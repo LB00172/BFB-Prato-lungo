@@ -6,10 +6,7 @@ const initialDayState = () => ({
   adultsTotal: '',
   kidsTotal: '',
   adultsLunch: '',
-  adultsDinner: '',
-  expenseFood: '',
-  expenseDrinks: '',
-  expenseAccessory: '',
+  adultsDinner: ''
 });
 
 function App() {
@@ -17,9 +14,17 @@ function App() {
   const [activeTab, setActiveTab] = useState('calendario');
   const [currentDate, setCurrentDate] = useState(new Date('2026-08-11')); 
   const [selectedDateStr, setSelectedDateStr] = useState('2026-08-11');
+  
+  // Dati dei giorni (presenze e note)
   const [campData, setCampData] = useState(() => {
     const saved = localStorage.getItem('cambusa_camp_data');
     return saved ? JSON.parse(saved) : {};
+  });
+
+  // Cassa globale del campo (slegata dai giorni)
+  const [globalExpenses, setGlobalExpenses] = useState(() => {
+    const saved = localStorage.getItem('cambusa_global_expenses');
+    return saved ? JSON.parse(saved) : { food: '', drinks: '', accessory: '' };
   });
 
   useEffect(() => {
@@ -30,6 +35,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('cambusa_camp_data', JSON.stringify(campData));
   }, [campData]);
+
+  useEffect(() => {
+    localStorage.setItem('cambusa_global_expenses', JSON.stringify(globalExpenses));
+  }, [globalExpenses]);
 
   const getDayData = (dateStr) => {
     return campData[dateStr] || initialDayState();
@@ -52,28 +61,23 @@ function App() {
     setSelectedDateStr(newDate.toISOString().split('T')[0]);
   };
 
+  const navigateDate = (days) => {
+    const d = new Date(selectedDateStr);
+    d.setDate(d.getDate() + days);
+    const newDateStr = d.toISOString().split('T')[0];
+    setSelectedDateStr(newDateStr);
+    setCurrentDate(new Date(d)); 
+  };
+
   const calculateTotals = () => {
-    let totalFood = 0;
-    let totalDrinks = 0;
-    let totalAccessory = 0;
+    const totalFood = parseFloat(globalExpenses.food) || 0;
+    const totalDrinks = parseFloat(globalExpenses.drinks) || 0;
+    const totalAccessory = parseFloat(globalExpenses.accessory) || 0;
+    
     let totalMealsConsumed = 0;
     let maxAdultsPresent = 0;
-    
-    const dailyBreakdown = {};
 
-    Object.entries(campData).forEach(([date, data]) => {
-      const food = parseFloat(data.expenseFood) || 0;
-      const drinks = parseFloat(data.expenseDrinks) || 0;
-      const acc = parseFloat(data.expenseAccessory) || 0;
-
-      totalFood += food;
-      totalDrinks += drinks;
-      totalAccessory += acc;
-
-      dailyBreakdown[date] = {
-        dayTotalExp: food + drinks + acc
-      };
-
+    Object.values(campData).forEach((data) => {
       const lunch = parseInt(data.adultsLunch) || 0;
       const dinner = parseInt(data.adultsDinner) || 0;
       const dailyAdults = parseInt(data.adultsTotal) || 0;
@@ -90,6 +94,7 @@ function App() {
     
     const safeAdultsDivisor = maxAdultsPresent > 0 ? maxAdultsPresent : 1;
     const logisticsPerAdult = totalAccessory / safeAdultsDivisor;
+    const overallTotal = totalFood + totalDrinks + totalAccessory;
 
     return {
       totalFood,
@@ -99,7 +104,7 @@ function App() {
       logisticsPerAdult,
       totalMealsConsumed,
       maxAdultsPresent,
-      dailyBreakdown,
+      overallTotal
     };
   };
 
@@ -216,14 +221,18 @@ function App() {
 
         {activeTab === 'partecipanti' && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-[#8F9E8B]/30">
-              <span className="text-xs uppercase font-bold text-[#5C4A3C]">Seleziona Giorno:</span>
+            <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm">
+              <button onClick={() => navigateDate(-1)} className="px-3 py-1 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&larr;</button>
               <input
                 type="date"
                 value={selectedDateStr}
-                onChange={(e) => setSelectedDateStr(e.target.value)}
-                className="bg-[#F0F4F1] border border-[#8F9E8B]/30 px-2 py-1 rounded text-sm focus:outline-none font-bold"
+                onChange={(e) => {
+                  setSelectedDateStr(e.target.value);
+                  setCurrentDate(new Date(e.target.value));
+                }}
+                className="bg-transparent border-none text-sm focus:outline-none font-bold text-center w-full mx-2 text-[#5C4A3C]"
               />
+              <button onClick={() => navigateDate(1)} className="px-3 py-1 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&rarr;</button>
             </div>
 
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-4">
@@ -288,39 +297,39 @@ function App() {
           <div className="space-y-4">
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-4">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">
-                Spese del {new Date(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
+                Cassa Globale Campo
               </h3>
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Spesa Cibo (€)</label>
+                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Totale Spesa Cibo (€)</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={getDayData(selectedDateStr).expenseFood}
-                    onChange={(e) => updateDayData(selectedDateStr, 'expenseFood', e.target.value)}
+                    value={globalExpenses.food}
+                    onChange={(e) => setGlobalExpenses(prev => ({...prev, food: e.target.value}))}
                     placeholder="0.00"
                     className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Spesa Bevande (€)</label>
+                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Totale Spesa Bevande (€)</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={getDayData(selectedDateStr).expenseDrinks}
-                    onChange={(e) => updateDayData(selectedDateStr, 'expenseDrinks', e.target.value)}
+                    value={globalExpenses.drinks}
+                    onChange={(e) => setGlobalExpenses(prev => ({...prev, drinks: e.target.value}))}
                     placeholder="0.00"
                     className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Spesa Accessoria (€) (Logistica)</label>
+                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Totale Accessori (€) (Logistica)</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={getDayData(selectedDateStr).expenseAccessory}
-                    onChange={(e) => updateDayData(selectedDateStr, 'expenseAccessory', e.target.value)}
+                    value={globalExpenses.accessory}
+                    onChange={(e) => setGlobalExpenses(prev => ({...prev, accessory: e.target.value}))}
                     placeholder="Generatore, piatti..."
                     className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
                   />
@@ -328,9 +337,9 @@ function App() {
               </div>
 
               <div className="bg-[#2D392C]/10 p-3 rounded border border-[#2D392C]/20 flex justify-between items-center mt-2">
-                <span className="font-bold text-xs uppercase">Totale Inserito Oggi:</span>
+                <span className="font-bold text-xs uppercase">Importo Complessivo:</span>
                 <span className="font-rustic font-bold text-lg text-[#2D392C]">
-                  {totals.dailyBreakdown[selectedDateStr]?.dayTotalExp.toFixed(2) || '0.00'} €
+                  {totals.overallTotal.toFixed(2)} €
                 </span>
               </div>
             </div>
@@ -346,7 +355,7 @@ function App() {
                     <span className="text-xs uppercase text-[#8F9E8B]">Quota Singolo Pasto</span>
                     <span className="font-rustic text-xl text-[#D97706]">{totals.costPerMeal.toFixed(2)} €</span>
                   </div>
-                  <p className="text-[9px] text-gray-400">Totale Cibo e Bevande ({(totals.totalFood + totals.totalDrinks).toFixed(2)} €) diviso per {totals.totalMealsConsumed} pasti consumati nel campo.</p>
+                  <p className="text-[9px] text-gray-400">Cibo e Bevande ({(totals.totalFood + totals.totalDrinks).toFixed(2)} €) diviso per {totals.totalMealsConsumed} pasti consumati.</p>
                 </div>
 
                 <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
@@ -354,7 +363,7 @@ function App() {
                     <span className="text-xs uppercase text-[#8F9E8B]">Quota Logistica (a persona)</span>
                     <span className="font-rustic text-xl text-[#D97706]">{totals.logisticsPerAdult.toFixed(2)} €</span>
                   </div>
-                  <p className="text-[9px] text-gray-400">Totale Accessori ({totals.totalAccessory.toFixed(2)} €) diviso per i {totals.maxAdultsPresent > 0 ? totals.maxAdultsPresent : 1} adulti calcolati al campo.</p>
+                  <p className="text-[9px] text-gray-400">Accessori ({totals.totalAccessory.toFixed(2)} €) diviso per il picco di {totals.maxAdultsPresent > 0 ? totals.maxAdultsPresent : 1} adulti calcolati al campo.</p>
                 </div>
               </div>
             </div>
