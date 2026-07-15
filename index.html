@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cambusa Camp 2026</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2D392C">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <style>
+    .font-rustic {
+      font-family: 'Special Elite', system-ui, -apple-system, sans-serif;
+    }
+    .font-clean {
+      font-family: 'Courier Prime', monospace;
+    }
+    /* Palette verde militare personalizzata */
+    :root {
+      --color-military: #2D392C;
+      --color-sage: #8F9E8B;
+      --color-wood: #5C4A3C;
+      --color-fire: #D97706;
+    }
+  </style>
+</head>
+<body class="bg-[#F0F4F1] text-[#2D392C] font-clean antialiased min-h-screen select-none">
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel" data-type="module" src="App.tsx"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker registrato con successo:', reg.scope))
+          .catch(err => console.log('Errore registrazione Service Worker:', err));
+      });
+    }
+  </script>
+</body>
+</html>
