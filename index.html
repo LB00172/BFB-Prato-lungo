@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Brigata Fabio Bandone</title>
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,12 +33,15 @@
 <body class="bg-[#F0F4F1] text-[#2D392C] font-clean antialiased min-h-screen select-none">
   <div id="root"></div>
 
+  <!-- Caricamento librerie React -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <script type="text/babel" data-type="module" src="App.tsx"></script>
+  <!-- Collegamento alla logica dell'app aggiornata a .js -->
+  <script type="text/babel" src="App.js"></script>
 
+  <!-- Registrazione Service Worker per uso Offline -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
