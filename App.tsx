@@ -64,13 +64,18 @@ export default function App() {
     setSelectedDateStr(newDate.toISOString().split('T')[0]);
   };
 
+  // NUOVA LOGICA DI CALCOLO SEPARATA
   const calculateTotals = () => {
     let totalFood = 0;
     let totalDrinks = 0;
     let totalAccessory = 0;
-    const dailyBreakdown: Record<string, { totalCost: number; costPerAdult: number }> = {};
+    let totalMealsConsumed = 0;
+    let maxAdultsPresent = 0;
+    
+    const dailyBreakdown: Record<string, { dayTotalExp: number }> = {};
 
     Object.entries(campData).forEach(([date, data]) => {
+      // Somma spese
       const food = parseFloat(data.expenseFood) || 0;
       const drinks = parseFloat(data.expenseDrinks) || 0;
       const acc = parseFloat(data.expenseAccessory) || 0;
@@ -79,23 +84,36 @@ export default function App() {
       totalDrinks += drinks;
       totalAccessory += acc;
 
-      const dayTotal = food + drinks + acc;
-
-      const adultsLunch = parseInt(data.adultsLunch) || 0;
-      const adultsDinner = parseInt(data.adultsDinner) || 0;
-      const totalPayingAdults = adultsLunch + adultsDinner || parseInt(data.adultsTotal) || 0;
-
       dailyBreakdown[date] = {
-        totalCost: dayTotal,
-        costPerAdult: totalPayingAdults > 0 ? dayTotal / totalPayingAdults : 0,
+        dayTotalExp: food + drinks + acc
       };
+
+      // Conteggio pasti e presenze
+      const lunch = parseInt(data.adultsLunch) || 0;
+      const dinner = parseInt(data.adultsDinner) || 0;
+      const dailyAdults = parseInt(data.adultsTotal) || 0;
+
+      totalMealsConsumed += (lunch + dinner);
+
+      if (dailyAdults > maxAdultsPresent) {
+        maxAdultsPresent = dailyAdults;
+      }
     });
+
+    const totalFoodDrinks = totalFood + totalDrinks;
+    const costPerMeal = totalMealsConsumed > 0 ? (totalFoodDrinks / totalMealsConsumed) : 0;
+    
+    const safeAdultsDivisor = maxAdultsPresent > 0 ? maxAdultsPresent : 1;
+    const logisticsPerAdult = totalAccessory / safeAdultsDivisor;
 
     return {
       totalFood,
       totalDrinks,
       totalAccessory,
-      overallTotal: totalFood + totalDrinks + totalAccessory,
+      costPerMeal,
+      logisticsPerAdult,
+      totalMealsConsumed,
+      maxAdultsPresent,
       dailyBreakdown,
     };
   };
@@ -230,12 +248,12 @@ export default function App() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Adulti Totali</label>
+                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Adulti Totali Campo</label>
                   <input
                     type="number"
                     value={getDayData(selectedDateStr).adultsTotal}
                     onChange={(e) => updateDayData(selectedDateStr, 'adultsTotal', e.target.value)}
-                    placeholder="25"
+                    placeholder="Es. 25"
                     className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-center font-bold"
                   />
                 </div>
@@ -245,14 +263,14 @@ export default function App() {
                     type="number"
                     value={getDayData(selectedDateStr).kidsTotal}
                     onChange={(e) => updateDayData(selectedDateStr, 'kidsTotal', e.target.value)}
-                    placeholder="10"
+                    placeholder="Es. 10"
                     className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-center font-bold"
                   />
                 </div>
               </div>
 
               <div className="border-t border-dashed border-[#8F9E8B]/30 pt-4 space-y-4">
-                <h4 className="font-rustic text-sm text-[#5C4A3C]">Dettaglio Pasti (per divisione quote)</h4>
+                <h4 className="font-rustic text-sm text-[#5C4A3C]">Conteggio Pasti Reali</h4>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -261,7 +279,7 @@ export default function App() {
                       type="number"
                       value={getDayData(selectedDateStr).adultsLunch}
                       onChange={(e) => updateDayData(selectedDateStr, 'adultsLunch', e.target.value)}
-                      placeholder="Vuoto = salta"
+                      placeholder="Vuoto = 0"
                       className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-center font-bold"
                     />
                   </div>
@@ -271,7 +289,7 @@ export default function App() {
                       type="number"
                       value={getDayData(selectedDateStr).adultsDinner}
                       onChange={(e) => updateDayData(selectedDateStr, 'adultsDinner', e.target.value)}
-                      placeholder="Vuoto = salta"
+                      placeholder="Vuoto = 0"
                       className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-center font-bold"
                     />
                   </div>
@@ -312,47 +330,47 @@ export default function App() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Spesa Accessoria (€)</label>
+                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Spesa Accessoria (€) (Logistica)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={getDayData(selectedDateStr).expenseAccessory}
                     onChange={(e) => updateDayData(selectedDateStr, 'expenseAccessory', e.target.value)}
-                    placeholder="Generatore, benzina, piatti..."
+                    placeholder="Generatore, piatti..."
                     className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
                   />
                 </div>
               </div>
 
-              <div className="bg-[#2D392C]/10 p-3 rounded border border-[#2D392C]/20 flex justify-between items-center">
-                <span className="font-bold text-xs uppercase">Totale Giornata:</span>
+              <div className="bg-[#2D392C]/10 p-3 rounded border border-[#2D392C]/20 flex justify-between items-center mt-2">
+                <span className="font-bold text-xs uppercase">Totale Inserito Oggi:</span>
                 <span className="font-rustic font-bold text-lg text-[#2D392C]">
-                  {totals.dailyBreakdown[selectedDateStr]?.totalCost.toFixed(2) || '0.00'} €
+                  {totals.dailyBreakdown[selectedDateStr]?.dayTotalExp.toFixed(2) || '0.00'} €
                 </span>
               </div>
             </div>
 
-            <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-3">
+            {/* NUOVO BLOCCO RIEPILOGO FINALE */}
+            <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-4">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1">
-                Cassa Totale Campo
+                Il Conto della Serva
               </h3>
               
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="opacity-80">Totale Cibo:</span>
-                  <span className="font-bold">{totals.totalFood.toFixed(2)} €</span>
+              <div className="space-y-3">
+                <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs uppercase text-[#8F9E8B]">Quota Singolo Pasto</span>
+                    <span className="font-rustic text-xl text-[#D97706]">{totals.costPerMeal.toFixed(2)} €</span>
+                  </div>
+                  <p className="text-[9px] text-gray-400">Totale Cibo e Bevande ({(totals.totalFood + totals.totalDrinks).toFixed(2)} €) diviso per {totals.totalMealsConsumed} pasti consumati nel campo.</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="opacity-80">Totale Bevande:</span>
-                  <span className="font-bold">{totals.totalDrinks.toFixed(2)} €</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="opacity-80">Totale Accessoria:</span>
-                  <span className="font-bold">{totals.totalAccessory.toFixed(2)} €</span>
-                </div>
-                <div className="border-t border-[#8F9E8B]/30 pt-2 flex justify-between text-base font-bold text-[#D97706]">
-                  <span>SPESA TOTALE:</span>
-                  <span className="font-rustic">{totals.overallTotal.toFixed(2)} €</span>
+
+                <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs uppercase text-[#8F9E8B]">Quota Logistica (a persona)</span>
+                    <span className="font-rustic text-xl text-[#D97706]">{totals.logisticsPerAdult.toFixed(2)} €</span>
+                  </div>
+                  <p className="text-[9px] text-gray-400">Totale Accessori ({totals.totalAccessory.toFixed(2)} €) diviso per i {totals.maxAdultsPresent > 0 ? totals.maxAdultsPresent : 1} adulti calcolati al campo.</p>
                 </div>
               </div>
             </div>
