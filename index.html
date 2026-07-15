@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cambusa Camp 2026</title>
+  <title>Brigata Fabio Bandone</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,6 @@
     .font-clean {
       font-family: 'Courier Prime', monospace;
     }
-    /* Palette verde militare personalizzata */
     :root {
       --color-military: #2D392C;
       --color-sage: #8F9E8B;
@@ -43,8 +42,8 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('Service Worker registrato con successo:', reg.scope))
-          .catch(err => console.log('Errore registrazione Service Worker:', err));
+          .then(reg => console.log('Service Worker registrato:', reg.scope))
+          .catch(err => console.log('Errore SW:', err));
       });
     }
   </script>
