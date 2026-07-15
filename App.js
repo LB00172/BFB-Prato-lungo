@@ -1,20 +1,7 @@
-import React, { useState, useEffect } from 'react';
+const { useState, useEffect } = React;
 const { createRoot } = ReactDOM;
 
-interface DayData {
-  note: string;
-  adultsTotal: string;
-  kidsTotal: string;
-  adultsLunch: string;
-  adultsDinner: string;
-  expenseFood: string;
-  expenseDrinks: string;
-  expenseAccessory: string;
-}
-
-type CampData = Record<string, DayData>;
-
-const initialDayState = (): DayData => ({
+const initialDayState = () => ({
   note: '',
   adultsTotal: '',
   kidsTotal: '',
@@ -25,12 +12,12 @@ const initialDayState = (): DayData => ({
   expenseAccessory: '',
 });
 
-export default function App() {
-  const [showSplash, setShowSplash] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'calendario' | 'partecipanti' | 'spesa'>('calendario');
-  const [currentDate, setCurrentDate] = useState<Date>(new Date('2026-08-11')); 
-  const [selectedDateStr, setSelectedDateStr] = useState<string>('2026-08-11');
-  const [campData, setCampData] = useState<CampData>(() => {
+function App() {
+  const [showSplash, setShowSplash] = useState(true);
+  const [activeTab, setActiveTab] = useState('calendario');
+  const [currentDate, setCurrentDate] = useState(new Date('2026-08-11')); 
+  const [selectedDateStr, setSelectedDateStr] = useState('2026-08-11');
+  const [campData, setCampData] = useState(() => {
     const saved = localStorage.getItem('cambusa_camp_data');
     return saved ? JSON.parse(saved) : {};
   });
@@ -44,11 +31,11 @@ export default function App() {
     localStorage.setItem('cambusa_camp_data', JSON.stringify(campData));
   }, [campData]);
 
-  const getDayData = (dateStr: string): DayData => {
+  const getDayData = (dateStr) => {
     return campData[dateStr] || initialDayState();
   };
 
-  const updateDayData = (dateStr: string, field: keyof DayData, value: string) => {
+  const updateDayData = (dateStr, field, value) => {
     setCampData((prev) => ({
       ...prev,
       [dateStr]: {
@@ -58,14 +45,13 @@ export default function App() {
     }));
   };
 
-  const changeWeek = (days: number) => {
+  const changeWeek = (days) => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + days);
     setCurrentDate(newDate);
     setSelectedDateStr(newDate.toISOString().split('T')[0]);
   };
 
-  // NUOVA LOGICA DI CALCOLO SEPARATA
   const calculateTotals = () => {
     let totalFood = 0;
     let totalDrinks = 0;
@@ -73,10 +59,9 @@ export default function App() {
     let totalMealsConsumed = 0;
     let maxAdultsPresent = 0;
     
-    const dailyBreakdown: Record<string, { dayTotalExp: number }> = {};
+    const dailyBreakdown = {};
 
     Object.entries(campData).forEach(([date, data]) => {
-      // Somma spese
       const food = parseFloat(data.expenseFood) || 0;
       const drinks = parseFloat(data.expenseDrinks) || 0;
       const acc = parseFloat(data.expenseAccessory) || 0;
@@ -89,7 +74,6 @@ export default function App() {
         dayTotalExp: food + drinks + acc
       };
 
-      // Conteggio pasti e presenze
       const lunch = parseInt(data.adultsLunch) || 0;
       const dinner = parseInt(data.adultsDinner) || 0;
       const dailyAdults = parseInt(data.adultsTotal) || 0;
@@ -121,7 +105,7 @@ export default function App() {
 
   const totals = calculateTotals();
 
-  const getDaysOfWeek = (start: Date) => {
+  const getDaysOfWeek = (start) => {
     const days = [];
     const temp = new Date(start);
     const day = temp.getDay();
@@ -163,7 +147,7 @@ export default function App() {
 
       <main className="flex-grow p-4">
         <div className="grid grid-cols-3 gap-2 mb-6">
-          {(['calendario', 'partecipanti', 'spesa'] as const).map((tab) => (
+          {['calendario', 'partecipanti', 'spesa'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -351,7 +335,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* NUOVO BLOCCO RIEPILOGO FINALE */}
             <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-4">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1">
                 Il Conto della Serva
@@ -388,7 +371,7 @@ export default function App() {
     </div>
   );
 }
-// Accendiamo i fuochi e serviamo l'app nel div "root"
+
 const rootElement = document.getElementById('root');
-const root = createRoot(rootElement!);
+const root = createRoot(rootElement);
 root.render(<App />);
