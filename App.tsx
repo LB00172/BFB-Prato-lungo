@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
-// Tipi di dati per la gestione dei giorni di campo
 interface DayData {
   note: string;
-  adultsTotal: string; // string per gestire i campi vuoti nei form
+  adultsTotal: string;
   kidsTotal: string;
   adultsLunch: string;
   adultsDinner: string;
@@ -28,22 +27,18 @@ const initialDayState = (): DayData => ({
 export default function App() {
   const [showSplash, setShowSplash] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'calendario' | 'partecipanti' | 'spesa'>('calendario');
-  const [currentDate, setCurrentDate] = useState<Date>(new Date('2026-08-11')); // Inizio campo
+  const [currentDate, setCurrentDate] = useState<Date>(new Date('2026-08-11')); 
   const [selectedDateStr, setSelectedDateStr] = useState<string>('2026-08-11');
   const [campData, setCampData] = useState<CampData>(() => {
     const saved = localStorage.getItem('cambusa_camp_data');
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Timer per lo Splash Screen
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 3500); // 3.5 secondi per caricare la pagina
+    const timer = setTimeout(() => setShowSplash(false), 3500);
     return () => clearTimeout(timer);
   }, []);
 
-  // Salvataggio automatico offline
   useEffect(() => {
     localStorage.setItem('cambusa_camp_data', JSON.stringify(campData));
   }, [campData]);
@@ -62,7 +57,6 @@ export default function App() {
     }));
   };
 
-  // Navigazione settimane
   const changeWeek = (days: number) => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + days);
@@ -70,7 +64,6 @@ export default function App() {
     setSelectedDateStr(newDate.toISOString().split('T')[0]);
   };
 
-  // Calcoli economici e presenze
   const calculateTotals = () => {
     let totalFood = 0;
     let totalDrinks = 0;
@@ -88,11 +81,8 @@ export default function App() {
 
       const dayTotal = food + drinks + acc;
 
-      // Calcoliamo i partecipanti attivi ai pasti (solo gli adulti pagano!)
       const adultsLunch = parseInt(data.adultsLunch) || 0;
       const adultsDinner = parseInt(data.adultsDinner) || 0;
-      
-      // Se non ci sono specifiche sui pasti, usiamo il totale degli adulti della giornata
       const totalPayingAdults = adultsLunch + adultsDinner || parseInt(data.adultsTotal) || 0;
 
       dailyBreakdown[date] = {
@@ -101,24 +91,20 @@ export default function App() {
       };
     });
 
-    const overallTotal = totalFood + totalDrinks + totalAccessory;
-
     return {
       totalFood,
       totalDrinks,
       totalAccessory,
-      overallTotal,
+      overallTotal: totalFood + totalDrinks + totalAccessory,
       dailyBreakdown,
     };
   };
 
   const totals = calculateTotals();
 
-  // Genera i giorni della settimana corrente da visualizzare
   const getDaysOfWeek = (start: Date) => {
     const days = [];
     const temp = new Date(start);
-    // Trova il lunedì della settimana corrente
     const day = temp.getDay();
     const diff = temp.getDate() - day + (day === 0 ? -6 : 1);
     temp.setDate(diff);
@@ -135,30 +121,28 @@ export default function App() {
   if (showSplash) {
     return (
       <div className="fixed inset-0 bg-[#2D392C] flex flex-col items-center justify-center text-[#F0F4F1] z-50 transition-opacity duration-1000">
-        <div className="w-40 h-40 mb-6 border-4 border-[#8F9E8B] rounded-full flex items-center justify-center overflow-hidden bg-[#2D392C]">
-          {/* Sostituisci questo SVG con la tua immagine logo in base64 o link diretto quando la avrai */}
-          <svg className="w-24 h-24 text-[#8F9E8B]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11.08V8a1 1 0 00-.07-.3M18 8a2 2 0 11-4 0 1 1 0 01-2 0 2 2 0 10-4 0M2 8h16M2 8a2 2 0 114 0M2 8V20a1 1 0 001 1h14a1 1 0 001-1V8M11 12.4V12m0 4v.1m0-12.2V3a1 1 0 00-1-1H5a1 1 0 00-1 1v3.4" />
-          </svg>
+        <div className="w-56 h-56 mb-6 rounded-full overflow-hidden shadow-2xl flex items-center justify-center border-4 border-[#8F9E8B] bg-[#F0F4F1]">
+          <img 
+            src="./logo.png" 
+            alt="Logo Brigata Fabio Bandone" 
+            className="w-full h-full object-cover"
+          />
         </div>
-        <h1 className="font-rustic text-3xl tracking-widest text-[#8F9E8B]">CAMBUSA APP</h1>
-        <p className="mt-2 text-xs uppercase tracking-widest opacity-60">Caricamento inventario...</p>
+        <h1 className="font-rustic text-3xl tracking-widest text-[#8F9E8B]">BRIGATA</h1>
+        <h2 className="font-rustic text-xl tracking-widest text-[#F0F4F1]">FABIO BANDONE</h2>
+        <p className="mt-4 text-xs uppercase tracking-widest opacity-60">Prato Lungo Forever</p>
       </div>
     );
   }
 
   return (
     <div className="max-w-md mx-auto min-h-screen flex flex-col bg-[#F0F4F1] border-x border-[#8F9E8B]/30 shadow-2xl pb-24">
-      {/* Header fisso */}
       <header className="bg-[#2D392C] text-[#F0F4F1] p-4 text-center border-b-4 border-[#5C4A3C]">
         <h1 className="font-rustic text-2xl tracking-wide">PERETO 2026</h1>
-        <p className="text-xs uppercase tracking-wider text-[#8F9E8B]">Campo Base Freecamping</p>
+        <p className="text-xs uppercase tracking-wider text-[#8F9E8B]">Brigata Fabio Bandone</p>
       </header>
 
-      {/* Area Contenuto */}
       <main className="flex-grow p-4">
-        
-        {/* TABS PRINCIPALI */}
         <div className="grid grid-cols-3 gap-2 mb-6">
           {(['calendario', 'partecipanti', 'spesa'] as const).map((tab) => (
             <button
@@ -175,7 +159,6 @@ export default function App() {
           ))}
         </div>
 
-        {/* CONTENUTO SCHEDA: CALENDARIO */}
         {activeTab === 'calendario' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm">
@@ -214,7 +197,6 @@ export default function App() {
               })}
             </div>
 
-            {/* Note del giorno selezionato */}
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
               <h3 className="font-rustic text-lg border-b border-dashed border-[#8F9E8B] pb-1">
                 Note del {new Date(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
@@ -229,7 +211,6 @@ export default function App() {
           </div>
         )}
 
-        {/* CONTENUTO SCHEDA: PARTECIPANTI */}
         {activeTab === 'partecipanti' && (
           <div className="space-y-4">
             <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-[#8F9E8B]/30">
@@ -296,18 +277,12 @@ export default function App() {
                   </div>
                 </div>
               </div>
-
-              <p className="text-[10px] italic text-gray-400 text-center pt-2">
-                * Lasciando i campi vuoti, il sistema escluderà il pasto dal conteggio finale della spesa giornaliera.
-              </p>
             </div>
           </div>
         )}
 
-        {/* CONTENUTO SCHEDA: SPESA */}
         {activeTab === 'spesa' && (
           <div className="space-y-4">
-            {/* Input Spese Giorno Corrente */}
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-4">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">
                 Spese del {new Date(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
@@ -349,7 +324,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Totale Giorno */}
               <div className="bg-[#2D392C]/10 p-3 rounded border border-[#2D392C]/20 flex justify-between items-center">
                 <span className="font-bold text-xs uppercase">Totale Giornata:</span>
                 <span className="font-rustic font-bold text-lg text-[#2D392C]">
@@ -358,7 +332,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Riepilogo Generale Campo */}
             <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-3">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1">
                 Cassa Totale Campo
@@ -388,7 +361,6 @@ export default function App() {
 
       </main>
 
-      {/* Footer / Info di servizio */}
       <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 py-3 px-4 text-center text-[10px] text-gray-400 z-10 flex justify-around">
         <div>📍 Abruzzo, Pereto</div>
         <div>🔌 Gen: 3kW Max</div>
