@@ -6,7 +6,8 @@ const initialDayState = () => ({
   adultsTotal: '',
   kidsTotal: '',
   adultsLunch: '',
-  adultsDinner: ''
+  adultsDinner: '',
+  guestsNames: ''
 });
 
 function App() {
@@ -15,13 +16,11 @@ function App() {
   const [currentDate, setCurrentDate] = useState(new Date('2026-08-11')); 
   const [selectedDateStr, setSelectedDateStr] = useState('2026-08-11');
   
-  // Dati dei giorni (presenze e note)
   const [campData, setCampData] = useState(() => {
     const saved = localStorage.getItem('cambusa_camp_data');
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Cassa globale del campo (slegata dai giorni)
   const [globalExpenses, setGlobalExpenses] = useState(() => {
     const saved = localStorage.getItem('cambusa_global_expenses');
     return saved ? JSON.parse(saved) : { food: '', drinks: '', accessory: '' };
@@ -146,7 +145,7 @@ function App() {
   return (
     <div className="max-w-md mx-auto min-h-screen flex flex-col bg-[#F0F4F1] border-x border-[#8F9E8B]/30 shadow-2xl pb-24">
       <header className="bg-[#2D392C] text-[#F0F4F1] p-4 text-center border-b-4 border-[#5C4A3C]">
-        <h1 className="font-rustic text-2xl tracking-wide">PERETO 2026</h1>
+        <h1 className="font-rustic text-2xl tracking-wide">PRATO LUNGO 2026</h1>
         <p className="text-xs uppercase tracking-wider text-[#8F9E8B]">Brigata Fabio Bandone</p>
       </header>
 
@@ -172,7 +171,7 @@ function App() {
             <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm">
               <button onClick={() => changeWeek(-7)} className="p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&larr;</button>
               <span className="font-bold text-sm text-[#2D392C] uppercase font-rustic">
-                Settimana di Campo
+                Settimana Selezionata
               </span>
               <button onClick={() => changeWeek(7)} className="p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&rarr;</button>
             </div>
@@ -289,6 +288,17 @@ function App() {
                   </div>
                 </div>
               </div>
+
+              <div className="border-t border-dashed border-[#8F9E8B]/30 pt-4 space-y-3">
+                <h4 className="font-rustic text-sm text-[#5C4A3C]">Nomi Ospiti</h4>
+                <textarea
+                  value={getDayData(selectedDateStr).guestsNames}
+                  onChange={(e) => updateDayData(selectedDateStr, 'guestsNames', e.target.value)}
+                  placeholder="Scrivi qui i nomi degli ospiti ed eventuali note a riguardo..."
+                  className="w-full h-20 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] resize-none"
+                />
+              </div>
+
             </div>
           </div>
         )}
@@ -372,10 +382,8 @@ function App() {
 
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 py-3 px-4 text-center text-[10px] text-gray-400 z-10 flex justify-around">
-        <div>📍 Abruzzo, Pereto</div>
-        <div>🔌 Gen: 3kW Max</div>
-        <div>🧊 Frighi: 2 Attivi</div>
+      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#F0F4F1] border-t-2 border-[#5C4A3C] py-3 px-4 text-center z-10">
+        <div className="font-rustic text-[#2D392C] tracking-widest text-sm uppercase font-bold">In Bandone we Trust</div>
       </footer>
     </div>
   );
