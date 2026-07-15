@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+const { createRoot } = ReactDOM;
 
 interface DayData {
   note: string;
@@ -387,3 +388,7 @@ export default function App() {
     </div>
   );
 }
+// Accendiamo i fuochi e serviamo l'app nel div "root"
+const rootElement = document.getElementById('root');
+const root = createRoot(rootElement!);
+root.render(<App />);
