@@ -1,8 +1,8 @@
-const CACHE_NAME = 'brigata-bandone-v1';
+const CACHE_NAME = 'brigata-bandone-v2';
 const ASSETS = [
   './',
   './index.html',
-  './App.tsx',
+  './App.js',
   './manifest.json',
   './logo.png',
   'https://cdn.tailwindcss.com',
