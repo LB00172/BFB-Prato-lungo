@@ -1,9 +1,10 @@
-const CACHE_NAME = 'cambusa-camp-v1';
+const CACHE_NAME = 'brigata-bandone-v1';
 const ASSETS = [
   './',
   './index.html',
   './App.tsx',
   './manifest.json',
+  './logo.png',
   'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Special+Elite&display=swap',
   'https://unpkg.com/react@18/umd/react.production.min.js',
@@ -11,7 +12,6 @@ const ASSETS = [
   'https://unpkg.com/@babel/standalone/babel.min.js'
 ];
 
-// Installazione Service Worker e Caching delle risorse
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -20,7 +20,6 @@ self.addEventListener('install', (e) => {
   );
 });
 
-// Attivazione e pulizia vecchie cache
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
@@ -35,7 +34,6 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Intercettazione richieste offline
 self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
