@@ -1,0 +1,21 @@
+{
+  "short_name": "Cambusa26",
+  "name": "Cambusa Camp Pereto 2026",
+  "icons": [
+    {
+      "src": "logo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#2D392C",
+  "theme_color": "#2D392C",
+  "display": "standalone",
+  "orientation": "portrait"
+}
