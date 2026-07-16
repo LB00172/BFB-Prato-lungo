@@ -1,4 +1,4 @@
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 const { createRoot } = ReactDOM;
 
 // ---------- Utility ----------
@@ -47,6 +47,12 @@ function App() {
   const [newMemberChild, setNewMemberChild] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  // ---------- Stato sincronizzazione cloud (Firebase) ----------
+  const [cloud, setCloud] = useState({ connected: false, status: 'idle', code: null, lastSync: null, error: null });
+  const [campCodeInput, setCampCodeInput] = useState((typeof window !== 'undefined' && window.CAMP_CODE_DEFAULT) || '');
+  const cloudConnectedRef = useRef(false);
+  const suppressPushRef = useRef(false);
+
   // ---------- Persistenza ----------
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2000);
@@ -67,6 +73,53 @@ function App() {
       window.removeEventListener('offline', off);
     };
   }, []);
+
+  // ---------- Sincronizzazione cloud ----------
+  // Applica al locale i dati arrivati dal cloud (senza rimbalzarli indietro).
+  const applyRemote = (remote) => {
+    suppressPushRef.current = true;
+    if (Array.isArray(remote.members)) setMembers(remote.members);
+    if (remote.campData && typeof remote.campData === 'object') setCampData(remote.campData);
+    if (remote.globalExpenses && typeof remote.globalExpenses === 'object') setGlobalExpenses(remote.globalExpenses);
+    setTimeout(() => { suppressPushRef.current = false; }, 0);
+  };
+
+  const connectCloud = async (code) => {
+    const CS = window.CloudSync;
+    if (!CS || !CS.isConfigured()) {
+      window.alert('Firebase non è configurato. Incolla la config del tuo progetto in firebase-config.js.');
+      return;
+    }
+    const c = (code || '').trim();
+    if (!c) { window.alert('Inserisci il codice del campo.'); return; }
+    try {
+      await CS.connect(window.FIREBASE_CONFIG, c, applyRemote);
+    } catch (e) {
+      window.alert('Connessione fallita: ' + (e && e.message ? e.message : e));
+    }
+  };
+
+  const disconnectCloud = () => { if (window.CloudSync) window.CloudSync.disconnect(); };
+
+  // All'avvio: aggancia lo stato e riconnette se già usato in passato.
+  useEffect(() => {
+    const CS = window.CloudSync;
+    if (!CS) return;
+    CS.onStatus((s) => { cloudConnectedRef.current = s.connected; setCloud(s); });
+    const saved = CS.savedCode();
+    if (saved && CS.isConfigured()) {
+      setCampCodeInput(saved);
+      CS.connect(window.FIREBASE_CONFIG, saved, applyRemote).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Push automatico verso il cloud quando i dati cambiano (se connesso e online).
+  useEffect(() => {
+    if (!cloudConnectedRef.current || !navigator.onLine) return;
+    if (suppressPushRef.current) return;
+    if (window.CloudSync) window.CloudSync.pushState({ members, campData, globalExpenses });
+  }, [members, campData, globalExpenses]);
 
   // ---------- Dati per giorno ----------
   const getDayData = (dateStr) => ({ ...initialDayState(), ...(campData[dateStr] || {}) });
@@ -563,6 +616,53 @@ function App() {
                   <input type="file" accept="application/json,.json" onChange={importData} className="hidden" />
                 </label>
               </div>
+            </div>
+
+            {/* Sincronizzazione Cloud (online) */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
+                <h3 className="font-rustic text-lg text-[#2D392C]">Sincronizzazione Cloud</h3>
+                <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
+                  {cloud.connected ? 'Connesso' : 'Non connesso'}
+                </span>
+              </div>
+
+              {!(window.CloudSync && window.CloudSync.isConfigured()) ? (
+                <p className="text-[10px] text-gray-500 italic">
+                  Firebase non configurato. Incolla la config del tuo progetto in <span className="font-bold">firebase-config.js</span> per abilitare la sincronizzazione online tra dispositivi.
+                </p>
+              ) : (
+                <>
+                  <p className="text-[10px] text-gray-500">
+                    Quando c'è linea, i dati si sincronizzano tra i dispositivi che usano lo stesso codice campo. Offline si continua a lavorare in locale.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={campCodeInput}
+                      onChange={(e) => setCampCodeInput(e.target.value)}
+                      placeholder="Codice campo"
+                      disabled={cloud.connected}
+                      className="flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] disabled:opacity-60"
+                    />
+                    {cloud.connected ? (
+                      <button onClick={disconnectCloud} className="px-4 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]">Disconnetti</button>
+                    ) : (
+                      <button onClick={() => connectCloud(campCodeInput)} className="px-4 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Connetti</button>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-gray-500">
+                    <span>
+                      {cloud.status === 'connecting' && 'Connessione in corso…'}
+                      {cloud.status === 'saving' && 'Salvataggio…'}
+                      {cloud.status === 'connected' && (cloud.lastSync ? `Ultima sync: ${new Date(cloud.lastSync).toLocaleTimeString('it-IT')}` : 'In ascolto…')}
+                      {cloud.status === 'error' && <span className="text-red-700">Errore: {cloud.error}</span>}
+                      {cloud.status === 'idle' && 'Inserisci il codice e premi Connetti.'}
+                    </span>
+                    {!isOnline && <span className="text-[#D97706] font-bold">offline</span>}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

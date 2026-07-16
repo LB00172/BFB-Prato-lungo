@@ -1,4 +1,4 @@
-const CACHE_NAME = 'brigata-bandone-v4';
+const CACHE_NAME = 'brigata-bandone-v5';
 
 // Tutte le risorse sono locali (stesso dominio): il precache è affidabile.
 // Nessuna dipendenza da CDN esterni -> l'app funziona offline al 100%.
@@ -6,6 +6,8 @@ const ASSETS = [
   './',
   './index.html',
   './App.js',
+  './firebase-config.js',
+  './firebase-sync.js',
   './manifest.json',
   './logo.png',
   './vendor/react.production.min.js',
@@ -38,6 +40,10 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
+
+  // Non intercettare le richieste esterne (es. Firebase/Firestore): passano
+  // direttamente alla rete, senza cache, senza interferenze.
+  if (new URL(req.url).origin !== self.location.origin) return;
 
   e.respondWith(
     caches.match(req).then((cached) => {
