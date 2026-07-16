@@ -1,4 +1,4 @@
-/* File GENERATO da App.jsx tramite Babel. Non modificare a mano: modifica App.jsx e ricompila. */
+/* File GENERATO da App.jsx tramite Babel (node build.js). Non modificare a mano. */
 const {
   useState,
   useEffect
@@ -357,12 +357,12 @@ function App() {
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => changeWeek(-7),
     className: "p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
-  }, "←"), /*#__PURE__*/React.createElement("span", {
+  }, "\u2190"), /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-sm text-[#2D392C] uppercase font-rustic"
   }, "Settimana Selezionata"), /*#__PURE__*/React.createElement("button", {
     onClick: () => changeWeek(7),
     className: "p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
-  }, "→")), /*#__PURE__*/React.createElement("div", {
+  }, "\u2192")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-7 gap-1"
   }, weekDays.map(d => {
     const dateStr = toDateStr(d);
@@ -442,14 +442,14 @@ function App() {
   }, m.isChild ? 'Bambino' : 'Adulto'), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeMember(m.id),
     className: "text-red-700 font-bold px-2 hover:text-red-900"
-  }, "×"))))))), activeTab === 'presenze' && /*#__PURE__*/React.createElement("div", {
+  }, "\xD7"))))))), activeTab === 'presenze' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => navigateDate(-1),
     className: "px-3 py-1 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
-  }, "←"), /*#__PURE__*/React.createElement("input", {
+  }, "\u2190"), /*#__PURE__*/React.createElement("input", {
     type: "date",
     value: selectedDateStr,
     onChange: e => {
@@ -462,7 +462,7 @@ function App() {
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => navigateDate(1),
     className: "px-3 py-1 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
-  }, "→")), /*#__PURE__*/React.createElement("div", {
+  }, "\u2192")), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
@@ -529,7 +529,7 @@ function App() {
     className: "font-bold text-xs uppercase"
   }, "Importo Complessivo:"), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-lg text-[#2D392C]"
-  }, money(totals.overallTotal), " €"))), /*#__PURE__*/React.createElement("div", {
+  }, money(totals.overallTotal), " \u20AC"))), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-4"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1"
@@ -541,19 +541,19 @@ function App() {
     className: "text-[10px] uppercase text-[#8F9E8B] block"
   }, "Quota Singolo Pasto"), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic text-xl text-[#D97706]"
-  }, money(totals.costPerMeal), " €"), /*#__PURE__*/React.createElement("p", {
+  }, money(totals.costPerMeal), " \u20AC"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 mt-1"
-  }, "Cibo+bevande (", money(totals.totalFoodDrinks), " €) / ", totals.adultMealsTotal, " pasti adulti.")), /*#__PURE__*/React.createElement("div", {
+  }, "Cibo+bevande (", money(totals.totalFoodDrinks), " \u20AC) / ", totals.adultMealsTotal, " pasti adulti.")), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] uppercase text-[#8F9E8B] block"
   }, "Logistica a testa"), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic text-xl text-[#D97706]"
-  }, money(totals.logisticsPerAdult), " €"), /*#__PURE__*/React.createElement("p", {
+  }, money(totals.logisticsPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 mt-1"
-  }, "Accessori (", money(totals.totalAccessory), " €) / ", totals.attendingAdultsCount, " adulti presenti."))), /*#__PURE__*/React.createElement("p", {
+  }, "Accessori (", money(totals.totalAccessory), " \u20AC) / ", totals.attendingAdultsCount, " adulti presenti."))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic"
-  }, "I pasti dei bambini sono gratis: il loro costo è ripartito sugli adulti.")), /*#__PURE__*/React.createElement("div", {
+  }, "I pasti dei bambini sono gratis: il loro costo \xE8 ripartito sugli adulti.")), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
@@ -578,9 +578,9 @@ function App() {
     className: "text-[11px] uppercase font-bold text-gray-500"
   }, "Totale raccolto"), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C]"
-  }, money(totals.collected), " €")), /*#__PURE__*/React.createElement("p", {
+  }, money(totals.collected), " \u20AC")), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
-  }, "Quote arrotondate a 0,10 € (niente monetine da 1/2/5 cent).", Math.abs(totals.roundingDiff) >= 0.005 ? ` Scarto rispetto al totale: ${totals.roundingDiff > 0 ? '+' : ''}${money(totals.roundingDiff)} € (sotto 0,50 €, non riconciliato).` : ' Nessuno scarto.'))), /*#__PURE__*/React.createElement("div", {
+  }, "Quote arrotondate a 0,10 \u20AC (niente monetine da 1/2/5 cent).", Math.abs(totals.roundingDiff) >= 0.005 ? ` Scarto rispetto al totale: ${totals.roundingDiff > 0 ? '+' : ''}${money(totals.roundingDiff)} € (sotto 0,50 €, non riconciliato).` : ' Nessuno scarto.'))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"

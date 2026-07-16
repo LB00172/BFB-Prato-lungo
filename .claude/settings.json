@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-/home/user/BFB-Prato-lungo}\" || exit 0; node build.js >/dev/null 2>&1; if [ -n \"$(git status --porcelain)\" ]; then git add -A && git commit -q -m \"Auto-commit: $(date '+%Y-%m-%d %H:%M')\" >/dev/null 2>&1 && git push -q origin HEAD >/dev/null 2>&1; fi; exit 0",
+            "statusMessage": "Auto-commit e push...",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
