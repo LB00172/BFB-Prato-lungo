@@ -175,7 +175,7 @@ function App() {
     // Accessori/logistica ripartiti in parti uguali tra gli adulti realmente presenti.
     const logisticsPerAdult = attendingAdults.size > 0 ? totalAccessory / attendingAdults.size : 0;
 
-    // Quota dovuta da ciascun membro.
+    // Quota dovuta da ciascun membro (valore esatto).
     const breakdown = members.map((m) => {
       const mealCount = mealsByMember[m.id] || 0;
       const foodShare = m.isChild ? 0 : mealCount * costPerMeal;
@@ -183,10 +183,46 @@ function App() {
       return { ...m, mealCount, foodShare, logShare, owed: foodShare + logShare };
     });
 
+    // --- Arrotondamento "cassa-friendly" ---
+    // Ogni quota viene arrotondata a multipli di 0,10 € (niente monetine da
+    // 1/2/5 cent). Lo scarto rispetto al totale reale viene riconciliato SOLO
+    // se è >= 0,50 €: sotto quella soglia si lascia com'è (non vale la pena).
+    const round10 = (cents) => Math.round(cents / 10) * 10;
+    breakdown.forEach((b) => {
+      b.payCents = b.isChild ? 0 : round10(Math.round(b.owed * 100));
+    });
+
+    const targetCents = Math.round(overallTotal * 100);
+    let residual = targetCents - breakdown.reduce((s, b) => s + b.payCents, 0);
+
+    if (Math.abs(residual) >= 50) {
+      // Redistribuisce lo scarto a passi di 10 cent, partendo da chi deve di più.
+      const order = breakdown
+        .filter((b) => !b.isChild && b.owed > 0)
+        .sort((a, b) => b.owed - a.owed);
+      const step = residual > 0 ? 10 : -10;
+      let guard = 0;
+      let idx = 0;
+      while (Math.abs(residual) >= 10 && order.length > 0 && guard < 100000) {
+        const t = order[idx % order.length];
+        if (!(step < 0 && t.payCents + step < 0)) {
+          t.payCents += step;
+          residual -= step;
+        }
+        idx++;
+        guard++;
+      }
+    }
+
+    breakdown.forEach((b) => { b.pay = b.payCents / 100; });
+    const collected = breakdown.reduce((s, b) => s + b.payCents, 0) / 100;
+    const roundingDiff = collected - overallTotal;
+
     return {
       totalFood, totalDrinks, totalAccessory, totalFoodDrinks, overallTotal,
       costPerMeal, logisticsPerAdult, adultMealsTotal,
       attendingAdultsCount: attendingAdults.size, breakdown,
+      collected, roundingDiff,
     };
   };
 
@@ -488,19 +524,31 @@ function App() {
               {totals.breakdown.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">Aggiungi membri e segna le presenze per vedere la ripartizione.</p>
               ) : (
-                <ul className="divide-y divide-[#8F9E8B]/20">
-                  {totals.breakdown.map((b) => (
-                    <li key={b.id} className="flex items-center justify-between py-2">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-[#2D392C]">{b.name}</span>
-                        <span className="text-[10px] text-gray-500">{b.mealCount} {b.mealCount === 1 ? 'pasto' : 'pasti'}{b.isChild ? ' · bambino' : ''}</span>
-                      </div>
-                      <span className={`font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-[#2D392C]'}`}>
-                        {b.isChild ? 'Gratis' : `${money(b.owed)} €`}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <div>
+                  <ul className="divide-y divide-[#8F9E8B]/20">
+                    {totals.breakdown.map((b) => (
+                      <li key={b.id} className="flex items-center justify-between py-2">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-[#2D392C]">{b.name}</span>
+                          <span className="text-[10px] text-gray-500">{b.mealCount} {b.mealCount === 1 ? 'pasto' : 'pasti'}{b.isChild ? ' · bambino' : ''}</span>
+                        </div>
+                        <span className={`font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-[#2D392C]'}`}>
+                          {b.isChild ? 'Gratis' : `${money(b.pay)} €`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex justify-between items-center pt-2 mt-1 border-t border-[#8F9E8B]/30">
+                    <span className="text-[11px] uppercase font-bold text-gray-500">Totale raccolto</span>
+                    <span className="font-rustic font-bold text-[#2D392C]">{money(totals.collected)} €</span>
+                  </div>
+                  <p className="text-[9px] text-gray-400 italic mt-2">
+                    Quote arrotondate a 0,10 € (niente monetine da 1/2/5 cent).
+                    {Math.abs(totals.roundingDiff) >= 0.005
+                      ? ` Scarto rispetto al totale: ${totals.roundingDiff > 0 ? '+' : ''}${money(totals.roundingDiff)} € (sotto 0,50 €, non riconciliato).`
+                      : ' Nessuno scarto.'}
+                  </p>
+                </div>
               )}
             </div>
 
