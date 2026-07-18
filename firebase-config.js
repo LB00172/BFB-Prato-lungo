@@ -1,24 +1,20 @@
 // ============================================================================
 //  CONFIGURAZIONE FIREBASE  (solo per la sincronizzazione online — opzionale)
 // ============================================================================
-// Incolla qui la config del TUO progetto Firebase:
-//   console.firebase.google.com  ->  Impostazioni progetto  ->  "Le tue app" (Web)
-//   ->  copia l'oggetto firebaseConfig.
+// Config del progetto Firebase "brigata-bandone".
 //
 // NOTA: l'apiKey di Firebase NON e' un segreto. E' un identificatore pubblico
-// lato client; la sicurezza vera sta nelle Regole di Firestore. Puoi committarla.
-//
-// Finche' i campi restano "INCOLLA_QUI", la app funziona normalmente in locale
-// (offline) e la sezione "Sincronizzazione Cloud" resta disattivata.
+// lato client; la sicurezza vera sta nelle Regole di Firestore.
 // ============================================================================
 
 window.FIREBASE_CONFIG = {
-  apiKey: "INCOLLA_QUI",
-  authDomain: "INCOLLA_QUI",
-  projectId: "INCOLLA_QUI",
-  storageBucket: "INCOLLA_QUI",
-  messagingSenderId: "INCOLLA_QUI",
-  appId: "INCOLLA_QUI"
+  apiKey: "AIzaSyAXxV4WII_quLsStOlj0_DPbqSArL7vwSQ",
+  authDomain: "brigata-bandone.firebaseapp.com",
+  projectId: "brigata-bandone",
+  storageBucket: "brigata-bandone.firebasestorage.app",
+  messagingSenderId: "981622823343",
+  appId: "1:981622823343:web:daabbe8e90c7373155b75a",
+  measurementId: "G-RP3PN9V17N"
 };
 
 // Codice del campo: chi conosce questo codice accede ai dati condivisi.
