@@ -49,9 +49,19 @@
   <!-- Registrazione Service Worker per uso Offline -->
   <script>
     if ('serviceWorker' in navigator) {
+      // Se la pagina è già controllata da un SW, quando ne arriva uno nuovo
+      // (nuova versione dell'app) ricarichiamo una volta sola, così l'utente
+      // vede subito gli aggiornamenti senza svuotare la cache a mano.
+      const hadController = !!navigator.serviceWorker.controller;
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing || !hadController) return;
+        refreshing = true;
+        window.location.reload();
+      });
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('Service Worker registrato:', reg.scope))
+          .then(reg => { if (reg.update) reg.update(); console.log('Service Worker registrato:', reg.scope); })
           .catch(err => console.log('Errore SW:', err));
       });
     }
