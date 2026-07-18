@@ -67,6 +67,7 @@ function App() {
   const [pName, setPName] = useState('');
   const [pPrice, setPPrice] = useState('');
   const [pType, setPType] = useState('alimentare');
+  const [pBuyer, setPBuyer] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -205,10 +206,11 @@ function App() {
       window.alert('Inserisci il nome del prodotto e un prezzo maggiore di zero.');
       return;
     }
-    setPurchases((prev) => [...prev, { id: uid(), name, price, type: pType, at: Date.now() }]);
+    setPurchases((prev) => [...prev, { id: uid(), name, price, type: pType, buyer: pBuyer.trim(), at: Date.now() }]);
     setPName('');
     setPPrice('');
     setPType('alimentare');
+    setPBuyer('');
   };
 
   const removePurchase = (id) => {
@@ -755,6 +757,21 @@ function App() {
                 />
               </div>
 
+              <div>
+                <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Acquirente</label>
+                <input
+                  type="text"
+                  list="acquirenti"
+                  value={pBuyer}
+                  onChange={(e) => setPBuyer(e.target.value)}
+                  placeholder="Chi ha acquistato"
+                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+                />
+                <datalist id="acquirenti">
+                  {members.map((m) => (<option key={m.id} value={m.name} />))}
+                </datalist>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Prezzo (€)</label>
@@ -806,7 +823,10 @@ function App() {
                           <span className="text-sm font-bold text-[#2D392C] truncate">{p.name}</span>
                           <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B] shrink-0">{PURCHASE_TYPES[p.type] || p.type}</span>
                         </div>
-                        {p.at && <span className="text-[9px] text-gray-400">{new Date(p.at).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} · {new Date(p.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>}
+                        <span className="text-[9px] text-gray-400">
+                          {p.buyer ? <span className="text-[#5C4A3C] font-bold">{p.buyer}</span> : <span className="italic">acquirente non indicato</span>}
+                          {p.at && ` · ${new Date(p.at).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} ${new Date(p.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`}
+                        </span>
                       </div>
                       <span className="font-rustic font-bold text-[#2D392C] shrink-0">{money(posNum(p.price))} €</span>
                       <button onClick={() => removePurchase(p.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0">&times;</button>

@@ -83,6 +83,7 @@ function App() {
   const [pName, setPName] = useState('');
   const [pPrice, setPPrice] = useState('');
   const [pType, setPType] = useState('alimentare');
+  const [pBuyer, setPBuyer] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -271,11 +272,13 @@ function App() {
       name,
       price,
       type: pType,
+      buyer: pBuyer.trim(),
       at: Date.now()
     }]);
     setPName('');
     setPPrice('');
     setPType('alimentare');
+    setPBuyer('');
   };
   const removePurchase = id => {
     setPurchases(prev => prev.filter(p => p.id !== id));
@@ -800,7 +803,21 @@ function App() {
     onChange: e => setPName(e.target.value),
     placeholder: "Es. Pasta, Acqua, Piatti\u2026",
     className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
-  })), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Acquirente"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    list: "acquirenti",
+    value: pBuyer,
+    onChange: e => setPBuyer(e.target.value),
+    placeholder: "Chi ha acquistato",
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  }), /*#__PURE__*/React.createElement("datalist", {
+    id: "acquirenti"
+  }, members.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m.id,
+    value: m.name
+  })))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
@@ -849,15 +866,19 @@ function App() {
     className: "text-sm font-bold text-[#2D392C] truncate"
   }, p.name), /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B] shrink-0"
-  }, PURCHASE_TYPES[p.type] || p.type)), p.at && /*#__PURE__*/React.createElement("span", {
+  }, PURCHASE_TYPES[p.type] || p.type)), /*#__PURE__*/React.createElement("span", {
     className: "text-[9px] text-gray-400"
-  }, new Date(p.at).toLocaleDateString('it-IT', {
+  }, p.buyer ? /*#__PURE__*/React.createElement("span", {
+    className: "text-[#5C4A3C] font-bold"
+  }, p.buyer) : /*#__PURE__*/React.createElement("span", {
+    className: "italic"
+  }, "acquirente non indicato"), p.at && ` · ${new Date(p.at).toLocaleDateString('it-IT', {
     day: 'numeric',
     month: 'short'
-  }), " \xB7 ", new Date(p.at).toLocaleTimeString('it-IT', {
+  })} ${new Date(p.at).toLocaleTimeString('it-IT', {
     hour: '2-digit',
     minute: '2-digit'
-  }))), /*#__PURE__*/React.createElement("span", {
+  })}`)), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C] shrink-0"
   }, money(posNum(p.price)), " \u20AC"), /*#__PURE__*/React.createElement("button", {
     onClick: () => removePurchase(p.id),
