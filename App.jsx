@@ -48,6 +48,7 @@ function App() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberChild, setNewMemberChild] = useState(false);
   const [newItemText, setNewItemText] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // ---------- Stato sincronizzazione cloud (Firebase) ----------
@@ -365,13 +366,33 @@ function App() {
     );
   }
 
-  const tabs = { calendario: 'Calendario', membri: 'Membri', presenze: 'Presenze', spesa: 'Spesa', lista: 'Lista' };
+  const tabs = {
+    calendario: 'Calendario',
+    membri: 'Membri',
+    presenze: 'Presenze',
+    spesa: 'Spesa',
+    lista: 'Lista',
+    regole: 'Regole',
+    dotazioni: 'Dotazioni personali',
+  };
+
+  const goTo = (tab) => { setActiveTab(tab); setMenuOpen(false); };
 
   return (
     <div className="max-w-md mx-auto min-h-screen flex flex-col bg-[#F0F4F1] border-x border-[#8F9E8B]/30 shadow-2xl pb-24">
       <header className="bg-[#2D392C] text-[#F0F4F1] p-4 text-center border-b-4 border-[#5C4A3C] relative">
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label="Menu"
+          aria-expanded={menuOpen}
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-white/10"
+        >
+          <span className="block w-5 h-0.5 bg-[#F0F4F1]"></span>
+          <span className="block w-5 h-0.5 bg-[#F0F4F1]"></span>
+          <span className="block w-5 h-0.5 bg-[#F0F4F1]"></span>
+        </button>
         <h1 className="font-rustic text-2xl tracking-wide">PRATO LUNGO 2026</h1>
-        <p className="text-xs uppercase tracking-wider text-[#8F9E8B]">Brigata Fabio Bandone</p>
+        <p className="text-xs uppercase tracking-wider text-[#8F9E8B]">{tabs[activeTab]}</p>
         <span
           title={isOnline ? 'Online' : 'Offline'}
           className={`absolute top-3 right-3 flex items-center gap-1 text-[9px] uppercase font-bold ${isOnline ? 'text-[#8F9E8B]' : 'text-[#D97706]'}`}
@@ -381,23 +402,24 @@ function App() {
         </span>
       </header>
 
-      <main className="flex-grow p-4">
-        <div className="grid grid-cols-5 gap-1 mb-6">
+      {/* Menu a tendina (hamburger): scende sotto l'header, che resta visibile */}
+      {menuOpen && (
+        <nav className="bg-[#F0F4F1] border-b-4 border-[#5C4A3C] shadow-md p-2 space-y-1">
           {Object.keys(tabs).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`py-3 px-1 rounded text-[10px] font-bold uppercase tracking-wider border-b-4 transition-all ${
-                activeTab === tab
-                  ? 'bg-[#2D392C] text-[#F0F4F1] border-[#5C4A3C]'
-                  : 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'
+              onClick={() => goTo(tab)}
+              className={`w-full text-left px-4 py-3 rounded font-bold uppercase text-sm tracking-wide transition-colors ${
+                activeTab === tab ? 'bg-[#2D392C] text-[#F0F4F1]' : 'text-[#2D392C] hover:bg-[#E2EAE4]'
               }`}
             >
               {tabs[tab]}
             </button>
           ))}
-        </div>
+        </nav>
+      )}
 
+      <main className="flex-grow p-4">
         {/* ---------- CALENDARIO ---------- */}
         {activeTab === 'calendario' && (
           <div className="space-y-4">
@@ -755,6 +777,26 @@ function App() {
                   Rimuovi comprati
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ---------- REGOLE ---------- */}
+        {activeTab === 'regole' && (
+          <div className="space-y-4">
+            <div className="bg-white p-6 rounded-lg border-2 border-[#2D392C]/20 shadow-sm text-center">
+              <h3 className="font-rustic text-lg text-[#2D392C] mb-2">Regole</h3>
+              <p className="text-sm text-gray-400 italic">Work in progress</p>
+            </div>
+          </div>
+        )}
+
+        {/* ---------- DOTAZIONI PERSONALI ---------- */}
+        {activeTab === 'dotazioni' && (
+          <div className="space-y-4">
+            <div className="bg-white p-6 rounded-lg border-2 border-[#2D392C]/20 shadow-sm text-center">
+              <h3 className="font-rustic text-lg text-[#2D392C] mb-2">Dotazioni personali</h3>
+              <p className="text-sm text-gray-400 italic">Work in progress</p>
             </div>
           </div>
         )}

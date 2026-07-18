@@ -55,6 +55,7 @@ function App() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberChild, setNewMemberChild] = useState(false);
   const [newItemText, setNewItemText] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // ---------- Stato sincronizzazione cloud (Firebase) ----------
@@ -440,30 +441,47 @@ function App() {
     membri: 'Membri',
     presenze: 'Presenze',
     spesa: 'Spesa',
-    lista: 'Lista'
+    lista: 'Lista',
+    regole: 'Regole',
+    dotazioni: 'Dotazioni personali'
+  };
+  const goTo = tab => {
+    setActiveTab(tab);
+    setMenuOpen(false);
   };
   return /*#__PURE__*/React.createElement("div", {
     className: "max-w-md mx-auto min-h-screen flex flex-col bg-[#F0F4F1] border-x border-[#8F9E8B]/30 shadow-2xl pb-24"
   }, /*#__PURE__*/React.createElement("header", {
     className: "bg-[#2D392C] text-[#F0F4F1] p-4 text-center border-b-4 border-[#5C4A3C] relative"
-  }, /*#__PURE__*/React.createElement("h1", {
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMenuOpen(o => !o),
+    "aria-label": "Menu",
+    "aria-expanded": menuOpen,
+    className: "absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-white/10"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block w-5 h-0.5 bg-[#F0F4F1]"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "block w-5 h-0.5 bg-[#F0F4F1]"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "block w-5 h-0.5 bg-[#F0F4F1]"
+  })), /*#__PURE__*/React.createElement("h1", {
     className: "font-rustic text-2xl tracking-wide"
   }, "PRATO LUNGO 2026"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs uppercase tracking-wider text-[#8F9E8B]"
-  }, "Brigata Fabio Bandone"), /*#__PURE__*/React.createElement("span", {
+  }, tabs[activeTab]), /*#__PURE__*/React.createElement("span", {
     title: isOnline ? 'Online' : 'Offline',
     className: `absolute top-3 right-3 flex items-center gap-1 text-[9px] uppercase font-bold ${isOnline ? 'text-[#8F9E8B]' : 'text-[#D97706]'}`
   }, /*#__PURE__*/React.createElement("span", {
     className: `w-2 h-2 rounded-full ${isOnline ? 'bg-[#8F9E8B]' : 'bg-[#D97706]'}`
-  }), isOnline ? 'Online' : 'Offline')), /*#__PURE__*/React.createElement("main", {
-    className: "flex-grow p-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-5 gap-1 mb-6"
+  }), isOnline ? 'Online' : 'Offline')), menuOpen && /*#__PURE__*/React.createElement("nav", {
+    className: "bg-[#F0F4F1] border-b-4 border-[#5C4A3C] shadow-md p-2 space-y-1"
   }, Object.keys(tabs).map(tab => /*#__PURE__*/React.createElement("button", {
     key: tab,
-    onClick: () => setActiveTab(tab),
-    className: `py-3 px-1 rounded text-[10px] font-bold uppercase tracking-wider border-b-4 transition-all ${activeTab === tab ? 'bg-[#2D392C] text-[#F0F4F1] border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'}`
-  }, tabs[tab]))), activeTab === 'calendario' && /*#__PURE__*/React.createElement("div", {
+    onClick: () => goTo(tab),
+    className: `w-full text-left px-4 py-3 rounded font-bold uppercase text-sm tracking-wide transition-colors ${activeTab === tab ? 'bg-[#2D392C] text-[#F0F4F1]' : 'text-[#2D392C] hover:bg-[#E2EAE4]'}`
+  }, tabs[tab]))), /*#__PURE__*/React.createElement("main", {
+    className: "flex-grow p-4"
+  }, activeTab === 'calendario' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm"
@@ -789,7 +807,23 @@ function App() {
   }, "\xD7")))), shopping.some(it => it.done) && /*#__PURE__*/React.createElement("button", {
     onClick: clearDoneShopping,
     className: "w-full mt-1 py-2 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]"
-  }, "Rimuovi comprati")))), /*#__PURE__*/React.createElement("footer", {
+  }, "Rimuovi comprati"))), activeTab === 'regole' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-6 rounded-lg border-2 border-[#2D392C]/20 shadow-sm text-center"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg text-[#2D392C] mb-2"
+  }, "Regole"), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-400 italic"
+  }, "Work in progress"))), activeTab === 'dotazioni' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-6 rounded-lg border-2 border-[#2D392C]/20 shadow-sm text-center"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg text-[#2D392C] mb-2"
+  }, "Dotazioni personali"), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-400 italic"
+  }, "Work in progress")))), /*#__PURE__*/React.createElement("footer", {
     className: "fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#F0F4F1] border-t-2 border-[#5C4A3C] py-3 px-4 text-center z-10"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-[#2D392C] tracking-widest text-sm uppercase font-bold"
