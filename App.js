@@ -39,6 +39,13 @@ const initialDayState = () => ({
   guestsNames: '',
   meals: {}
 });
+
+// Tipologie di acquisto e a quale voce di spesa contribuiscono.
+const PURCHASE_TYPES = {
+  alimentare: 'Alimentare',
+  bevande: 'Bevande',
+  logistica: 'Logistica'
+};
 function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState('calendario');
@@ -46,15 +53,36 @@ function App() {
   const [selectedDateStr, setSelectedDateStr] = useState('2026-08-11');
   const [members, setMembers] = useState(() => load('cambusa_members', []));
   const [campData, setCampData] = useState(() => load('cambusa_camp_data', {}));
-  const [globalExpenses, setGlobalExpenses] = useState(() => load('cambusa_global_expenses', {
-    food: '',
-    drinks: '',
-    accessory: ''
-  }));
-  const [shopping, setShopping] = useState(() => load('cambusa_shopping', []));
+  // Taccuino delle spese: ogni voce è un acquisto { id, name, price, type, at }.
+  // I totali della scheda Spesa sono calcolati da qui.
+  const [purchases, setPurchases] = useState(() => {
+    const saved = load('cambusa_purchases', null);
+    if (Array.isArray(saved)) return saved;
+    // Migrazione una-tantum dai vecchi totali manuali, se presenti.
+    const g = load('cambusa_global_expenses', null);
+    const seed = [];
+    if (g) {
+      const mk = (amt, type, name) => {
+        const n = Math.max(0, parseFloat(amt) || 0);
+        if (n > 0) seed.push({
+          id: uid(),
+          name,
+          price: n,
+          type,
+          at: Date.now()
+        });
+      };
+      mk(g.food, 'alimentare', 'Totale cibo (importato)');
+      mk(g.drinks, 'bevande', 'Totale bevande (importato)');
+      mk(g.accessory, 'logistica', 'Totale accessori (importato)');
+    }
+    return seed;
+  });
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberChild, setNewMemberChild] = useState(false);
-  const [newItemText, setNewItemText] = useState('');
+  const [pName, setPName] = useState('');
+  const [pPrice, setPPrice] = useState('');
+  const [pType, setPType] = useState('alimentare');
   const [menuOpen, setMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -77,8 +105,7 @@ function App() {
   }, []);
   useEffect(() => localStorage.setItem('cambusa_members', JSON.stringify(members)), [members]);
   useEffect(() => localStorage.setItem('cambusa_camp_data', JSON.stringify(campData)), [campData]);
-  useEffect(() => localStorage.setItem('cambusa_global_expenses', JSON.stringify(globalExpenses)), [globalExpenses]);
-  useEffect(() => localStorage.setItem('cambusa_shopping', JSON.stringify(shopping)), [shopping]);
+  useEffect(() => localStorage.setItem('cambusa_purchases', JSON.stringify(purchases)), [purchases]);
   useEffect(() => {
     const on = () => {
       setIsOnline(true);
@@ -106,8 +133,7 @@ function App() {
     suppressPushRef.current = true;
     if (Array.isArray(remote.members)) setMembers(remote.members);
     if (remote.campData && typeof remote.campData === 'object') setCampData(remote.campData);
-    if (remote.globalExpenses && typeof remote.globalExpenses === 'object') setGlobalExpenses(remote.globalExpenses);
-    if (Array.isArray(remote.shopping)) setShopping(remote.shopping);
+    if (Array.isArray(remote.purchases)) setPurchases(remote.purchases);
     setTimeout(() => {
       suppressPushRef.current = false;
     }, 0);
@@ -157,10 +183,9 @@ function App() {
     if (window.CloudSync) window.CloudSync.pushState({
       members,
       campData,
-      globalExpenses,
-      shopping
+      purchases
     });
-  }, [members, campData, globalExpenses, shopping]);
+  }, [members, campData, purchases]);
 
   // ---------- Dati per giorno ----------
   const getDayData = dateStr => ({
@@ -233,28 +258,27 @@ function App() {
     } : m));
   };
 
-  // ---------- Lista della spesa ----------
-  const addShoppingItem = () => {
-    const text = newItemText.trim();
-    if (!text) return;
-    setShopping(prev => [...prev, {
+  // ---------- Taccuino delle spese ----------
+  const addPurchase = () => {
+    const name = pName.trim();
+    const price = posNum(pPrice);
+    if (!name || price <= 0) {
+      window.alert('Inserisci il nome del prodotto e un prezzo maggiore di zero.');
+      return;
+    }
+    setPurchases(prev => [...prev, {
       id: uid(),
-      text,
-      done: false
+      name,
+      price,
+      type: pType,
+      at: Date.now()
     }]);
-    setNewItemText('');
+    setPName('');
+    setPPrice('');
+    setPType('alimentare');
   };
-  const toggleShoppingItem = id => {
-    setShopping(prev => prev.map(it => it.id === id ? {
-      ...it,
-      done: !it.done
-    } : it));
-  };
-  const removeShoppingItem = id => {
-    setShopping(prev => prev.filter(it => it.id !== id));
-  };
-  const clearDoneShopping = () => {
-    setShopping(prev => prev.filter(it => !it.done));
+  const removePurchase = id => {
+    setPurchases(prev => prev.filter(p => p.id !== id));
   };
 
   // ---------- Navigazione date ----------
@@ -286,9 +310,11 @@ function App() {
 
   // ---------- Calcolo ripartizione (coerente: somma quote = totale) ----------
   const calculateTotals = () => {
-    const totalFood = posNum(globalExpenses.food);
-    const totalDrinks = posNum(globalExpenses.drinks);
-    const totalAccessory = posNum(globalExpenses.accessory);
+    // I totali di spesa sono generati dal taccuino (per tipologia).
+    const sumByType = t => purchases.reduce((s, p) => p.type === t ? s + posNum(p.price) : s, 0);
+    const totalFood = sumByType('alimentare');
+    const totalDrinks = sumByType('bevande');
+    const totalAccessory = sumByType('logistica');
     const totalFoodDrinks = totalFood + totalDrinks;
     const overallTotal = totalFoodDrinks + totalAccessory;
 
@@ -382,11 +408,11 @@ function App() {
   // ---------- Backup (Export / Import) ----------
   const exportData = () => {
     const payload = {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       members,
       campData,
-      globalExpenses
+      purchases
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: 'application/json'
@@ -408,7 +434,7 @@ function App() {
         if (!window.confirm('Importare questo backup? I dati attuali verranno sostituiti.')) return;
         if (Array.isArray(d.members)) setMembers(d.members);
         if (d.campData && typeof d.campData === 'object') setCampData(d.campData);
-        if (d.globalExpenses && typeof d.globalExpenses === 'object') setGlobalExpenses(d.globalExpenses);
+        if (Array.isArray(d.purchases)) setPurchases(d.purchases);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
       }
@@ -441,7 +467,7 @@ function App() {
     membri: 'Membri',
     presenze: 'Presenze',
     spesa: 'Spesa',
-    lista: 'Lista',
+    lista: 'Taccuino',
     regole: 'Regole',
     dotazioni: 'Dotazioni personali'
   };
@@ -637,24 +663,20 @@ function App() {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-4"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-  }, "Cassa Globale Campo"), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3"
-  }, [['food', 'Totale Spesa Cibo (€)', '0.00'], ['drinks', 'Totale Spesa Bevande (€)', '0.00'], ['accessory', 'Totale Accessori (€) (Logistica)', 'Generatore, piatti...']].map(([key, label, ph]) => /*#__PURE__*/React.createElement("div", {
-    key: key
-  }, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-  }, label), /*#__PURE__*/React.createElement("input", {
-    type: "number",
-    min: "0",
-    step: "0.01",
-    value: globalExpenses[key],
-    onChange: e => setGlobalExpenses(prev => ({
-      ...prev,
-      [key]: e.target.value
-    })),
-    placeholder: ph,
-    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
-  })))), /*#__PURE__*/React.createElement("div", {
+  }, "Cassa Globale Campo"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 -mt-1"
+  }, "Totali generati automaticamente dagli acquisti registrati nel ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Taccuino"), "."), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, [['Spesa Cibo (Alimentare)', totals.totalFood], ['Spesa Bevande', totals.totalDrinks], ['Accessori (Logistica)', totals.totalAccessory]].map(([label, val]) => /*#__PURE__*/React.createElement("div", {
+    key: label,
+    className: "flex justify-between items-center bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] uppercase font-bold text-gray-500"
+  }, label), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-[#2D392C]"
+  }, money(val), " \u20AC")))), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#2D392C]/10 p-3 rounded border border-[#2D392C]/20 flex justify-between items-center mt-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-xs uppercase"
@@ -768,46 +790,80 @@ function App() {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  }, "Prodotto acquistato"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Nome"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: pName,
+    onChange: e => setPName(e.target.value),
+    placeholder: "Es. Pasta, Acqua, Piatti\u2026",
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Prezzo (\u20AC)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "0",
+    step: "0.01",
+    inputMode: "decimal",
+    value: pPrice,
+    onChange: e => setPPrice(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && addPurchase(),
+    placeholder: "0.00",
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Tipologia"), /*#__PURE__*/React.createElement("select", {
+    value: pType,
+    onChange: e => setPType(e.target.value),
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold focus:outline-none focus:border-[#2D392C]"
+  }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
+    key: k,
+    value: k
+  }, PURCHASE_TYPES[k]))))), /*#__PURE__*/React.createElement("button", {
+    onClick: addPurchase,
+    className: "w-full py-3 bg-[#2D392C] text-white rounded font-bold uppercase text-sm tracking-wide hover:bg-[#1F271E]"
+  }, "Salva")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
+    className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C]"
-  }, "Lista della Spesa"), shopping.length > 0 && /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] uppercase font-bold text-gray-500"
-  }, shopping.filter(it => !it.done).length, " da comprare")), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    value: newItemText,
-    onChange: e => setNewItemText(e.target.value),
-    onKeyDown: e => e.key === 'Enter' && addShoppingItem(),
-    placeholder: "Aggiungi un articolo\u2026",
-    className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: addShoppingItem,
-    "aria-label": "Aggiungi",
-    className: "px-4 bg-[#2D392C] text-white rounded font-bold text-lg leading-none hover:bg-[#1F271E]"
-  }, "+")), shopping.length === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, "Cronologia acquisti"), purchases.length > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic font-bold text-[#2D392C]"
+  }, money(totals.overallTotal), " \u20AC")), purchases.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
-  }, "Lista vuota. Aggiungi il primo articolo con il tasto +.") : /*#__PURE__*/React.createElement("ul", {
+  }, "Nessun acquisto registrato. Compila il form qui sopra e premi Salva.") : /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
-  }, shopping.map(it => /*#__PURE__*/React.createElement("li", {
-    key: it.id,
-    className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => toggleShoppingItem(it.id),
-    "aria-label": it.done ? 'Segna da comprare' : 'Segna comprato',
-    className: `w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold ${it.done ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B]'}`
-  }, it.done ? '✓' : ''), /*#__PURE__*/React.createElement("span", {
-    className: `flex-grow text-sm ${it.done ? 'line-through text-gray-400' : 'text-[#2D392C]'}`
-  }, it.text), /*#__PURE__*/React.createElement("button", {
-    onClick: () => removeShoppingItem(it.id),
+  }, purchases.slice().reverse().map(p => /*#__PURE__*/React.createElement("li", {
+    key: p.id,
+    className: "flex items-center gap-2 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-grow min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-sm font-bold text-[#2D392C] truncate"
+  }, p.name), /*#__PURE__*/React.createElement("span", {
+    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B] shrink-0"
+  }, PURCHASE_TYPES[p.type] || p.type)), p.at && /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] text-gray-400"
+  }, new Date(p.at).toLocaleDateString('it-IT', {
+    day: 'numeric',
+    month: 'short'
+  }), " \xB7 ", new Date(p.at).toLocaleTimeString('it-IT', {
+    hour: '2-digit',
+    minute: '2-digit'
+  }))), /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic font-bold text-[#2D392C] shrink-0"
+  }, money(posNum(p.price)), " \u20AC"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removePurchase(p.id),
     "aria-label": "Rimuovi",
-    className: "text-red-700 font-bold px-2 hover:text-red-900"
-  }, "\xD7")))), shopping.some(it => it.done) && /*#__PURE__*/React.createElement("button", {
-    onClick: clearDoneShopping,
-    className: "w-full mt-1 py-2 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]"
-  }, "Rimuovi comprati"))), activeTab === 'regole' && /*#__PURE__*/React.createElement("div", {
+    className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
+  }, "\xD7")))))), activeTab === 'regole' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-6 rounded-lg border-2 border-[#2D392C]/20 shadow-sm text-center"
