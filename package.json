@@ -1,0 +1,12 @@
+{
+  "name": "bfb-prato-lungo",
+  "version": "1.0.0",
+  "description": "PWA gestionale per le spese da campeggio della Brigata Fabio Bandone",
+  "private": true,
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "@babel/standalone": "^7"
+  }
+}
