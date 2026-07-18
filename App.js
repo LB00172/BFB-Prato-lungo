@@ -51,8 +51,10 @@ function App() {
     drinks: '',
     accessory: ''
   }));
+  const [shopping, setShopping] = useState(() => load('cambusa_shopping', []));
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberChild, setNewMemberChild] = useState(false);
+  const [newItemText, setNewItemText] = useState('');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // ---------- Stato sincronizzazione cloud (Firebase) ----------
@@ -75,6 +77,7 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_members', JSON.stringify(members)), [members]);
   useEffect(() => localStorage.setItem('cambusa_camp_data', JSON.stringify(campData)), [campData]);
   useEffect(() => localStorage.setItem('cambusa_global_expenses', JSON.stringify(globalExpenses)), [globalExpenses]);
+  useEffect(() => localStorage.setItem('cambusa_shopping', JSON.stringify(shopping)), [shopping]);
   useEffect(() => {
     const on = () => {
       setIsOnline(true);
@@ -103,6 +106,7 @@ function App() {
     if (Array.isArray(remote.members)) setMembers(remote.members);
     if (remote.campData && typeof remote.campData === 'object') setCampData(remote.campData);
     if (remote.globalExpenses && typeof remote.globalExpenses === 'object') setGlobalExpenses(remote.globalExpenses);
+    if (Array.isArray(remote.shopping)) setShopping(remote.shopping);
     setTimeout(() => {
       suppressPushRef.current = false;
     }, 0);
@@ -152,9 +156,10 @@ function App() {
     if (window.CloudSync) window.CloudSync.pushState({
       members,
       campData,
-      globalExpenses
+      globalExpenses,
+      shopping
     });
-  }, [members, campData, globalExpenses]);
+  }, [members, campData, globalExpenses, shopping]);
 
   // ---------- Dati per giorno ----------
   const getDayData = dateStr => ({
@@ -225,6 +230,30 @@ function App() {
       ...m,
       isChild: !m.isChild
     } : m));
+  };
+
+  // ---------- Lista della spesa ----------
+  const addShoppingItem = () => {
+    const text = newItemText.trim();
+    if (!text) return;
+    setShopping(prev => [...prev, {
+      id: uid(),
+      text,
+      done: false
+    }]);
+    setNewItemText('');
+  };
+  const toggleShoppingItem = id => {
+    setShopping(prev => prev.map(it => it.id === id ? {
+      ...it,
+      done: !it.done
+    } : it));
+  };
+  const removeShoppingItem = id => {
+    setShopping(prev => prev.filter(it => it.id !== id));
+  };
+  const clearDoneShopping = () => {
+    setShopping(prev => prev.filter(it => !it.done));
   };
 
   // ---------- Navigazione date ----------
@@ -410,7 +439,8 @@ function App() {
     calendario: 'Calendario',
     membri: 'Membri',
     presenze: 'Presenze',
-    spesa: 'Spesa'
+    spesa: 'Spesa',
+    lista: 'Lista'
   };
   return /*#__PURE__*/React.createElement("div", {
     className: "max-w-md mx-auto min-h-screen flex flex-col bg-[#F0F4F1] border-x border-[#8F9E8B]/30 shadow-2xl pb-24"
@@ -428,7 +458,7 @@ function App() {
   }), isOnline ? 'Online' : 'Offline')), /*#__PURE__*/React.createElement("main", {
     className: "flex-grow p-4"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-4 gap-1.5 mb-6"
+    className: "grid grid-cols-5 gap-1 mb-6"
   }, Object.keys(tabs).map(tab => /*#__PURE__*/React.createElement("button", {
     key: tab,
     onClick: () => setActiveTab(tab),
@@ -716,7 +746,50 @@ function App() {
     className: "text-red-700"
   }, "Errore: ", cloud.error), cloud.status === 'idle' && 'Inserisci il codice e premi Connetti.'), !isOnline && /*#__PURE__*/React.createElement("span", {
     className: "text-[#D97706] font-bold"
-  }, "offline")))))), /*#__PURE__*/React.createElement("footer", {
+  }, "offline"))))), activeTab === 'lista' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg text-[#2D392C]"
+  }, "Lista della Spesa"), shopping.length > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] uppercase font-bold text-gray-500"
+  }, shopping.filter(it => !it.done).length, " da comprare")), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: newItemText,
+    onChange: e => setNewItemText(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && addShoppingItem(),
+    placeholder: "Aggiungi un articolo\u2026",
+    className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: addShoppingItem,
+    "aria-label": "Aggiungi",
+    className: "px-4 bg-[#2D392C] text-white rounded font-bold text-lg leading-none hover:bg-[#1F271E]"
+  }, "+")), shopping.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-400 italic"
+  }, "Lista vuota. Aggiungi il primo articolo con il tasto +.") : /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-2"
+  }, shopping.map(it => /*#__PURE__*/React.createElement("li", {
+    key: it.id,
+    className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => toggleShoppingItem(it.id),
+    "aria-label": it.done ? 'Segna da comprare' : 'Segna comprato',
+    className: `w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold ${it.done ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B]'}`
+  }, it.done ? '✓' : ''), /*#__PURE__*/React.createElement("span", {
+    className: `flex-grow text-sm ${it.done ? 'line-through text-gray-400' : 'text-[#2D392C]'}`
+  }, it.text), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeShoppingItem(it.id),
+    "aria-label": "Rimuovi",
+    className: "text-red-700 font-bold px-2 hover:text-red-900"
+  }, "\xD7")))), shopping.some(it => it.done) && /*#__PURE__*/React.createElement("button", {
+    onClick: clearDoneShopping,
+    className: "w-full mt-1 py-2 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]"
+  }, "Rimuovi comprati")))), /*#__PURE__*/React.createElement("footer", {
     className: "fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#F0F4F1] border-t-2 border-[#5C4A3C] py-3 px-4 text-center z-10"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-[#2D392C] tracking-widest text-sm uppercase font-bold"
