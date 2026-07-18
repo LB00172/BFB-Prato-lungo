@@ -64,7 +64,16 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_global_expenses', JSON.stringify(globalExpenses)), [globalExpenses]);
 
   useEffect(() => {
-    const on = () => setIsOnline(true);
+    const on = () => {
+      setIsOnline(true);
+      // Al ritorno della linea, se avevamo un codice salvato ma non siamo
+      // connessi (es. app aperta da offline), riprova a connettersi.
+      const CS = window.CloudSync;
+      if (CS && CS.isConfigured() && !cloudConnectedRef.current) {
+        const saved = CS.savedCode();
+        if (saved) CS.connect(window.FIREBASE_CONFIG, saved, applyRemote).catch(() => {});
+      }
+    };
     const off = () => setIsOnline(false);
     window.addEventListener('online', on);
     window.addEventListener('offline', off);
@@ -72,6 +81,7 @@ function App() {
       window.removeEventListener('online', on);
       window.removeEventListener('offline', off);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---------- Sincronizzazione cloud ----------
@@ -114,9 +124,10 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Push automatico verso il cloud quando i dati cambiano (se connesso e online).
+  // Push verso il cloud quando i dati cambiano. Se offline, Firestore mette la
+  // scrittura in coda e la invia da solo al ritorno della linea.
   useEffect(() => {
-    if (!cloudConnectedRef.current || !navigator.onLine) return;
+    if (!cloudConnectedRef.current) return;
     if (suppressPushRef.current) return;
     if (window.CloudSync) window.CloudSync.pushState({ members, campData, globalExpenses });
   }, [members, campData, globalExpenses]);

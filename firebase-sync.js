@@ -51,7 +51,17 @@
       await loadSdk();
       app = fb.getApps().length ? fb.getApp() : fb.initializeApp(config);
       auth = fb.getAuth(app);
-      db = fb.getFirestore(app);
+      // Cache persistente: offline si legge/scrive dalla cache locale e le
+      // scritture vengono messe in coda e inviate da sole al ritorno della rete.
+      if (!db) {
+        try {
+          db = fb.initializeFirestore(app, {
+            localCache: fb.persistentLocalCache({ tabManager: fb.persistentMultipleTabManager() }),
+          });
+        } catch (e) {
+          db = fb.getFirestore(app); // fallback (già inizializzato o persistenza non disponibile)
+        }
+      }
       await fb.signInAnonymously(auth);
 
       const ref = fb.doc(db, 'camps', code);
