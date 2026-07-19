@@ -345,7 +345,9 @@ function App() {
     setNewMemberChild(false);
   };
   const removeMember = id => {
-    setMembers(prev => prev.filter(m => m.id !== id));
+    const m = members.find(x => x.id === id);
+    if (m && !window.confirm(`Eliminare ${m.name} dai membri?\nLe sue presenze e i suoi pasti non conteranno più nei calcoli.`)) return;
+    setMembers(prev => prev.filter(x => x.id !== id));
   };
   const toggleChild = id => {
     setMembers(prev => prev.map(m => m.id === id ? {
@@ -385,7 +387,9 @@ function App() {
     setPReceipt(null);
   };
   const removePurchase = id => {
-    setPurchases(prev => prev.filter(p => p.id !== id));
+    const p = purchases.find(x => x.id === id);
+    if (p && !window.confirm(`Eliminare l'acquisto "${p.name}" (${money(posNum(p.price))} €)?\nVerrà tolto dai totali${receipts[id] ? ' insieme alla foto dello scontrino' : ''}.`)) return;
+    setPurchases(prev => prev.filter(x => x.id !== id));
     setReceipts(prev => {
       if (!prev[id]) return prev;
       const copy = {
@@ -422,7 +426,9 @@ function App() {
     setNewGearText('');
   };
   const removeGear = id => {
-    setGear(prev => prev.filter(g => g.id !== id));
+    const g = gear.find(x => x.id === id);
+    if (g && !window.confirm(`Eliminare "${g.text}" dalle dotazioni?`)) return;
+    setGear(prev => prev.filter(x => x.id !== id));
   };
 
   // ---------- Navigazione date ----------
