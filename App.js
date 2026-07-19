@@ -442,6 +442,31 @@ function App() {
     });
     settlement.sort((a, b) => b.net - a.net); // prima chi deve ricevere
 
+    // Transazioni di pareggio: chi paga chi, col minor numero di giri.
+    // Greedy sui centesimi: il debitore più grosso paga il creditore più grosso.
+    const creditors = settlement.filter(s => s.net > 0.005).map(s => ({
+      name: s.name,
+      cents: Math.round(s.net * 100)
+    }));
+    const debtors = settlement.filter(s => s.net < -0.005).map(s => ({
+      name: s.name,
+      cents: Math.round(-s.net * 100)
+    }));
+    const transfers = [];
+    let ci = 0,
+      di = 0;
+    while (ci < creditors.length && di < debtors.length) {
+      const amt = Math.min(creditors[ci].cents, debtors[di].cents);
+      if (amt > 0) transfers.push({
+        from: debtors[di].name,
+        to: creditors[ci].name,
+        amount: amt / 100
+      });
+      creditors[ci].cents -= amt;
+      debtors[di].cents -= amt;
+      if (creditors[ci].cents === 0) ci++;
+      if (debtors[di].cents === 0) di++;
+    }
     return {
       totalFood,
       totalDrinks,
@@ -457,7 +482,8 @@ function App() {
       roundingDiff,
       byBuyer,
       settlement,
-      unattributed
+      unattributed,
+      transfers
     };
   };
   const totals = calculateTotals();
@@ -517,7 +543,9 @@ function App() {
       className: "font-rustic text-xl tracking-widest text-[#F0F4F1]"
     }, "FABIO BANDONE"), /*#__PURE__*/React.createElement("p", {
       className: "mt-4 text-xs uppercase tracking-widest opacity-60"
-    }, "Prato Lungo Forever"));
+    }, "Prato Lungo Forever"), /*#__PURE__*/React.createElement("p", {
+      className: "absolute bottom-4 left-0 right-0 text-center text-[9px] tracking-wide text-[#8F9E8B]/70 px-6"
+    }, "Web app prodotta da Lorenzo Ballerini \xB7 Tutti i diritti riservati \xA9 2026"));
   }
   const tabs = {
     calendario: 'Calendario',
@@ -830,7 +858,26 @@ function App() {
     }, "ha anticipato ", money(s.paid), " \u20AC \xB7 deve ", money(s.owed), " \u20AC")), /*#__PURE__*/React.createElement("span", {
       className: `font-rustic font-bold text-sm shrink-0 text-right ${credito ? 'text-[#8FBF8F]' : debito ? 'text-[#D97706]' : 'text-gray-400'}`
     }, credito ? `riceve ${money(s.net)} €` : debito ? `dà ${money(-s.net)} €` : 'in pari'));
-  })), totals.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
+  })), totals.transfers.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 pt-3 border-t border-[#8F9E8B]/30"
+  }, /*#__PURE__*/React.createElement("h4", {
+    className: "font-rustic text-sm text-[#8F9E8B] mb-2"
+  }, "Chi paga chi"), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-1.5"
+  }, totals.transfers.map((t, i) => /*#__PURE__*/React.createElement("li", {
+    key: i,
+    className: "flex items-center justify-between bg-[#1F271E] px-3 py-2 rounded border border-[#8F9E8B]/20"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, t.from), /*#__PURE__*/React.createElement("span", {
+    className: "text-[#8F9E8B]"
+  }, " \u2192 "), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, t.to)), /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic font-bold text-[#D97706]"
+  }, money(t.amount), " \u20AC"))))), totals.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-[#D97706] italic mt-2"
   }, "Attenzione: ", money(totals.unattributed), " \u20AC di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti."), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-1"

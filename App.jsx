@@ -365,11 +365,26 @@ function App() {
     });
     settlement.sort((a, b) => b.net - a.net); // prima chi deve ricevere
 
+    // Transazioni di pareggio: chi paga chi, col minor numero di giri.
+    // Greedy sui centesimi: il debitore più grosso paga il creditore più grosso.
+    const creditors = settlement.filter((s) => s.net > 0.005).map((s) => ({ name: s.name, cents: Math.round(s.net * 100) }));
+    const debtors = settlement.filter((s) => s.net < -0.005).map((s) => ({ name: s.name, cents: Math.round(-s.net * 100) }));
+    const transfers = [];
+    let ci = 0, di = 0;
+    while (ci < creditors.length && di < debtors.length) {
+      const amt = Math.min(creditors[ci].cents, debtors[di].cents);
+      if (amt > 0) transfers.push({ from: debtors[di].name, to: creditors[ci].name, amount: amt / 100 });
+      creditors[ci].cents -= amt;
+      debtors[di].cents -= amt;
+      if (creditors[ci].cents === 0) ci++;
+      if (debtors[di].cents === 0) di++;
+    }
+
     return {
       totalFood, totalDrinks, totalAccessory, totalFoodDrinks, overallTotal,
       costPerMeal, logisticsPerAdult, adultMealsTotal,
       attendingAdultsCount: attendingAdults.size, breakdown,
-      collected, roundingDiff, byBuyer, settlement, unattributed,
+      collected, roundingDiff, byBuyer, settlement, unattributed, transfers,
     };
   };
 
@@ -419,6 +434,9 @@ function App() {
         <h1 className="font-rustic text-3xl tracking-widest text-[#8F9E8B]">BRIGATA</h1>
         <h2 className="font-rustic text-xl tracking-widest text-[#F0F4F1]">FABIO BANDONE</h2>
         <p className="mt-4 text-xs uppercase tracking-widest opacity-60">Prato Lungo Forever</p>
+        <p className="absolute bottom-4 left-0 right-0 text-center text-[9px] tracking-wide text-[#8F9E8B]/70 px-6">
+          Web app prodotta da Lorenzo Ballerini · Tutti i diritti riservati © 2026
+        </p>
       </div>
     );
   }
@@ -760,6 +778,23 @@ function App() {
                     );
                   })}
                 </ul>
+              )}
+              {totals.transfers.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-[#8F9E8B]/30">
+                  <h4 className="font-rustic text-sm text-[#8F9E8B] mb-2">Chi paga chi</h4>
+                  <ul className="space-y-1.5">
+                    {totals.transfers.map((t, i) => (
+                      <li key={i} className="flex items-center justify-between bg-[#1F271E] px-3 py-2 rounded border border-[#8F9E8B]/20">
+                        <span className="text-xs">
+                          <span className="font-bold">{t.from}</span>
+                          <span className="text-[#8F9E8B]"> → </span>
+                          <span className="font-bold">{t.to}</span>
+                        </span>
+                        <span className="font-rustic font-bold text-[#D97706]">{money(t.amount)} €</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
               {totals.unattributed > 0.005 && (
                 <p className="text-[9px] text-[#D97706] italic mt-2">
