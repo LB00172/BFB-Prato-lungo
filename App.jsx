@@ -34,6 +34,40 @@ const initialDayState = () => ({ note: '', guestsNames: '', meals: {} });
 // Tipologie di acquisto e a quale voce di spesa contribuiscono.
 const PURCHASE_TYPES = { alimentare: 'Alimentare', bevande: 'Bevande', logistica: 'Logistica' };
 
+// Dotazione personale base: uguale per tutti, non modificabile dall'app.
+const BASE_GEAR = [
+  'Tenda',
+  'Stoviglie, posate personali e bicchiere riutilizzabile',
+  'Sacchi a pelo',
+  'Borraccia',
+  'Cuscini',
+  'Canovacci',
+  'Materassino',
+  'Luci LED',
+];
+
+// Comprime una foto (scontrino) ridimensionandola e convertendola in JPEG,
+// così da poterla salvare in localStorage senza esaurire lo spazio.
+const compressImage = (file, maxDim = 1200, quality = 0.6) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
 function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState('calendario');
@@ -68,6 +102,17 @@ function App() {
   const [pPrice, setPPrice] = useState('');
   const [pType, setPType] = useState('alimentare');
   const [pBuyer, setPBuyer] = useState('');
+  const [pReceipt, setPReceipt] = useState(null); // foto scontrino in attesa di Salva
+  const [viewReceipt, setViewReceipt] = useState(null); // foto aperta a schermo intero
+
+  // Foto scontrini: SOLO su questo dispositivo (non sincronizzate: troppo
+  // pesanti per il documento cloud condiviso).
+  const [receipts, setReceipts] = useState(() => load('cambusa_receipts', {}));
+
+  // Dotazioni aggiuntive (box editabile), condivise via sync.
+  const [gear, setGear] = useState(() => load('cambusa_gear', []));
+  const [newGearText, setNewGearText] = useState('');
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -86,6 +131,14 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_members', JSON.stringify(members)), [members]);
   useEffect(() => localStorage.setItem('cambusa_camp_data', JSON.stringify(campData)), [campData]);
   useEffect(() => localStorage.setItem('cambusa_purchases', JSON.stringify(purchases)), [purchases]);
+  useEffect(() => localStorage.setItem('cambusa_gear', JSON.stringify(gear)), [gear]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('cambusa_receipts', JSON.stringify(receipts));
+    } catch (e) {
+      window.alert('Spazio del dispositivo quasi esaurito: l\'ultima foto scontrino potrebbe non essere stata salvata. Elimina qualche vecchia foto.');
+    }
+  }, [receipts]);
 
   useEffect(() => {
     const on = () => {
@@ -115,6 +168,7 @@ function App() {
     if (Array.isArray(remote.members)) setMembers(remote.members);
     if (remote.campData && typeof remote.campData === 'object') setCampData(remote.campData);
     if (Array.isArray(remote.purchases)) setPurchases(remote.purchases);
+    if (Array.isArray(remote.gear)) setGear(remote.gear);
     setTimeout(() => { suppressPushRef.current = false; }, 0);
   };
 
@@ -153,8 +207,8 @@ function App() {
   useEffect(() => {
     if (!cloudConnectedRef.current) return;
     if (suppressPushRef.current) return;
-    if (window.CloudSync) window.CloudSync.pushState({ members, campData, purchases });
-  }, [members, campData, purchases]);
+    if (window.CloudSync) window.CloudSync.pushState({ members, campData, purchases, gear });
+  }, [members, campData, purchases, gear]);
 
   // ---------- Dati per giorno ----------
   const getDayData = (dateStr) => ({ ...initialDayState(), ...(campData[dateStr] || {}) });
@@ -206,15 +260,47 @@ function App() {
       window.alert('Inserisci il nome del prodotto e un prezzo maggiore di zero.');
       return;
     }
-    setPurchases((prev) => [...prev, { id: uid(), name, price, type: pType, buyer: pBuyer.trim(), at: Date.now() }]);
+    const id = uid();
+    setPurchases((prev) => [...prev, { id, name, price, type: pType, buyer: pBuyer.trim(), at: Date.now() }]);
+    if (pReceipt) setReceipts((prev) => ({ ...prev, [id]: pReceipt }));
     setPName('');
     setPPrice('');
     setPType('alimentare');
     setPBuyer('');
+    setPReceipt(null);
   };
 
   const removePurchase = (id) => {
     setPurchases((prev) => prev.filter((p) => p.id !== id));
+    setReceipts((prev) => {
+      if (!prev[id]) return prev;
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+  };
+
+  const onReceiptFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      setPReceipt(await compressImage(file));
+    } catch (err) {
+      window.alert('Impossibile leggere la foto. Riprova.');
+    }
+  };
+
+  // ---------- Dotazioni aggiuntive ----------
+  const addGear = () => {
+    const text = newGearText.trim();
+    if (!text) return;
+    setGear((prev) => [...prev, { id: uid(), text }]);
+    setNewGearText('');
+  };
+
+  const removeGear = (id) => {
+    setGear((prev) => prev.filter((g) => g.id !== id));
   };
 
   // ---------- Navigazione date ----------
@@ -392,7 +478,7 @@ function App() {
 
   // ---------- Backup (Export / Import) ----------
   const exportData = () => {
-    const payload = { version: 2, exportedAt: new Date().toISOString(), members, campData, purchases };
+    const payload = { version: 3, exportedAt: new Date().toISOString(), members, campData, purchases, gear, receipts };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -413,6 +499,8 @@ function App() {
         if (Array.isArray(d.members)) setMembers(d.members);
         if (d.campData && typeof d.campData === 'object') setCampData(d.campData);
         if (Array.isArray(d.purchases)) setPurchases(d.purchases);
+        if (Array.isArray(d.gear)) setGear(d.gear);
+        if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
       }
@@ -871,7 +959,24 @@ function App() {
           <div className="space-y-4">
             {/* Form di inserimento */}
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Prodotto acquistato</h3>
+              <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
+                <h3 className="font-rustic text-lg text-[#2D392C]">Prodotto acquistato</h3>
+                <label
+                  title="Foto scontrino"
+                  className={`cursor-pointer px-3 py-2 rounded border-2 text-lg leading-none ${pReceipt ? 'bg-[#2D392C] border-[#2D392C]' : 'bg-white border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'}`}
+                >
+                  📷
+                  <input type="file" accept="image/*" capture="environment" onChange={onReceiptFile} className="hidden" />
+                </label>
+              </div>
+
+              {pReceipt && (
+                <div className="flex items-center gap-3 bg-[#F0F4F1]/60 p-2 rounded border border-[#8F9E8B]/30">
+                  <img src={pReceipt} alt="Scontrino" className="w-12 h-12 object-cover rounded" />
+                  <span className="flex-grow text-xs text-[#2D392C] font-bold">Scontrino allegato ✓</span>
+                  <button onClick={() => setPReceipt(null)} aria-label="Rimuovi foto" className="text-red-700 font-bold px-2 hover:text-red-900">&times;</button>
+                </div>
+              )}
 
               <div>
                 <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Nome</label>
@@ -956,11 +1061,15 @@ function App() {
                         </span>
                       </div>
                       <span className="font-rustic font-bold text-[#2D392C] shrink-0">{money(posNum(p.price))} €</span>
+                      {receipts[p.id] && (
+                        <button onClick={() => setViewReceipt(receipts[p.id])} aria-label="Vedi scontrino" className="px-1 shrink-0 hover:opacity-70">📷</button>
+                      )}
                       <button onClick={() => removePurchase(p.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0">&times;</button>
                     </li>
                   ))}
                 </ul>
               )}
+              <p className="text-[9px] text-gray-400 italic mt-2">Le foto degli scontrini restano solo su questo dispositivo (incluse nel backup Esporta).</p>
             </div>
           </div>
         )}
@@ -978,13 +1087,62 @@ function App() {
         {/* ---------- DOTAZIONI PERSONALI ---------- */}
         {activeTab === 'dotazioni' && (
           <div className="space-y-4">
-            <div className="bg-white p-6 rounded-lg border-2 border-[#2D392C]/20 shadow-sm text-center">
-              <h3 className="font-rustic text-lg text-[#2D392C] mb-2">Dotazioni personali</h3>
-              <p className="text-sm text-gray-400 italic">Work in progress</p>
+            {/* Box fisso: dotazione base */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Dotazione base</h3>
+              <ul className="space-y-2">
+                {BASE_GEAR.map((item) => (
+                  <li key={item} className="flex items-center gap-3 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
+                    <span className="w-1.5 h-1.5 bg-[#D97706] rounded-full shrink-0"></span>
+                    <span className="text-sm text-[#2D392C]">{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[9px] text-gray-400 italic mt-2">Dotazione obbligatoria per ogni partecipante.</p>
+            </div>
+
+            {/* Box editabile: aggiunte dell'occasione */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Aggiunte per questo campo</h3>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newGearText}
+                  onChange={(e) => setNewGearText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addGear()}
+                  placeholder="Es. costume, torcia frontale…"
+                  className="flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+                />
+                <button onClick={addGear} aria-label="Aggiungi dotazione" className="px-4 bg-[#2D392C] text-white rounded font-bold text-lg leading-none hover:bg-[#1F271E]">+</button>
+              </div>
+              {gear.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">Nessuna aggiunta. Inserisci qui le dotazioni extra per questo campo.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {gear.map((g) => (
+                    <li key={g.id} className="flex items-center gap-3 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
+                      <span className="w-1.5 h-1.5 bg-[#8F9E8B] rounded-full shrink-0"></span>
+                      <span className="flex-grow text-sm text-[#2D392C]">{g.text}</span>
+                      <button onClick={() => removeGear(g.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-2 hover:text-red-900">&times;</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         )}
       </main>
+
+      {/* Visualizzatore scontrino a schermo intero (tocca per chiudere) */}
+      {viewReceipt && (
+        <div
+          onClick={() => setViewReceipt(null)}
+          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 cursor-pointer"
+        >
+          <img src={viewReceipt} alt="Scontrino" className="max-w-full max-h-full rounded shadow-2xl" />
+          <span className="absolute bottom-6 left-0 right-0 text-center text-[10px] uppercase tracking-widest text-white/60">Tocca per chiudere</span>
+        </div>
+      )}
 
       <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#F0F4F1] border-t-2 border-[#5C4A3C] py-3 px-4 text-center z-10">
         <div className="font-rustic text-[#2D392C] tracking-widest text-sm uppercase font-bold">In Bandone we Trust</div>
