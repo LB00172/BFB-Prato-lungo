@@ -110,6 +110,7 @@ function App() {
   const [pBuyer, setPBuyer] = useState('');
   const [pReceipt, setPReceipt] = useState(null); // foto scontrino in attesa di Salva
   const [viewReceipt, setViewReceipt] = useState(null); // foto aperta a schermo intero
+  const [snapList, setSnapList] = useState(null); // elenco snapshot per il ripristino
 
   // Foto scontrini: sincronizzate via Firestore (sotto-collezione dedicata,
   // un documento per foto) + copia locale in localStorage.
@@ -412,6 +413,43 @@ function App() {
       setPReceipt(dataUrl);
     } catch (err) {
       window.alert('Impossibile leggere la foto. Riprova.');
+    }
+  };
+
+  // ---------- Ripristino di emergenza (snapshot giornalieri) ----------
+  const openRestore = async () => {
+    const CS = window.CloudSync;
+    if (!CS || !CS.isConnected || !CS.isConnected()) {
+      window.alert('Serve la connessione al cloud per il ripristino. Riprova quando c\'è linea.');
+      return;
+    }
+    const ids = await CS.listSnapshots();
+    if (!ids.length) {
+      window.alert('Nessun salvataggio automatico disponibile (se ne crea uno al giorno).');
+      return;
+    }
+    setSnapList(ids);
+  };
+  const restoreSnapshot = async id => {
+    if (!window.confirm(`Ripristinare i dati salvati il ${id}?\nI dati attuali verranno sostituiti su TUTTI i dispositivi connessi.`)) return;
+    const CS = window.CloudSync;
+    const json = await CS.getSnapshot(id);
+    if (!json) {
+      window.alert('Impossibile leggere questo salvataggio.');
+      return;
+    }
+    try {
+      const d = JSON.parse(json);
+      // Set "normali" (non via applyRemote): così il push parte e propaga
+      // il ripristino a tutti i dispositivi.
+      setMembers(Array.isArray(d.members) ? d.members : []);
+      setCampData(d.campData && typeof d.campData === 'object' ? d.campData : {});
+      setPurchases(Array.isArray(d.purchases) ? d.purchases : []);
+      setGear(Array.isArray(d.gear) ? d.gear : []);
+      setSnapList(null);
+      window.alert('Dati ripristinati: tra qualche secondo saranno su tutti i dispositivi.');
+    } catch (e) {
+      window.alert('Salvataggio non valido.');
     }
   };
 
@@ -1050,7 +1088,7 @@ function App() {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
   }, "Backup Dati"), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500"
-  }, "I dati restano solo su questo dispositivo. Esporta un file per salvarli o trasferirli."), /*#__PURE__*/React.createElement("div", {
+  }, "Ogni giorno viene salvata da sola una copia di sicurezza nel cloud. Esporta/Importa serve per un backup manuale su file."), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: exportData,
@@ -1062,7 +1100,10 @@ function App() {
     accept: "application/json,.json",
     onChange: importData,
     className: "hidden"
-  })))), /*#__PURE__*/React.createElement("div", {
+  }))), /*#__PURE__*/React.createElement("button", {
+    onClick: openRestore,
+    className: "w-full py-2.5 bg-white border-2 border-[#D97706]/50 text-[#D97706] rounded text-xs font-bold uppercase hover:bg-[#D97706]/10"
+  }, "Ripristino di emergenza")), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
@@ -1278,7 +1319,28 @@ function App() {
     onClick: () => removeGear(g.id),
     "aria-label": "Rimuovi",
     className: "text-red-700 font-bold px-2 hover:text-red-900"
-  }, "\xD7"))))))), viewReceipt && /*#__PURE__*/React.createElement("div", {
+  }, "\xD7"))))))), snapList && /*#__PURE__*/React.createElement("div", {
+    onClick: () => setSnapList(null),
+    className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
+  }, "Ripristina un salvataggio"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500"
+  }, "Copie automatiche giornaliere. Scegli il giorno a cui tornare."), snapList.map(id => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    onClick: () => restoreSnapshot(id),
+    className: "w-full py-2.5 bg-[#F0F4F1] border border-[#8F9E8B]/40 rounded text-sm font-bold text-[#2D392C] hover:bg-[#E2EAE4]"
+  }, parseDate(id).toLocaleDateString('it-IT', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'long'
+  }))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSnapList(null),
+    className: "w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700"
+  }, "Annulla"))), viewReceipt && /*#__PURE__*/React.createElement("div", {
     onClick: () => setViewReceipt(null),
     className: "fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 cursor-pointer"
   }, /*#__PURE__*/React.createElement("img", {

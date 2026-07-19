@@ -79,6 +79,7 @@
             lastAppliedJson = d.data;
             try { if (onRemote) onRemote(JSON.parse(d.data)); } catch (e) { /* ignora dati non validi */ }
             emit({ lastSync: Date.now() });
+            maybeDailySnapshot(d.data);
           }
         },
         (err) => emit({ status: 'error', error: err.message })
@@ -121,6 +122,7 @@
         const ref = fb.doc(db, 'camps', state.code);
         await fb.setDoc(ref, { data: json, updatedBy: deviceId, updatedAt: fb.serverTimestamp() });
         emit({ status: 'connected', lastSync: Date.now() });
+        maybeDailySnapshot(json);
       } catch (e) {
         emit({ status: 'error', error: e.message || String(e) });
       }
@@ -135,6 +137,59 @@
       const ref = fb.doc(db, 'camps', state.code, 'receipts', purchaseId);
       await fb.setDoc(ref, { data: dataUrl, updatedBy: deviceId, updatedAt: fb.serverTimestamp() });
     } catch (e) { /* regole mancanti o rete: si riprova alla prossima connessione */ }
+  }
+
+  // --- Snapshot di sicurezza giornaliero ---
+  // Una volta al giorno salva una copia dei dati in camps/<code>/snapshots/<data>.
+  // "Il primo del giorno vince": se il documento del giorno esiste gia' non lo
+  // sovrascrive (protegge dal caso di un dispositivo con dati vecchi).
+  async function maybeDailySnapshot(json) {
+    if (!state.connected || !db || !fb || !navigator.onLine) return;
+    const now = new Date();
+    const key = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    if (localStorage.getItem('cambusa_snap_date') === key) return;
+    try {
+      const ref = fb.doc(db, 'camps', state.code, 'snapshots', key);
+      const existing = await fb.getDoc(ref);
+      if (!existing.exists()) {
+        await fb.setDoc(ref, { data: json, savedBy: deviceId, savedAt: fb.serverTimestamp() });
+        // Pulizia: tiene solo gli ultimi 10 giorni.
+        try {
+          const all = await fb.getDocs(fb.collection(db, 'camps', state.code, 'snapshots'));
+          const ids = [];
+          all.forEach((d) => ids.push(d.id));
+          ids.sort();
+          for (const id of ids.slice(0, Math.max(0, ids.length - 10))) {
+            await fb.deleteDoc(fb.doc(db, 'camps', state.code, 'snapshots', id));
+          }
+        } catch (e) { /* pulizia best-effort */ }
+      }
+      localStorage.setItem('cambusa_snap_date', key);
+    } catch (e) { /* offline o regole mancanti: riprovera' */ }
+  }
+
+  // Elenco degli snapshot disponibili (date, dalla piu' recente).
+  async function listSnapshots() {
+    if (!state.connected || !db || !fb) return [];
+    try {
+      const all = await fb.getDocs(fb.collection(db, 'camps', state.code, 'snapshots'));
+      const ids = [];
+      all.forEach((d) => ids.push(d.id));
+      return ids.sort().reverse();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Contenuto (JSON) di uno snapshot.
+  async function getSnapshot(id) {
+    if (!state.connected || !db || !fb) return null;
+    try {
+      const s = await fb.getDoc(fb.doc(db, 'camps', state.code, 'snapshots', id));
+      return s.exists() ? s.data().data : null;
+    } catch (e) {
+      return null;
+    }
   }
 
   async function deleteReceipt(purchaseId) {
@@ -158,6 +213,8 @@
     pushState,
     putReceipt,
     deleteReceipt,
+    listSnapshots,
+    getSnapshot,
     disconnect,
     onStatus: (cb) => { onStatusCb = cb; cb({ ...state }); },
     onReceipts: (cb) => { onReceiptsCb = cb; },

@@ -104,6 +104,7 @@ function App() {
   const [pBuyer, setPBuyer] = useState('');
   const [pReceipt, setPReceipt] = useState(null); // foto scontrino in attesa di Salva
   const [viewReceipt, setViewReceipt] = useState(null); // foto aperta a schermo intero
+  const [snapList, setSnapList] = useState(null); // elenco snapshot per il ripristino
 
   // Foto scontrini: sincronizzate via Firestore (sotto-collezione dedicata,
   // un documento per foto) + copia locale in localStorage.
@@ -350,6 +351,41 @@ function App() {
       setPReceipt(dataUrl);
     } catch (err) {
       window.alert('Impossibile leggere la foto. Riprova.');
+    }
+  };
+
+  // ---------- Ripristino di emergenza (snapshot giornalieri) ----------
+  const openRestore = async () => {
+    const CS = window.CloudSync;
+    if (!CS || !CS.isConnected || !CS.isConnected()) {
+      window.alert('Serve la connessione al cloud per il ripristino. Riprova quando c\'è linea.');
+      return;
+    }
+    const ids = await CS.listSnapshots();
+    if (!ids.length) {
+      window.alert('Nessun salvataggio automatico disponibile (se ne crea uno al giorno).');
+      return;
+    }
+    setSnapList(ids);
+  };
+
+  const restoreSnapshot = async (id) => {
+    if (!window.confirm(`Ripristinare i dati salvati il ${id}?\nI dati attuali verranno sostituiti su TUTTI i dispositivi connessi.`)) return;
+    const CS = window.CloudSync;
+    const json = await CS.getSnapshot(id);
+    if (!json) { window.alert('Impossibile leggere questo salvataggio.'); return; }
+    try {
+      const d = JSON.parse(json);
+      // Set "normali" (non via applyRemote): così il push parte e propaga
+      // il ripristino a tutti i dispositivi.
+      setMembers(Array.isArray(d.members) ? d.members : []);
+      setCampData(d.campData && typeof d.campData === 'object' ? d.campData : {});
+      setPurchases(Array.isArray(d.purchases) ? d.purchases : []);
+      setGear(Array.isArray(d.gear) ? d.gear : []);
+      setSnapList(null);
+      window.alert('Dati ripristinati: tra qualche secondo saranno su tutti i dispositivi.');
+    } catch (e) {
+      window.alert('Salvataggio non valido.');
     }
   };
 
@@ -974,7 +1010,7 @@ function App() {
             {/* Backup dati */}
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Backup Dati</h3>
-              <p className="text-[10px] text-gray-500">I dati restano solo su questo dispositivo. Esporta un file per salvarli o trasferirli.</p>
+              <p className="text-[10px] text-gray-500">Ogni giorno viene salvata da sola una copia di sicurezza nel cloud. Esporta/Importa serve per un backup manuale su file.</p>
               <div className="flex gap-2">
                 <button onClick={exportData} className="flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Esporta</button>
                 <label className="flex-1 py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase text-center cursor-pointer hover:bg-[#463628]">
@@ -982,6 +1018,9 @@ function App() {
                   <input type="file" accept="application/json,.json" onChange={importData} className="hidden" />
                 </label>
               </div>
+              <button onClick={openRestore} className="w-full py-2.5 bg-white border-2 border-[#D97706]/50 text-[#D97706] rounded text-xs font-bold uppercase hover:bg-[#D97706]/10">
+                Ripristino di emergenza
+              </button>
             </div>
 
             {/* Sincronizzazione Cloud (online) */}
@@ -1213,6 +1252,26 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Scelta dello snapshot da ripristinare */}
+      {snapList && (
+        <div onClick={() => setSnapList(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl">
+            <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">Ripristina un salvataggio</h3>
+            <p className="text-[10px] text-gray-500">Copie automatiche giornaliere. Scegli il giorno a cui tornare.</p>
+            {snapList.map((id) => (
+              <button
+                key={id}
+                onClick={() => restoreSnapshot(id)}
+                className="w-full py-2.5 bg-[#F0F4F1] border border-[#8F9E8B]/40 rounded text-sm font-bold text-[#2D392C] hover:bg-[#E2EAE4]"
+              >
+                {parseDate(id).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' })}
+              </button>
+            ))}
+            <button onClick={() => setSnapList(null)} className="w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700">Annulla</button>
+          </div>
+        </div>
+      )}
 
       {/* Visualizzatore scontrino a schermo intero (tocca per chiudere) */}
       {viewReceipt && (
