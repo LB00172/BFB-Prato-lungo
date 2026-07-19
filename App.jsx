@@ -172,12 +172,13 @@ function App() {
   useEffect(() => {
     const on = () => {
       setIsOnline(true);
-      // Al ritorno della linea, se avevamo un codice salvato ma non siamo
-      // connessi (es. app aperta da offline), riprova a connettersi.
+      // Al ritorno della linea, se non siamo connessi (e la sync non è stata
+      // disattivata a mano), riconnette da solo col codice salvato o predefinito.
       const CS = window.CloudSync;
-      if (CS && CS.isConfigured() && !cloudConnectedRef.current) {
-        const saved = CS.savedCode();
-        if (saved) CS.connect(window.FIREBASE_CONFIG, saved, applyRemote).catch(() => {});
+      const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
+      if (CS && CS.isConfigured() && !cloudConnectedRef.current && !optedOut) {
+        const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
+        if (code) CS.connect(window.FIREBASE_CONFIG, code, applyRemote).catch(() => {});
       }
     };
     const off = () => setIsOnline(false);
@@ -209,6 +210,7 @@ function App() {
     }
     const c = (code || '').trim();
     if (!c) { window.alert('Inserisci il codice del campo.'); return; }
+    localStorage.removeItem('cambusa_sync_optout'); // riattiva l'auto-connessione
     try {
       await CS.connect(window.FIREBASE_CONFIG, c, applyRemote);
     } catch (e) {
@@ -216,7 +218,11 @@ function App() {
     }
   };
 
-  const disconnectCloud = () => { if (window.CloudSync) window.CloudSync.disconnect(); };
+  const disconnectCloud = () => {
+    // Scelta esplicita: niente riconnessione automatica finché non si riattiva.
+    localStorage.setItem('cambusa_sync_optout', '1');
+    if (window.CloudSync) window.CloudSync.disconnect();
+  };
 
   // Foto scontrini in arrivo dal cloud: merge con le locali, e upload di
   // quelle presenti solo in locale (es. scattate prima della connessione).
@@ -229,16 +235,19 @@ function App() {
     setReceipts((prev) => ({ ...prev, ...cloudMap }));
   };
 
-  // All'avvio: aggancia lo stato e riconnette se già usato in passato.
+  // All'avvio: aggancia lo stato e si connette DA SOLO col codice campo
+  // (salvato o predefinito). Chi ha premuto Disconnetti resta fuori finché
+  // non riattiva manualmente (flag cambusa_sync_optout).
   useEffect(() => {
     const CS = window.CloudSync;
     if (!CS) return;
     CS.onStatus((s) => { cloudConnectedRef.current = s.connected; setCloud(s); });
     if (CS.onReceipts) CS.onReceipts(handleCloudReceipts);
-    const saved = CS.savedCode();
-    if (saved && CS.isConfigured()) {
-      setCampCodeInput(saved);
-      CS.connect(window.FIREBASE_CONFIG, saved, applyRemote).catch(() => {});
+    const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
+    const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
+    if (code && CS.isConfigured() && !optedOut) {
+      setCampCodeInput(code);
+      CS.connect(window.FIREBASE_CONFIG, code, applyRemote).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -985,7 +994,7 @@ function App() {
               ) : (
                 <>
                   <p className="text-[10px] text-gray-500">
-                    Quando c'è linea, i dati si sincronizzano tra i dispositivi che usano lo stesso codice campo. Offline si continua a lavorare in locale.
+                    La sincronizzazione si attiva da sola all'avvio quando c'è linea. Offline si continua a lavorare in locale. Premi Disconnetti solo se vuoi lavorare senza condividere i dati.
                   </p>
                   <div className="flex gap-2">
                     <input
@@ -1008,7 +1017,9 @@ function App() {
                       {cloud.status === 'saving' && 'Salvataggio…'}
                       {cloud.status === 'connected' && (cloud.lastSync ? `Ultima sync: ${new Date(cloud.lastSync).toLocaleTimeString('it-IT')}` : 'In ascolto…')}
                       {cloud.status === 'error' && <span className="text-red-700">Errore: {cloud.error}</span>}
-                      {cloud.status === 'idle' && 'Inserisci il codice e premi Connetti.'}
+                      {cloud.status === 'idle' && (localStorage.getItem('cambusa_sync_optout') === '1'
+                        ? 'Sincronizzazione disattivata: premi Connetti per riattivarla.'
+                        : 'In attesa di connessione automatica…')}
                     </span>
                     {!isOnline && <span className="text-[#D97706] font-bold">offline</span>}
                   </div>

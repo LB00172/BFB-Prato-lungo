@@ -181,12 +181,13 @@ function App() {
   useEffect(() => {
     const on = () => {
       setIsOnline(true);
-      // Al ritorno della linea, se avevamo un codice salvato ma non siamo
-      // connessi (es. app aperta da offline), riprova a connettersi.
+      // Al ritorno della linea, se non siamo connessi (e la sync non è stata
+      // disattivata a mano), riconnette da solo col codice salvato o predefinito.
       const CS = window.CloudSync;
-      if (CS && CS.isConfigured() && !cloudConnectedRef.current) {
-        const saved = CS.savedCode();
-        if (saved) CS.connect(window.FIREBASE_CONFIG, saved, applyRemote).catch(() => {});
+      const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
+      if (CS && CS.isConfigured() && !cloudConnectedRef.current && !optedOut) {
+        const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
+        if (code) CS.connect(window.FIREBASE_CONFIG, code, applyRemote).catch(() => {});
       }
     };
     const off = () => setIsOnline(false);
@@ -222,6 +223,7 @@ function App() {
       window.alert('Inserisci il codice del campo.');
       return;
     }
+    localStorage.removeItem('cambusa_sync_optout'); // riattiva l'auto-connessione
     try {
       await CS.connect(window.FIREBASE_CONFIG, c, applyRemote);
     } catch (e) {
@@ -229,6 +231,8 @@ function App() {
     }
   };
   const disconnectCloud = () => {
+    // Scelta esplicita: niente riconnessione automatica finché non si riattiva.
+    localStorage.setItem('cambusa_sync_optout', '1');
     if (window.CloudSync) window.CloudSync.disconnect();
   };
 
@@ -246,7 +250,9 @@ function App() {
     }));
   };
 
-  // All'avvio: aggancia lo stato e riconnette se già usato in passato.
+  // All'avvio: aggancia lo stato e si connette DA SOLO col codice campo
+  // (salvato o predefinito). Chi ha premuto Disconnetti resta fuori finché
+  // non riattiva manualmente (flag cambusa_sync_optout).
   useEffect(() => {
     const CS = window.CloudSync;
     if (!CS) return;
@@ -255,10 +261,11 @@ function App() {
       setCloud(s);
     });
     if (CS.onReceipts) CS.onReceipts(handleCloudReceipts);
-    const saved = CS.savedCode();
-    if (saved && CS.isConfigured()) {
-      setCampCodeInput(saved);
-      CS.connect(window.FIREBASE_CONFIG, saved, applyRemote).catch(() => {});
+    const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
+    const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
+    if (code && CS.isConfigured() && !optedOut) {
+      setCampCodeInput(code);
+      CS.connect(window.FIREBASE_CONFIG, code, applyRemote).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1063,7 +1070,7 @@ function App() {
     className: "font-bold"
   }, "firebase-config.js"), " per abilitare la sincronizzazione online tra dispositivi.") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500"
-  }, "Quando c'\xE8 linea, i dati si sincronizzano tra i dispositivi che usano lo stesso codice campo. Offline si continua a lavorare in locale."), /*#__PURE__*/React.createElement("div", {
+  }, "La sincronizzazione si attiva da sola all'avvio quando c'\xE8 linea. Offline si continua a lavorare in locale. Premi Disconnetti solo se vuoi lavorare senza condividere i dati."), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -1082,7 +1089,7 @@ function App() {
     className: "flex items-center justify-between text-[10px] text-gray-500"
   }, /*#__PURE__*/React.createElement("span", null, cloud.status === 'connecting' && 'Connessione in corso…', cloud.status === 'saving' && 'Salvataggio…', cloud.status === 'connected' && (cloud.lastSync ? `Ultima sync: ${new Date(cloud.lastSync).toLocaleTimeString('it-IT')}` : 'In ascolto…'), cloud.status === 'error' && /*#__PURE__*/React.createElement("span", {
     className: "text-red-700"
-  }, "Errore: ", cloud.error), cloud.status === 'idle' && 'Inserisci il codice e premi Connetti.'), !isOnline && /*#__PURE__*/React.createElement("span", {
+  }, "Errore: ", cloud.error), cloud.status === 'idle' && (localStorage.getItem('cambusa_sync_optout') === '1' ? 'Sincronizzazione disattivata: premi Connetti per riattivarla.' : 'In attesa di connessione automatica…')), !isOnline && /*#__PURE__*/React.createElement("span", {
     className: "text-[#D97706] font-bold"
   }, "offline"))))), activeTab === 'lista' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
