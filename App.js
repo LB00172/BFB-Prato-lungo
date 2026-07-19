@@ -111,9 +111,10 @@ function App() {
   const [pReceipt, setPReceipt] = useState(null); // foto scontrino in attesa di Salva
   const [viewReceipt, setViewReceipt] = useState(null); // foto aperta a schermo intero
 
-  // Foto scontrini: SOLO su questo dispositivo (non sincronizzate: troppo
-  // pesanti per il documento cloud condiviso).
+  // Foto scontrini: sincronizzate via Firestore (sotto-collezione dedicata,
+  // un documento per foto) + copia locale in localStorage.
   const [receipts, setReceipts] = useState(() => load('cambusa_receipts', {}));
+  const receiptsRef = useRef({});
 
   // Dotazioni aggiuntive (box editabile), condivise via sync.
   const [gear, setGear] = useState(() => load('cambusa_gear', []));
@@ -143,12 +144,28 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_purchases', JSON.stringify(purchases)), [purchases]);
   useEffect(() => localStorage.setItem('cambusa_gear', JSON.stringify(gear)), [gear]);
   useEffect(() => {
+    receiptsRef.current = receipts;
     try {
       localStorage.setItem('cambusa_receipts', JSON.stringify(receipts));
     } catch (e) {
-      window.alert('Spazio del dispositivo quasi esaurito: l\'ultima foto scontrino potrebbe non essere stata salvata. Elimina qualche vecchia foto.');
+      console.warn('localStorage pieno: le foto restano comunque nella cache di Firestore.');
     }
   }, [receipts]);
+
+  // Pulizia: elimina le foto locali di acquisti che non esistono più
+  // (es. acquisto cancellato da un altro dispositivo).
+  useEffect(() => {
+    setReceipts(prev => {
+      const ids = new Set(purchases.map(p => p.id));
+      const keys = Object.keys(prev);
+      if (keys.every(k => ids.has(k))) return prev;
+      const copy = {};
+      keys.forEach(k => {
+        if (ids.has(k)) copy[k] = prev[k];
+      });
+      return copy;
+    });
+  }, [purchases]);
   useEffect(() => {
     const on = () => {
       setIsOnline(true);
@@ -203,6 +220,20 @@ function App() {
     if (window.CloudSync) window.CloudSync.disconnect();
   };
 
+  // Foto scontrini in arrivo dal cloud: merge con le locali, e upload di
+  // quelle presenti solo in locale (es. scattate prima della connessione).
+  const handleCloudReceipts = cloudMap => {
+    const local = receiptsRef.current;
+    const CS = window.CloudSync;
+    Object.keys(local).forEach(id => {
+      if (!cloudMap[id] && CS && CS.isConnected()) CS.putReceipt(id, local[id]);
+    });
+    setReceipts(prev => ({
+      ...prev,
+      ...cloudMap
+    }));
+  };
+
   // All'avvio: aggancia lo stato e riconnette se già usato in passato.
   useEffect(() => {
     const CS = window.CloudSync;
@@ -211,6 +242,7 @@ function App() {
       cloudConnectedRef.current = s.connected;
       setCloud(s);
     });
+    if (CS.onReceipts) CS.onReceipts(handleCloudReceipts);
     const saved = CS.savedCode();
     if (saved && CS.isConfigured()) {
       setCampCodeInput(saved);
@@ -320,10 +352,13 @@ function App() {
       buyer: pBuyer.trim(),
       at: Date.now()
     }]);
-    if (pReceipt) setReceipts(prev => ({
-      ...prev,
-      [id]: pReceipt
-    }));
+    if (pReceipt) {
+      setReceipts(prev => ({
+        ...prev,
+        [id]: pReceipt
+      }));
+      if (window.CloudSync) window.CloudSync.putReceipt(id, pReceipt);
+    }
     setPName('');
     setPPrice('');
     setPType('alimentare');
@@ -340,13 +375,18 @@ function App() {
       delete copy[id];
       return copy;
     });
+    if (window.CloudSync) window.CloudSync.deleteReceipt(id);
   };
   const onReceiptFile = async e => {
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!file) return;
     try {
-      setPReceipt(await compressImage(file));
+      // Comprimi; se ancora troppo grande per un documento Firestore (1MB),
+      // ricomprimi più aggressivamente.
+      let dataUrl = await compressImage(file, 1000, 0.6);
+      if (dataUrl.length > 900000) dataUrl = await compressImage(file, 800, 0.4);
+      setPReceipt(dataUrl);
     } catch (err) {
       window.alert('Impossibile leggere la foto. Riprova.');
     }
@@ -1144,7 +1184,7 @@ function App() {
     className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
   }, "\xD7")))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
-  }, "Le foto degli scontrini restano solo su questo dispositivo (incluse nel backup Esporta)."))), activeTab === 'regole' && /*#__PURE__*/React.createElement("div", {
+  }, "Le foto degli scontrini si sincronizzano tra i dispositivi connessi al campo (e sono incluse nel backup Esporta)."))), activeTab === 'regole' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-6 rounded-lg border-2 border-[#2D392C]/20 shadow-sm text-center"

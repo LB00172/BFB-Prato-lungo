@@ -15,7 +15,9 @@
 
   let fb = null;              // moduli Firebase caricati
   let app, db, auth, unsub;   // handle Firebase
+  let receiptsUnsub = null;   // listener sotto-collezione scontrini
   let onRemote = null;        // callback quando arrivano dati remoti
+  let onReceiptsCb = null;    // callback quando arrivano foto scontrini
   let onStatusCb = null;      // callback di stato per la UI
   let pushTimer = null;
   let lastAppliedJson = null; // ultimo stato ricevuto/applicato dal cloud
@@ -82,6 +84,22 @@
         (err) => emit({ status: 'error', error: err.message })
       );
 
+      // Foto scontrini: sotto-collezione camps/<code>/receipts, un documento
+      // per foto (dataURL compresso, sotto il limite di 1MB per documento).
+      if (receiptsUnsub) receiptsUnsub();
+      receiptsUnsub = fb.onSnapshot(
+        fb.collection(db, 'camps', code, 'receipts'),
+        (snap) => {
+          const map = {};
+          snap.forEach((d) => {
+            const v = d.data();
+            if (v && typeof v.data === 'string') map[d.id] = v.data;
+          });
+          if (onReceiptsCb) onReceiptsCb(map);
+        },
+        () => { /* es. regole non aggiornate: la sync principale continua */ }
+      );
+
       localStorage.setItem('cambusa_camp_code', code);
       emit({ connected: true, code, status: 'connected', error: null });
     } catch (e) {
@@ -109,8 +127,26 @@
     }, 1500);
   }
 
+  // Carica/aggiorna la foto di uno scontrino nel cloud (fire-and-forget:
+  // offline la scrittura resta in coda nella cache persistente di Firestore).
+  async function putReceipt(purchaseId, dataUrl) {
+    if (!state.connected || !db || !fb) return;
+    try {
+      const ref = fb.doc(db, 'camps', state.code, 'receipts', purchaseId);
+      await fb.setDoc(ref, { data: dataUrl, updatedBy: deviceId, updatedAt: fb.serverTimestamp() });
+    } catch (e) { /* regole mancanti o rete: si riprova alla prossima connessione */ }
+  }
+
+  async function deleteReceipt(purchaseId) {
+    if (!state.connected || !db || !fb) return;
+    try {
+      await fb.deleteDoc(fb.doc(db, 'camps', state.code, 'receipts', purchaseId));
+    } catch (e) { /* ignora */ }
+  }
+
   function disconnect() {
     if (unsub) { unsub(); unsub = null; }
+    if (receiptsUnsub) { receiptsUnsub(); receiptsUnsub = null; }
     localStorage.removeItem('cambusa_camp_code');
     lastAppliedJson = null;
     lastPushedJson = null;
@@ -120,8 +156,12 @@
   window.CloudSync = {
     connect,
     pushState,
+    putReceipt,
+    deleteReceipt,
     disconnect,
     onStatus: (cb) => { onStatusCb = cb; cb({ ...state }); },
+    onReceipts: (cb) => { onReceiptsCb = cb; },
+    isConnected: () => state.connected,
     savedCode: () => localStorage.getItem('cambusa_camp_code'),
     isConfigured: () => {
       const c = window.FIREBASE_CONFIG;
