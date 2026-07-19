@@ -327,11 +327,21 @@ function App() {
     const collected = breakdown.reduce((s, b) => s + b.payCents, 0) / 100;
     const roundingDiff = collected - overallTotal;
 
+    // Anticipi per acquirente: quanto ha speso ciascuno (per i rimborsi).
+    const buyerMap = {};
+    purchases.forEach((p) => {
+      const key = (p.buyer && p.buyer.trim()) ? p.buyer.trim() : '—';
+      buyerMap[key] = (buyerMap[key] || 0) + posNum(p.price);
+    });
+    const byBuyer = Object.keys(buyerMap)
+      .map((name) => ({ name, total: buyerMap[name] }))
+      .sort((a, b) => b.total - a.total);
+
     return {
       totalFood, totalDrinks, totalAccessory, totalFoodDrinks, overallTotal,
       costPerMeal, logisticsPerAdult, adultMealsTotal,
       attendingAdultsCount: attendingAdults.size, breakdown,
-      collected, roundingDiff,
+      collected, roundingDiff, byBuyer,
     };
   };
 
@@ -673,6 +683,28 @@ function App() {
                       ? ` Scarto rispetto al totale: ${totals.roundingDiff > 0 ? '+' : ''}${money(totals.roundingDiff)} € (sotto 0,50 €, non riconciliato).`
                       : ' Nessuno scarto.'}
                   </p>
+                </div>
+              )}
+            </div>
+
+            {/* Anticipi per acquirente */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Anticipi per acquirente</h3>
+              {totals.byBuyer.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">Registra gli acquisti nel Taccuino per vedere chi ha anticipato quanto.</p>
+              ) : (
+                <div>
+                  <ul className="divide-y divide-[#8F9E8B]/20">
+                    {totals.byBuyer.map((b) => (
+                      <li key={b.name} className="flex items-center justify-between py-2">
+                        <span className={`text-sm font-bold ${b.name === '—' ? 'text-gray-400 italic' : 'text-[#2D392C]'}`}>
+                          {b.name === '—' ? 'Non indicato' : b.name}
+                        </span>
+                        <span className="font-rustic font-bold text-[#2D392C]">{money(b.total)} €</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-[9px] text-gray-400 italic mt-2">Quanto ha anticipato ciascuno (utile per i rimborsi).</p>
                 </div>
               )}
             </div>

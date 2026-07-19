@@ -391,6 +391,17 @@ function App() {
     });
     const collected = breakdown.reduce((s, b) => s + b.payCents, 0) / 100;
     const roundingDiff = collected - overallTotal;
+
+    // Anticipi per acquirente: quanto ha speso ciascuno (per i rimborsi).
+    const buyerMap = {};
+    purchases.forEach(p => {
+      const key = p.buyer && p.buyer.trim() ? p.buyer.trim() : '—';
+      buyerMap[key] = (buyerMap[key] || 0) + posNum(p.price);
+    });
+    const byBuyer = Object.keys(buyerMap).map(name => ({
+      name,
+      total: buyerMap[name]
+    })).sort((a, b) => b.total - a.total);
     return {
       totalFood,
       totalDrinks,
@@ -403,7 +414,8 @@ function App() {
       attendingAdultsCount: attendingAdults.size,
       breakdown,
       collected,
-      roundingDiff
+      roundingDiff,
+      byBuyer
     };
   };
   const totals = calculateTotals();
@@ -737,6 +749,23 @@ function App() {
   }, money(totals.collected), " \u20AC")), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
   }, "Quote arrotondate a 0,10 \u20AC (niente monetine da 1/2/5 cent).", Math.abs(totals.roundingDiff) >= 0.005 ? ` Scarto rispetto al totale: ${totals.roundingDiff > 0 ? '+' : ''}${money(totals.roundingDiff)} € (sotto 0,50 €, non riconciliato).` : ' Nessuno scarto.'))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+  }, "Anticipi per acquirente"), totals.byBuyer.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-400 italic"
+  }, "Registra gli acquisti nel Taccuino per vedere chi ha anticipato quanto.") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("ul", {
+    className: "divide-y divide-[#8F9E8B]/20"
+  }, totals.byBuyer.map(b => /*#__PURE__*/React.createElement("li", {
+    key: b.name,
+    className: "flex items-center justify-between py-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `text-sm font-bold ${b.name === '—' ? 'text-gray-400 italic' : 'text-[#2D392C]'}`
+  }, b.name === '—' ? 'Non indicato' : b.name), /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic font-bold text-[#2D392C]"
+  }, money(b.total), " \u20AC")))), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic mt-2"
+  }, "Quanto ha anticipato ciascuno (utile per i rimborsi)."))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
