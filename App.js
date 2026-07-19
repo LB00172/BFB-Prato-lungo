@@ -402,6 +402,46 @@ function App() {
       name,
       total: buyerMap[name]
     })).sort((a, b) => b.total - a.total);
+
+    // --- Saldo netto per persona (stile Splitwise): anticipato - dovuto ---
+    const norm = s => (s || '').trim().toLowerCase();
+    const paidByName = {}; // nome normalizzato -> { display, paid }
+    purchases.forEach(p => {
+      const raw = p.buyer && p.buyer.trim() ? p.buyer.trim() : '—';
+      const key = norm(raw) || '—';
+      if (!paidByName[key]) paidByName[key] = {
+        display: raw,
+        paid: 0
+      };
+      paidByName[key].paid += posNum(p.price);
+    });
+    const owedByName = {}; // nome membro normalizzato -> { display, owed }
+    breakdown.forEach(b => {
+      const key = norm(b.name);
+      if (!owedByName[key]) owedByName[key] = {
+        display: b.name,
+        owed: 0
+      };
+      owedByName[key].owed += b.pay; // già arrotondato; bambini = 0
+    });
+    const unattributed = paidByName['—'] ? paidByName['—'].paid : 0;
+    const allKeys = new Set([...Object.keys(paidByName), ...Object.keys(owedByName)]);
+    allKeys.delete('—');
+    const settlement = [];
+    allKeys.forEach(k => {
+      const paid = paidByName[k] ? paidByName[k].paid : 0;
+      const owed = owedByName[k] ? owedByName[k].owed : 0;
+      if (paid === 0 && owed === 0) return;
+      const display = owedByName[k] && owedByName[k].display || paidByName[k] && paidByName[k].display || k;
+      settlement.push({
+        name: display,
+        paid,
+        owed,
+        net: paid - owed
+      });
+    });
+    settlement.sort((a, b) => b.net - a.net); // prima chi deve ricevere
+
     return {
       totalFood,
       totalDrinks,
@@ -415,7 +455,9 @@ function App() {
       breakdown,
       collected,
       roundingDiff,
-      byBuyer
+      byBuyer,
+      settlement,
+      unattributed
     };
   };
   const totals = calculateTotals();
@@ -766,6 +808,33 @@ function App() {
   }, money(b.total), " \u20AC")))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
   }, "Quanto ha anticipato ciascuno (utile per i rimborsi)."))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 mb-3"
+  }, "Saldo finale"), totals.settlement.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-400 italic"
+  }, "Registra acquisti (con acquirente) e presenze per vedere chi deve dare o ricevere.") : /*#__PURE__*/React.createElement("ul", {
+    className: "divide-y divide-[#8F9E8B]/20"
+  }, totals.settlement.map(s => {
+    const credito = s.net > 0.005;
+    const debito = s.net < -0.005;
+    return /*#__PURE__*/React.createElement("li", {
+      key: s.name,
+      className: "flex items-center justify-between py-2 gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-col min-w-0"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-sm font-bold truncate"
+    }, s.name), /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] text-[#8F9E8B]"
+    }, "ha anticipato ", money(s.paid), " \u20AC \xB7 deve ", money(s.owed), " \u20AC")), /*#__PURE__*/React.createElement("span", {
+      className: `font-rustic font-bold text-sm shrink-0 text-right ${credito ? 'text-[#8FBF8F]' : debito ? 'text-[#D97706]' : 'text-gray-400'}`
+    }, credito ? `riceve ${money(s.net)} €` : debito ? `dà ${money(-s.net)} €` : 'in pari'));
+  })), totals.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-[#D97706] italic mt-2"
+  }, "Attenzione: ", money(totals.unattributed), " \u20AC di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti."), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic mt-1"
+  }, "\"Riceve\" = ha anticipato pi\xF9 di quanto deve; \"d\xE0\" = deve versare la differenza.")), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
