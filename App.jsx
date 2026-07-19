@@ -115,6 +115,20 @@ function App() {
   const [newGearText, setNewGearText] = useState('');
 
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Suggerimento installazione PWA: mostrato finché l'app non è installata
+  // (o finché l'utente non lo chiude). Su iOS l'installazione è solo manuale.
+  const [showInstallHint, setShowInstallHint] = useState(() => {
+    const standalone =
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true;
+    return !standalone && !localStorage.getItem('cambusa_install_hint_off');
+  });
+  const dismissInstallHint = () => {
+    localStorage.setItem('cambusa_install_hint_off', '1');
+    setShowInstallHint(false);
+  };
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // ---------- Stato sincronizzazione cloud (Firebase) ----------
@@ -615,6 +629,21 @@ function App() {
             </button>
           ))}
         </nav>
+      )}
+
+      {/* Suggerimento installazione app */}
+      {showInstallHint && (
+        <div className="bg-[#D97706]/15 border-b border-[#D97706]/40 px-4 py-2.5 flex items-start gap-2">
+          <span className="text-base leading-none mt-0.5">📲</span>
+          <p className="flex-grow text-[11px] text-[#5C4A3C] leading-snug">
+            <span className="font-bold">Installa l'app sul telefono:</span>{' '}
+            {isIOS
+              ? 'tocca Condividi (il quadrato con la freccia in su) e poi "Aggiungi alla schermata Home".'
+              : 'apri il menu del browser (⋮) e tocca "Installa app" (o "Aggiungi a schermata Home").'}
+            {' '}Una volta installata funziona anche senza linea.
+          </p>
+          <button onClick={dismissInstallHint} aria-label="Chiudi avviso" className="text-[#5C4A3C] font-bold px-1 shrink-0">&times;</button>
+        </div>
       )}
 
       <main className="flex-grow p-4">
@@ -1180,7 +1209,7 @@ function App() {
       )}
 
       <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#F0F4F1] border-t-2 border-[#5C4A3C] py-3 px-4 text-center z-10">
-        <div className="font-rustic text-[#2D392C] tracking-widest text-sm uppercase font-bold">In Bandone we Trust</div>
+        <div className="font-rustic text-[#2D392C] tracking-widest text-sm uppercase font-bold">In BANDY we Trust</div>
       </footer>
     </div>
   );
