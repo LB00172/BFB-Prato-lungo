@@ -21,6 +21,4 @@ window.FIREBASE_CONFIG = {
 window.CAMP_CODE_DEFAULT = "Bandone";
 
 // Località del campo per il meteo (Open-Meteo, gratuito, senza chiave).
-// Inserire le coordinate del posto campo: finché lat/lon sono null il
-// meteo mostra "località da impostare" invece di dati sbagliati.
-window.CAMP_LOCATION = { lat: null, lon: null, label: "Prato Lungo" };
+window.CAMP_LOCATION = { lat: 42.059, lon: 13.1, label: "Pereto (AQ)" };
