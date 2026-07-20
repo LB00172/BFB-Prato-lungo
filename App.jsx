@@ -31,6 +31,14 @@ const posNum = (v) => Math.max(0, parseFloat(v) || 0);
 
 const initialDayState = () => ({ note: '', guestsNames: '', meals: {} });
 
+// Periodo del campo. Durante il campo l'app si apre sul giorno corrente.
+const CAMP_START = '2026-08-11';
+const CAMP_END = '2026-08-16';
+const defaultDateStr = () => {
+  const today = toDateStr(new Date());
+  return today >= CAMP_START && today <= CAMP_END ? today : CAMP_START;
+};
+
 // Tipologie di acquisto e a quale voce di spesa contribuiscono.
 const PURCHASE_TYPES = { alimentare: 'Alimentare', bevande: 'Bevande', logistica: 'Logistica' };
 
@@ -86,8 +94,8 @@ const compressImage = (file, maxDim = 1200, quality = 0.6) =>
 function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState('calendario');
-  const [currentDate, setCurrentDate] = useState(() => parseDate('2026-08-11'));
-  const [selectedDateStr, setSelectedDateStr] = useState('2026-08-11');
+  const [currentDate, setCurrentDate] = useState(() => parseDate(defaultDateStr()));
+  const [selectedDateStr, setSelectedDateStr] = useState(defaultDateStr());
 
   const [members, setMembers] = useState(() => load('cambusa_members', []));
   const [campData, setCampData] = useState(() => load('cambusa_camp_data', {}));
@@ -335,6 +343,41 @@ function App() {
       const cur = meals[memberId] || { lunch: false, dinner: false };
       meals[memberId] = { ...cur, [mealType]: !cur[mealType] };
       return { ...prev, [dateStr]: { ...day, meals } };
+    });
+  };
+
+  // Segna (o toglie) TUTTI i membri a pranzo/cena per il giorno: se sono già
+  // tutti segnati, li toglie tutti; altrimenti li segna tutti.
+  const setAllMeals = (dateStr, mealType) => {
+    if (members.length === 0) return;
+    setCampData((prev) => {
+      const day = { ...initialDayState(), ...(prev[dateStr] || {}) };
+      const meals = { ...(day.meals || {}) };
+      const allOn = members.every((m) => meals[m.id] && meals[m.id][mealType]);
+      members.forEach((m) => {
+        const cur = meals[m.id] || { lunch: false, dinner: false };
+        meals[m.id] = { ...cur, [mealType]: !allOn };
+      });
+      return { ...prev, [dateStr]: { ...day, meals } };
+    });
+  };
+
+  // Copia le presenze (pranzo e cena) dal giorno precedente.
+  const copyFromPreviousDay = () => {
+    const d = parseDate(selectedDateStr);
+    d.setDate(d.getDate() - 1);
+    const prevStr = toDateStr(d);
+    const prevMeals = (campData[prevStr] && campData[prevStr].meals) || {};
+    if (!Object.keys(prevMeals).length) {
+      window.alert('Nessuna presenza registrata il giorno precedente.');
+      return;
+    }
+    const curMeals = (campData[selectedDateStr] && campData[selectedDateStr].meals) || {};
+    const hasAny = Object.values(curMeals).some((m) => m && (m.lunch || m.dinner));
+    if (hasAny && !window.confirm('Questo giorno ha già delle presenze: sostituirle con quelle di ieri?')) return;
+    setCampData((prev) => {
+      const day = { ...initialDayState(), ...(prev[selectedDateStr] || {}) };
+      return { ...prev, [selectedDateStr]: { ...day, meals: JSON.parse(JSON.stringify(prevMeals)) } };
     });
   };
 
@@ -782,7 +825,7 @@ function App() {
               {weekDays.map((d) => {
                 const dateStr = toDateStr(d);
                 const isSelected = dateStr === selectedDateStr;
-                const isCampPeriod = dateStr >= '2026-08-11' && dateStr <= '2026-08-16';
+                const isCampPeriod = dateStr >= CAMP_START && dateStr <= CAMP_END;
                 const label = d.toLocaleDateString('it-IT', { weekday: 'short' });
                 return (
                   <button
@@ -920,6 +963,19 @@ function App() {
               {members.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">Aggiungi prima i membri nella scheda "Membri".</p>
               ) : (
+                <>
+                {/* Azioni rapide */}
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => setAllMeals(selectedDateStr, 'lunch')} className="py-2.5 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#1F271E]">Tutti a pranzo</button>
+                  <button onClick={() => setAllMeals(selectedDateStr, 'dinner')} className="py-2.5 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]">Tutti a cena</button>
+                  <button onClick={copyFromPreviousDay} className="py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]">Copia da ieri</button>
+                </div>
+                <p className="text-[9px] text-gray-400 -mt-1">
+                  Segna tutti, poi togli i pochi assenti. Se sono già tutti segnati, il bottone li toglie tutti.
+                  {' '}<span className="font-bold text-[#5C4A3C]">
+                    Oggi: {members.filter((m) => getMeal(selectedDateStr, m.id).lunch).length} a pranzo · {members.filter((m) => getMeal(selectedDateStr, m.id).dinner).length} a cena
+                  </span>
+                </p>
                 <ul className="space-y-2">
                   {members.map((m) => {
                     const meal = getMeal(selectedDateStr, m.id);
@@ -947,6 +1003,7 @@ function App() {
                     );
                   })}
                 </ul>
+                </>
               )}
             </div>
 
