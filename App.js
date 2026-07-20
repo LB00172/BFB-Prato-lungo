@@ -47,6 +47,54 @@ const PURCHASE_TYPES = {
   logistica: 'Logistica'
 };
 
+// Codici meteo WMO (Open-Meteo) -> icona e descrizione.
+const wmoInfo = code => {
+  if (code === 0) return {
+    icon: '☀️',
+    label: 'Sereno'
+  };
+  if (code === 1 || code === 2) return {
+    icon: '🌤️',
+    label: 'Poco nuvoloso'
+  };
+  if (code === 3) return {
+    icon: '☁️',
+    label: 'Coperto'
+  };
+  if (code === 45 || code === 48) return {
+    icon: '🌫️',
+    label: 'Nebbia'
+  };
+  if (code >= 51 && code <= 57) return {
+    icon: '🌦️',
+    label: 'Pioviggine'
+  };
+  if (code >= 61 && code <= 67) return {
+    icon: '🌧️',
+    label: 'Pioggia'
+  };
+  if (code >= 71 && code <= 77) return {
+    icon: '🌨️',
+    label: 'Neve'
+  };
+  if (code >= 80 && code <= 82) return {
+    icon: '🌦️',
+    label: 'Rovesci'
+  };
+  if (code === 85 || code === 86) return {
+    icon: '🌨️',
+    label: 'Rovesci di neve'
+  };
+  if (code >= 95) return {
+    icon: '⛈️',
+    label: 'Temporale'
+  };
+  return {
+    icon: '🌡️',
+    label: 'Meteo'
+  };
+};
+
 // Dotazione personale base: uguale per tutti, non modificabile dall'app.
 const BASE_GEAR = ['Tenda', 'Stoviglie, posate personali e bicchiere riutilizzabile', 'Sacchi a pelo', 'Borraccia', 'Cuscini', 'Canovacci', 'Materassino', 'Luci LED'];
 
@@ -111,6 +159,16 @@ function App() {
   const [pReceipt, setPReceipt] = useState(null); // foto scontrino in attesa di Salva
   const [viewReceipt, setViewReceipt] = useState(null); // foto aperta a schermo intero
   const [snapList, setSnapList] = useState(null); // elenco snapshot per il ripristino
+  const [spesaSection, setSpesaSection] = useState('totali'); // sotto-sezione attiva in Spesa
+
+  // Rimborsi segnati come "saldati" (solo barrati, non rimossi). Condivisi via sync.
+  const [settled, setSettled] = useState(() => load('cambusa_settled', []));
+
+  // Cache meteo (Open-Meteo, 16 giorni). Aggiornata al massimo una volta all'ora.
+  const [weather, setWeather] = useState(() => load('cambusa_weather', {
+    fetchedAt: 0,
+    byDate: {}
+  }));
 
   // Foto scontrini: sincronizzate via Firestore (sotto-collezione dedicata,
   // un documento per foto) + copia locale in localStorage.
@@ -156,6 +214,35 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_camp_data', JSON.stringify(campData)), [campData]);
   useEffect(() => localStorage.setItem('cambusa_purchases', JSON.stringify(purchases)), [purchases]);
   useEffect(() => localStorage.setItem('cambusa_gear', JSON.stringify(gear)), [gear]);
+  useEffect(() => localStorage.setItem('cambusa_settled', JSON.stringify(settled)), [settled]);
+  useEffect(() => localStorage.setItem('cambusa_weather', JSON.stringify(weather)), [weather]);
+
+  // Scarica le previsioni (16 giorni) se c'è linea, la località è impostata e
+  // la cache ha più di un'ora. Navigando tra i giorni i dati sono già pronti.
+  useEffect(() => {
+    const loc = window.CAMP_LOCATION;
+    if (!loc || typeof loc.lat !== 'number' || typeof loc.lon !== 'number') return;
+    if (!navigator.onLine) return;
+    if (Date.now() - weather.fetchedAt < 60 * 60 * 1000) return;
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=16`).then(r => r.json()).then(j => {
+      const d = j && j.daily;
+      if (!d || !Array.isArray(d.time)) return;
+      const byDate = {};
+      d.time.forEach((t, i) => {
+        byDate[t] = {
+          code: d.weather_code[i],
+          tmax: d.temperature_2m_max[i],
+          tmin: d.temperature_2m_min[i],
+          rain: d.precipitation_probability_max[i]
+        };
+      });
+      setWeather({
+        fetchedAt: Date.now(),
+        byDate
+      });
+    }).catch(() => {/* offline o API non raggiungibile: resta la cache */});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline, selectedDateStr]);
   useEffect(() => {
     receiptsRef.current = receipts;
     try {
@@ -209,6 +296,7 @@ function App() {
     if (remote.campData && typeof remote.campData === 'object') setCampData(remote.campData);
     if (Array.isArray(remote.purchases)) setPurchases(remote.purchases);
     if (Array.isArray(remote.gear)) setGear(remote.gear);
+    if (Array.isArray(remote.settled)) setSettled(remote.settled);
     setTimeout(() => {
       suppressPushRef.current = false;
     }, 0);
@@ -280,9 +368,10 @@ function App() {
       members,
       campData,
       purchases,
-      gear
+      gear,
+      settled
     });
-  }, [members, campData, purchases, gear]);
+  }, [members, campData, purchases, gear, settled]);
 
   // ---------- Dati per giorno ----------
   const getDayData = dateStr => ({
@@ -451,6 +540,11 @@ function App() {
     } catch (e) {
       window.alert('Salvataggio non valido.');
     }
+  };
+
+  // ---------- Rimborsi saldati (barrati) ----------
+  const toggleSettled = key => {
+    setSettled(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
   };
 
   // ---------- Dotazioni aggiuntive ----------
@@ -676,12 +770,13 @@ function App() {
   // ---------- Backup (Export / Import) ----------
   const exportData = () => {
     const payload = {
-      version: 3,
+      version: 4,
       exportedAt: new Date().toISOString(),
       members,
       campData,
       purchases,
       gear,
+      settled,
       receipts
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -706,6 +801,7 @@ function App() {
         if (d.campData && typeof d.campData === 'object') setCampData(d.campData);
         if (Array.isArray(d.purchases)) setPurchases(d.purchases);
         if (Array.isArray(d.gear)) setGear(d.gear);
+        if (Array.isArray(d.settled)) setSettled(d.settled);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
@@ -773,13 +869,28 @@ function App() {
     className: `absolute top-3 right-3 flex items-center gap-1 text-[9px] uppercase font-bold ${isOnline ? 'text-[#8F9E8B]' : 'text-[#D97706]'}`
   }, /*#__PURE__*/React.createElement("span", {
     className: `w-2 h-2 rounded-full ${isOnline ? 'bg-[#8F9E8B]' : 'bg-[#D97706]'}`
-  }), isOnline ? 'Online' : 'Offline')), menuOpen && /*#__PURE__*/React.createElement("nav", {
-    className: "bg-[#F0F4F1] border-b-4 border-[#5C4A3C] shadow-md p-2 space-y-1"
-  }, Object.keys(tabs).map(tab => /*#__PURE__*/React.createElement("button", {
+  }), isOnline ? 'Online' : 'Offline')), /*#__PURE__*/React.createElement("div", {
+    className: `fixed inset-0 z-40 ${menuOpen ? '' : 'pointer-events-none'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: () => setMenuOpen(false),
+    className: `absolute inset-0 bg-black/40 transition-opacity duration-300 ${menuOpen ? 'opacity-100' : 'opacity-0'}`
+  }), /*#__PURE__*/React.createElement("nav", {
+    className: `absolute left-0 top-0 bottom-0 w-72 max-w-[80vw] bg-[#F0F4F1] border-r-4 border-[#5C4A3C] shadow-2xl p-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 border-b border-[#8F9E8B]/40 pb-3 mb-2"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: "./logo.png",
+    alt: "",
+    className: "w-11 h-11 rounded-full object-cover border-2 border-[#8F9E8B] bg-white"
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "font-rustic text-[#2D392C] leading-tight"
+  }, "PRATO LUNGO 2026"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] uppercase tracking-wider text-[#8F9E8B]"
+  }, "Brigata Fabio Bandone"))), Object.keys(tabs).map(tab => /*#__PURE__*/React.createElement("button", {
     key: tab,
     onClick: () => goTo(tab),
     className: `w-full text-left px-4 py-3 rounded font-bold uppercase text-sm tracking-wide transition-colors ${activeTab === tab ? 'bg-[#2D392C] text-[#F0F4F1]' : 'text-[#2D392C] hover:bg-[#E2EAE4]'}`
-  }, tabs[tab]))), showInstallHint && /*#__PURE__*/React.createElement("div", {
+  }, tabs[tab])))), showInstallHint && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-b border-[#D97706]/40 px-4 py-2.5 flex items-start gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-base leading-none mt-0.5"
@@ -835,7 +946,30 @@ function App() {
   }, "Note del ", parseDate(selectedDateStr).toLocaleDateString('it-IT', {
     day: 'numeric',
     month: 'long'
-  })), /*#__PURE__*/React.createElement("textarea", {
+  })), (() => {
+    const loc = window.CAMP_LOCATION;
+    const locOk = loc && typeof loc.lat === 'number' && typeof loc.lon === 'number';
+    const wx = weather.byDate[selectedDateStr];
+    return /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
+    }, !locOk ? /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] text-gray-400 italic"
+    }, "Meteo: localit\xE0 del campo da impostare.") : wx ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+      className: "text-2xl leading-none"
+    }, wmoInfo(wx.code).icon), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-col"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-sm font-bold text-[#2D392C]"
+    }, wmoInfo(wx.code).label), loc.label && /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] text-gray-400"
+    }, loc.label)), /*#__PURE__*/React.createElement("span", {
+      className: "ml-auto text-xs text-gray-600 font-bold"
+    }, Math.round(wx.tmax), "\xB0 / ", Math.round(wx.tmin), "\xB0", wx.rain != null ? /*#__PURE__*/React.createElement("span", {
+      className: "text-[#5C8AA8]"
+    }, " \xB7 \uD83D\uDCA7", wx.rain, "%") : null)) : /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] text-gray-400 italic"
+    }, "Previsione non ancora disponibile per questo giorno", isOnline ? ' (copre ~16 giorni in avanti)' : ' (offline)', "."));
+  })(), /*#__PURE__*/React.createElement("textarea", {
     value: getDayData(selectedDateStr).note,
     onChange: e => updateDayData(selectedDateStr, 'note', e.target.value),
     placeholder: "Inserisci note sul menu, meteo o legna per oggi...",
@@ -946,6 +1080,14 @@ function App() {
   }))), activeTab === 'spesa' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5"
+  }, [['totali', 'Totali'], ['quote', 'Quote'], ['saldi', 'Saldi'], ['dati', 'Dati']].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
+    key: k,
+    onClick: () => setSpesaSection(k),
+    className: `py-2.5 rounded text-[10px] font-bold uppercase tracking-wide border-b-4 transition-all ${spesaSection === k ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'}`
+  }, l))), spesaSection === 'totali' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-4"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
@@ -992,7 +1134,9 @@ function App() {
     className: "text-[9px] text-gray-400 mt-1"
   }, "Accessori (", money(totals.totalAccessory), " \u20AC) / ", totals.attendingAdultsCount, " adulti presenti."))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic"
-  }, "I pasti dei bambini sono gratis: il loro costo \xE8 ripartito sugli adulti.")), /*#__PURE__*/React.createElement("div", {
+  }, "I pasti dei bambini sono gratis: il loro costo \xE8 ripartito sugli adulti."))), spesaSection === 'quote' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
@@ -1019,7 +1163,9 @@ function App() {
     className: "font-rustic font-bold text-[#2D392C]"
   }, money(totals.collected), " \u20AC")), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
-  }, "Quote arrotondate a 0,10 \u20AC (niente monetine da 1/2/5 cent).", Math.abs(totals.roundingDiff) >= 0.005 ? ` Scarto rispetto al totale: ${totals.roundingDiff > 0 ? '+' : ''}${money(totals.roundingDiff)} € (sotto 0,50 €, non riconciliato).` : ' Nessuno scarto.'))), /*#__PURE__*/React.createElement("div", {
+  }, "Quote arrotondate a 0,10 \u20AC (niente monetine da 1/2/5 cent).", Math.abs(totals.roundingDiff) >= 0.005 ? ` Scarto rispetto al totale: ${totals.roundingDiff > 0 ? '+' : ''}${money(totals.roundingDiff)} € (sotto 0,50 €, non riconciliato).` : ' Nessuno scarto.')))), spesaSection === 'saldi' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
@@ -1062,27 +1208,40 @@ function App() {
   })), totals.transfers.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "mt-3 pt-3 border-t border-[#8F9E8B]/30"
   }, /*#__PURE__*/React.createElement("h4", {
-    className: "font-rustic text-sm text-[#8F9E8B] mb-2"
-  }, "Chi paga chi"), /*#__PURE__*/React.createElement("ul", {
+    className: "font-rustic text-sm text-[#8F9E8B] mb-1"
+  }, "Chi paga chi"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 mb-2"
+  }, "Tocca una riga quando il rimborso \xE8 stato fatto: resta barrata. Tocca di nuovo per annullare."), /*#__PURE__*/React.createElement("ul", {
     className: "space-y-1.5"
-  }, totals.transfers.map((t, i) => /*#__PURE__*/React.createElement("li", {
-    key: i,
-    className: "flex items-center justify-between bg-[#1F271E] px-3 py-2 rounded border border-[#8F9E8B]/20"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, t.from), /*#__PURE__*/React.createElement("span", {
-    className: "text-[#8F9E8B]"
-  }, " \u2192 "), /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, t.to)), /*#__PURE__*/React.createElement("span", {
-    className: "font-rustic font-bold text-[#D97706]"
-  }, money(t.amount), " \u20AC"))))), totals.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
+  }, totals.transfers.map((t, i) => {
+    const key = `${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
+    const paid = settled.includes(key);
+    return /*#__PURE__*/React.createElement("li", {
+      key: key + i,
+      onClick: () => toggleSettled(key),
+      className: `cursor-pointer select-none flex items-center justify-between bg-[#1F271E] px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-[#8F9E8B]/20'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-xs ${paid ? 'line-through text-gray-400' : ''}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, t.from), /*#__PURE__*/React.createElement("span", {
+      className: "text-[#8F9E8B]"
+    }, " \u2192 "), /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, t.to)), /*#__PURE__*/React.createElement("span", {
+      className: "flex items-center gap-1.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-[#D97706]'}`
+    }, money(t.amount), " \u20AC"), paid && /*#__PURE__*/React.createElement("span", {
+      className: "text-[#8FBF8F] text-sm font-bold"
+    }, "\u2713")));
+  }))), totals.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-[#D97706] italic mt-2"
   }, "Attenzione: ", money(totals.unattributed), " \u20AC di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti."), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-1"
-  }, "\"Riceve\" = ha anticipato pi\xF9 di quanto deve; \"d\xE0\" = deve versare la differenza.")), /*#__PURE__*/React.createElement("div", {
+  }, "\"Riceve\" = ha anticipato pi\xF9 di quanto deve; \"d\xE0\" = deve versare la differenza."))), spesaSection === 'dati' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
@@ -1138,7 +1297,7 @@ function App() {
     className: "text-red-700"
   }, "Errore: ", cloud.error), cloud.status === 'idle' && (localStorage.getItem('cambusa_sync_optout') === '1' ? 'Sincronizzazione disattivata: premi Connetti per riattivarla.' : 'In attesa di connessione automatica…')), !isOnline && /*#__PURE__*/React.createElement("span", {
     className: "text-[#D97706] font-bold"
-  }, "offline"))))), activeTab === 'lista' && /*#__PURE__*/React.createElement("div", {
+  }, "offline")))))), activeTab === 'lista' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"

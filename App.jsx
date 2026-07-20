@@ -34,6 +34,21 @@ const initialDayState = () => ({ note: '', guestsNames: '', meals: {} });
 // Tipologie di acquisto e a quale voce di spesa contribuiscono.
 const PURCHASE_TYPES = { alimentare: 'Alimentare', bevande: 'Bevande', logistica: 'Logistica' };
 
+// Codici meteo WMO (Open-Meteo) -> icona e descrizione.
+const wmoInfo = (code) => {
+  if (code === 0) return { icon: '☀️', label: 'Sereno' };
+  if (code === 1 || code === 2) return { icon: '🌤️', label: 'Poco nuvoloso' };
+  if (code === 3) return { icon: '☁️', label: 'Coperto' };
+  if (code === 45 || code === 48) return { icon: '🌫️', label: 'Nebbia' };
+  if (code >= 51 && code <= 57) return { icon: '🌦️', label: 'Pioviggine' };
+  if (code >= 61 && code <= 67) return { icon: '🌧️', label: 'Pioggia' };
+  if (code >= 71 && code <= 77) return { icon: '🌨️', label: 'Neve' };
+  if (code >= 80 && code <= 82) return { icon: '🌦️', label: 'Rovesci' };
+  if (code === 85 || code === 86) return { icon: '🌨️', label: 'Rovesci di neve' };
+  if (code >= 95) return { icon: '⛈️', label: 'Temporale' };
+  return { icon: '🌡️', label: 'Meteo' };
+};
+
 // Dotazione personale base: uguale per tutti, non modificabile dall'app.
 const BASE_GEAR = [
   'Tenda',
@@ -105,6 +120,13 @@ function App() {
   const [pReceipt, setPReceipt] = useState(null); // foto scontrino in attesa di Salva
   const [viewReceipt, setViewReceipt] = useState(null); // foto aperta a schermo intero
   const [snapList, setSnapList] = useState(null); // elenco snapshot per il ripristino
+  const [spesaSection, setSpesaSection] = useState('totali'); // sotto-sezione attiva in Spesa
+
+  // Rimborsi segnati come "saldati" (solo barrati, non rimossi). Condivisi via sync.
+  const [settled, setSettled] = useState(() => load('cambusa_settled', []));
+
+  // Cache meteo (Open-Meteo, 16 giorni). Aggiornata al massimo una volta all'ora.
+  const [weather, setWeather] = useState(() => load('cambusa_weather', { fetchedAt: 0, byDate: {} }));
 
   // Foto scontrini: sincronizzate via Firestore (sotto-collezione dedicata,
   // un documento per foto) + copia locale in localStorage.
@@ -148,6 +170,35 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_camp_data', JSON.stringify(campData)), [campData]);
   useEffect(() => localStorage.setItem('cambusa_purchases', JSON.stringify(purchases)), [purchases]);
   useEffect(() => localStorage.setItem('cambusa_gear', JSON.stringify(gear)), [gear]);
+  useEffect(() => localStorage.setItem('cambusa_settled', JSON.stringify(settled)), [settled]);
+  useEffect(() => localStorage.setItem('cambusa_weather', JSON.stringify(weather)), [weather]);
+
+  // Scarica le previsioni (16 giorni) se c'è linea, la località è impostata e
+  // la cache ha più di un'ora. Navigando tra i giorni i dati sono già pronti.
+  useEffect(() => {
+    const loc = window.CAMP_LOCATION;
+    if (!loc || typeof loc.lat !== 'number' || typeof loc.lon !== 'number') return;
+    if (!navigator.onLine) return;
+    if (Date.now() - weather.fetchedAt < 60 * 60 * 1000) return;
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=16`)
+      .then((r) => r.json())
+      .then((j) => {
+        const d = j && j.daily;
+        if (!d || !Array.isArray(d.time)) return;
+        const byDate = {};
+        d.time.forEach((t, i) => {
+          byDate[t] = {
+            code: d.weather_code[i],
+            tmax: d.temperature_2m_max[i],
+            tmin: d.temperature_2m_min[i],
+            rain: d.precipitation_probability_max[i],
+          };
+        });
+        setWeather({ fetchedAt: Date.now(), byDate });
+      })
+      .catch(() => { /* offline o API non raggiungibile: resta la cache */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline, selectedDateStr]);
   useEffect(() => {
     receiptsRef.current = receipts;
     try {
@@ -200,6 +251,7 @@ function App() {
     if (remote.campData && typeof remote.campData === 'object') setCampData(remote.campData);
     if (Array.isArray(remote.purchases)) setPurchases(remote.purchases);
     if (Array.isArray(remote.gear)) setGear(remote.gear);
+    if (Array.isArray(remote.settled)) setSettled(remote.settled);
     setTimeout(() => { suppressPushRef.current = false; }, 0);
   };
 
@@ -258,8 +310,8 @@ function App() {
   useEffect(() => {
     if (!cloudConnectedRef.current) return;
     if (suppressPushRef.current) return;
-    if (window.CloudSync) window.CloudSync.pushState({ members, campData, purchases, gear });
-  }, [members, campData, purchases, gear]);
+    if (window.CloudSync) window.CloudSync.pushState({ members, campData, purchases, gear, settled });
+  }, [members, campData, purchases, gear, settled]);
 
   // ---------- Dati per giorno ----------
   const getDayData = (dateStr) => ({ ...initialDayState(), ...(campData[dateStr] || {}) });
@@ -387,6 +439,11 @@ function App() {
     } catch (e) {
       window.alert('Salvataggio non valido.');
     }
+  };
+
+  // ---------- Rimborsi saldati (barrati) ----------
+  const toggleSettled = (key) => {
+    setSettled((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   };
 
   // ---------- Dotazioni aggiuntive ----------
@@ -578,7 +635,7 @@ function App() {
 
   // ---------- Backup (Export / Import) ----------
   const exportData = () => {
-    const payload = { version: 3, exportedAt: new Date().toISOString(), members, campData, purchases, gear, receipts };
+    const payload = { version: 4, exportedAt: new Date().toISOString(), members, campData, purchases, gear, settled, receipts };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -600,6 +657,7 @@ function App() {
         if (d.campData && typeof d.campData === 'object') setCampData(d.campData);
         if (Array.isArray(d.purchases)) setPurchases(d.purchases);
         if (Array.isArray(d.gear)) setGear(d.gear);
+        if (Array.isArray(d.settled)) setSettled(d.settled);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
@@ -665,9 +723,22 @@ function App() {
         </span>
       </header>
 
-      {/* Menu a tendina (hamburger): scende sotto l'header, che resta visibile */}
-      {menuOpen && (
-        <nav className="bg-[#F0F4F1] border-b-4 border-[#5C4A3C] shadow-md p-2 space-y-1">
+      {/* Menu laterale (drawer): scorre da sinistra sopra il contenuto */}
+      <div className={`fixed inset-0 z-40 ${menuOpen ? '' : 'pointer-events-none'}`}>
+        <div
+          onClick={() => setMenuOpen(false)}
+          className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${menuOpen ? 'opacity-100' : 'opacity-0'}`}
+        ></div>
+        <nav
+          className={`absolute left-0 top-0 bottom-0 w-72 max-w-[80vw] bg-[#F0F4F1] border-r-4 border-[#5C4A3C] shadow-2xl p-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        >
+          <div className="flex items-center gap-3 border-b border-[#8F9E8B]/40 pb-3 mb-2">
+            <img src="./logo.png" alt="" className="w-11 h-11 rounded-full object-cover border-2 border-[#8F9E8B] bg-white" />
+            <div>
+              <div className="font-rustic text-[#2D392C] leading-tight">PRATO LUNGO 2026</div>
+              <div className="text-[9px] uppercase tracking-wider text-[#8F9E8B]">Brigata Fabio Bandone</div>
+            </div>
+          </div>
           {Object.keys(tabs).map((tab) => (
             <button
               key={tab}
@@ -680,7 +751,7 @@ function App() {
             </button>
           ))}
         </nav>
-      )}
+      </div>
 
       {/* Suggerimento installazione app */}
       {showInstallHint && (
@@ -737,6 +808,36 @@ function App() {
               <h3 className="font-rustic text-lg border-b border-dashed border-[#8F9E8B] pb-1">
                 Note del {parseDate(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
               </h3>
+
+              {/* Meteo previsto per il giorno selezionato */}
+              {(() => {
+                const loc = window.CAMP_LOCATION;
+                const locOk = loc && typeof loc.lat === 'number' && typeof loc.lon === 'number';
+                const wx = weather.byDate[selectedDateStr];
+                return (
+                  <div className="flex items-center gap-2 bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20">
+                    {!locOk ? (
+                      <span className="text-[10px] text-gray-400 italic">Meteo: località del campo da impostare.</span>
+                    ) : wx ? (
+                      <>
+                        <span className="text-2xl leading-none">{wmoInfo(wx.code).icon}</span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-[#2D392C]">{wmoInfo(wx.code).label}</span>
+                          {loc.label && <span className="text-[9px] text-gray-400">{loc.label}</span>}
+                        </div>
+                        <span className="ml-auto text-xs text-gray-600 font-bold">
+                          {Math.round(wx.tmax)}° / {Math.round(wx.tmin)}°{wx.rain != null ? <span className="text-[#5C8AA8]"> · 💧{wx.rain}%</span> : null}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-[10px] text-gray-400 italic">
+                        Previsione non ancora disponibile per questo giorno{isOnline ? ' (copre ~16 giorni in avanti)' : ' (offline)'}.
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+
               <textarea
                 value={getDayData(selectedDateStr).note}
                 onChange={(e) => updateDayData(selectedDateStr, 'note', e.target.value)}
@@ -864,6 +965,22 @@ function App() {
         {/* ---------- SPESA ---------- */}
         {activeTab === 'spesa' && (
           <div className="space-y-4">
+            {/* Sotto-sezioni della Spesa */}
+            <div className="grid grid-cols-4 gap-1.5">
+              {[['totali', 'Totali'], ['quote', 'Quote'], ['saldi', 'Saldi'], ['dati', 'Dati']].map(([k, l]) => (
+                <button
+                  key={k}
+                  onClick={() => setSpesaSection(k)}
+                  className={`py-2.5 rounded text-[10px] font-bold uppercase tracking-wide border-b-4 transition-all ${
+                    spesaSection === k ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            {spesaSection === 'totali' && (<div className="space-y-4">
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-4">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Cassa Globale Campo</h3>
               <p className="text-[10px] text-gray-500 -mt-1">Totali generati automaticamente dagli acquisti registrati nel <span className="font-bold">Taccuino</span>.</p>
@@ -902,6 +1019,9 @@ function App() {
               <p className="text-[9px] text-gray-400 italic">I pasti dei bambini sono gratis: il loro costo è ripartito sugli adulti.</p>
             </div>
 
+            </div>)}
+
+            {spesaSection === 'quote' && (<div className="space-y-4">
             {/* Ripartizione per membro */}
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Quanto deve ciascuno</h3>
@@ -936,6 +1056,9 @@ function App() {
               )}
             </div>
 
+            </div>)}
+
+            {spesaSection === 'saldi' && (<div className="space-y-4">
             {/* Anticipi per acquirente */}
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Anticipi per acquirente</h3>
@@ -984,18 +1107,30 @@ function App() {
               )}
               {totals.transfers.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-[#8F9E8B]/30">
-                  <h4 className="font-rustic text-sm text-[#8F9E8B] mb-2">Chi paga chi</h4>
+                  <h4 className="font-rustic text-sm text-[#8F9E8B] mb-1">Chi paga chi</h4>
+                  <p className="text-[9px] text-gray-400 mb-2">Tocca una riga quando il rimborso è stato fatto: resta barrata. Tocca di nuovo per annullare.</p>
                   <ul className="space-y-1.5">
-                    {totals.transfers.map((t, i) => (
-                      <li key={i} className="flex items-center justify-between bg-[#1F271E] px-3 py-2 rounded border border-[#8F9E8B]/20">
-                        <span className="text-xs">
-                          <span className="font-bold">{t.from}</span>
-                          <span className="text-[#8F9E8B]"> → </span>
-                          <span className="font-bold">{t.to}</span>
-                        </span>
-                        <span className="font-rustic font-bold text-[#D97706]">{money(t.amount)} €</span>
-                      </li>
-                    ))}
+                    {totals.transfers.map((t, i) => {
+                      const key = `${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
+                      const paid = settled.includes(key);
+                      return (
+                        <li
+                          key={key + i}
+                          onClick={() => toggleSettled(key)}
+                          className={`cursor-pointer select-none flex items-center justify-between bg-[#1F271E] px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-[#8F9E8B]/20'}`}
+                        >
+                          <span className={`text-xs ${paid ? 'line-through text-gray-400' : ''}`}>
+                            <span className="font-bold">{t.from}</span>
+                            <span className="text-[#8F9E8B]"> → </span>
+                            <span className="font-bold">{t.to}</span>
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <span className={`font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-[#D97706]'}`}>{money(t.amount)} €</span>
+                            {paid && <span className="text-[#8FBF8F] text-sm font-bold">✓</span>}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -1007,6 +1142,9 @@ function App() {
               <p className="text-[9px] text-gray-400 italic mt-1">"Riceve" = ha anticipato più di quanto deve; "dà" = deve versare la differenza.</p>
             </div>
 
+            </div>)}
+
+            {spesaSection === 'dati' && (<div className="space-y-4">
             {/* Backup dati */}
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Backup Dati</h3>
@@ -1071,6 +1209,7 @@ function App() {
                 </>
               )}
             </div>
+            </div>)}
           </div>
         )}
 
