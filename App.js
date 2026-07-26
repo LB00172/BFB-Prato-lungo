@@ -186,6 +186,12 @@ function App() {
   // Dotazioni aggiuntive (box editabile), condivise via sync.
   const [gear, setGear] = useState(() => load('cambusa_gear', []));
   const [newGearText, setNewGearText] = useState('');
+
+  // Attrezzatura da acquistare: { id, text, price, bought }. Quelle spuntate
+  // (acquistate) entrano nelle spese totali come logistica. Condivisa via sync.
+  const [equipment, setEquipment] = useState(() => load('cambusa_equipment', []));
+  const [newEquipText, setNewEquipText] = useState('');
+  const [newEquipPrice, setNewEquipPrice] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Suggerimento installazione PWA: mostrato finché l'app non è installata
@@ -223,6 +229,7 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_purchases', JSON.stringify(purchases)), [purchases]);
   useEffect(() => localStorage.setItem('cambusa_gear', JSON.stringify(gear)), [gear]);
   useEffect(() => localStorage.setItem('cambusa_settled', JSON.stringify(settled)), [settled]);
+  useEffect(() => localStorage.setItem('cambusa_equipment', JSON.stringify(equipment)), [equipment]);
   useEffect(() => localStorage.setItem('cambusa_weather', JSON.stringify(weather)), [weather]);
 
   // Scarica le previsioni (16 giorni) se c'è linea, la località è impostata e
@@ -305,6 +312,7 @@ function App() {
     if (Array.isArray(remote.purchases)) setPurchases(remote.purchases);
     if (Array.isArray(remote.gear)) setGear(remote.gear);
     if (Array.isArray(remote.settled)) setSettled(remote.settled);
+    if (Array.isArray(remote.equipment)) setEquipment(remote.equipment);
     setTimeout(() => {
       suppressPushRef.current = false;
     }, 0);
@@ -377,9 +385,10 @@ function App() {
       campData,
       purchases,
       gear,
-      settled
+      settled,
+      equipment
     });
-  }, [members, campData, purchases, gear, settled]);
+  }, [members, campData, purchases, gear, settled, equipment]);
 
   // ---------- Dati per giorno ----------
   const getDayData = dateStr => ({
@@ -616,6 +625,31 @@ function App() {
     setSettled(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
   };
 
+  // ---------- Aggiunta attrezzatura ----------
+  const addEquip = () => {
+    const text = newEquipText.trim();
+    if (!text) return;
+    setEquipment(prev => [...prev, {
+      id: uid(),
+      text,
+      price: posNum(newEquipPrice),
+      bought: false
+    }]);
+    setNewEquipText('');
+    setNewEquipPrice('');
+  };
+  const toggleEquipBought = id => {
+    setEquipment(prev => prev.map(e => e.id === id ? {
+      ...e,
+      bought: !e.bought
+    } : e));
+  };
+  const removeEquip = id => {
+    const e = equipment.find(x => x.id === id);
+    if (e && !window.confirm(`Eliminare "${e.text}" dall'attrezzatura?`)) return;
+    setEquipment(prev => prev.filter(x => x.id !== id));
+  };
+
   // ---------- Dotazioni aggiuntive ----------
   const addGear = () => {
     const text = newGearText.trim();
@@ -665,7 +699,9 @@ function App() {
     const sumByType = t => purchases.reduce((s, p) => p.type === t ? s + posNum(p.price) : s, 0);
     const totalFood = sumByType('alimentare');
     const totalDrinks = sumByType('bevande');
-    const totalAccessory = sumByType('logistica');
+    // Attrezzatura acquistata (spuntata): conta come logistica.
+    const equipBought = equipment.reduce((s, e) => e.bought ? s + posNum(e.price) : s, 0);
+    const totalAccessory = sumByType('logistica') + equipBought;
     const totalFoodDrinks = totalFood + totalDrinks;
     const overallTotal = totalFoodDrinks + totalAccessory;
 
@@ -763,6 +799,15 @@ function App() {
       };
       paidByName[key].paid += posNum(p.price);
     });
+    // L'attrezzatura acquistata è spesa comune senza un singolo anticipatore:
+    // entra tra gli anticipi "non attribuiti" così i saldi restano a somma zero.
+    if (equipBought > 0) {
+      if (!paidByName['—']) paidByName['—'] = {
+        display: '—',
+        paid: 0
+      };
+      paidByName['—'].paid += equipBought;
+    }
     const owedByName = {}; // nome membro normalizzato -> { display, owed }
     breakdown.forEach(b => {
       const key = norm(b.name);
@@ -839,13 +884,14 @@ function App() {
   // ---------- Backup (Export / Import) ----------
   const exportData = () => {
     const payload = {
-      version: 4,
+      version: 5,
       exportedAt: new Date().toISOString(),
       members,
       campData,
       purchases,
       gear,
       settled,
+      equipment,
       receipts
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -871,6 +917,7 @@ function App() {
         if (Array.isArray(d.purchases)) setPurchases(d.purchases);
         if (Array.isArray(d.gear)) setGear(d.gear);
         if (Array.isArray(d.settled)) setSettled(d.settled);
+        if (Array.isArray(d.equipment)) setEquipment(d.equipment);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
@@ -905,8 +952,9 @@ function App() {
     calendario: 'Calendario',
     membri: 'Membri',
     presenze: 'Presenze',
-    spesa: 'Spesa',
-    lista: 'Taccuino',
+    spesa: 'Spese Totali',
+    lista: 'Lista della Spesa',
+    attrezzatura: 'Aggiunta Attrezzatura',
     regole: 'Regole',
     dotazioni: 'Dotazioni personali'
   };
@@ -1177,9 +1225,11 @@ function App() {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
   }, "Cassa Globale Campo"), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 -mt-1"
-  }, "Totali generati automaticamente dagli acquisti registrati nel ", /*#__PURE__*/React.createElement("span", {
+  }, "Totali generati automaticamente dalla ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Taccuino"), "."), /*#__PURE__*/React.createElement("div", {
+  }, "Lista della Spesa"), " e dall'", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Attrezzatura"), " acquistata."), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
   }, [['Spesa Cibo (Alimentare)', totals.totalFood], ['Spesa Bevande', totals.totalDrinks], ['Accessori (Logistica)', totals.totalAccessory]].map(([label, val]) => /*#__PURE__*/React.createElement("div", {
     key: label,
@@ -1505,7 +1555,81 @@ function App() {
     className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
   }, "\xD7")))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
-  }, "Le foto degli scontrini si sincronizzano tra i dispositivi connessi al campo (e sono incluse nel backup Esporta)."))), activeTab === 'regole' && /*#__PURE__*/React.createElement("div", {
+  }, "Le foto degli scontrini si sincronizzano tra i dispositivi connessi al campo (e sono incluse nel backup Esporta)."))), activeTab === 'attrezzatura' && (() => {
+    const equipBoughtTotal = equipment.reduce((s, e) => e.bought ? s + posNum(e.price) : s, 0);
+    const equipPlannedTotal = equipment.reduce((s, e) => s + posNum(e.price), 0);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "space-y-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+    }, "Aggiungi attrezzatura"), /*#__PURE__*/React.createElement("input", {
+      type: "text",
+      value: newEquipText,
+      onChange: e => setNewEquipText(e.target.value),
+      placeholder: "Es. Corda, gazebo, tanica\u2026",
+      className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "number",
+      min: "0",
+      step: "0.01",
+      inputMode: "decimal",
+      value: newEquipPrice,
+      onChange: e => setNewEquipPrice(e.target.value),
+      onKeyDown: e => e.key === 'Enter' && addEquip(),
+      placeholder: "Prezzo (\u20AC)",
+      className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
+    }), /*#__PURE__*/React.createElement("button", {
+      onClick: addEquip,
+      className: "px-5 bg-[#2D392C] text-white rounded font-bold uppercase text-sm hover:bg-[#1F271E]"
+    }, "Aggiungi")), /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-gray-400"
+    }, "Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica).")), /*#__PURE__*/React.createElement("div", {
+      className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "font-rustic text-lg text-[#2D392C]"
+    }, "Attrezzatura"), equipment.length > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] uppercase font-bold text-gray-500"
+    }, equipment.filter(e => !e.bought).length, " da comprare")), equipment.length === 0 ? /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-gray-400 italic"
+    }, "Nessuna attrezzatura. Aggiungi la prima voce qui sopra.") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ul", {
+      className: "space-y-2"
+    }, equipment.map(e => /*#__PURE__*/React.createElement("li", {
+      key: e.id,
+      className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => toggleEquipBought(e.id),
+      "aria-label": e.bought ? 'Segna da comprare' : 'Segna acquistato',
+      className: `w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold ${e.bought ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B]'}`
+    }, e.bought ? '✓' : ''), /*#__PURE__*/React.createElement("span", {
+      className: `flex-grow text-sm ${e.bought ? 'line-through text-gray-400' : 'text-[#2D392C]'}`
+    }, e.text), /*#__PURE__*/React.createElement("span", {
+      className: `font-rustic font-bold shrink-0 ${e.bought ? 'text-[#2D392C]' : 'text-gray-400'}`
+    }, money(posNum(e.price)), " \u20AC"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => removeEquip(e.id),
+      "aria-label": "Rimuovi",
+      className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
+    }, "\xD7")))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-3 pt-2 border-t border-[#8F9E8B]/30 space-y-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between text-[11px] text-gray-500"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "uppercase font-bold"
+    }, "Previsto (tutto)"), /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, money(equipPlannedTotal), " \u20AC")), /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between items-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] uppercase font-bold text-[#2D392C]"
+    }, "Acquistato (nelle spese)"), /*#__PURE__*/React.createElement("span", {
+      className: "font-rustic font-bold text-[#2D392C]"
+    }, money(equipBoughtTotal), " \u20AC"))))));
+  })(), activeTab === 'regole' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-6 rounded-lg border-2 border-[#2D392C]/20 shadow-sm text-center"

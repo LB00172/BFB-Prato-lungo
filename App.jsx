@@ -145,6 +145,12 @@ function App() {
   const [gear, setGear] = useState(() => load('cambusa_gear', []));
   const [newGearText, setNewGearText] = useState('');
 
+  // Attrezzatura da acquistare: { id, text, price, bought }. Quelle spuntate
+  // (acquistate) entrano nelle spese totali come logistica. Condivisa via sync.
+  const [equipment, setEquipment] = useState(() => load('cambusa_equipment', []));
+  const [newEquipText, setNewEquipText] = useState('');
+  const [newEquipPrice, setNewEquipPrice] = useState('');
+
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Suggerimento installazione PWA: mostrato finché l'app non è installata
@@ -179,6 +185,7 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_purchases', JSON.stringify(purchases)), [purchases]);
   useEffect(() => localStorage.setItem('cambusa_gear', JSON.stringify(gear)), [gear]);
   useEffect(() => localStorage.setItem('cambusa_settled', JSON.stringify(settled)), [settled]);
+  useEffect(() => localStorage.setItem('cambusa_equipment', JSON.stringify(equipment)), [equipment]);
   useEffect(() => localStorage.setItem('cambusa_weather', JSON.stringify(weather)), [weather]);
 
   // Scarica le previsioni (16 giorni) se c'è linea, la località è impostata e
@@ -260,6 +267,7 @@ function App() {
     if (Array.isArray(remote.purchases)) setPurchases(remote.purchases);
     if (Array.isArray(remote.gear)) setGear(remote.gear);
     if (Array.isArray(remote.settled)) setSettled(remote.settled);
+    if (Array.isArray(remote.equipment)) setEquipment(remote.equipment);
     setTimeout(() => { suppressPushRef.current = false; }, 0);
   };
 
@@ -318,8 +326,8 @@ function App() {
   useEffect(() => {
     if (!cloudConnectedRef.current) return;
     if (suppressPushRef.current) return;
-    if (window.CloudSync) window.CloudSync.pushState({ members, campData, purchases, gear, settled });
-  }, [members, campData, purchases, gear, settled]);
+    if (window.CloudSync) window.CloudSync.pushState({ members, campData, purchases, gear, settled, equipment });
+  }, [members, campData, purchases, gear, settled, equipment]);
 
   // ---------- Dati per giorno ----------
   const getDayData = (dateStr) => ({ ...initialDayState(), ...(campData[dateStr] || {}) });
@@ -489,6 +497,25 @@ function App() {
     setSettled((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   };
 
+  // ---------- Aggiunta attrezzatura ----------
+  const addEquip = () => {
+    const text = newEquipText.trim();
+    if (!text) return;
+    setEquipment((prev) => [...prev, { id: uid(), text, price: posNum(newEquipPrice), bought: false }]);
+    setNewEquipText('');
+    setNewEquipPrice('');
+  };
+
+  const toggleEquipBought = (id) => {
+    setEquipment((prev) => prev.map((e) => (e.id === id ? { ...e, bought: !e.bought } : e)));
+  };
+
+  const removeEquip = (id) => {
+    const e = equipment.find((x) => x.id === id);
+    if (e && !window.confirm(`Eliminare "${e.text}" dall'attrezzatura?`)) return;
+    setEquipment((prev) => prev.filter((x) => x.id !== id));
+  };
+
   // ---------- Dotazioni aggiuntive ----------
   const addGear = () => {
     const text = newGearText.trim();
@@ -539,7 +566,9 @@ function App() {
     const sumByType = (t) => purchases.reduce((s, p) => (p.type === t ? s + posNum(p.price) : s), 0);
     const totalFood = sumByType('alimentare');
     const totalDrinks = sumByType('bevande');
-    const totalAccessory = sumByType('logistica');
+    // Attrezzatura acquistata (spuntata): conta come logistica.
+    const equipBought = equipment.reduce((s, e) => (e.bought ? s + posNum(e.price) : s), 0);
+    const totalAccessory = sumByType('logistica') + equipBought;
     const totalFoodDrinks = totalFood + totalDrinks;
     const overallTotal = totalFoodDrinks + totalAccessory;
 
@@ -632,6 +661,12 @@ function App() {
       if (!paidByName[key]) paidByName[key] = { display: raw, paid: 0 };
       paidByName[key].paid += posNum(p.price);
     });
+    // L'attrezzatura acquistata è spesa comune senza un singolo anticipatore:
+    // entra tra gli anticipi "non attribuiti" così i saldi restano a somma zero.
+    if (equipBought > 0) {
+      if (!paidByName['—']) paidByName['—'] = { display: '—', paid: 0 };
+      paidByName['—'].paid += equipBought;
+    }
     const owedByName = {}; // nome membro normalizzato -> { display, owed }
     breakdown.forEach((b) => {
       const key = norm(b.name);
@@ -678,7 +713,7 @@ function App() {
 
   // ---------- Backup (Export / Import) ----------
   const exportData = () => {
-    const payload = { version: 4, exportedAt: new Date().toISOString(), members, campData, purchases, gear, settled, receipts };
+    const payload = { version: 5, exportedAt: new Date().toISOString(), members, campData, purchases, gear, settled, equipment, receipts };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -701,6 +736,7 @@ function App() {
         if (Array.isArray(d.purchases)) setPurchases(d.purchases);
         if (Array.isArray(d.gear)) setGear(d.gear);
         if (Array.isArray(d.settled)) setSettled(d.settled);
+        if (Array.isArray(d.equipment)) setEquipment(d.equipment);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
@@ -734,8 +770,9 @@ function App() {
     calendario: 'Calendario',
     membri: 'Membri',
     presenze: 'Presenze',
-    spesa: 'Spesa',
-    lista: 'Taccuino',
+    spesa: 'Spese Totali',
+    lista: 'Lista della Spesa',
+    attrezzatura: 'Aggiunta Attrezzatura',
     regole: 'Regole',
     dotazioni: 'Dotazioni personali',
   };
@@ -1040,7 +1077,7 @@ function App() {
             {spesaSection === 'totali' && (<div className="space-y-4">
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-4">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Cassa Globale Campo</h3>
-              <p className="text-[10px] text-gray-500 -mt-1">Totali generati automaticamente dagli acquisti registrati nel <span className="font-bold">Taccuino</span>.</p>
+              <p className="text-[10px] text-gray-500 -mt-1">Totali generati automaticamente dalla <span className="font-bold">Lista della Spesa</span> e dall'<span className="font-bold">Attrezzatura</span> acquistata.</p>
               <div className="space-y-2">
                 {[
                   ['Spesa Cibo (Alimentare)', totals.totalFood],
@@ -1389,6 +1426,83 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* ---------- AGGIUNTA ATTREZZATURA ---------- */}
+        {activeTab === 'attrezzatura' && (() => {
+          const equipBoughtTotal = equipment.reduce((s, e) => (e.bought ? s + posNum(e.price) : s), 0);
+          const equipPlannedTotal = equipment.reduce((s, e) => s + posNum(e.price), 0);
+          return (
+          <div className="space-y-4">
+            {/* Form di inserimento */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Aggiungi attrezzatura</h3>
+              <input
+                type="text"
+                value={newEquipText}
+                onChange={(e) => setNewEquipText(e.target.value)}
+                placeholder="Es. Corda, gazebo, tanica…"
+                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+              />
+              <div className="flex gap-2">
+                <input
+                  type="number" min="0" step="0.01" inputMode="decimal"
+                  value={newEquipPrice}
+                  onChange={(e) => setNewEquipPrice(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addEquip()}
+                  placeholder="Prezzo (€)"
+                  className="flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
+                />
+                <button onClick={addEquip} className="px-5 bg-[#2D392C] text-white rounded font-bold uppercase text-sm hover:bg-[#1F271E]">Aggiungi</button>
+              </div>
+              <p className="text-[9px] text-gray-400">Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica).</p>
+            </div>
+
+            {/* Elenco attrezzatura */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
+              <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3">
+                <h3 className="font-rustic text-lg text-[#2D392C]">Attrezzatura</h3>
+                {equipment.length > 0 && (
+                  <span className="text-[10px] uppercase font-bold text-gray-500">
+                    {equipment.filter((e) => !e.bought).length} da comprare
+                  </span>
+                )}
+              </div>
+              {equipment.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">Nessuna attrezzatura. Aggiungi la prima voce qui sopra.</p>
+              ) : (
+                <>
+                <ul className="space-y-2">
+                  {equipment.map((e) => (
+                    <li key={e.id} className="flex items-center gap-3 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
+                      <button
+                        onClick={() => toggleEquipBought(e.id)}
+                        aria-label={e.bought ? 'Segna da comprare' : 'Segna acquistato'}
+                        className={`w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold ${e.bought ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B]'}`}
+                      >
+                        {e.bought ? '✓' : ''}
+                      </button>
+                      <span className={`flex-grow text-sm ${e.bought ? 'line-through text-gray-400' : 'text-[#2D392C]'}`}>{e.text}</span>
+                      <span className={`font-rustic font-bold shrink-0 ${e.bought ? 'text-[#2D392C]' : 'text-gray-400'}`}>{money(posNum(e.price))} €</span>
+                      <button onClick={() => removeEquip(e.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0">&times;</button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3 pt-2 border-t border-[#8F9E8B]/30 space-y-1">
+                  <div className="flex justify-between text-[11px] text-gray-500">
+                    <span className="uppercase font-bold">Previsto (tutto)</span>
+                    <span className="font-bold">{money(equipPlannedTotal)} €</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] uppercase font-bold text-[#2D392C]">Acquistato (nelle spese)</span>
+                    <span className="font-rustic font-bold text-[#2D392C]">{money(equipBoughtTotal)} €</span>
+                  </div>
+                </div>
+                </>
+              )}
+            </div>
+          </div>
+          );
+        })()}
 
         {/* ---------- REGOLE ---------- */}
         {activeTab === 'regole' && (
