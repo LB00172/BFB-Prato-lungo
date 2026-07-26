@@ -1581,10 +1581,10 @@ function App() {
       onChange: e => setNewEquipPrice(e.target.value),
       onKeyDown: e => e.key === 'Enter' && addEquip(),
       placeholder: "Prezzo (\u20AC)",
-      className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
+      className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
     }), /*#__PURE__*/React.createElement("button", {
       onClick: addEquip,
-      className: "px-5 bg-[#2D392C] text-white rounded font-bold uppercase text-sm hover:bg-[#1F271E]"
+      className: "shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold uppercase text-xs hover:bg-[#1F271E]"
     }, "Aggiungi")), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-gray-400"
     }, "Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica).")), /*#__PURE__*/React.createElement("div", {
