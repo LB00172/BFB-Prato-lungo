@@ -31,6 +31,21 @@ const posNum = (v) => Math.max(0, parseFloat(v) || 0);
 
 const initialDayState = () => ({ note: '', guestsNames: '', meals: {} });
 
+// Branding e funzionalità: letti da window.APP_CONFIG (firebase-config.js),
+// con fallback ai valori attuali se la configurazione non è presente.
+const CFG = (typeof window !== 'undefined' && window.APP_CONFIG) || {};
+const BRAND = {
+  appTitle: 'PRATO LUNGO 2026',
+  groupName: 'Brigata Fabio Bandone',
+  splashLine1: 'BRIGATA',
+  splashLine2: 'FABIO BANDONE',
+  splashTagline: 'Prato Lungo Forever',
+  footerMotto: 'In BANDY we Trust',
+  credits: 'Web app prodotta da Lorenzo Ballerini · Tutti i diritti riservati © 2026',
+  ...(CFG.brand || {}),
+};
+const FEATURES = { auth: false, rooms: false, ...(CFG.features || {}) };
+
 // Periodo del campo. Durante il campo l'app si apre sul giorno corrente.
 const CAMP_START = '2026-08-11';
 const CAMP_END = '2026-08-16';
@@ -168,6 +183,17 @@ function App() {
     setShowInstallHint(false);
   };
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  // Desktop = puntatore fine e nessun touch primario: cambia solo i testi
+  // delle istruzioni, non la grafica.
+  const isDesktop = !/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+
+  // Chiusura del menu laterale con Esc (comodo da tastiera).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // ---------- Stato sincronizzazione cloud (Firebase) ----------
@@ -498,7 +524,7 @@ function App() {
   const buildReport = () => {
     const t = totals;
     const lines = [];
-    lines.push('🏕️ PRATO LUNGO 2026 — Conti finali');
+    lines.push(`🏕️ ${BRAND.appTitle} — Conti finali`);
     lines.push('');
     lines.push(`💶 Totale spese: ${money(t.overallTotal)} €`);
     if (t.transfers.length > 0) {
@@ -803,13 +829,13 @@ function App() {
         className="fixed inset-0 bg-[#2D392C] flex flex-col items-center justify-center text-[#F0F4F1] z-50 cursor-pointer"
       >
         <div className="w-56 h-56 mb-6 rounded-full overflow-hidden shadow-2xl flex items-center justify-center border-4 border-[#8F9E8B] bg-[#F0F4F1]">
-          <img src="./logo.png" alt="Logo Brigata Fabio Bandone" className="w-full h-full object-cover" />
+          <img src="./logo.png" alt={`Logo ${BRAND.groupName}`} className="w-full h-full object-cover" />
         </div>
-        <h1 className="font-rustic text-3xl tracking-widest text-[#8F9E8B]">BRIGATA</h1>
-        <h2 className="font-rustic text-xl tracking-widest text-[#F0F4F1]">FABIO BANDONE</h2>
-        <p className="mt-4 text-xs uppercase tracking-widest opacity-60">Prato Lungo Forever</p>
+        <h1 className="font-rustic text-3xl tracking-widest text-[#8F9E8B]">{BRAND.splashLine1}</h1>
+        <h2 className="font-rustic text-xl tracking-widest text-[#F0F4F1]">{BRAND.splashLine2}</h2>
+        <p className="mt-4 text-xs uppercase tracking-widest opacity-60">{BRAND.splashTagline}</p>
         <p className="absolute bottom-4 left-0 right-0 text-center text-[9px] tracking-wide text-[#8F9E8B]/70 px-6">
-          Web app prodotta da Lorenzo Ballerini · Tutti i diritti riservati © 2026
+          {BRAND.credits}
         </p>
       </div>
     );
@@ -854,7 +880,7 @@ function App() {
           <span className="block w-5 h-0.5 bg-[#F0F4F1]"></span>
           <span className="block w-5 h-0.5 bg-[#F0F4F1]"></span>
         </button>
-        <h1 className="font-rustic text-2xl tracking-wide">PRATO LUNGO 2026</h1>
+        <h1 className="font-rustic text-2xl tracking-wide">{BRAND.appTitle}</h1>
         <p className="text-xs uppercase tracking-wider text-[#8F9E8B]">{tabs[activeTab]}</p>
         <span
           title={isOnline ? 'Online' : 'Offline'}
@@ -871,14 +897,17 @@ function App() {
           onClick={() => setMenuOpen(false)}
           className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${menuOpen ? 'opacity-100' : 'opacity-0'}`}
         ></div>
+        {/* Il pannello è ancorato alla colonna dell'app (max-w-md centrata),
+            così su desktop entra dal bordo dell'app e non da quello della finestra. */}
+        <div className="absolute inset-0 max-w-md mx-auto overflow-hidden pointer-events-none">
         <nav
-          className={`absolute left-0 top-0 bottom-0 w-72 max-w-[80vw] bg-[#F0F4F1] border-r-4 border-[#5C4A3C] shadow-2xl p-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          className={`pointer-events-auto absolute left-0 top-0 bottom-0 w-72 max-w-[80%] bg-[#F0F4F1] border-r-4 border-[#5C4A3C] shadow-2xl p-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
           <div className="flex items-center gap-3 border-b border-[#8F9E8B]/40 pb-3 mb-2">
             <img src="./logo.png" alt="" className="w-11 h-11 rounded-full object-cover border-2 border-[#8F9E8B] bg-white" />
             <div>
-              <div className="font-rustic text-[#2D392C] leading-tight">PRATO LUNGO 2026</div>
-              <div className="text-[9px] uppercase tracking-wider text-[#8F9E8B]">Brigata Fabio Bandone</div>
+              <div className="font-rustic text-[#2D392C] leading-tight">{BRAND.appTitle}</div>
+              <div className="text-[9px] uppercase tracking-wider text-[#8F9E8B]">{BRAND.groupName}</div>
             </div>
           </div>
           {Object.keys(tabs).map((tab) => (
@@ -893,6 +922,7 @@ function App() {
             </button>
           ))}
         </nav>
+        </div>
       </div>
 
       {/* Suggerimento installazione app */}
@@ -900,9 +930,11 @@ function App() {
         <div className="bg-[#D97706]/15 border-b border-[#D97706]/40 px-4 py-2.5 flex items-start gap-2">
           <span className="text-base leading-none mt-0.5">📲</span>
           <p className="flex-grow text-[11px] text-[#5C4A3C] leading-snug">
-            <span className="font-bold">Installa l'app sul telefono:</span>{' '}
+            <span className="font-bold">{isDesktop ? 'Installa l\'app sul computer:' : 'Installa l\'app sul telefono:'}</span>{' '}
             {isIOS
               ? 'tocca Condividi (il quadrato con la freccia in su) e poi "Aggiungi alla schermata Home".'
+              : isDesktop
+              ? 'clicca l\'icona di installazione nella barra degli indirizzi (o menu ⋮ → "Installa").'
               : 'apri il menu del browser (⋮) e tocca "Installa app" (o "Aggiungi a schermata Home").'}
             {' '}Una volta installata funziona anche senza linea.
           </p>
@@ -1741,7 +1773,7 @@ function App() {
       )}
 
       <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#F0F4F1] border-t-2 border-[#5C4A3C] py-3 px-4 text-center z-10">
-        <div className="font-rustic text-[#2D392C] tracking-widest text-sm uppercase font-bold">In BANDY we Trust</div>
+        <div className="font-rustic text-[#2D392C] tracking-widest text-sm uppercase font-bold">{BRAND.footerMotto}</div>
       </footer>
     </div>
   );

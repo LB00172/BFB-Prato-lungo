@@ -31,6 +31,17 @@
       --color-wood: #5C4A3C;
       --color-fire: #D97706;
     }
+    /* Desktop / browser: la colonna dell'app resta identica, ma lo spazio
+       attorno prende un fondo più scuro così si stacca, e il testo torna
+       selezionabile (su mobile resta bloccato per evitare selezioni
+       accidentali col dito). */
+    @media (min-width: 768px) {
+      body {
+        background-color: #D3DCD4;
+        -webkit-user-select: text;
+        user-select: text;
+      }
+    }
   </style>
 </head>
 <body class="bg-[#F0F4F1] text-[#2D392C] font-clean antialiased min-h-screen select-none">
