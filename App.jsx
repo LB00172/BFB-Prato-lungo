@@ -150,6 +150,7 @@ function App() {
   const [equipment, setEquipment] = useState(() => load('cambusa_equipment', []));
   const [newEquipText, setNewEquipText] = useState('');
   const [newEquipPrice, setNewEquipPrice] = useState('');
+  const [newEquipBuyer, setNewEquipBuyer] = useState('');
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -501,9 +502,10 @@ function App() {
   const addEquip = () => {
     const text = newEquipText.trim();
     if (!text) return;
-    setEquipment((prev) => [...prev, { id: uid(), text, price: posNum(newEquipPrice), bought: false }]);
+    setEquipment((prev) => [...prev, { id: uid(), text, price: posNum(newEquipPrice), bought: false, buyer: newEquipBuyer.trim() }]);
     setNewEquipText('');
     setNewEquipPrice('');
+    setNewEquipBuyer('');
   };
 
   const toggleEquipBought = (id) => {
@@ -661,12 +663,18 @@ function App() {
       if (!paidByName[key]) paidByName[key] = { display: raw, paid: 0 };
       paidByName[key].paid += posNum(p.price);
     });
-    // L'attrezzatura acquistata è spesa comune senza un singolo anticipatore:
-    // entra tra gli anticipi "non attribuiti" così i saldi restano a somma zero.
-    if (equipBought > 0) {
-      if (!paidByName['—']) paidByName['—'] = { display: '—', paid: 0 };
-      paidByName['—'].paid += equipBought;
-    }
+    // Attrezzatura acquistata: se ha un acquirente viene accreditata a lui
+    // (verrà rimborsato); altrimenti è spesa comune ("non attribuita"). In
+    // entrambi i casi la somma dei saldi resta zero.
+    equipment.forEach((e) => {
+      if (!e.bought) return;
+      const price = posNum(e.price);
+      if (price <= 0) return;
+      const raw = (e.buyer && e.buyer.trim()) ? e.buyer.trim() : '—';
+      const key = norm(raw) || '—';
+      if (!paidByName[key]) paidByName[key] = { display: raw, paid: 0 };
+      paidByName[key].paid += price;
+    });
     const owedByName = {}; // nome membro normalizzato -> { display, owed }
     breakdown.forEach((b) => {
       const key = norm(b.name);
@@ -1443,6 +1451,17 @@ function App() {
                 placeholder="Es. Corda, gazebo, tanica…"
                 className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
               />
+              <input
+                type="text"
+                list="acquirenti-attrezzatura"
+                value={newEquipBuyer}
+                onChange={(e) => setNewEquipBuyer(e.target.value)}
+                placeholder="Acquirente (facoltativo)"
+                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+              />
+              <datalist id="acquirenti-attrezzatura">
+                {members.map((m) => (<option key={m.id} value={m.name} />))}
+              </datalist>
               <div className="flex gap-2">
                 <input
                   type="number" min="0" step="0.01" inputMode="decimal"
@@ -1481,7 +1500,10 @@ function App() {
                       >
                         {e.bought ? '✓' : ''}
                       </button>
-                      <span className={`flex-grow text-sm ${e.bought ? 'line-through text-gray-400' : 'text-[#2D392C]'}`}>{e.text}</span>
+                      <div className="flex-grow min-w-0">
+                        <div className={`text-sm truncate ${e.bought ? 'line-through text-gray-400' : 'text-[#2D392C]'}`}>{e.text}</div>
+                        {e.buyer && <div className="text-[9px] text-[#5C4A3C] font-bold truncate">{e.buyer}</div>}
+                      </div>
                       <span className={`font-rustic font-bold shrink-0 ${e.bought ? 'text-[#2D392C]' : 'text-gray-400'}`}>{money(posNum(e.price))} €</span>
                       <button onClick={() => removeEquip(e.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0">&times;</button>
                     </li>

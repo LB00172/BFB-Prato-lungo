@@ -192,6 +192,7 @@ function App() {
   const [equipment, setEquipment] = useState(() => load('cambusa_equipment', []));
   const [newEquipText, setNewEquipText] = useState('');
   const [newEquipPrice, setNewEquipPrice] = useState('');
+  const [newEquipBuyer, setNewEquipBuyer] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Suggerimento installazione PWA: mostrato finché l'app non è installata
@@ -633,10 +634,12 @@ function App() {
       id: uid(),
       text,
       price: posNum(newEquipPrice),
-      bought: false
+      bought: false,
+      buyer: newEquipBuyer.trim()
     }]);
     setNewEquipText('');
     setNewEquipPrice('');
+    setNewEquipBuyer('');
   };
   const toggleEquipBought = id => {
     setEquipment(prev => prev.map(e => e.id === id ? {
@@ -799,15 +802,21 @@ function App() {
       };
       paidByName[key].paid += posNum(p.price);
     });
-    // L'attrezzatura acquistata è spesa comune senza un singolo anticipatore:
-    // entra tra gli anticipi "non attribuiti" così i saldi restano a somma zero.
-    if (equipBought > 0) {
-      if (!paidByName['—']) paidByName['—'] = {
-        display: '—',
+    // Attrezzatura acquistata: se ha un acquirente viene accreditata a lui
+    // (verrà rimborsato); altrimenti è spesa comune ("non attribuita"). In
+    // entrambi i casi la somma dei saldi resta zero.
+    equipment.forEach(e => {
+      if (!e.bought) return;
+      const price = posNum(e.price);
+      if (price <= 0) return;
+      const raw = e.buyer && e.buyer.trim() ? e.buyer.trim() : '—';
+      const key = norm(raw) || '—';
+      if (!paidByName[key]) paidByName[key] = {
+        display: raw,
         paid: 0
       };
-      paidByName['—'].paid += equipBought;
-    }
+      paidByName[key].paid += price;
+    });
     const owedByName = {}; // nome membro normalizzato -> { display, owed }
     breakdown.forEach(b => {
       const key = norm(b.name);
@@ -1570,7 +1579,19 @@ function App() {
       onChange: e => setNewEquipText(e.target.value),
       placeholder: "Es. Corda, gazebo, tanica\u2026",
       className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
-    }), /*#__PURE__*/React.createElement("div", {
+    }), /*#__PURE__*/React.createElement("input", {
+      type: "text",
+      list: "acquirenti-attrezzatura",
+      value: newEquipBuyer,
+      onChange: e => setNewEquipBuyer(e.target.value),
+      placeholder: "Acquirente (facoltativo)",
+      className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+    }), /*#__PURE__*/React.createElement("datalist", {
+      id: "acquirenti-attrezzatura"
+    }, members.map(m => /*#__PURE__*/React.createElement("option", {
+      key: m.id,
+      value: m.name
+    }))), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-2"
     }, /*#__PURE__*/React.createElement("input", {
       type: "number",
@@ -1606,9 +1627,13 @@ function App() {
       onClick: () => toggleEquipBought(e.id),
       "aria-label": e.bought ? 'Segna da comprare' : 'Segna acquistato',
       className: `w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold ${e.bought ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B]'}`
-    }, e.bought ? '✓' : ''), /*#__PURE__*/React.createElement("span", {
-      className: `flex-grow text-sm ${e.bought ? 'line-through text-gray-400' : 'text-[#2D392C]'}`
-    }, e.text), /*#__PURE__*/React.createElement("span", {
+    }, e.bought ? '✓' : ''), /*#__PURE__*/React.createElement("div", {
+      className: "flex-grow min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `text-sm truncate ${e.bought ? 'line-through text-gray-400' : 'text-[#2D392C]'}`
+    }, e.text), e.buyer && /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-[#5C4A3C] font-bold truncate"
+    }, e.buyer)), /*#__PURE__*/React.createElement("span", {
       className: `font-rustic font-bold shrink-0 ${e.bought ? 'text-[#2D392C]' : 'text-gray-400'}`
     }, money(posNum(e.price)), " \u20AC"), /*#__PURE__*/React.createElement("button", {
       onClick: () => removeEquip(e.id),
