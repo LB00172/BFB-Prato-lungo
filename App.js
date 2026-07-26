@@ -168,6 +168,7 @@ function App() {
   const [viewReceipt, setViewReceipt] = useState(null); // foto aperta a schermo intero
   const [snapList, setSnapList] = useState(null); // elenco snapshot per il ripristino
   const [spesaSection, setSpesaSection] = useState('totali'); // sotto-sezione attiva in Spesa
+  const [guideOpen, setGuideOpen] = useState('calendario'); // pill aperta nella guida
 
   // Rimborsi segnati come "saldati" (solo barrati, non rimossi). Condivisi via sync.
   const [settled, setSettled] = useState(() => load('cambusa_settled', []));
@@ -621,6 +622,52 @@ function App() {
     }
   };
 
+  // ---------- Condividi resoconto spese ----------
+  const buildReport = () => {
+    const t = totals;
+    const lines = [];
+    lines.push('🏕️ PRATO LUNGO 2026 — Conti finali');
+    lines.push('');
+    lines.push(`💶 Totale spese: ${money(t.overallTotal)} €`);
+    if (t.transfers.length > 0) {
+      lines.push('');
+      lines.push('👉 Chi paga chi:');
+      t.transfers.forEach(x => lines.push(`• ${x.from} → ${x.to}: ${money(x.amount)} €`));
+    }
+    if (t.settlement.length > 0) {
+      lines.push('');
+      lines.push('📋 Dettaglio a testa:');
+      t.settlement.forEach(s => {
+        const stato = s.net > 0.005 ? `riceve ${money(s.net)} €` : s.net < -0.005 ? `deve dare ${money(-s.net)} €` : 'in pari';
+        lines.push(`• ${s.name}: ${stato} (anticipato ${money(s.paid)} €, quota ${money(s.owed)} €)`);
+      });
+    }
+    if (t.unattributed > 0.005) {
+      lines.push('');
+      lines.push(`⚠️ ${money(t.unattributed)} € di spese comuni senza acquirente.`);
+    }
+    return lines.join('\n');
+  };
+  const shareReport = async () => {
+    if (totals.overallTotal <= 0) {
+      window.alert('Nessuna spesa da condividere: registra prima gli acquisti.');
+      return;
+    }
+    const text = buildReport();
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Prato Lungo 2026 — Conti',
+          text
+        });
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return; /* altrimenti prova WhatsApp */
+      }
+    }
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  };
+
   // ---------- Rimborsi saldati (barrati) ----------
   const toggleSettled = key => {
     setSettled(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
@@ -965,12 +1012,56 @@ function App() {
     lista: 'Lista della Spesa',
     attrezzatura: 'Aggiunta Attrezzatura',
     regole: 'Regole',
-    dotazioni: 'Dotazioni personali'
+    dotazioni: 'Dotazioni personali',
+    guida: 'Come funziona'
   };
   const goTo = tab => {
     setActiveTab(tab);
     setMenuOpen(false);
   };
+
+  // Guida: una "pill" per ogni area di lavoro.
+  const GUIDE = [{
+    k: 'calendario',
+    icon: '📅',
+    title: 'Calendario',
+    body: 'Per ogni giorno vedi il meteo previsto di Pereto e il riepilogo cucina (quanti pasti preparare a pranzo e a cena). Sotto puoi scrivere note libere su menù, legna, ecc. Scorri le settimane con le frecce.'
+  }, {
+    k: 'membri',
+    icon: '👥',
+    title: 'Membri',
+    body: 'Aggiungi tutte le persone del campo. Segna "Bambino" chi non paga i pasti (mangia gratis). L\'elenco serve alle presenze e ai conti.'
+  }, {
+    k: 'presenze',
+    icon: '🍽️',
+    title: 'Presenze',
+    body: 'Per ogni giorno segna chi c\'è a pranzo e a cena. Usa "Tutti a pranzo/cena" per fare in fretta e poi togli gli assenti, oppure "Copia da ieri". Il conto dei pasti serve a calcolare la quota.'
+  }, {
+    k: 'lista',
+    icon: '🧾',
+    title: 'Lista della Spesa',
+    body: 'Registra ogni acquisto: nome, chi l\'ha pagato, prezzo e tipologia (Alimentare/Bevande/Logistica). Puoi allegare la foto dello scontrino. Da qui si generano i totali.'
+  }, {
+    k: 'attrezzatura',
+    icon: '🪛',
+    title: 'Aggiunta Attrezzatura',
+    body: 'Elenco dell\'attrezzatura da comprare con prezzo. Spunta una voce quando è acquistata: il suo costo entra nelle spese come logistica. Se metti l\'acquirente, verrà rimborsato.'
+  }, {
+    k: 'spesa',
+    icon: '💶',
+    title: 'Spese Totali',
+    body: 'Quattro sezioni: Totali (quanto si è speso), Quote (quanto costa a testa), Saldi (chi deve dare/ricevere e "chi paga chi", con Condividi resoconto), Dati (backup e ripristino). Cibo diviso per i pasti, logistica in parti uguali.'
+  }, {
+    k: 'dotazioni',
+    icon: '🎒',
+    title: 'Dotazioni personali',
+    body: 'La lista di cosa portarsi da casa: una parte fissa uguale per tutti e una parte aggiuntiva per questo campo che potete modificare.'
+  }, {
+    k: 'sync',
+    icon: '☁️',
+    title: 'Sincronizzazione',
+    body: 'Con la linea i dati si allineano da soli tra i telefoni che usano lo stesso campo. Al campo, senza linea, si continua a lavorare: tutto si sincronizza appena torna la rete.'
+  }];
   return /*#__PURE__*/React.createElement("div", {
     className: "max-w-md mx-auto min-h-screen flex flex-col bg-[#F0F4F1] border-x border-[#8F9E8B]/30 shadow-2xl pb-24"
   }, /*#__PURE__*/React.createElement("header", {
@@ -1095,6 +1186,24 @@ function App() {
     }, " \xB7 \uD83D\uDCA7", wx.rain, "%") : null)) : /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] text-gray-400 italic"
     }, "Previsione non ancora disponibile per questo giorno", isOnline ? ' (copre ~16 giorni in avanti)' : ' (offline)', "."));
+  })(), (() => {
+    const lunch = members.filter(m => getMeal(selectedDateStr, m.id).lunch).length;
+    const dinner = members.filter(m => getMeal(selectedDateStr, m.id).dinner).length;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 bg-[#2D392C]/5 px-3 py-2 rounded border border-[#2D392C]/15"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-xl leading-none"
+    }, "\uD83C\uDF72"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] uppercase font-bold text-gray-500"
+    }, "Cucina"), /*#__PURE__*/React.createElement("span", {
+      className: "ml-auto text-sm font-bold text-[#2D392C]"
+    }, lunch, " ", /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-normal text-gray-500"
+    }, "a pranzo"), /*#__PURE__*/React.createElement("span", {
+      className: "text-gray-300"
+    }, " \xB7 "), dinner, " ", /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-normal text-gray-500"
+    }, "a cena")));
   })(), /*#__PURE__*/React.createElement("textarea", {
     value: getDayData(selectedDateStr).note,
     onChange: e => updateDayData(selectedDateStr, 'note', e.target.value),
@@ -1382,7 +1491,12 @@ function App() {
     className: "text-[9px] text-[#D97706] italic mt-2"
   }, "Attenzione: ", money(totals.unattributed), " \u20AC di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti."), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-1"
-  }, "\"Riceve\" = ha anticipato pi\xF9 di quanto deve; \"d\xE0\" = deve versare la differenza."))), spesaSection === 'dati' && /*#__PURE__*/React.createElement("div", {
+  }, "\"Riceve\" = ha anticipato pi\xF9 di quanto deve; \"d\xE0\" = deve versare la differenza.")), /*#__PURE__*/React.createElement("button", {
+    onClick: shareReport,
+    className: "w-full py-3 bg-[#25D366] text-white rounded font-bold uppercase text-sm tracking-wide hover:brightness-95 flex items-center justify-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDCE4"), " Condividi resoconto"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic text-center"
+  }, "Genera un messaggio pronto con totale e \"chi paga chi\" da mandare nel gruppo.")), spesaSection === 'dati' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
@@ -1711,7 +1825,50 @@ function App() {
     onClick: () => removeGear(g.id),
     "aria-label": "Rimuovi",
     className: "text-red-700 font-bold px-2 hover:text-red-900"
-  }, "\xD7"))))))), snapList && /*#__PURE__*/React.createElement("div", {
+  }, "\xD7")))))), activeTab === 'guida' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-1"
+  }, "Come funziona l'app"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-gray-500 mb-3"
+  }, "Tocca un'area per vedere a cosa serve. In sintesi: segni presenze e spese, l'app calcola quanto deve ciascuno e chi rimborsa chi."), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, GUIDE.map(g => /*#__PURE__*/React.createElement("button", {
+    key: g.k,
+    onClick: () => setGuideOpen(g.k),
+    className: `px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors ${guideOpen === g.k ? 'bg-[#2D392C] text-white' : 'bg-[#F0F4F1] text-[#2D392C] border border-[#8F9E8B]/40 hover:bg-[#E2EAE4]'}`
+  }, g.icon, " ", g.title))), (() => {
+    const g = GUIDE.find(x => x.k === guideOpen) || GUIDE[0];
+    return /*#__PURE__*/React.createElement("div", {
+      className: "mt-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-lg leading-none"
+    }, g.icon), /*#__PURE__*/React.createElement("span", {
+      className: "font-rustic text-[#2D392C]"
+    }, g.title)), /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-[#2D392C] leading-relaxed"
+    }, g.body));
+  })()), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md"
+  }, /*#__PURE__*/React.createElement("h4", {
+    className: "font-rustic text-base mb-2"
+  }, "In tre passi"), /*#__PURE__*/React.createElement("ol", {
+    className: "text-xs space-y-1.5 list-decimal list-inside text-[#F0F4F1]/90"
+  }, /*#__PURE__*/React.createElement("li", null, "In ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Membri"), " aggiungi le persone."), /*#__PURE__*/React.createElement("li", null, "Ogni giorno segna le ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Presenze"), " e registra le spese nella ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Lista della Spesa"), "."), /*#__PURE__*/React.createElement("li", null, "In ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Spese Totali \u2192 Saldi"), " vedi chi deve dare o ricevere, e con ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Condividi resoconto"), " lo mandi nel gruppo."))))), snapList && /*#__PURE__*/React.createElement("div", {
     onClick: () => setSnapList(null),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
   }, /*#__PURE__*/React.createElement("div", {
