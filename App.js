@@ -292,19 +292,30 @@ const SK = {
   light: '#F4CFAF',
   tip: '#E8A090'
 };
-function drawBody(ctx, x, y, cell, i, total) {
+function drawBody(ctx, x, y, cell, i, total, dir) {
   const u = cell / 10;
   const cx = x + cell / 2,
     cy = y + cell / 2;
   if (i === 0) {
-    // punta arrotondata
-    ctx.fillStyle = SK.tip;
+    // Punta a mezza sfera: cupola rivolta nel senso di marcia, lato piatto
+    // raccordato al fusto (prima era un cerchio intero e sembrava una palla).
+    const d = dir && (dir.x || dir.y) ? dir : {
+      x: 0,
+      y: -1
+    };
+    const th = Math.atan2(d.y, d.x);
+    const w = cell - u * 3; // spessore del fusto
+    ctx.fillStyle = SK.skin; // raccordo verso il segmento dietro
+    if (d.x !== 0) ctx.fillRect(d.x > 0 ? x : cx, cy - w / 2, cell / 2, w);else ctx.fillRect(cx - w / 2, d.y > 0 ? y : cy, w, cell / 2);
+    ctx.fillStyle = SK.tip; // cupola
     ctx.beginPath();
-    ctx.arc(cx, cy, cell * 0.44, 0, Math.PI * 2);
+    ctx.arc(cx, cy, cell * 0.42, th - Math.PI / 2, th + Math.PI / 2);
+    ctx.closePath();
     ctx.fill();
+    // riflesso spostato in avanti, per dare la curvatura
     ctx.fillStyle = SK.light;
     ctx.beginPath();
-    ctx.arc(cx - u * 1.2, cy - u * 1.2, cell * 0.16, 0, Math.PI * 2);
+    ctx.arc(cx + Math.cos(th - 0.6) * cell * 0.2, cy + Math.sin(th - 0.6) * cell * 0.2, cell * 0.1, 0, Math.PI * 2);
     ctx.fill();
   } else if (i === total - 1 && total > 2) {
     // base: due lobi affiancati
@@ -435,7 +446,7 @@ function BandyGame({
           const sg = st.snake[i];
           const x = offX + sg.x * cell,
             y = offY + sg.y * cell;
-          drawBody(ctx, x, y, cell, i, st.snake.length);
+          drawBody(ctx, x, y, cell, i, st.snake.length, st.dir);
         }
         return;
       }
