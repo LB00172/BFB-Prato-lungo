@@ -213,44 +213,76 @@ function drawStreet(ctx, w, h, cell) {
 
 // Livello 2+: il corpo è un tubo cartoon a blocchi (stile fumetto, non
 // realistico) con la punta arrotondata e due lobi alla base.
-const SK = { skin: '#E4A882', shade: '#C0805C', light: '#F4CFAF', tip: '#E8A090' };
-function drawBody(ctx, x, y, cell, i, total, dir) {
+const SK = { skin: '#E4A882', shade: '#C98D68', light: '#F4CFAF', tip: '#E8A090', crease: '#A9714F' };
+function drawBody(ctx, snake, i, cell, offX, offY, dir) {
+  const seg = snake[i];
+  const x = offX + seg.x * cell, y = offY + seg.y * cell;
   const u = cell / 10;
+  const T = cell - u * 2.6;                 // spessore unico per tutto il fusto
   const cx = x + cell / 2, cy = y + cell / 2;
+  const total = snake.length;
+
+  // banda dal centro della cella verso un segmento vicino: garantisce
+  // spessore uniforme anche nelle curve (niente gradini)
+  const bandTo = (n) => {
+    if (!n) return;
+    const dx = n.x - seg.x, dy = n.y - seg.y;
+    if (dx > 0) ctx.fillRect(cx, cy - T / 2, cell / 2 + 1, T);
+    else if (dx < 0) ctx.fillRect(x - 1, cy - T / 2, cell / 2 + 1, T);
+    else if (dy > 0) ctx.fillRect(cx - T / 2, cy, T, cell / 2 + 1);
+    else if (dy < 0) ctx.fillRect(cx - T / 2, y - 1, T, cell / 2 + 1);
+  };
+
   if (i === 0) {
-    // Punta a mezza sfera: cupola rivolta nel senso di marcia, lato piatto
-    // raccordato al fusto (prima era un cerchio intero e sembrava una palla).
+    // Punta a mezza sfera orientata nel senso di marcia
     const d = dir && (dir.x || dir.y) ? dir : { x: 0, y: -1 };
     const th = Math.atan2(d.y, d.x);
-    const w = cell - u * 3;                 // spessore del fusto
-    ctx.fillStyle = SK.skin;                // raccordo verso il segmento dietro
-    if (d.x !== 0) ctx.fillRect(d.x > 0 ? x : cx, cy - w / 2, cell / 2, w);
-    else ctx.fillRect(cx - w / 2, d.y > 0 ? y : cy, w, cell / 2);
-    ctx.fillStyle = SK.tip;                 // cupola
+    ctx.fillStyle = SK.skin;
+    ctx.fillRect(cx - T / 2, cy - T / 2, T, T);
+    bandTo(snake[1]);
+    ctx.fillStyle = SK.tip;
     ctx.beginPath();
-    ctx.arc(cx, cy, cell * 0.42, th - Math.PI / 2, th + Math.PI / 2);
+    ctx.arc(cx, cy, T / 2, th - Math.PI / 2, th + Math.PI / 2);
     ctx.closePath();
     ctx.fill();
-    // riflesso spostato in avanti, per dare la curvatura
     ctx.fillStyle = SK.light;
     ctx.beginPath();
-    ctx.arc(cx + Math.cos(th - 0.6) * cell * 0.2, cy + Math.sin(th - 0.6) * cell * 0.2, cell * 0.1, 0, Math.PI * 2);
+    ctx.arc(cx + Math.cos(th - 0.7) * T * 0.22, cy + Math.sin(th - 0.7) * T * 0.22, T * 0.12, 0, Math.PI * 2);
     ctx.fill();
-  } else if (i === total - 1 && total > 2) {
-    // base: due lobi affiancati
-    ctx.fillStyle = SK.shade;
-    ctx.beginPath(); ctx.arc(cx - u * 2.1, cy, cell * 0.27, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx + u * 2.1, cy, cell * 0.27, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = SK.skin;
-    ctx.fillRect(cx - u * 1.6, y + u * 1.6, u * 3.2, u * 3.4);
-  } else {
-    // fusto: blocco che si aggancia alle celle vicine
-    ctx.fillStyle = SK.skin;
-    ctx.fillRect(x, y + u * 1.5, cell, cell - u * 3);
-    ctx.fillRect(x + u * 1.5, y, cell - u * 3, cell);
-    ctx.fillStyle = SK.light;   // luce laterale, dà volume
-    ctx.fillRect(x + u * 2, y + u * 2, u * 1.4, cell - u * 4);
+    return;
   }
+
+  if (i === total - 1 && total > 2) {
+    // Base: due lobi ben visibili
+    ctx.fillStyle = SK.skin;
+    ctx.fillRect(cx - T / 2, cy - T / 2, T, T);
+    bandTo(snake[i - 1]);
+    const prev = snake[i - 1];
+    const vertical = prev.x === seg.x;      // lobi affiancati rispetto all'asse
+    const r = cell * 0.34, off = cell * 0.33;
+    const lobe = (a, b) => { ctx.beginPath(); ctx.arc(a, b, r, 0, Math.PI * 2); ctx.fill(); };
+    ctx.fillStyle = SK.shade;
+    if (vertical) { lobe(cx - off, cy + u * 0.8); lobe(cx + off, cy + u * 0.8); }
+    else { lobe(cx + u * 0.8, cy - off); lobe(cx + u * 0.8, cy + off); }
+    // piega centrale: fa leggere due lobi distinti invece di un ovale unico
+    ctx.fillStyle = SK.crease;
+    if (vertical) ctx.fillRect(cx - u * 0.25, cy - u * 0.6, u * 0.5, r * 1.5);
+    else ctx.fillRect(cx - u * 0.6, cy - u * 0.25, r * 1.5, u * 0.5);
+    ctx.fillStyle = SK.skin;                 // raccordo sopra i lobi
+    ctx.fillRect(cx - T / 2, cy - T / 2, T, T);
+    return;
+  }
+
+  // Fusto: spessore identico per ogni segmento
+  ctx.fillStyle = SK.skin;
+  ctx.fillRect(cx - T / 2, cy - T / 2, T, T);
+  bandTo(snake[i - 1]);
+  bandTo(snake[i + 1]);
+  // luce lungo l'asse del tubo
+  const horiz = (snake[i - 1] && snake[i - 1].y === seg.y) || (snake[i + 1] && snake[i + 1].y === seg.y);
+  ctx.fillStyle = SK.light;
+  if (horiz) ctx.fillRect(x, cy - T * 0.34, cell, u * 1.2);
+  else ctx.fillRect(cx - T * 0.34, y, u * 1.2, cell);
 }
 
 function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
@@ -331,9 +363,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
       if (st.level >= 2) {
         // dal fondo verso la testa, così la punta resta sopra
         for (let i = st.snake.length - 1; i >= 0; i--) {
-          const sg = st.snake[i];
-          const x = offX + sg.x * cell, y = offY + sg.y * cell;
-          drawBody(ctx, x, y, cell, i, st.snake.length, st.dir);
+          drawBody(ctx, st.snake, i, cell, offX, offY, st.dir);
         }
         return;
       }
