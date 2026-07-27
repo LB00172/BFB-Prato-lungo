@@ -166,6 +166,10 @@ const compressImage = (file, maxDim = 1200, quality = 0.6) => new Promise((resol
 //  dall'alto, generato a pixel (nessuna immagine da scaricare).
 // ============================================================================
 const GAME_COLS = 15;
+const BASE_STEP = 170; // millisecondi per passo al livello 1
+const BASE_LEN = 3; // lunghezza di partenza a ogni livello
+const LEVEL_EVERY = 15; // Bandy necessari per salire di livello
+const MIN_STEP = 45; // limite di velocità: sotto diventa ingiocabile
 const GAME_ROWS = 19;
 
 // Rumore deterministico: lo sfondo è sempre lo stesso ad ogni partita.
@@ -375,7 +379,7 @@ function BandyGame({
       alive: true,
       acc: 0,
       last: 0,
-      step: 170,
+      step: BASE_STEP,
       level: 1
     };
     stateRef.current = st;
@@ -414,7 +418,7 @@ function BandyGame({
         ctx.fillRect(fcx - cell * 0.4, fcy - cell * 0.4, cell * 0.8, cell * 0.8);
       }
       // Livello 2: la fila di figure stilizzate al posto della canna.
-      if (st.level === 2) {
+      if (st.level >= 2) {
         st.snake.forEach((s, i) => {
           const x = offX + s.x * cell,
             y = offY + s.y * cell;
@@ -471,13 +475,17 @@ function BandyGame({
             if (head.x === st.food.x && head.y === st.food.y) {
               st.score += 1;
               setScore(st.score);
-              if (st.level === 1 && st.score >= 15) {
-                st.level = 2;
-                bgRef.current = bgStreet;
-                setLevel(2);
-                st.flash = 1400; // annuncio del livello
+              const nextLevel = Math.floor(st.score / LEVEL_EVERY) + 1;
+              if (nextLevel > st.level) {
+                st.level = nextLevel;
+                // velocità raddoppiata a ogni livello
+                st.step = Math.max(MIN_STEP, Math.round(BASE_STEP / Math.pow(2, nextLevel - 1)));
+                // si riparte dalla lunghezza base, mantenendo posizione e direzione
+                st.snake = st.snake.slice(0, BASE_LEN);
+                st.queue = [];
+                bgRef.current = nextLevel >= 2 ? bgStreet : bgForest;
+                setLevel(nextLevel);
               }
-              st.step = Math.max(85, 170 - st.score * 5); // accelera
               placeFood();
             } else {
               st.snake.pop();
@@ -575,7 +583,7 @@ function BandyGame({
     className: "font-rustic text-lg text-[#2D392C]"
   }, score, " \uD83C\uDF3F"), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-gray-400"
-  }, level === 1 ? `liv. 1 · -${Math.max(0, 15 - score)}` : 'liv. 2 🏙️', " \xB7 rec ", bestLocal)), /*#__PURE__*/React.createElement("div", {
+  }, "liv. ", level, level >= 2 ? ' 🏙️' : '', " \xB7 -", Math.max(0, level * 15 - score), " \xB7 rec ", bestLocal)), /*#__PURE__*/React.createElement("div", {
     className: "relative"
   }, /*#__PURE__*/React.createElement("canvas", {
     ref: canvasRef,
@@ -591,9 +599,9 @@ function BandyGame({
     className: "bg-black/70 px-5 py-3 rounded-lg text-center"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-2xl text-[#D97706]"
-  }, "LIVELLO 2"), /*#__PURE__*/React.createElement("div", {
+  }, "LIVELLO ", level), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] uppercase tracking-widest text-[#F0F4F1]"
-  }, "In citt\xE0!"))), (over || paused) && /*#__PURE__*/React.createElement("div", {
+  }, level === 2 ? 'In città!' : 'Il doppio più veloce!'))), (over || paused) && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 bg-black/70 rounded-lg flex flex-col items-center justify-center text-center p-4"
   }, over ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-2xl text-[#F0F4F1]"
