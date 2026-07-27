@@ -104,6 +104,250 @@ const compressImage = (file, maxDim = 1200, quality = 0.6) =>
     reader.readAsDataURL(file);
   });
 
+// ============================================================================
+//  MINI GIOCO "Aiuta Bandy" — snake in canvas, tutto offline.
+//  La canna cresce ogni volta che raccoglie Bandy. Sfondo: bosco visto
+//  dall'alto, generato a pixel (nessuna immagine da scaricare).
+// ============================================================================
+const GAME_COLS = 15;
+const GAME_ROWS = 19;
+
+// Rumore deterministico: lo sfondo è sempre lo stesso ad ogni partita.
+const seeded = (n) => { let s = n * 9301 + 49297; return () => ((s = (s * 9301 + 49297) % 233280) / 233280); };
+
+function drawForest(ctx, w, h, cell) {
+  const rnd = seeded(7);
+  ctx.fillStyle = '#24371F';
+  ctx.fillRect(0, 0, w, h);
+  // sottobosco a chiazze
+  const px = Math.max(3, Math.round(cell / 5));
+  for (let y = 0; y < h; y += px) {
+    for (let x = 0; x < w; x += px) {
+      const r = rnd();
+      if (r > 0.86) { ctx.fillStyle = '#2E4527'; ctx.fillRect(x, y, px, px); }
+      else if (r > 0.8) { ctx.fillStyle = '#1D2C19'; ctx.fillRect(x, y, px, px); }
+    }
+  }
+  // chiome degli alberi viste dall'alto
+  const canopies = 16;
+  for (let i = 0; i < canopies; i++) {
+    const cx = rnd() * w, cy = rnd() * h, rad = cell * (0.7 + rnd() * 0.9);
+    const tone = ['#3E6B33', '#356029', '#477A38'][Math.floor(rnd() * 3)];
+    for (let y = cy - rad; y < cy + rad; y += px) {
+      for (let x = cx - rad; x < cx + rad; x += px) {
+        const dx = x - cx, dy = y - cy;
+        if (dx * dx + dy * dy > rad * rad) continue;
+        ctx.fillStyle = (dx + dy) % (px * 4) === 0 ? '#2B4C22' : tone;
+        ctx.fillRect(Math.round(x / px) * px, Math.round(y / px) * px, px, px);
+      }
+    }
+    // tronco
+    ctx.fillStyle = '#4A3526';
+    ctx.fillRect(Math.round(cx / px) * px, Math.round(cy / px) * px, px, px);
+  }
+}
+
+function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
+  const canvasRef = useRef(null);
+  const bgRef = useRef(null);
+  const stateRef = useRef(null);
+  const [score, setScore] = useState(0);
+  const [over, setOver] = useState(false);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const cell = Math.floor(Math.min(canvas.width / GAME_COLS, canvas.height / GAME_ROWS));
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+
+    // sfondo disegnato una volta e riusato
+    const bg = document.createElement('canvas');
+    bg.width = canvas.width; bg.height = canvas.height;
+    drawForest(bg.getContext('2d'), canvas.width, canvas.height, cell);
+    bgRef.current = bg;
+
+    const img = new Image();
+    img.src = './bandy.png';
+
+    const st = {
+      snake: [{ x: 7, y: 12 }, { x: 7, y: 13 }, { x: 7, y: 14 }],
+      dir: { x: 0, y: -1 }, next: { x: 0, y: -1 },
+      food: { x: 7, y: 5 }, score: 0, alive: true, acc: 0, last: 0, step: 190,
+    };
+    stateRef.current = st;
+
+    const placeFood = () => {
+      let p, tries = 0;
+      do {
+        p = { x: Math.floor(Math.random() * GAME_COLS), y: Math.floor(Math.random() * GAME_ROWS) };
+        tries++;
+      } while (tries < 200 && st.snake.some((s) => s.x === p.x && s.y === p.y));
+      st.food = p;
+    };
+
+    const offX = Math.floor((canvas.width - cell * GAME_COLS) / 2);
+    const offY = Math.floor((canvas.height - cell * GAME_ROWS) / 2);
+
+    const draw = () => {
+      ctx.drawImage(bgRef.current, 0, 0);
+      // Bandy da raccogliere
+      const f = st.food;
+      const fx = offX + f.x * cell, fy = offY + f.y * cell;
+      if (img.complete && img.naturalWidth) {
+        ctx.drawImage(img, fx + 1, fy + 1, cell - 2, cell - 2);
+      } else {
+        ctx.fillStyle = '#E9B48E';
+        ctx.fillRect(fx + 2, fy + 2, cell - 4, cell - 4);
+      }
+      // la canna: corpo di carta con punta accesa
+      st.snake.forEach((s, i) => {
+        const x = offX + s.x * cell, y = offY + s.y * cell;
+        if (i === 0) {
+          ctx.fillStyle = '#F6EFDF';
+          ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
+          ctx.fillStyle = '#D97706';           // brace
+          ctx.fillRect(x + cell * 0.28, y + cell * 0.28, cell * 0.44, cell * 0.44);
+          ctx.fillStyle = '#FFD08A';
+          ctx.fillRect(x + cell * 0.4, y + cell * 0.4, cell * 0.2, cell * 0.2);
+        } else {
+          const last = i === st.snake.length - 1;
+          ctx.fillStyle = last ? '#C7A87C' : (i % 2 ? '#F1E7D2' : '#FAF4E6');
+          ctx.fillRect(x + 2, y + 2, cell - 4, cell - 4);
+          if (i % 3 === 0) { ctx.fillStyle = '#E3D6BB'; ctx.fillRect(x + 3, y + 3, cell - 6, 2); }
+        }
+      });
+    };
+
+    const tick = (ts) => {
+      if (!stateRef.current) return;
+      if (!st.last) st.last = ts;
+      const dt = ts - st.last; st.last = ts;
+      if (st.alive && !st.pause) {
+        st.acc += dt;
+        if (st.acc >= st.step) {
+          st.acc = 0;
+          st.dir = st.next;
+          const head = { x: st.snake[0].x + st.dir.x, y: st.snake[0].y + st.dir.y };
+          const hitWall = head.x < 0 || head.y < 0 || head.x >= GAME_COLS || head.y >= GAME_ROWS;
+          const hitSelf = st.snake.some((s) => s.x === head.x && s.y === head.y);
+          if (hitWall || hitSelf) {
+            st.alive = false;
+            setOver(true);
+            onGameOver(st.score);
+          } else {
+            st.snake.unshift(head);
+            if (head.x === st.food.x && head.y === st.food.y) {
+              st.score += 1;
+              setScore(st.score);
+              st.step = Math.max(90, 190 - st.score * 6); // accelera
+              placeFood();
+            } else {
+              st.snake.pop();
+            }
+          }
+        }
+      }
+      draw();
+      st.raf = requestAnimationFrame(tick);
+    };
+    st.raf = requestAnimationFrame(tick);
+
+    const turn = (x, y) => {
+      if (st.dir.x === -x && st.dir.y === -y) return; // niente inversione a U
+      st.next = { x, y };
+    };
+    const onKey = (e) => {
+      const k = e.key;
+      if (['ArrowUp', 'w', 'W'].includes(k)) { turn(0, -1); e.preventDefault(); }
+      else if (['ArrowDown', 's', 'S'].includes(k)) { turn(0, 1); e.preventDefault(); }
+      else if (['ArrowLeft', 'a', 'A'].includes(k)) { turn(-1, 0); e.preventDefault(); }
+      else if (['ArrowRight', 'd', 'D'].includes(k)) { turn(1, 0); e.preventDefault(); }
+    };
+    window.addEventListener('keydown', onKey);
+
+    let sx = 0, sy = 0;
+    const onStart = (e) => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; };
+    const onEnd = (e) => {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
+      if (Math.abs(dx) > Math.abs(dy)) turn(dx > 0 ? 1 : -1, 0); else turn(0, dy > 0 ? 1 : -1);
+    };
+    canvas.addEventListener('touchstart', onStart, { passive: true });
+    canvas.addEventListener('touchend', onEnd, { passive: true });
+
+    stateRef.current.turn = turn;
+
+    return () => {
+      cancelAnimationFrame(st.raf);
+      window.removeEventListener('keydown', onKey);
+      canvas.removeEventListener('touchstart', onStart);
+      canvas.removeEventListener('touchend', onEnd);
+      stateRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const nudge = (x, y) => { const st = stateRef.current; if (st && st.turn) st.turn(x, y); };
+  const togglePause = () => {
+    const st = stateRef.current; if (!st || !st.alive) return;
+    st.pause = !st.pause; setPaused(st.pause);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#8F9E8B]/30">
+        <span className="text-xs uppercase font-bold text-gray-500 truncate">{playerName}</span>
+        <span className="font-rustic text-lg text-[#2D392C]">{score} 🌿</span>
+        <span className="text-[10px] text-gray-400">record {bestLocal}</span>
+      </div>
+
+      <div className="relative">
+        <canvas
+          ref={canvasRef}
+          width={360}
+          height={456}
+          className="w-full rounded-lg border-2 border-[#2D392C]/40 touch-none"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        {(over || paused) && (
+          <div className="absolute inset-0 bg-black/70 rounded-lg flex flex-col items-center justify-center text-center p-4">
+            {over ? (
+              <>
+                <div className="font-rustic text-2xl text-[#F0F4F1]">Bandy è scappato!</div>
+                <div className="text-[#D97706] font-rustic text-3xl my-2">{score}</div>
+                <div className="text-[11px] text-gray-300 mb-4">
+                  {score > bestLocal ? 'Nuovo record personale! 🎉' : `Il tuo record resta ${bestLocal}`}
+                </div>
+                <button onClick={onExit} className="px-6 py-2.5 bg-[#2D392C] text-white rounded font-bold uppercase text-xs">Chiudi</button>
+              </>
+            ) : (
+              <div className="font-rustic text-xl text-[#F0F4F1]">In pausa</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Comandi per il telefono (in alternativa si scorre il dito sul campo) */}
+      <div className="grid grid-cols-3 gap-2 max-w-[240px] mx-auto">
+        <span></span>
+        <button onClick={() => nudge(0, -1)} aria-label="Su" className="py-3 bg-[#2D392C] text-white rounded font-bold">▲</button>
+        <span></span>
+        <button onClick={() => nudge(-1, 0)} aria-label="Sinistra" className="py-3 bg-[#2D392C] text-white rounded font-bold">◀</button>
+        <button onClick={togglePause} aria-label="Pausa" className="py-3 bg-[#5C4A3C] text-white rounded font-bold text-xs">{paused ? '▶' : '❚❚'}</button>
+        <button onClick={() => nudge(1, 0)} aria-label="Destra" className="py-3 bg-[#2D392C] text-white rounded font-bold">▶</button>
+        <span></span>
+        <button onClick={() => nudge(0, 1)} aria-label="Giù" className="py-3 bg-[#2D392C] text-white rounded font-bold">▼</button>
+        <span></span>
+      </div>
+
+      <button onClick={onExit} className="w-full py-2 text-[11px] uppercase font-bold text-gray-500 hover:text-gray-700">Esci dal gioco</button>
+    </div>
+  );
+}
+
 function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState('calendario');
@@ -171,6 +415,12 @@ function App() {
   const [newBuyQty, setNewBuyQty] = useState('');
   const [buying, setBuying] = useState(null); // voce in fase di registrazione acquisto
   const [listaSection, setListaSection] = useState('daacquistare'); // sotto-sezione Lista della Spesa
+
+  // ---------- Mini gioco "Aiuta Bandy" ----------
+  const [gamePlayer, setGamePlayer] = useState(() => localStorage.getItem('cambusa_player') || '');
+  const [gameRunning, setGameRunning] = useState(false);
+  const [gameBest, setGameBest] = useState(() => Number(load('cambusa_best', 0)) || 0);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [newEquipText, setNewEquipText] = useState('');
   const [newEquipPrice, setNewEquipPrice] = useState('');
   const [newEquipBuyer, setNewEquipBuyer] = useState('');
@@ -626,6 +876,36 @@ function App() {
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
   };
 
+  // Carica la classifica quando si apre la sezione del gioco.
+  useEffect(() => {
+    if (activeTab === 'gioco') refreshLeaderboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, cloud.connected]);
+
+  // ---------- Mini gioco: classifica ----------
+  const refreshLeaderboard = () => {
+    const CS = window.CloudSync;
+    if (CS && CS.listScores) CS.listScores().then(setLeaderboard).catch(() => {});
+  };
+
+  const startGame = () => {
+    const n = gamePlayer.trim();
+    if (!n) { window.alert('Scrivi il tuo nome per entrare in classifica.'); return; }
+    localStorage.setItem('cambusa_player', n);
+    setGameRunning(true);
+  };
+
+  const endGame = (score) => {
+    if (score > gameBest) {
+      setGameBest(score);
+      localStorage.setItem('cambusa_best', JSON.stringify(score));
+    }
+    const CS = window.CloudSync;
+    if (CS && CS.submitScore) {
+      CS.submitScore(gamePlayer.trim(), score).then(refreshLeaderboard).catch(() => {});
+    }
+  };
+
   // ---------- Rimborsi saldati (barrati) ----------
   const toggleSettled = (key) => {
     setSettled((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
@@ -933,6 +1213,7 @@ function App() {
     attrezzatura: 'Aggiunta Attrezzatura',
     regole: 'Regole',
     dotazioni: 'Dotazioni personali',
+    gioco: 'Aiuta Bandy',
     guida: 'Come funziona',
   };
 
@@ -1906,6 +2187,75 @@ function App() {
                 </ul>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ---------- AIUTA BANDY (mini gioco) ---------- */}
+        {activeTab === 'gioco' && (
+          <div className="space-y-4">
+            {!gameRunning ? (
+              <>
+                <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+                  <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Aiuta Bandy</h3>
+                  <div className="flex items-center gap-3">
+                    <img src="./bandy.png" alt="Bandy" className="w-14 h-14 rounded border-2 border-[#8F9E8B]/40 bg-[#F0F4F1]" style={{ imageRendering: 'pixelated' }} />
+                    <p className="text-[11px] text-gray-600 leading-snug">
+                      Bandy si è perso nel bosco: raccoglilo più volte che puoi. Ogni volta che lo prendi la canna si allunga — se sbatti contro i bordi o contro te stesso, finita.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Nome giocatore</label>
+                    <input
+                      type="text"
+                      list="acquirenti"
+                      value={gamePlayer}
+                      onChange={(e) => setGamePlayer(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && startGame()}
+                      placeholder="Come ti chiami?"
+                      maxLength={24}
+                      className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+                    />
+                  </div>
+                  <button onClick={startGame} className="w-full py-3 bg-[#2D392C] text-white rounded font-bold uppercase text-sm tracking-wide hover:bg-[#1F271E]">
+                    Gioca
+                  </button>
+                  <p className="text-[9px] text-gray-400 italic">Comandi: scorri il dito sul campo o usa le frecce sotto. Da computer: frecce o WASD.</p>
+                </div>
+
+                <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md">
+                  <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3">
+                    <h3 className="font-rustic text-lg">Classifica</h3>
+                    <button onClick={refreshLeaderboard} className="text-[9px] uppercase font-bold text-[#8F9E8B] hover:text-white">Aggiorna</button>
+                  </div>
+                  <div className="flex justify-between text-xs mb-3 pb-2 border-b border-[#8F9E8B]/20">
+                    <span className="text-[#8F9E8B]">Il tuo record</span>
+                    <span className="font-rustic text-[#D97706] text-lg leading-none">{gameBest}</span>
+                  </div>
+                  {leaderboard.length === 0 ? (
+                    <p className="text-[11px] text-gray-400 italic">Nessun punteggio condiviso ancora. Gioca una partita: con la linea il tuo record finisce qui per tutti.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {leaderboard.map((r, i) => (
+                        <li key={r.name + i} className="flex items-center justify-between py-1">
+                          <span className="text-sm truncate">
+                            <span className="text-[#8F9E8B] mr-2">{i + 1}.</span>
+                            {i === 0 ? '🏆 ' : ''}{r.name}
+                          </span>
+                          <span className="font-rustic font-bold text-[#D97706]">{r.score}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </>
+            ) : (
+              <BandyGame
+                playerName={gamePlayer.trim()}
+                bestLocal={gameBest}
+                onGameOver={endGame}
+                onExit={() => { setGameRunning(false); refreshLeaderboard(); }}
+              />
+            )}
           </div>
         )}
 

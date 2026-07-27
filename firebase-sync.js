@@ -192,6 +192,33 @@
     }
   }
 
+  // --- Classifica del mini gioco ---
+  // Un documento per giocatore: camps/<code>/scores/<nome normalizzato>,
+  // aggiornato solo se il nuovo punteggio è migliore.
+  async function submitScore(name, score) {
+    if (!state.connected || !db || !fb) return;
+    const key = String(name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
+    if (!key) return;
+    try {
+      const ref = fb.doc(db, 'camps', state.code, 'scores', key);
+      const cur = await fb.getDoc(ref);
+      if (cur.exists() && (cur.data().score || 0) >= score) return;
+      await fb.setDoc(ref, { name: String(name).trim().slice(0, 24), score, at: fb.serverTimestamp() });
+    } catch (e) { /* offline o regole: riprovera' */ }
+  }
+
+  async function listScores() {
+    if (!state.connected || !db || !fb) return [];
+    try {
+      const snap = await fb.getDocs(fb.collection(db, 'camps', state.code, 'scores'));
+      const out = [];
+      snap.forEach((d) => { const v = d.data(); if (v && v.name) out.push({ name: v.name, score: v.score || 0 }); });
+      return out.sort((a, b) => b.score - a.score).slice(0, 20);
+    } catch (e) {
+      return [];
+    }
+  }
+
   async function deleteReceipt(purchaseId) {
     if (!state.connected || !db || !fb) return;
     try {
@@ -215,6 +242,8 @@
     deleteReceipt,
     listSnapshots,
     getSnapshot,
+    submitScore,
+    listScores,
     disconnect,
     onStatus: (cb) => { onStatusCb = cb; cb({ ...state }); },
     onReceipts: (cb) => { onReceiptsCb = cb; },
