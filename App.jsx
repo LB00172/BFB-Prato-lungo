@@ -210,37 +210,33 @@ function drawStreet(ctx, w, h, cell) {
   });
 }
 
-// Figura stilizzata (top + gonna) disegnata a blocchi: la fila che segue Bandy.
-const FIG_TOPS = ['#D94F6A', '#E0803A', '#7B5BD6', '#3FA7A0', '#D64C9B'];
-const FIG_SKIRTS = ['#2B3A6B', '#7A2540', '#243B2A', '#4A2B6B', '#6B4A20'];
-const FIG_HAIR = ['#2B1B12', '#5C3A1E', '#8A6234', '#1F1B1A'];
-function drawFigure(ctx, x, y, cell, i, leader) {
-  const u = cell / 10;                      // unità di disegno
-  const top = leader ? '#F0C674' : FIG_TOPS[i % FIG_TOPS.length];
-  const skirt = leader ? '#8A5A1E' : FIG_SKIRTS[i % FIG_SKIRTS.length];
-  const hair = FIG_HAIR[i % FIG_HAIR.length];
-  const skin = '#E9B48E';
-  // gambe
-  ctx.fillStyle = skin;
-  ctx.fillRect(x + u * 3.5, y + u * 7.5, u * 1.2, u * 2.2);
-  ctx.fillRect(x + u * 5.3, y + u * 7.5, u * 1.2, u * 2.2);
-  // gonna (trapezio a blocchi)
-  ctx.fillStyle = skirt;
-  ctx.fillRect(x + u * 2.6, y + u * 6.4, u * 4.8, u * 1.3);
-  ctx.fillRect(x + u * 3.0, y + u * 5.4, u * 4.0, u * 1.1);
-  // top e braccia (spalle marcate)
-  ctx.fillStyle = top;
-  ctx.fillRect(x + u * 3.0, y + u * 3.4, u * 4.0, u * 2.1);
-  ctx.fillStyle = skin;
-  ctx.fillRect(x + u * 2.1, y + u * 3.6, u * 0.9, u * 2.4);
-  ctx.fillRect(x + u * 7.0, y + u * 3.6, u * 0.9, u * 2.4);
-  // testa e capelli
-  ctx.fillStyle = skin;
-  ctx.fillRect(x + u * 3.7, y + u * 1.2, u * 2.6, u * 2.4);
-  ctx.fillStyle = hair;
-  ctx.fillRect(x + u * 3.4, y + u * 0.7, u * 3.2, u * 1.1);
-  ctx.fillRect(x + u * 3.1, y + u * 1.3, u * 0.7, u * 1.8);
-  ctx.fillRect(x + u * 6.2, y + u * 1.3, u * 0.7, u * 1.8);
+// Livello 2+: il corpo è un tubo cartoon a blocchi (stile fumetto, non
+// realistico) con la punta arrotondata e due lobi alla base.
+const SK = { skin: '#E4A882', shade: '#C0805C', light: '#F4CFAF', tip: '#E8A090' };
+function drawBody(ctx, x, y, cell, i, total) {
+  const u = cell / 10;
+  const cx = x + cell / 2, cy = y + cell / 2;
+  if (i === 0) {
+    // punta arrotondata
+    ctx.fillStyle = SK.tip;
+    ctx.beginPath(); ctx.arc(cx, cy, cell * 0.44, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = SK.light;
+    ctx.beginPath(); ctx.arc(cx - u * 1.2, cy - u * 1.2, cell * 0.16, 0, Math.PI * 2); ctx.fill();
+  } else if (i === total - 1 && total > 2) {
+    // base: due lobi affiancati
+    ctx.fillStyle = SK.shade;
+    ctx.beginPath(); ctx.arc(cx - u * 2.1, cy, cell * 0.27, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + u * 2.1, cy, cell * 0.27, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = SK.skin;
+    ctx.fillRect(cx - u * 1.6, y + u * 1.6, u * 3.2, u * 3.4);
+  } else {
+    // fusto: blocco che si aggancia alle celle vicine
+    ctx.fillStyle = SK.skin;
+    ctx.fillRect(x, y + u * 1.5, cell, cell - u * 3);
+    ctx.fillRect(x + u * 1.5, y, cell - u * 3, cell);
+    ctx.fillStyle = SK.light;   // luce laterale, dà volume
+    ctx.fillRect(x + u * 2, y + u * 2, u * 1.4, cell - u * 4);
+  }
 }
 
 function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
@@ -319,12 +315,12 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
       }
       // Livello 2: la fila di figure stilizzate al posto della canna.
       if (st.level >= 2) {
-        st.snake.forEach((s, i) => {
-          const x = offX + s.x * cell, y = offY + s.y * cell;
-          ctx.fillStyle = 'rgba(0,0,0,0.28)';                 // ombra a terra
-          ctx.fillRect(x + cell * 0.2, y + cell * 0.82, cell * 0.6, cell * 0.12);
-          drawFigure(ctx, x, y, cell, i, i === 0);
-        });
+        // dal fondo verso la testa, così la punta resta sopra
+        for (let i = st.snake.length - 1; i >= 0; i--) {
+          const sg = st.snake[i];
+          const x = offX + sg.x * cell, y = offY + sg.y * cell;
+          drawBody(ctx, x, y, cell, i, st.snake.length);
+        }
         return;
       }
       // la canna: corpo di carta con punta accesa
