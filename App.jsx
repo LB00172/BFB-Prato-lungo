@@ -358,6 +358,7 @@ function drawBody(ctx, snake, i, cell, offX, offY, dir) {
 
 function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
   const canvasRef = useRef(null);
+  const wrapRef = useRef(null);
   const bgRef = useRef(null);
   const stateRef = useRef(null);
   const [score, setScore] = useState(0);
@@ -534,6 +535,22 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Schermo intero: su Android/desktop usa l'API Fullscreen; su iPhone quella
+  // API non esiste, ma il gioco è già un overlay che copre tutto lo schermo.
+  useEffect(() => {
+    const el = wrapRef.current;
+    const req = el && (el.requestFullscreen || el.webkitRequestFullscreen);
+    if (req) { try { req.call(el); } catch (e) { /* niente fullscreen: resta l'overlay */ } }
+    document.body.classList.add('overflow-hidden');
+    return () => {
+      document.body.classList.remove('overflow-hidden');
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit && (document.fullscreenElement || document.webkitFullscreenElement)) {
+        try { exit.call(document); } catch (e) { /* ignora */ }
+      }
+    };
+  }, []);
+
   const nudge = (x, y) => { const st = stateRef.current; if (st && st.turn) st.turn(x, y); };
   const togglePause = () => {
     const st = stateRef.current; if (!st || !st.alive) return;
@@ -541,8 +558,12 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#8F9E8B]/30">
+    <div
+      ref={wrapRef}
+      className="fixed inset-0 z-50 bg-[#1F271E] flex flex-col gap-2 p-2"
+      style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+    >
+      <div className="flex items-center justify-between bg-white/95 px-3 py-2 rounded-lg shrink-0">
         <span className="text-xs uppercase font-bold text-gray-500 truncate">{playerName}</span>
         <span className="font-rustic text-lg text-[#2D392C]">{score} 🌿</span>
         <span className="text-[10px] text-gray-400">
@@ -550,13 +571,13 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
         </span>
       </div>
 
-      <div className="relative">
+      <div className="relative flex-1 min-h-0 flex items-center justify-center">
         <canvas
           ref={canvasRef}
           width={360}
           height={456}
-          className="w-full rounded-lg border-2 border-[#2D392C]/40 touch-none"
-          style={{ imageRendering: 'pixelated' }}
+          className="rounded-lg border-2 border-[#2D392C]/40 touch-none max-h-full max-w-full"
+          style={{ imageRendering: 'pixelated', height: '100%', width: 'auto', aspectRatio: '360 / 456' }}
         />
         {levelUp && !over && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -587,7 +608,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
       </div>
 
       {/* Comandi per il telefono (in alternativa si scorre il dito sul campo) */}
-      <div className="grid grid-cols-3 gap-2 max-w-[240px] mx-auto">
+      <div className="grid grid-cols-3 gap-2 max-w-[240px] w-full mx-auto shrink-0">
         <span></span>
         <button onPointerDown={(e) => { e.preventDefault(); nudge(0, -1); }} aria-label="Su" className="py-3 bg-[#2D392C] text-white rounded font-bold">▲</button>
         <span></span>
@@ -599,7 +620,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
         <span></span>
       </div>
 
-      <button onClick={onExit} className="w-full py-2 text-[11px] uppercase font-bold text-gray-500 hover:text-gray-700">Esci dal gioco</button>
+      <button onClick={onExit} className="w-full py-1.5 text-[11px] uppercase font-bold text-[#8F9E8B] hover:text-white shrink-0">Esci dal gioco</button>
     </div>
   );
 }
