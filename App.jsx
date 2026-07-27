@@ -147,6 +147,98 @@ function drawForest(ctx, w, h, cell) {
   }
 }
 
+// Livello 2: strada vista dall'alto. Due corsie, rotaie del tram al centro,
+// e ai bordi si intravedono i portoni dei palazzi.
+function drawStreet(ctx, w, h, cell) {
+  const rnd = seeded(23);
+  const px = Math.max(3, Math.round(cell / 5));
+  const edge = cell * 1.1;               // fascia dei palazzi a destra e sinistra
+
+  // asfalto
+  ctx.fillStyle = '#3A3A3E';
+  ctx.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += px) {
+    for (let x = edge; x < w - edge; x += px) {
+      const r = rnd();
+      if (r > 0.9) { ctx.fillStyle = '#43434A'; ctx.fillRect(x, y, px, px); }
+      else if (r > 0.82) { ctx.fillStyle = '#333338'; ctx.fillRect(x, y, px, px); }
+    }
+  }
+
+  // marciapiedi + palazzi ai due bordi, con portoni appena visibili
+  [0, w - edge].forEach((bx, side) => {
+    ctx.fillStyle = '#6E6A63';
+    ctx.fillRect(bx, 0, edge, h);
+    ctx.fillStyle = '#5C5851';
+    for (let y = 0; y < h; y += px * 3) ctx.fillRect(bx, y, edge, px);   // lastre
+    // portoni: rettangoli scuri con architrave chiara
+    for (let y = cell * 1.2; y < h - cell; y += cell * 3.4) {
+      const dw = edge * 0.62, dh = cell * 1.5;
+      const dx = side === 0 ? bx + edge - dw : bx;
+      ctx.fillStyle = '#4A3526';
+      ctx.fillRect(dx, y, dw, dh);
+      ctx.fillStyle = '#2E2119';
+      ctx.fillRect(dx + px, y + px, dw - px * 2, dh - px * 2);
+      ctx.fillStyle = '#8A8078';
+      ctx.fillRect(dx, y - px, dw, px);
+      ctx.fillStyle = '#C9A227';                    // maniglia
+      ctx.fillRect(side === 0 ? dx + px : dx + dw - px * 2, y + dh / 2, px, px);
+    }
+  });
+
+  // strisce di mezzeria tratteggiate delle due corsie
+  ctx.fillStyle = '#D8D3C4';
+  [w * 0.3, w * 0.7].forEach((lx) => {
+    for (let y = 0; y < h; y += cell * 1.6) ctx.fillRect(lx - px / 2, y, px, cell * 0.8);
+  });
+
+  // rotaie del tram al centro
+  const cx = w / 2, gauge = cell * 0.9;
+  ctx.fillStyle = '#4E4A46';
+  ctx.fillRect(cx - gauge / 2 - px, 0, gauge + px * 2, h);   // massicciata
+  ctx.fillStyle = '#6B4A32';
+  for (let y = 0; y < h; y += cell * 0.9) ctx.fillRect(cx - gauge / 2 - px, y, gauge + px * 2, px); // traversine
+  [cx - gauge / 2, cx + gauge / 2].forEach((rx) => {
+    ctx.fillStyle = '#B9BCC2';
+    ctx.fillRect(rx - px / 2, 0, px, h);
+    ctx.fillStyle = '#8E9298';
+    ctx.fillRect(rx + px / 2, 0, Math.max(1, px / 2), h);
+  });
+}
+
+// Figura stilizzata (top + gonna) disegnata a blocchi: la fila che segue Bandy.
+const FIG_TOPS = ['#D94F6A', '#E0803A', '#7B5BD6', '#3FA7A0', '#D64C9B'];
+const FIG_SKIRTS = ['#2B3A6B', '#7A2540', '#243B2A', '#4A2B6B', '#6B4A20'];
+const FIG_HAIR = ['#2B1B12', '#5C3A1E', '#8A6234', '#1F1B1A'];
+function drawFigure(ctx, x, y, cell, i, leader) {
+  const u = cell / 10;                      // unità di disegno
+  const top = leader ? '#F0C674' : FIG_TOPS[i % FIG_TOPS.length];
+  const skirt = leader ? '#8A5A1E' : FIG_SKIRTS[i % FIG_SKIRTS.length];
+  const hair = FIG_HAIR[i % FIG_HAIR.length];
+  const skin = '#E9B48E';
+  // gambe
+  ctx.fillStyle = skin;
+  ctx.fillRect(x + u * 3.5, y + u * 7.5, u * 1.2, u * 2.2);
+  ctx.fillRect(x + u * 5.3, y + u * 7.5, u * 1.2, u * 2.2);
+  // gonna (trapezio a blocchi)
+  ctx.fillStyle = skirt;
+  ctx.fillRect(x + u * 2.6, y + u * 6.4, u * 4.8, u * 1.3);
+  ctx.fillRect(x + u * 3.0, y + u * 5.4, u * 4.0, u * 1.1);
+  // top e braccia (spalle marcate)
+  ctx.fillStyle = top;
+  ctx.fillRect(x + u * 3.0, y + u * 3.4, u * 4.0, u * 2.1);
+  ctx.fillStyle = skin;
+  ctx.fillRect(x + u * 2.1, y + u * 3.6, u * 0.9, u * 2.4);
+  ctx.fillRect(x + u * 7.0, y + u * 3.6, u * 0.9, u * 2.4);
+  // testa e capelli
+  ctx.fillStyle = skin;
+  ctx.fillRect(x + u * 3.7, y + u * 1.2, u * 2.6, u * 2.4);
+  ctx.fillStyle = hair;
+  ctx.fillRect(x + u * 3.4, y + u * 0.7, u * 3.2, u * 1.1);
+  ctx.fillRect(x + u * 3.1, y + u * 1.3, u * 0.7, u * 1.8);
+  ctx.fillRect(x + u * 6.2, y + u * 1.3, u * 0.7, u * 1.8);
+}
+
 function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
   const canvasRef = useRef(null);
   const bgRef = useRef(null);
@@ -154,6 +246,14 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
   const [score, setScore] = useState(0);
   const [over, setOver] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [level, setLevel] = useState(1);
+  const [levelUp, setLevelUp] = useState(false);
+  useEffect(() => {
+    if (level < 2) return;
+    setLevelUp(true);
+    const t = setTimeout(() => setLevelUp(false), 1800);
+    return () => clearTimeout(t);
+  }, [level]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -163,20 +263,26 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
     ctx.imageSmoothingEnabled = false;
 
     // sfondo disegnato una volta e riusato
-    const bg = document.createElement('canvas');
-    bg.width = canvas.width; bg.height = canvas.height;
-    drawForest(bg.getContext('2d'), canvas.width, canvas.height, cell);
-    bgRef.current = bg;
+    const mkBg = (fn) => {
+      const c = document.createElement('canvas');
+      c.width = canvas.width; c.height = canvas.height;
+      fn(c.getContext('2d'), canvas.width, canvas.height, cell);
+      return c;
+    };
+    const bgForest = mkBg(drawForest);
+    const bgStreet = mkBg(drawStreet);
+    bgRef.current = bgForest;
 
     const img = new Image();
     img.src = './bandy.png';
 
     const st = {
       snake: [{ x: 7, y: 12 }, { x: 7, y: 13 }, { x: 7, y: 14 }],
-      dir: { x: 0, y: -1 }, next: { x: 0, y: -1 },
-      food: { x: 7, y: 5 }, score: 0, alive: true, acc: 0, last: 0, step: 190,
+      dir: { x: 0, y: -1 }, queue: [],
+      food: { x: 7, y: 5 }, score: 0, alive: true, acc: 0, last: 0, step: 170, level: 1,
     };
     stateRef.current = st;
+    canvas.__game = st;   // aggancio per i test automatici (non usato dall'app)
 
     const placeFood = () => {
       let p, tries = 0;
@@ -207,6 +313,16 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
         ctx.fillStyle = '#E9B48E';
         ctx.fillRect(fcx - cell * 0.4, fcy - cell * 0.4, cell * 0.8, cell * 0.8);
       }
+      // Livello 2: la fila di figure stilizzate al posto della canna.
+      if (st.level === 2) {
+        st.snake.forEach((s, i) => {
+          const x = offX + s.x * cell, y = offY + s.y * cell;
+          ctx.fillStyle = 'rgba(0,0,0,0.28)';                 // ombra a terra
+          ctx.fillRect(x + cell * 0.2, y + cell * 0.82, cell * 0.6, cell * 0.12);
+          drawFigure(ctx, x, y, cell, i, i === 0);
+        });
+        return;
+      }
       // la canna: corpo di carta con punta accesa
       st.snake.forEach((s, i) => {
         const x = offX + s.x * cell, y = offY + s.y * cell;
@@ -234,7 +350,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
         st.acc += dt;
         if (st.acc >= st.step) {
           st.acc = 0;
-          st.dir = st.next;
+          if (st.queue.length) st.dir = st.queue.shift();
           const head = { x: st.snake[0].x + st.dir.x, y: st.snake[0].y + st.dir.y };
           const hitWall = head.x < 0 || head.y < 0 || head.x >= GAME_COLS || head.y >= GAME_ROWS;
           const hitSelf = st.snake.some((s) => s.x === head.x && s.y === head.y);
@@ -247,7 +363,13 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
             if (head.x === st.food.x && head.y === st.food.y) {
               st.score += 1;
               setScore(st.score);
-              st.step = Math.max(90, 190 - st.score * 6); // accelera
+              if (st.level === 1 && st.score >= 15) {
+                st.level = 2;
+                bgRef.current = bgStreet;
+                setLevel(2);
+                st.flash = 1400;                      // annuncio del livello
+              }
+              st.step = Math.max(85, 170 - st.score * 5); // accelera
               placeFood();
             } else {
               st.snake.pop();
@@ -261,8 +383,15 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
     st.raf = requestAnimationFrame(tick);
 
     const turn = (x, y) => {
-      if (st.dir.x === -x && st.dir.y === -y) return; // niente inversione a U
-      st.next = { x, y };
+      // Confronto con l'ultima direzione decisa (non con quella a schermo),
+      // così due comandi rapidi in sequenza funzionano entrambi.
+      const last = st.queue.length ? st.queue[st.queue.length - 1] : st.dir;
+      if (last.x === -x && last.y === -y) return;   // niente inversione a U
+      if (last.x === x && last.y === y) return;     // già in questa direzione
+      if (st.queue.length < 2) st.queue.push({ x, y });
+      // Se il passo è già a metà, lo anticipo: la svolta si vede subito
+      // invece di aspettare fino a un tick intero.
+      if (st.acc >= st.step * 0.45) st.acc = st.step;
     };
     const onKey = (e) => {
       const k = e.key;
@@ -273,16 +402,19 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
     };
     window.addEventListener('keydown', onKey);
 
-    let sx = 0, sy = 0;
-    const onStart = (e) => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; };
-    const onEnd = (e) => {
-      const t = e.changedTouches[0];
+    let sx = 0, sy = 0, swiped = false;
+    const onStart = (e) => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; swiped = false; };
+    const onMove = (e) => {
+      if (swiped) return;
+      const t = e.touches[0];
       const dx = t.clientX - sx, dy = t.clientY - sy;
-      if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
+      if (Math.abs(dx) < 16 && Math.abs(dy) < 16) return;
+      // Svolta appena il dito ha percorso abbastanza: non aspetta il rilascio.
       if (Math.abs(dx) > Math.abs(dy)) turn(dx > 0 ? 1 : -1, 0); else turn(0, dy > 0 ? 1 : -1);
+      swiped = true;
     };
     canvas.addEventListener('touchstart', onStart, { passive: true });
-    canvas.addEventListener('touchend', onEnd, { passive: true });
+    canvas.addEventListener('touchmove', onMove, { passive: true });
 
     stateRef.current.turn = turn;
 
@@ -290,7 +422,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
       cancelAnimationFrame(st.raf);
       window.removeEventListener('keydown', onKey);
       canvas.removeEventListener('touchstart', onStart);
-      canvas.removeEventListener('touchend', onEnd);
+      canvas.removeEventListener('touchmove', onMove);
       stateRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -307,7 +439,9 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
       <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#8F9E8B]/30">
         <span className="text-xs uppercase font-bold text-gray-500 truncate">{playerName}</span>
         <span className="font-rustic text-lg text-[#2D392C]">{score} 🌿</span>
-        <span className="text-[10px] text-gray-400">record {bestLocal}</span>
+        <span className="text-[10px] text-gray-400">
+          {level === 1 ? `liv. 1 · -${Math.max(0, 15 - score)}` : 'liv. 2 🏙️'} · rec {bestLocal}
+        </span>
       </div>
 
       <div className="relative">
@@ -318,6 +452,14 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
           className="w-full rounded-lg border-2 border-[#2D392C]/40 touch-none"
           style={{ imageRendering: 'pixelated' }}
         />
+        {levelUp && !over && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="bg-black/70 px-5 py-3 rounded-lg text-center">
+              <div className="font-rustic text-2xl text-[#D97706]">LIVELLO 2</div>
+              <div className="text-[10px] uppercase tracking-widest text-[#F0F4F1]">In città!</div>
+            </div>
+          </div>
+        )}
         {(over || paused) && (
           <div className="absolute inset-0 bg-black/70 rounded-lg flex flex-col items-center justify-center text-center p-4">
             {over ? (
@@ -339,13 +481,13 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
       {/* Comandi per il telefono (in alternativa si scorre il dito sul campo) */}
       <div className="grid grid-cols-3 gap-2 max-w-[240px] mx-auto">
         <span></span>
-        <button onClick={() => nudge(0, -1)} aria-label="Su" className="py-3 bg-[#2D392C] text-white rounded font-bold">▲</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(0, -1); }} aria-label="Su" className="py-3 bg-[#2D392C] text-white rounded font-bold">▲</button>
         <span></span>
-        <button onClick={() => nudge(-1, 0)} aria-label="Sinistra" className="py-3 bg-[#2D392C] text-white rounded font-bold">◀</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(-1, 0); }} aria-label="Sinistra" className="py-3 bg-[#2D392C] text-white rounded font-bold">◀</button>
         <button onClick={togglePause} aria-label="Pausa" className="py-3 bg-[#5C4A3C] text-white rounded font-bold text-xs">{paused ? '▶' : '❚❚'}</button>
-        <button onClick={() => nudge(1, 0)} aria-label="Destra" className="py-3 bg-[#2D392C] text-white rounded font-bold">▶</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(1, 0); }} aria-label="Destra" className="py-3 bg-[#2D392C] text-white rounded font-bold">▶</button>
         <span></span>
-        <button onClick={() => nudge(0, 1)} aria-label="Giù" className="py-3 bg-[#2D392C] text-white rounded font-bold">▼</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(0, 1); }} aria-label="Giù" className="py-3 bg-[#2D392C] text-white rounded font-bold">▼</button>
         <span></span>
       </div>
 
