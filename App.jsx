@@ -164,6 +164,14 @@ function App() {
   // Attrezzatura da acquistare: { id, text, price, bought }. Quelle spuntate
   // (acquistate) entrano nelle spese totali come logistica. Condivisa via sync.
   const [equipment, setEquipment] = useState(() => load('cambusa_equipment', []));
+
+  // Lista "Da Acquistare": { id, name, qty }. Quando viene acquistata la voce
+  // passa nella cronologia (diventa un acquisto con lo stesso id, così l'even-
+  // tuale foto dello scontrino resta collegata).
+  const [toBuy, setToBuy] = useState(() => load('cambusa_tobuy', []));
+  const [newBuyName, setNewBuyName] = useState('');
+  const [newBuyQty, setNewBuyQty] = useState('');
+  const [buying, setBuying] = useState(null); // voce in fase di registrazione acquisto
   const [newEquipText, setNewEquipText] = useState('');
   const [newEquipPrice, setNewEquipPrice] = useState('');
   const [newEquipBuyer, setNewEquipBuyer] = useState('');
@@ -214,6 +222,7 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_gear', JSON.stringify(gear)), [gear]);
   useEffect(() => localStorage.setItem('cambusa_settled', JSON.stringify(settled)), [settled]);
   useEffect(() => localStorage.setItem('cambusa_equipment', JSON.stringify(equipment)), [equipment]);
+  useEffect(() => localStorage.setItem('cambusa_tobuy', JSON.stringify(toBuy)), [toBuy]);
   useEffect(() => localStorage.setItem('cambusa_weather', JSON.stringify(weather)), [weather]);
 
   // Scarica le previsioni (16 giorni) se c'è linea, la località è impostata e
@@ -296,6 +305,7 @@ function App() {
     if (Array.isArray(remote.gear)) setGear(remote.gear);
     if (Array.isArray(remote.settled)) setSettled(remote.settled);
     if (Array.isArray(remote.equipment)) setEquipment(remote.equipment);
+    if (Array.isArray(remote.toBuy)) setToBuy(remote.toBuy);
     setTimeout(() => { suppressPushRef.current = false; }, 0);
   };
 
@@ -354,8 +364,8 @@ function App() {
   useEffect(() => {
     if (!cloudConnectedRef.current) return;
     if (suppressPushRef.current) return;
-    if (window.CloudSync) window.CloudSync.pushState({ members, campData, purchases, gear, settled, equipment });
-  }, [members, campData, purchases, gear, settled, equipment]);
+    if (window.CloudSync) window.CloudSync.pushState({ members, campData, purchases, gear, settled, equipment, toBuy });
+  }, [members, campData, purchases, gear, settled, equipment, toBuy]);
 
   // ---------- Dati per giorno ----------
   const getDayData = (dateStr) => ({ ...initialDayState(), ...(campData[dateStr] || {}) });
@@ -434,6 +444,61 @@ function App() {
 
   const toggleChild = (id) => {
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, isChild: !m.isChild } : m)));
+  };
+
+  // Esenzione dalla spesa per l'attrezzatura aggiunta.
+  const toggleEquipExempt = (id) => {
+    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, equipExempt: !m.equipExempt } : m)));
+  };
+
+  // ---------- Lista "Da Acquistare" ----------
+  const addToBuy = () => {
+    const name = newBuyName.trim();
+    if (!name) return;
+    setToBuy((prev) => [...prev, { id: uid(), name, qty: newBuyQty.trim() }]);
+    setNewBuyName('');
+    setNewBuyQty('');
+  };
+
+  const removeToBuy = (id) => {
+    const it = toBuy.find((x) => x.id === id);
+    if (it && !window.confirm(`Eliminare "${it.name}" dalla lista da acquistare?`)) return;
+    setToBuy((prev) => prev.filter((x) => x.id !== id));
+    setReceipts((prev) => {
+      if (!prev[id]) return prev;
+      const copy = { ...prev }; delete copy[id]; return copy;
+    });
+    if (window.CloudSync) window.CloudSync.deleteReceipt(id);
+  };
+
+  // Foto scontrino allegata direttamente alla voce da acquistare.
+  const onToBuyReceipt = async (e, id) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      let dataUrl = await compressImage(file, 1000, 0.6);
+      if (dataUrl.length > 900000) dataUrl = await compressImage(file, 800, 0.4);
+      setReceipts((prev) => ({ ...prev, [id]: dataUrl }));
+      if (window.CloudSync) window.CloudSync.putReceipt(id, dataUrl);
+    } catch (err) {
+      window.alert('Impossibile leggere la foto. Riprova.');
+    }
+  };
+
+  // Conferma acquisto: la voce esce dalla lista ed entra nella cronologia
+  // mantenendo lo stesso id (così la foto scontrino resta collegata).
+  const confirmBuy = () => {
+    if (!buying) return;
+    const price = posNum(buying.price);
+    if (price <= 0) { window.alert('Inserisci un prezzo maggiore di zero.'); return; }
+    const fullName = buying.qty ? `${buying.name} (${buying.qty})` : buying.name;
+    setPurchases((prev) => [...prev, {
+      id: buying.id, name: fullName, price, type: buying.type,
+      buyer: (buying.buyer || '').trim(), at: Date.now(), fromList: true,
+    }]);
+    setToBuy((prev) => prev.filter((x) => x.id !== buying.id));
+    setBuying(null);
   };
 
   // ---------- Taccuino delle spese ----------
@@ -635,9 +700,11 @@ function App() {
     const sumByType = (t) => purchases.reduce((s, p) => (p.type === t ? s + posNum(p.price) : s), 0);
     const totalFood = sumByType('alimentare');
     const totalDrinks = sumByType('bevande');
-    // Attrezzatura acquistata (spuntata): conta come logistica.
+    // Logistica dagli acquisti (divisa fra tutti i presenti) e attrezzatura
+    // acquistata (divisa solo fra chi NON è esente): due quote separate.
+    const logisticsPurchases = sumByType('logistica');
     const equipBought = equipment.reduce((s, e) => (e.bought ? s + posNum(e.price) : s), 0);
-    const totalAccessory = sumByType('logistica') + equipBought;
+    const totalAccessory = logisticsPurchases + equipBought;
     const totalFoodDrinks = totalFood + totalDrinks;
     const overallTotal = totalFoodDrinks + totalAccessory;
 
@@ -647,6 +714,7 @@ function App() {
 
     let adultMealsTotal = 0;
     const attendingAdults = new Set();
+    const attendingForEquip = new Set(); // presenti NON esenti da attrezzatura
 
     Object.values(campData).forEach((day) => {
       const meals = (day && day.meals) || {};
@@ -659,20 +727,30 @@ function App() {
         if (!m.isChild) {
           adultMealsTotal += count;
           attendingAdults.add(m.id);
+          if (!m.equipExempt) attendingForEquip.add(m.id);
         }
       });
     });
 
     // Cibo+bevande ripartiti sui pasti degli adulti (bambini = gratis).
     const costPerMeal = adultMealsTotal > 0 ? totalFoodDrinks / adultMealsTotal : 0;
-    // Accessori/logistica ripartiti in parti uguali tra gli adulti realmente presenti.
-    const logisticsPerAdult = attendingAdults.size > 0 ? totalAccessory / attendingAdults.size : 0;
+    // Logistica: parti uguali tra tutti gli adulti presenti.
+    const logisticsPerAdult = attendingAdults.size > 0 ? logisticsPurchases / attendingAdults.size : 0;
+    // Attrezzatura: parti uguali tra i presenti non esenti. Se sono tutti
+    // esenti, per non perdere la spesa si ripartisce su tutti i presenti.
+    const equipDivisorSet = attendingForEquip.size > 0 ? attendingForEquip : attendingAdults;
+    const equipPerAdult = equipDivisorSet.size > 0 ? equipBought / equipDivisorSet.size : 0;
+    // Quota "accessori" media mostrata nel riepilogo.
+    const accessoryPerAdult = logisticsPerAdult + equipPerAdult;
 
     // Quota dovuta da ciascun membro (valore esatto).
     const breakdown = members.map((m) => {
       const mealCount = mealsByMember[m.id] || 0;
       const foodShare = m.isChild ? 0 : mealCount * costPerMeal;
-      const logShare = !m.isChild && mealCount > 0 ? logisticsPerAdult : 0;
+      const present = !m.isChild && mealCount > 0;
+      const logShare =
+        (present ? logisticsPerAdult : 0) +
+        (present && equipDivisorSet.has(m.id) ? equipPerAdult : 0);
       return { ...m, mealCount, foodShare, logShare, owed: foodShare + logShare };
     });
 
@@ -778,7 +856,9 @@ function App() {
 
     return {
       totalFood, totalDrinks, totalAccessory, totalFoodDrinks, overallTotal,
-      costPerMeal, logisticsPerAdult, adultMealsTotal,
+      costPerMeal, logisticsPerAdult, equipPerAdult, accessoryPerAdult,
+      logisticsPurchases, equipBought, equipPayersCount: equipDivisorSet.size,
+      adultMealsTotal,
       attendingAdultsCount: attendingAdults.size, breakdown,
       collected, roundingDiff, byBuyer, settlement, unattributed, transfers,
     };
@@ -788,7 +868,7 @@ function App() {
 
   // ---------- Backup (Export / Import) ----------
   const exportData = () => {
-    const payload = { version: 5, exportedAt: new Date().toISOString(), members, campData, purchases, gear, settled, equipment, receipts };
+    const payload = { version: 6, exportedAt: new Date().toISOString(), members, campData, purchases, gear, settled, equipment, toBuy, receipts };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -812,6 +892,7 @@ function App() {
         if (Array.isArray(d.gear)) setGear(d.gear);
         if (Array.isArray(d.settled)) setSettled(d.settled);
         if (Array.isArray(d.equipment)) setEquipment(d.equipment);
+        if (Array.isArray(d.toBuy)) setToBuy(d.toBuy);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
@@ -1070,17 +1151,32 @@ function App() {
               ) : (
                 <ul className="space-y-2">
                   {members.map((m) => (
-                    <li key={m.id} className="flex items-center justify-between bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
-                      <span className="font-bold text-sm text-[#2D392C]">{m.name}</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => toggleChild(m.id)}
-                          className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${m.isChild ? 'bg-[#D97706] text-white' : 'bg-gray-200 text-gray-500'}`}
-                        >
-                          {m.isChild ? 'Bambino' : 'Adulto'}
-                        </button>
-                        <button onClick={() => removeMember(m.id)} className="text-red-700 font-bold px-2 hover:text-red-900">&times;</button>
+                    <li key={m.id} className="bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-sm text-[#2D392C] truncate">{m.name}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => toggleChild(m.id)}
+                            className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${m.isChild ? 'bg-[#D97706] text-white' : 'bg-gray-200 text-gray-500'}`}
+                          >
+                            {m.isChild ? 'Bambino' : 'Adulto'}
+                          </button>
+                          <button onClick={() => removeMember(m.id)} className="text-red-700 font-bold px-2 hover:text-red-900">&times;</button>
+                        </div>
                       </div>
+                      {/* Esenzione dalla spesa per l'attrezzatura */}
+                      <button
+                        onClick={() => toggleEquipExempt(m.id)}
+                        aria-label="Esenzione attrezzatura"
+                        className="mt-1.5 flex items-center gap-2 text-left"
+                      >
+                        <span className={`w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-[10px] font-bold ${m.equipExempt ? 'bg-[#5C4A3C] border-[#5C4A3C] text-white' : 'bg-white border-[#8F9E8B]'}`}>
+                          {m.equipExempt ? '✓' : ''}
+                        </span>
+                        <span className={`text-[10px] ${m.equipExempt ? 'font-bold text-[#5C4A3C]' : 'text-gray-500'}`}>
+                          Esente attrezzatura
+                        </span>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -1193,7 +1289,8 @@ function App() {
                 {[
                   ['Spesa Cibo (Alimentare)', totals.totalFood],
                   ['Spesa Bevande', totals.totalDrinks],
-                  ['Accessori (Logistica)', totals.totalAccessory],
+                  ['Logistica', totals.logisticsPurchases],
+                  ['Attrezzatura acquistata', totals.equipBought],
                 ].map(([label, val]) => (
                   <div key={label} className="flex justify-between items-center bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20">
                     <span className="text-[11px] uppercase font-bold text-gray-500">{label}</span>
@@ -1218,7 +1315,14 @@ function App() {
                 <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
                   <span className="text-[10px] uppercase text-[#8F9E8B] block">Logistica a testa</span>
                   <span className="font-rustic text-xl text-[#D97706]">{money(totals.logisticsPerAdult)} €</span>
-                  <p className="text-[9px] text-gray-400 mt-1">Accessori ({money(totals.totalAccessory)} €) / {totals.attendingAdultsCount} adulti presenti.</p>
+                  <p className="text-[9px] text-gray-400 mt-1">Logistica ({money(totals.logisticsPurchases)} €) / {totals.attendingAdultsCount} adulti presenti.</p>
+                </div>
+                <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20 col-span-2">
+                  <span className="text-[10px] uppercase text-[#8F9E8B] block">Attrezzatura a testa</span>
+                  <span className="font-rustic text-xl text-[#D97706]">{money(totals.equipPerAdult)} €</span>
+                  <p className="text-[9px] text-gray-400 mt-1">
+                    Attrezzatura ({money(totals.equipBought)} €) / {totals.equipPayersCount} {totals.equipPayersCount === 1 ? 'persona non esente' : 'persone non esenti'}.
+                  </p>
                 </div>
               </div>
               <p className="text-[9px] text-gray-400 italic">I pasti dei bambini sono gratis: il loro costo è ripartito sugli adulti.</p>
@@ -1426,26 +1530,73 @@ function App() {
         {/* ---------- TACCUINO DELLE SPESE ---------- */}
         {activeTab === 'lista' && (
           <div className="space-y-4">
-            {/* Form di inserimento */}
-            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+            {/* ===== DA ACQUISTARE ===== */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#5C4A3C]/30 shadow-sm space-y-3">
               <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
-                <h3 className="font-rustic text-lg text-[#2D392C]">Prodotto acquistato</h3>
-                <label
-                  title="Foto scontrino"
-                  className={`cursor-pointer px-3 py-2 rounded border-2 text-lg leading-none ${pReceipt ? 'bg-[#2D392C] border-[#2D392C]' : 'bg-white border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'}`}
-                >
-                  📷
-                  <input type="file" accept="image/*" capture="environment" onChange={onReceiptFile} className="hidden" />
-                </label>
+                <h3 className="font-rustic text-lg text-[#2D392C]">Da Acquistare</h3>
+                {toBuy.length > 0 && (
+                  <span className="text-[10px] uppercase font-bold text-gray-500">{toBuy.length} {toBuy.length === 1 ? 'voce' : 'voci'}</span>
+                )}
               </div>
 
-              {pReceipt && (
-                <div className="flex items-center gap-3 bg-[#F0F4F1]/60 p-2 rounded border border-[#8F9E8B]/30">
-                  <img src={pReceipt} alt="Scontrino" className="w-12 h-12 object-cover rounded" />
-                  <span className="flex-grow text-xs text-[#2D392C] font-bold">Scontrino allegato ✓</span>
-                  <button onClick={() => setPReceipt(null)} aria-label="Rimuovi foto" className="text-red-700 font-bold px-2 hover:text-red-900">&times;</button>
-                </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newBuyName}
+                  onChange={(e) => setNewBuyName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addToBuy()}
+                  placeholder="Cosa serve…"
+                  className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+                />
+                <input
+                  type="text"
+                  value={newBuyQty}
+                  onChange={(e) => setNewBuyQty(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addToBuy()}
+                  placeholder="Q.tà"
+                  className="w-20 shrink-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm text-center focus:outline-none focus:border-[#2D392C]"
+                />
+                <button onClick={addToBuy} aria-label="Aggiungi alla lista" className="shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold text-lg leading-none hover:bg-[#1F271E]">+</button>
+              </div>
+
+              {toBuy.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">Lista vuota. Scrivi cosa serve e premi +.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {toBuy.map((it) => (
+                    <li key={it.id} className="bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-grow min-w-0">
+                          <div className="text-sm font-bold text-[#2D392C] truncate">{it.name}</div>
+                          {it.qty && <div className="text-[10px] text-gray-500">Quantità: {it.qty}</div>}
+                        </div>
+                        {/* Foto scontrino della singola voce */}
+                        {receipts[it.id] ? (
+                          <button onClick={() => setViewReceipt(receipts[it.id])} aria-label="Vedi scontrino" className="shrink-0 px-2 py-1.5 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white leading-none">📷</button>
+                        ) : (
+                          <label title="Foto scontrino" aria-label="Allega scontrino" className="shrink-0 cursor-pointer px-2 py-1.5 rounded border-2 border-[#8F9E8B]/50 bg-white leading-none hover:bg-[#E2EAE4]">
+                            📷
+                            <input type="file" accept="image/*" capture="environment" onChange={(e) => onToBuyReceipt(e, it.id)} className="hidden" />
+                          </label>
+                        )}
+                        <button onClick={() => removeToBuy(it.id)} aria-label="Rimuovi" className="shrink-0 text-red-700 font-bold px-1.5 hover:text-red-900">&times;</button>
+                      </div>
+                      <button
+                        onClick={() => setBuying({ id: it.id, name: it.name, qty: it.qty, price: '', buyer: '', type: 'alimentare' })}
+                        className="mt-2 w-full py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
+                      >
+                        Segna come acquistata
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
+              <p className="text-[9px] text-gray-400 italic">Quando una voce viene acquistata passa nella cronologia qui sotto, con prezzo e acquirente.</p>
+            </div>
+
+            {/* Form di inserimento diretto */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Prodotto acquistato</h3>
 
               <div>
                 <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Nome</label>
@@ -1523,6 +1674,7 @@ function App() {
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-[#2D392C] truncate">{p.name}</span>
                           <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B] shrink-0">{PURCHASE_TYPES[p.type] || p.type}</span>
+                          {p.fromList && <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C] shrink-0">acquistata</span>}
                         </div>
                         <span className="text-[9px] text-gray-400">
                           {p.buyer ? <span className="text-[#5C4A3C] font-bold">{p.buyer}</span> : <span className="italic">acquirente non indicato</span>}
@@ -1740,6 +1892,53 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Registrazione acquisto di una voce "Da Acquistare" */}
+      {buying && (
+        <div onClick={() => setBuying(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 shadow-2xl">
+            <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">
+              Acquistata: {buying.name}{buying.qty ? ` (${buying.qty})` : ''}
+            </h3>
+            <div>
+              <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Prezzo (€)</label>
+              <input
+                type="number" min="0" step="0.01" inputMode="decimal" autoFocus
+                value={buying.price}
+                onChange={(e) => setBuying((b) => ({ ...b, price: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && confirmBuy()}
+                placeholder="0.00"
+                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Acquirente</label>
+              <input
+                type="text"
+                list="acquirenti"
+                value={buying.buyer}
+                onChange={(e) => setBuying((b) => ({ ...b, buyer: e.target.value }))}
+                placeholder="Chi ha acquistato"
+                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Tipologia</label>
+              <select
+                value={buying.type}
+                onChange={(e) => setBuying((b) => ({ ...b, type: e.target.value }))}
+                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
+              >
+                {Object.keys(PURCHASE_TYPES).map((k) => (<option key={k} value={k}>{PURCHASE_TYPES[k]}</option>))}
+              </select>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setBuying(null)} className="flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase">Annulla</button>
+              <button onClick={confirmBuy} className="flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Conferma</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Scelta dello snapshot da ripristinare */}
       {snapList && (

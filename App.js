@@ -210,6 +210,14 @@ function App() {
   // Attrezzatura da acquistare: { id, text, price, bought }. Quelle spuntate
   // (acquistate) entrano nelle spese totali come logistica. Condivisa via sync.
   const [equipment, setEquipment] = useState(() => load('cambusa_equipment', []));
+
+  // Lista "Da Acquistare": { id, name, qty }. Quando viene acquistata la voce
+  // passa nella cronologia (diventa un acquisto con lo stesso id, così l'even-
+  // tuale foto dello scontrino resta collegata).
+  const [toBuy, setToBuy] = useState(() => load('cambusa_tobuy', []));
+  const [newBuyName, setNewBuyName] = useState('');
+  const [newBuyQty, setNewBuyQty] = useState('');
+  const [buying, setBuying] = useState(null); // voce in fase di registrazione acquisto
   const [newEquipText, setNewEquipText] = useState('');
   const [newEquipPrice, setNewEquipPrice] = useState('');
   const [newEquipBuyer, setNewEquipBuyer] = useState('');
@@ -264,6 +272,7 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_gear', JSON.stringify(gear)), [gear]);
   useEffect(() => localStorage.setItem('cambusa_settled', JSON.stringify(settled)), [settled]);
   useEffect(() => localStorage.setItem('cambusa_equipment', JSON.stringify(equipment)), [equipment]);
+  useEffect(() => localStorage.setItem('cambusa_tobuy', JSON.stringify(toBuy)), [toBuy]);
   useEffect(() => localStorage.setItem('cambusa_weather', JSON.stringify(weather)), [weather]);
 
   // Scarica le previsioni (16 giorni) se c'è linea, la località è impostata e
@@ -347,6 +356,7 @@ function App() {
     if (Array.isArray(remote.gear)) setGear(remote.gear);
     if (Array.isArray(remote.settled)) setSettled(remote.settled);
     if (Array.isArray(remote.equipment)) setEquipment(remote.equipment);
+    if (Array.isArray(remote.toBuy)) setToBuy(remote.toBuy);
     setTimeout(() => {
       suppressPushRef.current = false;
     }, 0);
@@ -420,9 +430,10 @@ function App() {
       purchases,
       gear,
       settled,
-      equipment
+      equipment,
+      toBuy
     });
-  }, [members, campData, purchases, gear, settled, equipment]);
+  }, [members, campData, purchases, gear, settled, equipment, toBuy]);
 
   // ---------- Dati per giorno ----------
   const getDayData = dateStr => ({
@@ -556,6 +567,82 @@ function App() {
       ...m,
       isChild: !m.isChild
     } : m));
+  };
+
+  // Esenzione dalla spesa per l'attrezzatura aggiunta.
+  const toggleEquipExempt = id => {
+    setMembers(prev => prev.map(m => m.id === id ? {
+      ...m,
+      equipExempt: !m.equipExempt
+    } : m));
+  };
+
+  // ---------- Lista "Da Acquistare" ----------
+  const addToBuy = () => {
+    const name = newBuyName.trim();
+    if (!name) return;
+    setToBuy(prev => [...prev, {
+      id: uid(),
+      name,
+      qty: newBuyQty.trim()
+    }]);
+    setNewBuyName('');
+    setNewBuyQty('');
+  };
+  const removeToBuy = id => {
+    const it = toBuy.find(x => x.id === id);
+    if (it && !window.confirm(`Eliminare "${it.name}" dalla lista da acquistare?`)) return;
+    setToBuy(prev => prev.filter(x => x.id !== id));
+    setReceipts(prev => {
+      if (!prev[id]) return prev;
+      const copy = {
+        ...prev
+      };
+      delete copy[id];
+      return copy;
+    });
+    if (window.CloudSync) window.CloudSync.deleteReceipt(id);
+  };
+
+  // Foto scontrino allegata direttamente alla voce da acquistare.
+  const onToBuyReceipt = async (e, id) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      let dataUrl = await compressImage(file, 1000, 0.6);
+      if (dataUrl.length > 900000) dataUrl = await compressImage(file, 800, 0.4);
+      setReceipts(prev => ({
+        ...prev,
+        [id]: dataUrl
+      }));
+      if (window.CloudSync) window.CloudSync.putReceipt(id, dataUrl);
+    } catch (err) {
+      window.alert('Impossibile leggere la foto. Riprova.');
+    }
+  };
+
+  // Conferma acquisto: la voce esce dalla lista ed entra nella cronologia
+  // mantenendo lo stesso id (così la foto scontrino resta collegata).
+  const confirmBuy = () => {
+    if (!buying) return;
+    const price = posNum(buying.price);
+    if (price <= 0) {
+      window.alert('Inserisci un prezzo maggiore di zero.');
+      return;
+    }
+    const fullName = buying.qty ? `${buying.name} (${buying.qty})` : buying.name;
+    setPurchases(prev => [...prev, {
+      id: buying.id,
+      name: fullName,
+      price,
+      type: buying.type,
+      buyer: (buying.buyer || '').trim(),
+      at: Date.now(),
+      fromList: true
+    }]);
+    setToBuy(prev => prev.filter(x => x.id !== buying.id));
+    setBuying(null);
   };
 
   // ---------- Taccuino delle spese ----------
@@ -781,9 +868,11 @@ function App() {
     const sumByType = t => purchases.reduce((s, p) => p.type === t ? s + posNum(p.price) : s, 0);
     const totalFood = sumByType('alimentare');
     const totalDrinks = sumByType('bevande');
-    // Attrezzatura acquistata (spuntata): conta come logistica.
+    // Logistica dagli acquisti (divisa fra tutti i presenti) e attrezzatura
+    // acquistata (divisa solo fra chi NON è esente): due quote separate.
+    const logisticsPurchases = sumByType('logistica');
     const equipBought = equipment.reduce((s, e) => e.bought ? s + posNum(e.price) : s, 0);
-    const totalAccessory = sumByType('logistica') + equipBought;
+    const totalAccessory = logisticsPurchases + equipBought;
     const totalFoodDrinks = totalFood + totalDrinks;
     const overallTotal = totalFoodDrinks + totalAccessory;
 
@@ -792,6 +881,8 @@ function App() {
     members.forEach(m => mealsByMember[m.id] = 0);
     let adultMealsTotal = 0;
     const attendingAdults = new Set();
+    const attendingForEquip = new Set(); // presenti NON esenti da attrezzatura
+
     Object.values(campData).forEach(day => {
       const meals = day && day.meals || {};
       members.forEach(m => {
@@ -803,20 +894,28 @@ function App() {
         if (!m.isChild) {
           adultMealsTotal += count;
           attendingAdults.add(m.id);
+          if (!m.equipExempt) attendingForEquip.add(m.id);
         }
       });
     });
 
     // Cibo+bevande ripartiti sui pasti degli adulti (bambini = gratis).
     const costPerMeal = adultMealsTotal > 0 ? totalFoodDrinks / adultMealsTotal : 0;
-    // Accessori/logistica ripartiti in parti uguali tra gli adulti realmente presenti.
-    const logisticsPerAdult = attendingAdults.size > 0 ? totalAccessory / attendingAdults.size : 0;
+    // Logistica: parti uguali tra tutti gli adulti presenti.
+    const logisticsPerAdult = attendingAdults.size > 0 ? logisticsPurchases / attendingAdults.size : 0;
+    // Attrezzatura: parti uguali tra i presenti non esenti. Se sono tutti
+    // esenti, per non perdere la spesa si ripartisce su tutti i presenti.
+    const equipDivisorSet = attendingForEquip.size > 0 ? attendingForEquip : attendingAdults;
+    const equipPerAdult = equipDivisorSet.size > 0 ? equipBought / equipDivisorSet.size : 0;
+    // Quota "accessori" media mostrata nel riepilogo.
+    const accessoryPerAdult = logisticsPerAdult + equipPerAdult;
 
     // Quota dovuta da ciascun membro (valore esatto).
     const breakdown = members.map(m => {
       const mealCount = mealsByMember[m.id] || 0;
       const foodShare = m.isChild ? 0 : mealCount * costPerMeal;
-      const logShare = !m.isChild && mealCount > 0 ? logisticsPerAdult : 0;
+      const present = !m.isChild && mealCount > 0;
+      const logShare = (present ? logisticsPerAdult : 0) + (present && equipDivisorSet.has(m.id) ? equipPerAdult : 0);
       return {
         ...m,
         mealCount,
@@ -956,6 +1055,11 @@ function App() {
       overallTotal,
       costPerMeal,
       logisticsPerAdult,
+      equipPerAdult,
+      accessoryPerAdult,
+      logisticsPurchases,
+      equipBought,
+      equipPayersCount: equipDivisorSet.size,
       adultMealsTotal,
       attendingAdultsCount: attendingAdults.size,
       breakdown,
@@ -972,7 +1076,7 @@ function App() {
   // ---------- Backup (Export / Import) ----------
   const exportData = () => {
     const payload = {
-      version: 5,
+      version: 6,
       exportedAt: new Date().toISOString(),
       members,
       campData,
@@ -980,6 +1084,7 @@ function App() {
       gear,
       settled,
       equipment,
+      toBuy,
       receipts
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -1006,6 +1111,7 @@ function App() {
         if (Array.isArray(d.gear)) setGear(d.gear);
         if (Array.isArray(d.settled)) setSettled(d.settled);
         if (Array.isArray(d.equipment)) setEquipment(d.equipment);
+        if (Array.isArray(d.toBuy)) setToBuy(d.toBuy);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
@@ -1277,18 +1383,28 @@ function App() {
     className: "space-y-2"
   }, members.map(m => /*#__PURE__*/React.createElement("li", {
     key: m.id,
-    className: "flex items-center justify-between bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
+    className: "bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold text-sm text-[#2D392C]"
+    className: "font-bold text-sm text-[#2D392C] truncate"
   }, m.name), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "flex items-center gap-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleChild(m.id),
     className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${m.isChild ? 'bg-[#D97706] text-white' : 'bg-gray-200 text-gray-500'}`
   }, m.isChild ? 'Bambino' : 'Adulto'), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeMember(m.id),
     className: "text-red-700 font-bold px-2 hover:text-red-900"
-  }, "\xD7"))))))), activeTab === 'presenze' && /*#__PURE__*/React.createElement("div", {
+  }, "\xD7"))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => toggleEquipExempt(m.id),
+    "aria-label": "Esenzione attrezzatura",
+    className: "mt-1.5 flex items-center gap-2 text-left"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-[10px] font-bold ${m.equipExempt ? 'bg-[#5C4A3C] border-[#5C4A3C] text-white' : 'bg-white border-[#8F9E8B]'}`
+  }, m.equipExempt ? '✓' : ''), /*#__PURE__*/React.createElement("span", {
+    className: `text-[10px] ${m.equipExempt ? 'font-bold text-[#5C4A3C]' : 'text-gray-500'}`
+  }, "Esente attrezzatura"))))))), activeTab === 'presenze' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm"
@@ -1383,7 +1499,7 @@ function App() {
     className: "font-bold"
   }, "Attrezzatura"), " acquistata."), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
-  }, [['Spesa Cibo (Alimentare)', totals.totalFood], ['Spesa Bevande', totals.totalDrinks], ['Accessori (Logistica)', totals.totalAccessory]].map(([label, val]) => /*#__PURE__*/React.createElement("div", {
+  }, [['Spesa Cibo (Alimentare)', totals.totalFood], ['Spesa Bevande', totals.totalDrinks], ['Logistica', totals.logisticsPurchases], ['Attrezzatura acquistata', totals.equipBought]].map(([label, val]) => /*#__PURE__*/React.createElement("div", {
     key: label,
     className: "flex justify-between items-center bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
   }, /*#__PURE__*/React.createElement("span", {
@@ -1418,7 +1534,15 @@ function App() {
     className: "font-rustic text-xl text-[#D97706]"
   }, money(totals.logisticsPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 mt-1"
-  }, "Accessori (", money(totals.totalAccessory), " \u20AC) / ", totals.attendingAdultsCount, " adulti presenti."))), /*#__PURE__*/React.createElement("p", {
+  }, "Logistica (", money(totals.logisticsPurchases), " \u20AC) / ", totals.attendingAdultsCount, " adulti presenti.")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20 col-span-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] uppercase text-[#8F9E8B] block"
+  }, "Attrezzatura a testa"), /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic text-xl text-[#D97706]"
+  }, money(totals.equipPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 mt-1"
+  }, "Attrezzatura (", money(totals.equipBought), " \u20AC) / ", totals.equipPayersCount, " ", totals.equipPayersCount === 1 ? 'persona non esente' : 'persone non esenti', "."))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic"
   }, "I pasti dei bambini sono gratis: il loro costo \xE8 ripartito sugli adulti."))), spesaSection === 'quote' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
@@ -1591,33 +1715,83 @@ function App() {
   }, "offline")))))), activeTab === 'lista' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+    className: "bg-white p-4 rounded-lg border-2 border-[#5C4A3C]/30 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C]"
-  }, "Prodotto acquistato"), /*#__PURE__*/React.createElement("label", {
+  }, "Da Acquistare"), toBuy.length > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] uppercase font-bold text-gray-500"
+  }, toBuy.length, " ", toBuy.length === 1 ? 'voce' : 'voci')), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: newBuyName,
+    onChange: e => setNewBuyName(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && addToBuy(),
+    placeholder: "Cosa serve\u2026",
+    className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  }), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: newBuyQty,
+    onChange: e => setNewBuyQty(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && addToBuy(),
+    placeholder: "Q.t\xE0",
+    className: "w-20 shrink-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm text-center focus:outline-none focus:border-[#2D392C]"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: addToBuy,
+    "aria-label": "Aggiungi alla lista",
+    className: "shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold text-lg leading-none hover:bg-[#1F271E]"
+  }, "+")), toBuy.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-400 italic"
+  }, "Lista vuota. Scrivi cosa serve e premi +.") : /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-2"
+  }, toBuy.map(it => /*#__PURE__*/React.createElement("li", {
+    key: it.id,
+    className: "bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-grow min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-bold text-[#2D392C] truncate"
+  }, it.name), it.qty && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-gray-500"
+  }, "Quantit\xE0: ", it.qty)), receipts[it.id] ? /*#__PURE__*/React.createElement("button", {
+    onClick: () => setViewReceipt(receipts[it.id]),
+    "aria-label": "Vedi scontrino",
+    className: "shrink-0 px-2 py-1.5 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white leading-none"
+  }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
     title: "Foto scontrino",
-    className: `cursor-pointer px-3 py-2 rounded border-2 text-lg leading-none ${pReceipt ? 'bg-[#2D392C] border-[#2D392C]' : 'bg-white border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'}`
+    "aria-label": "Allega scontrino",
+    className: "shrink-0 cursor-pointer px-2 py-1.5 rounded border-2 border-[#8F9E8B]/50 bg-white leading-none hover:bg-[#E2EAE4]"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
     capture: "environment",
-    onChange: onReceiptFile,
+    onChange: e => onToBuyReceipt(e, it.id),
     className: "hidden"
-  }))), pReceipt && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-2 rounded border border-[#8F9E8B]/30"
-  }, /*#__PURE__*/React.createElement("img", {
-    src: pReceipt,
-    alt: "Scontrino",
-    className: "w-12 h-12 object-cover rounded"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "flex-grow text-xs text-[#2D392C] font-bold"
-  }, "Scontrino allegato \u2713"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setPReceipt(null),
-    "aria-label": "Rimuovi foto",
-    className: "text-red-700 font-bold px-2 hover:text-red-900"
-  }, "\xD7")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeToBuy(it.id),
+    "aria-label": "Rimuovi",
+    className: "shrink-0 text-red-700 font-bold px-1.5 hover:text-red-900"
+  }, "\xD7")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setBuying({
+      id: it.id,
+      name: it.name,
+      qty: it.qty,
+      price: '',
+      buyer: '',
+      type: 'alimentare'
+    }),
+    className: "mt-2 w-full py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
+  }, "Segna come acquistata")))), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic"
+  }, "Quando una voce viene acquistata passa nella cronologia qui sotto, con prezzo e acquirente.")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  }, "Prodotto acquistato"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
   }, "Nome"), /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -1688,7 +1862,9 @@ function App() {
     className: "text-sm font-bold text-[#2D392C] truncate"
   }, p.name), /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B] shrink-0"
-  }, PURCHASE_TYPES[p.type] || p.type)), /*#__PURE__*/React.createElement("span", {
+  }, PURCHASE_TYPES[p.type] || p.type), p.fromList && /*#__PURE__*/React.createElement("span", {
+    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C] shrink-0"
+  }, "acquistata")), /*#__PURE__*/React.createElement("span", {
     className: "text-[9px] text-gray-400"
   }, p.buyer ? /*#__PURE__*/React.createElement("span", {
     className: "text-[#5C4A3C] font-bold"
@@ -1902,7 +2078,63 @@ function App() {
     className: "font-bold"
   }, "Spese Totali \u2192 Saldi"), " vedi chi deve dare o ricevere, e con ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Condividi resoconto"), " lo mandi nel gruppo."))))), snapList && /*#__PURE__*/React.createElement("div", {
+  }, "Condividi resoconto"), " lo mandi nel gruppo."))))), buying && /*#__PURE__*/React.createElement("div", {
+    onClick: () => setBuying(null),
+    className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5"
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-3 shadow-2xl"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
+  }, "Acquistata: ", buying.name, buying.qty ? ` (${buying.qty})` : ''), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Prezzo (\u20AC)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "0",
+    step: "0.01",
+    inputMode: "decimal",
+    autoFocus: true,
+    value: buying.price,
+    onChange: e => setBuying(b => ({
+      ...b,
+      price: e.target.value
+    })),
+    onKeyDown: e => e.key === 'Enter' && confirmBuy(),
+    placeholder: "0.00",
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Acquirente"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    list: "acquirenti",
+    value: buying.buyer,
+    onChange: e => setBuying(b => ({
+      ...b,
+      buyer: e.target.value
+    })),
+    placeholder: "Chi ha acquistato",
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Tipologia"), /*#__PURE__*/React.createElement("select", {
+    value: buying.type,
+    onChange: e => setBuying(b => ({
+      ...b,
+      type: e.target.value
+    })),
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
+  }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
+    key: k,
+    value: k
+  }, PURCHASE_TYPES[k])))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 pt-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setBuying(null),
+    className: "flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase"
+  }, "Annulla"), /*#__PURE__*/React.createElement("button", {
+    onClick: confirmBuy,
+    className: "flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]"
+  }, "Conferma")))), snapList && /*#__PURE__*/React.createElement("div", {
     onClick: () => setSnapList(null),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
   }, /*#__PURE__*/React.createElement("div", {
