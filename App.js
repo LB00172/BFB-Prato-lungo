@@ -287,13 +287,19 @@ function BandyGame({
       ctx.drawImage(bgRef.current, 0, 0);
       // Bandy da raccogliere
       const f = st.food;
-      const fx = offX + f.x * cell,
-        fy = offY + f.y * cell;
+      const fcx = offX + f.x * cell + cell / 2,
+        fcy = offY + f.y * cell + cell / 2;
+      // alone chiaro: stacca Bandy dal verde del bosco
+      ctx.beginPath();
+      ctx.arc(fcx, fcy, cell * 0.62, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(240, 244, 241, 0.28)';
+      ctx.fill();
       if (img.complete && img.naturalWidth) {
-        ctx.drawImage(img, fx + 1, fy + 1, cell - 2, cell - 2);
+        const fs = cell * 1.34; // un filo più grande della cella per leggerlo bene
+        ctx.drawImage(img, fcx - fs / 2, fcy - fs / 2, fs, fs);
       } else {
         ctx.fillStyle = '#E9B48E';
-        ctx.fillRect(fx + 2, fy + 2, cell - 4, cell - 4);
+        ctx.fillRect(fcx - cell * 0.4, fcy - cell * 0.4, cell * 0.8, cell * 0.8);
       }
       // la canna: corpo di carta con punta accesa
       st.snake.forEach((s, i) => {
