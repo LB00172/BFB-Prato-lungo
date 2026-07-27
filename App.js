@@ -2495,7 +2495,7 @@ function App() {
     }
   }), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-gray-600 leading-snug"
-  }, "Bandy si \xE8 perso nel bosco: raccoglilo pi\xF9 volte che puoi. Ogni volta che lo prendi la canna si allunga \u2014 se sbatti contro i bordi o contro te stesso, finita.")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, "Bandy \xE8 in montagna e non \xE8 ancora fatto: raggiungilo con la canna pi\xF9 volte che puoi. Ogni volta che lo prendi la canna si allunga \u2014 se sbatti contro i bordi o contro te stesso, GAME OVER.")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
   }, "Nome giocatore"), /*#__PURE__*/React.createElement("input", {
     type: "text",

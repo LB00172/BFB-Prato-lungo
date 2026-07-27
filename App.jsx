@@ -2206,7 +2206,7 @@ function App() {
                   <div className="flex items-center gap-3">
                     <img src="./bandy.png" alt="Bandy" className="w-14 h-14 rounded border-2 border-[#8F9E8B]/40 bg-[#F0F4F1]" style={{ imageRendering: 'pixelated' }} />
                     <p className="text-[11px] text-gray-600 leading-snug">
-                      Bandy si è perso nel bosco: raccoglilo più volte che puoi. Ogni volta che lo prendi la canna si allunga — se sbatti contro i bordi o contro te stesso, finita.
+                      Bandy è in montagna e non è ancora fatto: raggiungilo con la canna più volte che puoi. Ogni volta che lo prendi la canna si allunga — se sbatti contro i bordi o contro te stesso, GAME OVER.
                     </p>
                   </div>
                   <div>
