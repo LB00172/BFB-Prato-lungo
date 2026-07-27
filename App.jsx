@@ -44,7 +44,7 @@ const BRAND = {
   credits: 'Web app prodotta da Lorenzo Ballerini · Tutti i diritti riservati © 2026',
   ...(CFG.brand || {}),
 };
-const FEATURES = { auth: false, rooms: false, ...(CFG.features || {}) };
+const FEATURES = { auth: false, rooms: false, equipExemption: false, ...(CFG.features || {}) };
 
 // Periodo del campo. Durante il campo l'app si apre sul giorno corrente.
 const CAMP_START = '2026-08-11';
@@ -730,7 +730,8 @@ function App() {
         if (!m.isChild) {
           adultMealsTotal += count;
           attendingAdults.add(m.id);
-          if (!m.equipExempt) attendingForEquip.add(m.id);
+          // L'esenzione vale solo se la funzione e' attiva (vedi FEATURES).
+          if (!(FEATURES.equipExemption && m.equipExempt)) attendingForEquip.add(m.id);
         }
       });
     });
@@ -1167,19 +1168,21 @@ function App() {
                           <button onClick={() => removeMember(m.id)} className="text-red-700 font-bold px-2 hover:text-red-900">&times;</button>
                         </div>
                       </div>
-                      {/* Esenzione dalla spesa per l'attrezzatura */}
-                      <button
-                        onClick={() => toggleEquipExempt(m.id)}
-                        aria-label="Esenzione attrezzatura"
-                        className="mt-1.5 flex items-center gap-2 text-left"
-                      >
-                        <span className={`w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-[10px] font-bold ${m.equipExempt ? 'bg-[#5C4A3C] border-[#5C4A3C] text-white' : 'bg-white border-[#8F9E8B]'}`}>
-                          {m.equipExempt ? '✓' : ''}
-                        </span>
-                        <span className={`text-[10px] ${m.equipExempt ? 'font-bold text-[#5C4A3C]' : 'text-gray-500'}`}>
-                          Esente attrezzatura
-                        </span>
-                      </button>
+                      {/* Esenzione attrezzatura: nascosta finche' FEATURES.equipExemption e' false */}
+                      {FEATURES.equipExemption && (
+                        <button
+                          onClick={() => toggleEquipExempt(m.id)}
+                          aria-label="Esenzione attrezzatura"
+                          className="mt-1.5 flex items-center gap-2 text-left"
+                        >
+                          <span className={`w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-[10px] font-bold ${m.equipExempt ? 'bg-[#5C4A3C] border-[#5C4A3C] text-white' : 'bg-white border-[#8F9E8B]'}`}>
+                            {m.equipExempt ? '✓' : ''}
+                          </span>
+                          <span className={`text-[10px] ${m.equipExempt ? 'font-bold text-[#5C4A3C]' : 'text-gray-500'}`}>
+                            Esente attrezzatura
+                          </span>
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -1324,7 +1327,9 @@ function App() {
                   <span className="text-[10px] uppercase text-[#8F9E8B] block">Attrezzatura a testa</span>
                   <span className="font-rustic text-xl text-[#D97706]">{money(totals.equipPerAdult)} €</span>
                   <p className="text-[9px] text-gray-400 mt-1">
-                    Attrezzatura ({money(totals.equipBought)} €) / {totals.equipPayersCount} {totals.equipPayersCount === 1 ? 'persona non esente' : 'persone non esenti'}.
+                    Attrezzatura ({money(totals.equipBought)} €) / {totals.equipPayersCount} {FEATURES.equipExemption
+                      ? (totals.equipPayersCount === 1 ? 'persona non esente' : 'persone non esenti')
+                      : (totals.equipPayersCount === 1 ? 'adulto presente' : 'adulti presenti')}.
                   </p>
                 </div>
               </div>

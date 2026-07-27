@@ -44,7 +44,8 @@ window.APP_CONFIG = {
     credits: "Web app prodotta da Lorenzo Ballerini · Tutti i diritti riservati © 2026",
   },
   features: {
-    auth: false,   // login con Google / email+password (roadmap settembre)
-    rooms: false,  // creazione "room" con ID e password (roadmap settembre)
+    auth: false,           // login con Google / email+password (roadmap settembre)
+    rooms: false,          // creazione "room" con ID e password (roadmap settembre)
+    equipExemption: false, // esenzione per membro dalla spesa attrezzatura (da rivedere)
   },
 };

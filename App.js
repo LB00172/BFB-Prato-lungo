@@ -56,6 +56,7 @@ const BRAND = {
 const FEATURES = {
   auth: false,
   rooms: false,
+  equipExemption: false,
   ...(CFG.features || {})
 };
 
@@ -897,7 +898,8 @@ function App() {
         if (!m.isChild) {
           adultMealsTotal += count;
           attendingAdults.add(m.id);
-          if (!m.equipExempt) attendingForEquip.add(m.id);
+          // L'esenzione vale solo se la funzione e' attiva (vedi FEATURES).
+          if (!(FEATURES.equipExemption && m.equipExempt)) attendingForEquip.add(m.id);
         }
       });
     });
@@ -1399,7 +1401,7 @@ function App() {
   }, m.isChild ? 'Bambino' : 'Adulto'), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeMember(m.id),
     className: "text-red-700 font-bold px-2 hover:text-red-900"
-  }, "\xD7"))), /*#__PURE__*/React.createElement("button", {
+  }, "\xD7"))), FEATURES.equipExemption && /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleEquipExempt(m.id),
     "aria-label": "Esenzione attrezzatura",
     className: "mt-1.5 flex items-center gap-2 text-left"
@@ -1545,7 +1547,7 @@ function App() {
     className: "font-rustic text-xl text-[#D97706]"
   }, money(totals.equipPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 mt-1"
-  }, "Attrezzatura (", money(totals.equipBought), " \u20AC) / ", totals.equipPayersCount, " ", totals.equipPayersCount === 1 ? 'persona non esente' : 'persone non esenti', "."))), /*#__PURE__*/React.createElement("p", {
+  }, "Attrezzatura (", money(totals.equipBought), " \u20AC) / ", totals.equipPayersCount, " ", FEATURES.equipExemption ? totals.equipPayersCount === 1 ? 'persona non esente' : 'persone non esenti' : totals.equipPayersCount === 1 ? 'adulto presente' : 'adulti presenti', "."))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic"
   }, "I pasti dei bambini sono gratis: il loro costo \xE8 ripartito sugli adulti."))), spesaSection === 'quote' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
