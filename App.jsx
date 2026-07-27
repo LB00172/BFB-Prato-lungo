@@ -707,18 +707,24 @@ function App() {
     }
   }, [receipts]);
 
-  // Pulizia: elimina le foto locali di acquisti che non esistono più
-  // (es. acquisto cancellato da un altro dispositivo).
+  // Pulizia: elimina le foto locali di voci che non esistono più (es. acquisto
+  // cancellato da un altro dispositivo). Vanno considerate TUTTE le liste che
+  // possono avere uno scontrino, altrimenti si perdono le foto delle voci
+  // ancora da acquistare o dell'attrezzatura.
   useEffect(() => {
     setReceipts((prev) => {
-      const ids = new Set(purchases.map((p) => p.id));
+      const ids = new Set([
+        ...purchases.map((p) => p.id),
+        ...toBuy.map((t) => t.id),
+        ...equipment.map((e) => e.id),
+      ]);
       const keys = Object.keys(prev);
       if (keys.every((k) => ids.has(k))) return prev;
       const copy = {};
       keys.forEach((k) => { if (ids.has(k)) copy[k] = prev[k]; });
       return copy;
     });
-  }, [purchases]);
+  }, [purchases, toBuy, equipment]);
 
   useEffect(() => {
     const on = () => {
@@ -1127,6 +1133,11 @@ function App() {
     const e = equipment.find((x) => x.id === id);
     if (e && !window.confirm(`Eliminare "${e.text}" dall'attrezzatura?`)) return;
     setEquipment((prev) => prev.filter((x) => x.id !== id));
+    setReceipts((prev) => {
+      if (!prev[id]) return prev;
+      const copy = { ...prev }; delete copy[id]; return copy;
+    });
+    if (window.CloudSync) window.CloudSync.deleteReceipt(id);
   };
 
   // ---------- Dotazioni aggiuntive ----------
@@ -1408,7 +1419,7 @@ function App() {
     presenze: 'Presenze',
     spesa: 'Spese Totali',
     lista: 'Lista della Spesa',
-    attrezzatura: 'Aggiunta Attrezzatura',
+    attrezzatura: 'Attrezzatura',
     regole: 'Regole',
     dotazioni: 'Dotazioni personali',
     gioco: 'Aiuta Bandy',
@@ -1423,7 +1434,7 @@ function App() {
     { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e il suggerimento dei nomi quando registri una spesa.' },
     { k: 'presenze', icon: '🍽️', title: 'Presenze', body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta usa "Tutti a pranzo" o "Tutti a cena" e poi togli i pochi assenti, oppure "Copia da ieri". In alto trovi il conteggio del giorno. Durante il campo l\'app si apre già sulla data di oggi.' },
     { k: 'lista', icon: '🧾', title: 'Lista della Spesa', body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; ogni voce ha l\'icona 📷 per lo scontrino e il tasto "Segna come acquistata", che chiede prezzo, acquirente e tipologia e la sposta in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce e fotografalo anche dopo.' },
-    { k: 'attrezzatura', icon: '🪛', title: 'Aggiunta Attrezzatura', body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. In fondo vedi il totale previsto e quello effettivamente acquistato. Se indichi l\'acquirente, gli verrà rimborsata.' },
+    { k: 'attrezzatura', icon: '🪛', title: 'Attrezzatura', body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. Con l\'icona 📷 alleghi lo scontrino, anche in un secondo momento. In fondo vedi il totale previsto e quello effettivamente acquistato; se indichi l\'acquirente, gli verrà rimborsata.' },
     { k: 'spesa', icon: '💶', title: 'Spese Totali', body: 'Quattro sotto-sezioni. Totali: quanto si è speso per cibo, bevande, logistica e attrezzatura. Quote: quanto costa a testa. Saldi: chi deve dare o ricevere. Dati: backup e sincronizzazione. I totali non si scrivono a mano, nascono dalla Lista della Spesa e dall\'attrezzatura acquistata.' },
     { k: 'conti', icon: '⚖️', title: 'Come si dividono', body: 'Cibo e bevande sono divisi per il numero di pasti: chi mangia di più paga di più. Logistica e attrezzatura sono una quota fissa uguale per ogni adulto presente: nessuno paga più di una quota. Le cifre sono arrotondate a 10 centesimi, così non servono monetine da 1, 2 o 5 cent.' },
     { k: 'saldi', icon: '🤝', title: 'Saldi e rimborsi', body: 'Per ogni persona l\'app confronta quanto ha anticipato con quanto deve, e dice se riceve o se deve dare. Sotto, in "Chi paga chi", trovi i pochi passaggi di denaro necessari per pareggiare tutto: tocca una riga quando il rimborso è stato fatto e resta barrata. Con "Condividi resoconto" mandi il riepilogo pronto nel gruppo WhatsApp.' },
@@ -2266,7 +2277,7 @@ function App() {
                 />
                 <button onClick={addEquip} className="shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold uppercase text-xs hover:bg-[#1F271E]">Aggiungi</button>
               </div>
-              <p className="text-[9px] text-gray-400">Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica).</p>
+              <p className="text-[9px] text-gray-400">Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica). Con 📷 puoi allegare lo scontrino, anche dopo.</p>
             </div>
 
             {/* Elenco attrezzatura */}
@@ -2298,6 +2309,14 @@ function App() {
                         {e.buyer && <div className="text-[9px] text-[#5C4A3C] font-bold truncate">{e.buyer}</div>}
                       </div>
                       <span className={`font-rustic font-bold shrink-0 ${e.bought ? 'text-[#2D392C]' : 'text-gray-400'}`}>{money(posNum(e.price))} €</span>
+                      {receipts[e.id] ? (
+                        <button onClick={() => setViewReceipt(receipts[e.id])} aria-label="Vedi scontrino" className="shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none">📷</button>
+                      ) : (
+                        <label title="Allega scontrino" aria-label="Allega scontrino" className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]">
+                          📷
+                          <input type="file" accept="image/*" capture="environment" onChange={(ev) => attachReceiptTo(ev, e.id)} className="hidden" />
+                        </label>
+                      )}
                       <button onClick={() => removeEquip(e.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0">&times;</button>
                     </li>
                   ))}

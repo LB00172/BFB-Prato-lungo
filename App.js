@@ -879,11 +879,13 @@ function App() {
     }
   }, [receipts]);
 
-  // Pulizia: elimina le foto locali di acquisti che non esistono più
-  // (es. acquisto cancellato da un altro dispositivo).
+  // Pulizia: elimina le foto locali di voci che non esistono più (es. acquisto
+  // cancellato da un altro dispositivo). Vanno considerate TUTTE le liste che
+  // possono avere uno scontrino, altrimenti si perdono le foto delle voci
+  // ancora da acquistare o dell'attrezzatura.
   useEffect(() => {
     setReceipts(prev => {
-      const ids = new Set(purchases.map(p => p.id));
+      const ids = new Set([...purchases.map(p => p.id), ...toBuy.map(t => t.id), ...equipment.map(e => e.id)]);
       const keys = Object.keys(prev);
       if (keys.every(k => ids.has(k))) return prev;
       const copy = {};
@@ -892,7 +894,7 @@ function App() {
       });
       return copy;
     });
-  }, [purchases]);
+  }, [purchases, toBuy, equipment]);
   useEffect(() => {
     const on = () => {
       setIsOnline(true);
@@ -1419,6 +1421,15 @@ function App() {
     const e = equipment.find(x => x.id === id);
     if (e && !window.confirm(`Eliminare "${e.text}" dall'attrezzatura?`)) return;
     setEquipment(prev => prev.filter(x => x.id !== id));
+    setReceipts(prev => {
+      if (!prev[id]) return prev;
+      const copy = {
+        ...prev
+      };
+      delete copy[id];
+      return copy;
+    });
+    if (window.CloudSync) window.CloudSync.deleteReceipt(id);
   };
 
   // ---------- Dotazioni aggiuntive ----------
@@ -1751,7 +1762,7 @@ function App() {
     presenze: 'Presenze',
     spesa: 'Spese Totali',
     lista: 'Lista della Spesa',
-    attrezzatura: 'Aggiunta Attrezzatura',
+    attrezzatura: 'Attrezzatura',
     regole: 'Regole',
     dotazioni: 'Dotazioni personali',
     gioco: 'Aiuta Bandy',
@@ -1786,8 +1797,8 @@ function App() {
   }, {
     k: 'attrezzatura',
     icon: '🪛',
-    title: 'Aggiunta Attrezzatura',
-    body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. In fondo vedi il totale previsto e quello effettivamente acquistato. Se indichi l\'acquirente, gli verrà rimborsata.'
+    title: 'Attrezzatura',
+    body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. Con l\'icona 📷 alleghi lo scontrino, anche in un secondo momento. In fondo vedi il totale previsto e quello effettivamente acquistato; se indichi l\'acquirente, gli verrà rimborsata.'
   }, {
     k: 'spesa',
     icon: '💶',
@@ -2598,7 +2609,7 @@ function App() {
       className: "shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold uppercase text-xs hover:bg-[#1F271E]"
     }, "Aggiungi")), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-gray-400"
-    }, "Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica).")), /*#__PURE__*/React.createElement("div", {
+    }, "Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica). Con \uD83D\uDCF7 puoi allegare lo scontrino, anche dopo.")), /*#__PURE__*/React.createElement("div", {
       className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
@@ -2625,7 +2636,21 @@ function App() {
       className: "text-[9px] text-[#5C4A3C] font-bold truncate"
     }, e.buyer)), /*#__PURE__*/React.createElement("span", {
       className: `font-rustic font-bold shrink-0 ${e.bought ? 'text-[#2D392C]' : 'text-gray-400'}`
-    }, money(posNum(e.price)), " \u20AC"), /*#__PURE__*/React.createElement("button", {
+    }, money(posNum(e.price)), " \u20AC"), receipts[e.id] ? /*#__PURE__*/React.createElement("button", {
+      onClick: () => setViewReceipt(receipts[e.id]),
+      "aria-label": "Vedi scontrino",
+      className: "shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none"
+    }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
+      title: "Allega scontrino",
+      "aria-label": "Allega scontrino",
+      className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]"
+    }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
+      type: "file",
+      accept: "image/*",
+      capture: "environment",
+      onChange: ev => attachReceiptTo(ev, e.id),
+      className: "hidden"
+    })), /*#__PURE__*/React.createElement("button", {
       onClick: () => removeEquip(e.id),
       "aria-label": "Rimuovi",
       className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
