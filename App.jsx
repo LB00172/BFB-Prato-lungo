@@ -73,15 +73,13 @@ const wmoInfo = (code) => {
 };
 
 // Dotazione personale base: uguale per tutti, non modificabile dall'app.
+// Le voci con emphasis: true sono mostrate in evidenza (piu' grandi e sottolineate).
 const BASE_GEAR = [
-  'Tenda',
-  'Stoviglie, posate personali e bicchiere riutilizzabile',
-  'Sacchi a pelo',
-  'Borraccia',
-  'Cuscini',
-  'Canovacci',
-  'Materassino',
-  'Luci LED',
+  { text: 'SEDIA PERSONALE PER ADULTI E EVENTUALI BAMBINI', emphasis: true },
+  { text: 'Stoviglie, posate personali e bicchiere riutilizzabile', emphasis: true },
+  { text: 'Borraccia' },
+  { text: 'Canovacci' },
+  { text: 'Luci LED' },
 ];
 
 // Comprime una foto (scontrino) ridimensionandola e convertendola in JPEG,
@@ -1860,9 +1858,20 @@ function App() {
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Dotazione base</h3>
               <ul className="space-y-2">
                 {BASE_GEAR.map((item) => (
-                  <li key={item} className="flex items-center gap-3 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
-                    <span className="w-1.5 h-1.5 bg-[#D97706] rounded-full shrink-0"></span>
-                    <span className="text-sm text-[#2D392C]">{item}</span>
+                  <li
+                    key={item.text}
+                    className={`flex items-center gap-3 rounded border p-2.5 ${
+                      item.emphasis
+                        ? 'bg-[#D97706]/10 border-[#D97706]/40'
+                        : 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20'
+                    }`}
+                  >
+                    <span className={`shrink-0 rounded-full bg-[#D97706] ${item.emphasis ? 'w-2 h-2' : 'w-1.5 h-1.5'}`}></span>
+                    <span className={item.emphasis
+                      ? 'text-base font-bold uppercase underline decoration-2 underline-offset-2 text-[#2D392C] leading-snug'
+                      : 'text-sm text-[#2D392C]'}>
+                      {item.text}
+                    </span>
                   </li>
                 ))}
               </ul>

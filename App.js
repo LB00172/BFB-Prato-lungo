@@ -124,7 +124,20 @@ const wmoInfo = code => {
 };
 
 // Dotazione personale base: uguale per tutti, non modificabile dall'app.
-const BASE_GEAR = ['Tenda', 'Stoviglie, posate personali e bicchiere riutilizzabile', 'Sacchi a pelo', 'Borraccia', 'Cuscini', 'Canovacci', 'Materassino', 'Luci LED'];
+// Le voci con emphasis: true sono mostrate in evidenza (piu' grandi e sottolineate).
+const BASE_GEAR = [{
+  text: 'SEDIA PERSONALE PER ADULTI E EVENTUALI BAMBINI',
+  emphasis: true
+}, {
+  text: 'Stoviglie, posate personali e bicchiere riutilizzabile',
+  emphasis: true
+}, {
+  text: 'Borraccia'
+}, {
+  text: 'Canovacci'
+}, {
+  text: 'Luci LED'
+}];
 
 // Comprime una foto (scontrino) ridimensionandola e convertendola in JPEG,
 // così da poterla salvare in localStorage senza esaurire lo spazio.
@@ -2062,13 +2075,13 @@ function App() {
   }, "Dotazione base"), /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
   }, BASE_GEAR.map(item => /*#__PURE__*/React.createElement("li", {
-    key: item,
-    className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
+    key: item.text,
+    className: `flex items-center gap-3 rounded border p-2.5 ${item.emphasis ? 'bg-[#D97706]/10 border-[#D97706]/40' : 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20'}`
   }, /*#__PURE__*/React.createElement("span", {
-    className: "w-1.5 h-1.5 bg-[#D97706] rounded-full shrink-0"
+    className: `shrink-0 rounded-full bg-[#D97706] ${item.emphasis ? 'w-2 h-2' : 'w-1.5 h-1.5'}`
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-sm text-[#2D392C]"
-  }, item)))), /*#__PURE__*/React.createElement("p", {
+    className: item.emphasis ? 'text-base font-bold uppercase underline decoration-2 underline-offset-2 text-[#2D392C] leading-snug' : 'text-sm text-[#2D392C]'
+  }, item.text)))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
   }, "Dotazione obbligatoria per ogni partecipante.")), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
