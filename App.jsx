@@ -113,6 +113,7 @@ const GAME_COLS = 15;
 const BASE_STEP = 170;   // millisecondi per passo al livello 1
 const BASE_LEN = 3;      // lunghezza di partenza a ogni livello
 const LEVEL_EVERY = 15;  // Bandy necessari per salire di livello
+const LEVEL_SPEEDUP = 1.5; // di quanto accelera a ogni livello
 const MIN_STEP = 45;     // limite di velocità: sotto diventa ingiocabile
 const GAME_ROWS = 19;
 
@@ -366,8 +367,8 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
               const nextLevel = Math.floor(st.score / LEVEL_EVERY) + 1;
               if (nextLevel > st.level) {
                 st.level = nextLevel;
-                // velocità raddoppiata a ogni livello
-                st.step = Math.max(MIN_STEP, Math.round(BASE_STEP / Math.pow(2, nextLevel - 1)));
+                // a ogni livello la velocità aumenta di una volta e mezza
+                st.step = Math.max(MIN_STEP, Math.round(BASE_STEP / Math.pow(LEVEL_SPEEDUP, nextLevel - 1)));
                 // si riparte dalla lunghezza base, mantenendo posizione e direzione
                 st.snake = st.snake.slice(0, BASE_LEN);
                 st.queue = [];
@@ -461,7 +462,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
             <div className="bg-black/70 px-5 py-3 rounded-lg text-center">
               <div className="font-rustic text-2xl text-[#D97706]">LIVELLO {level}</div>
               <div className="text-[10px] uppercase tracking-widest text-[#F0F4F1]">
-                {level === 2 ? 'In città!' : 'Il doppio più veloce!'}
+                {level === 2 ? 'In città!' : 'Ancora più veloce!'}
               </div>
             </div>
           </div>

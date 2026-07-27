@@ -169,6 +169,7 @@ const GAME_COLS = 15;
 const BASE_STEP = 170; // millisecondi per passo al livello 1
 const BASE_LEN = 3; // lunghezza di partenza a ogni livello
 const LEVEL_EVERY = 15; // Bandy necessari per salire di livello
+const LEVEL_SPEEDUP = 1.5; // di quanto accelera a ogni livello
 const MIN_STEP = 45; // limite di velocità: sotto diventa ingiocabile
 const GAME_ROWS = 19;
 
@@ -488,8 +489,8 @@ function BandyGame({
               const nextLevel = Math.floor(st.score / LEVEL_EVERY) + 1;
               if (nextLevel > st.level) {
                 st.level = nextLevel;
-                // velocità raddoppiata a ogni livello
-                st.step = Math.max(MIN_STEP, Math.round(BASE_STEP / Math.pow(2, nextLevel - 1)));
+                // a ogni livello la velocità aumenta di una volta e mezza
+                st.step = Math.max(MIN_STEP, Math.round(BASE_STEP / Math.pow(LEVEL_SPEEDUP, nextLevel - 1)));
                 // si riparte dalla lunghezza base, mantenendo posizione e direzione
                 st.snake = st.snake.slice(0, BASE_LEN);
                 st.queue = [];
@@ -611,7 +612,7 @@ function BandyGame({
     className: "font-rustic text-2xl text-[#D97706]"
   }, "LIVELLO ", level), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] uppercase tracking-widest text-[#F0F4F1]"
-  }, level === 2 ? 'In città!' : 'Il doppio più veloce!'))), (over || paused) && /*#__PURE__*/React.createElement("div", {
+  }, level === 2 ? 'In città!' : 'Ancora più veloce!'))), (over || paused) && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 bg-black/70 rounded-lg flex flex-col items-center justify-center text-center p-4"
   }, over ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-2xl text-[#F0F4F1]"
