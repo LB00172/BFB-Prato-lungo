@@ -293,6 +293,85 @@ const SK = {
   tip: '#E8A090',
   crease: '#A9714F'
 };
+// Livello 1: la canna come cilindro continuo, con brace tonda e sfumata
+// e filtro in fondo (prima era una catena di quadretti staccati).
+const JO = {
+  paper: '#F6EFDF',
+  paper2: '#E9DFC7',
+  seam: '#DCCFB2',
+  filter: '#B98F5E',
+  filter2: '#9C7345'
+};
+function drawJoint(ctx, snake, i, cell, offX, offY, dir) {
+  const seg = snake[i];
+  const x = offX + seg.x * cell,
+    y = offY + seg.y * cell;
+  const u = cell / 10;
+  const T = cell - u * 3.6; // spessore della cartina
+  const cx = x + cell / 2,
+    cy = y + cell / 2;
+  const total = snake.length;
+  const bandTo = nb => {
+    if (!nb) return;
+    const dx = nb.x - seg.x,
+      dy = nb.y - seg.y;
+    if (dx > 0) ctx.fillRect(cx, cy - T / 2, cell / 2 + 1, T);else if (dx < 0) ctx.fillRect(x - 1, cy - T / 2, cell / 2 + 1, T);else if (dy > 0) ctx.fillRect(cx - T / 2, cy, T, cell / 2 + 1);else if (dy < 0) ctx.fillRect(cx - T / 2, y - 1, T, cell / 2 + 1);
+  };
+  if (i === 0) {
+    const d = dir && (dir.x || dir.y) ? dir : {
+      x: 0,
+      y: -1
+    };
+    // cartina fino alla punta
+    ctx.fillStyle = JO.paper;
+    ctx.fillRect(cx - T / 2, cy - T / 2, T, T);
+    bandTo(snake[1]);
+    // brace: cerchio con sfumatura + alone morbido
+    const ex = cx + d.x * u * 1.2,
+      ey = cy + d.y * u * 1.2;
+    const r = T * 0.5;
+    const glow = ctx.createRadialGradient(ex, ey, r * 0.3, ex, ey, r * 2.1);
+    glow.addColorStop(0, 'rgba(255,150,40,0.45)');
+    glow.addColorStop(1, 'rgba(255,120,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(ex, ey, r * 2.1, 0, Math.PI * 2);
+    ctx.fill();
+    const g = ctx.createRadialGradient(ex - r * 0.25, ey - r * 0.25, r * 0.1, ex, ey, r);
+    g.addColorStop(0, '#FFF3C4');
+    g.addColorStop(0.4, '#FFB13B');
+    g.addColorStop(0.8, '#E06A0C');
+    g.addColorStop(1, '#8E3406');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(ex, ey, r, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  if (i === total - 1 && total > 2) {
+    // filtro di cartoncino
+    ctx.fillStyle = JO.filter;
+    ctx.fillRect(cx - T / 2, cy - T / 2, T, T);
+    bandTo(snake[i - 1]);
+    ctx.fillStyle = JO.filter2;
+    const horizT = snake[i - 1].y === seg.y;
+    if (horizT) ctx.fillRect(cx - T / 2, cy - T / 2, u * 1.2, T);else ctx.fillRect(cx - T / 2, cy - T / 2, T, u * 1.2);
+    return;
+  }
+
+  // corpo: cartina con una leggera ombra lungo l'asse
+  ctx.fillStyle = JO.paper;
+  ctx.fillRect(cx - T / 2, cy - T / 2, T, T);
+  bandTo(snake[i - 1]);
+  bandTo(snake[i + 1]);
+  const horiz = snake[i - 1] && snake[i - 1].y === seg.y || snake[i + 1] && snake[i + 1].y === seg.y;
+  ctx.fillStyle = JO.paper2;
+  if (horiz) ctx.fillRect(x, cy + T * 0.18, cell, u * 1.1);else ctx.fillRect(cx + T * 0.18, y, u * 1.1, cell);
+  ctx.fillStyle = JO.seam; // cucitura della cartina
+  if (i % 3 === 0) {
+    if (horiz) ctx.fillRect(cx - u * 0.4, cy - T / 2, u * 0.8, T);else ctx.fillRect(cx - T / 2, cy - u * 0.4, T, u * 0.8);
+  }
+}
 function drawBody(ctx, snake, i, cell, offX, offY, dir) {
   const seg = snake[i];
   const x = offX + seg.x * cell,
@@ -482,27 +561,10 @@ function BandyGame({
         }
         return;
       }
-      // la canna: corpo di carta con punta accesa
-      st.snake.forEach((s, i) => {
-        const x = offX + s.x * cell,
-          y = offY + s.y * cell;
-        if (i === 0) {
-          ctx.fillStyle = '#F6EFDF';
-          ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
-          ctx.fillStyle = '#D97706'; // brace
-          ctx.fillRect(x + cell * 0.28, y + cell * 0.28, cell * 0.44, cell * 0.44);
-          ctx.fillStyle = '#FFD08A';
-          ctx.fillRect(x + cell * 0.4, y + cell * 0.4, cell * 0.2, cell * 0.2);
-        } else {
-          const last = i === st.snake.length - 1;
-          ctx.fillStyle = last ? '#C7A87C' : i % 2 ? '#F1E7D2' : '#FAF4E6';
-          ctx.fillRect(x + 2, y + 2, cell - 4, cell - 4);
-          if (i % 3 === 0) {
-            ctx.fillStyle = '#E3D6BB';
-            ctx.fillRect(x + 3, y + 3, cell - 6, 2);
-          }
-        }
-      });
+      // la canna: dal fondo verso la testa, così la brace resta sopra
+      for (let i = st.snake.length - 1; i >= 0; i--) {
+        drawJoint(ctx, st.snake, i, cell, offX, offY, st.dir);
+      }
     };
     const tick = ts => {
       if (!stateRef.current) return;
