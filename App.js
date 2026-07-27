@@ -1168,42 +1168,62 @@ function App() {
     k: 'calendario',
     icon: '📅',
     title: 'Calendario',
-    body: 'Per ogni giorno vedi il meteo previsto di Pereto e il riepilogo cucina (quanti pasti preparare a pranzo e a cena). Sotto puoi scrivere note libere su menù, legna, ecc. Scorri le settimane con le frecce.'
+    body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e uno spazio per le note su menù, legna, turni. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.'
   }, {
     k: 'membri',
     icon: '👥',
     title: 'Membri',
-    body: 'Aggiungi tutte le persone del campo. Segna "Bambino" chi non paga i pasti (mangia gratis). L\'elenco serve alle presenze e ai conti.'
+    body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e il suggerimento dei nomi quando registri una spesa.'
   }, {
     k: 'presenze',
     icon: '🍽️',
     title: 'Presenze',
-    body: 'Per ogni giorno segna chi c\'è a pranzo e a cena. Usa "Tutti a pranzo/cena" per fare in fretta e poi togli gli assenti, oppure "Copia da ieri". Il conto dei pasti serve a calcolare la quota.'
+    body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta usa "Tutti a pranzo" o "Tutti a cena" e poi togli i pochi assenti, oppure "Copia da ieri". In alto trovi il conteggio del giorno. Durante il campo l\'app si apre già sulla data di oggi.'
   }, {
     k: 'lista',
     icon: '🧾',
     title: 'Lista della Spesa',
-    body: 'Registra ogni acquisto: nome, chi l\'ha pagato, prezzo e tipologia (Alimentare/Bevande/Logistica). Puoi allegare la foto dello scontrino. Da qui si generano i totali.'
+    body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; ogni voce ha l\'icona 📷 per lo scontrino e il tasto "Segna come acquistata", che chiede prezzo, acquirente e tipologia e la sposta in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce e fotografalo anche dopo.'
   }, {
     k: 'attrezzatura',
     icon: '🪛',
     title: 'Aggiunta Attrezzatura',
-    body: 'Elenco dell\'attrezzatura da comprare con prezzo. Spunta una voce quando è acquistata: il suo costo entra nelle spese come logistica. Se metti l\'acquirente, verrà rimborsato.'
+    body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. In fondo vedi il totale previsto e quello effettivamente acquistato. Se indichi l\'acquirente, gli verrà rimborsata.'
   }, {
     k: 'spesa',
     icon: '💶',
     title: 'Spese Totali',
-    body: 'Quattro sezioni: Totali (quanto si è speso), Quote (quanto costa a testa), Saldi (chi deve dare/ricevere e "chi paga chi", con Condividi resoconto), Dati (backup e ripristino). Cibo diviso per i pasti, logistica in parti uguali.'
+    body: 'Quattro sotto-sezioni. Totali: quanto si è speso per cibo, bevande, logistica e attrezzatura. Quote: quanto costa a testa. Saldi: chi deve dare o ricevere. Dati: backup e sincronizzazione. I totali non si scrivono a mano, nascono dalla Lista della Spesa e dall\'attrezzatura acquistata.'
+  }, {
+    k: 'conti',
+    icon: '⚖️',
+    title: 'Come si dividono',
+    body: 'Cibo e bevande sono divisi per il numero di pasti: chi mangia di più paga di più. Logistica e attrezzatura sono una quota fissa uguale per ogni adulto presente: nessuno paga più di una quota. Le cifre sono arrotondate a 10 centesimi, così non servono monetine da 1, 2 o 5 cent.'
+  }, {
+    k: 'saldi',
+    icon: '🤝',
+    title: 'Saldi e rimborsi',
+    body: 'Per ogni persona l\'app confronta quanto ha anticipato con quanto deve, e dice se riceve o se deve dare. Sotto, in "Chi paga chi", trovi i pochi passaggi di denaro necessari per pareggiare tutto: tocca una riga quando il rimborso è stato fatto e resta barrata. Con "Condividi resoconto" mandi il riepilogo pronto nel gruppo WhatsApp.'
   }, {
     k: 'dotazioni',
     icon: '🎒',
     title: 'Dotazioni personali',
-    body: 'La lista di cosa portarsi da casa: una parte fissa uguale per tutti e una parte aggiuntiva per questo campo che potete modificare.'
+    body: 'Cosa portarsi da casa: una dotazione base uguale per tutti (tenda, sacco a pelo, stoviglie, borraccia…) che non si modifica, e un elenco di aggiunte per questo campo che potete integrare quando serve.'
+  }, {
+    k: 'backup',
+    icon: '🛟',
+    title: 'Backup e sicurezza',
+    body: 'Ogni giorno viene salvata da sola una copia dei dati nel cloud: se qualcosa va storto, "Ripristino di emergenza" (in Spese Totali → Dati) permette di tornare a un giorno preciso. In più puoi esportare tutto su file con Esporta e ricaricarlo con Importa. Prima di eliminare qualcosa l\'app chiede sempre conferma.'
   }, {
     k: 'sync',
     icon: '☁️',
     title: 'Sincronizzazione',
-    body: 'Con la linea i dati si allineano da soli tra i telefoni che usano lo stesso campo. Al campo, senza linea, si continua a lavorare: tutto si sincronizza appena torna la rete.'
+    body: 'La connessione al campo è automatica: quando c\'è linea i dati si allineano da soli fra i telefoni, in tempo reale, foto degli scontrini comprese. Senza linea si continua a lavorare normalmente e tutto viene inviato appena la rete torna. Il pallino in alto a destra indica se sei online o offline.'
+  }, {
+    k: 'installa',
+    icon: '📲',
+    title: 'Installa l\'app',
+    body: 'Conviene installarla, così si apre a schermo intero e funziona anche senza rete. Su iPhone: Condividi (il quadrato con la freccia) e poi "Aggiungi alla schermata Home". Su Android: menu del browser e "Installa app". Quando usciamo un aggiornamento, l\'app si aggiorna da sola: se non vedi una novità, chiudila e riaprila.'
   }];
   return /*#__PURE__*/React.createElement("div", {
     className: "max-w-md mx-auto min-h-screen flex flex-col bg-[#F0F4F1] border-x border-[#8F9E8B]/30 shadow-2xl pb-24"
@@ -2117,13 +2137,13 @@ function App() {
     className: "text-xs space-y-1.5 list-decimal list-inside text-[#F0F4F1]/90"
   }, /*#__PURE__*/React.createElement("li", null, "In ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Membri"), " aggiungi le persone."), /*#__PURE__*/React.createElement("li", null, "Ogni giorno segna le ", /*#__PURE__*/React.createElement("span", {
+  }, "Membri"), " aggiungi le persone (e segna chi \xE8 bambino)."), /*#__PURE__*/React.createElement("li", null, "Ogni giorno segna le ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
   }, "Presenze"), " e registra le spese nella ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Lista della Spesa"), "."), /*#__PURE__*/React.createElement("li", null, "In ", /*#__PURE__*/React.createElement("span", {
+  }, "Lista della Spesa"), ": prima cosa serve in \"Da acquistare\", poi la sposti in \"Acquistato\" con prezzo e acquirente."), /*#__PURE__*/React.createElement("li", null, "In ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Spese Totali \u2192 Saldi"), " vedi chi deve dare o ricevere, e con ", /*#__PURE__*/React.createElement("span", {
+  }, "Spese Totali \u2192 Saldi"), " vedi chi deve dare o ricevere e chi paga chi, e con ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
   }, "Condividi resoconto"), " lo mandi nel gruppo."))))), buying && /*#__PURE__*/React.createElement("div", {
     onClick: () => setBuying(null),
