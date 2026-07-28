@@ -132,6 +132,9 @@ const BASE_GEAR = [{
   text: 'Stoviglie, posate personali e bicchiere riutilizzabile',
   emphasis: true
 }, {
+  text: 'Ospite nun fa Ospiti',
+  emphasis: true
+}, {
   text: 'Borraccia'
 }, {
   text: 'Canovacci'
@@ -2278,7 +2281,15 @@ function App() {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
-  }, "Quanto deve ciascuno"), totals.breakdown.length === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, "Quanto deve ciascuno"), totals.overallTotal > 0 && totals.adultMealsTotal === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "mb-3 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[#5C4A3C] leading-snug"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Attenzione:"), " ci sono spese per ", money(totals.overallTotal), " \u20AC ma nessun pasto registrato. Le quote restano a zero finch\xE9 non segni le presenze nella scheda ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Presenze"), ".")), totals.breakdown.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
   }, "Aggiungi membri e segna le presenze per vedere la ripartizione.") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-[#8F9E8B]/20"

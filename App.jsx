@@ -77,6 +77,7 @@ const wmoInfo = (code) => {
 const BASE_GEAR = [
   { text: 'SEDIA PERSONALE PER ADULTI E EVENTUALI BAMBINI', emphasis: true },
   { text: 'Stoviglie, posate personali e bicchiere riutilizzabile', emphasis: true },
+  { text: 'Ospite nun fa Ospiti', emphasis: true },
   { text: 'Borraccia' },
   { text: 'Canovacci' },
   { text: 'Luci LED' },
@@ -1913,6 +1914,18 @@ function App() {
             {/* Ripartizione per membro */}
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Quanto deve ciascuno</h3>
+              {/* Caso tipico da campo: spese registrate ma presenze dimenticate.
+                  Senza pasti non c'è nulla su cui ripartire e le quote restano a
+                  zero: meglio dirlo, invece di mostrare solo degli zeri. */}
+              {totals.overallTotal > 0 && totals.adultMealsTotal === 0 && (
+                <div className="mb-3 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
+                  <p className="text-[11px] text-[#5C4A3C] leading-snug">
+                    <span className="font-bold">Attenzione:</span> ci sono spese per {money(totals.overallTotal)} € ma
+                    nessun pasto registrato. Le quote restano a zero finché non segni le presenze
+                    nella scheda <span className="font-bold">Presenze</span>.
+                  </p>
+                </div>
+              )}
               {totals.breakdown.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">Aggiungi membri e segna le presenze per vedere la ripartizione.</p>
               ) : (
