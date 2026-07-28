@@ -1886,7 +1886,7 @@ function App() {
     k: 'lista',
     icon: '🧾',
     title: 'Lista della Spesa',
-    body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; ogni voce ha l\'icona 📷 per lo scontrino e il tasto "Segna come acquistata", che chiede prezzo, acquirente e tipologia e la sposta in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce e fotografalo anche dopo.'
+    body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; ogni voce ha l\'icona 📷 per lo scontrino (foto o galleria) e il tasto "Segna come acquistata", che chiede prezzo, acquirente e tipologia e la sposta in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.'
   }, {
     k: 'attrezzatura',
     icon: '🪛',
@@ -2504,13 +2504,12 @@ function App() {
     "aria-label": "Vedi scontrino",
     className: "shrink-0 px-2 py-1.5 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white leading-none"
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
-    title: "Foto scontrino",
+    title: "Scontrino: scatta una foto o scegli dalla galleria",
     "aria-label": "Allega scontrino",
     className: "shrink-0 cursor-pointer px-2 py-1.5 rounded border-2 border-[#8F9E8B]/50 bg-white leading-none hover:bg-[#E2EAE4]"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
-    capture: "environment",
     onChange: e => attachReceiptTo(e, it.id),
     className: "hidden"
   })), /*#__PURE__*/React.createElement("button", {
@@ -2529,20 +2528,19 @@ function App() {
     className: "mt-2 w-full py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
   }, "Segna come acquistata")))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic"
-  }, "Quando una voce viene acquistata passa in \"Acquistato\", con prezzo e acquirente.")), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, "Con \uD83D\uDCF7 puoi scattare lo scontrino o prenderlo dalla galleria. Quando una voce viene acquistata passa in \"Acquistato\", con prezzo e acquirente.")), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C]"
   }, "Prodotto acquistato"), /*#__PURE__*/React.createElement("label", {
-    title: "Foto scontrino",
+    title: "Scontrino: scatta una foto o scegli dalla galleria",
     "aria-label": "Allega scontrino",
     className: `cursor-pointer px-3 py-2 rounded border-2 text-lg leading-none ${pReceipt ? 'bg-[#2D392C] border-[#2D392C]' : 'bg-white border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'}`
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
-    capture: "environment",
     onChange: onReceiptFile,
     className: "hidden"
   }))), /*#__PURE__*/React.createElement("p", {
@@ -2651,13 +2649,12 @@ function App() {
     "aria-label": "Vedi scontrino",
     className: "shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none"
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
-    title: "Allega scontrino",
+    title: "Scontrino: scatta una foto o scegli dalla galleria",
     "aria-label": "Allega scontrino",
     className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
-    capture: "environment",
     onChange: e => attachReceiptTo(e, p.id),
     className: "hidden"
   })), /*#__PURE__*/React.createElement("button", {
@@ -2666,7 +2663,7 @@ function App() {
     className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
   }, "\xD7")))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
-  }, "Manca uno scontrino? Tocca \uD83D\uDCF7 sulla voce e fotografalo anche dopo. Le foto si sincronizzano tra i dispositivi del campo e sono incluse nel backup.")))), activeTab === 'attrezzatura' && (() => {
+  }, "Manca uno scontrino? Tocca \uD83D\uDCF7 sulla voce: puoi scattarlo o scegliere una foto dalla galleria, anche dopo. Le foto si sincronizzano tra i dispositivi del campo e sono incluse nel backup.")))), activeTab === 'attrezzatura' && (() => {
     const equipBoughtTotal = equipment.reduce((s, e) => e.bought ? s + posNum(e.price) : s, 0);
     const equipPlannedTotal = equipment.reduce((s, e) => s + posNum(e.price), 0);
     return /*#__PURE__*/React.createElement("div", {
@@ -2710,7 +2707,7 @@ function App() {
       className: "shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold uppercase text-xs hover:bg-[#1F271E]"
     }, "Aggiungi")), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-gray-400"
-    }, "Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica). Con \uD83D\uDCF7 puoi allegare lo scontrino, anche dopo.")), /*#__PURE__*/React.createElement("div", {
+    }, "Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica). Con \uD83D\uDCF7 alleghi lo scontrino (foto o galleria), anche dopo.")), /*#__PURE__*/React.createElement("div", {
       className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
@@ -2742,13 +2739,12 @@ function App() {
       "aria-label": "Vedi scontrino",
       className: "shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none"
     }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
-      title: "Allega scontrino",
+      title: "Scontrino: scatta una foto o scegli dalla galleria",
       "aria-label": "Allega scontrino",
       className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]"
     }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
       type: "file",
       accept: "image/*",
-      capture: "environment",
       onChange: ev => attachReceiptTo(ev, e.id),
       className: "hidden"
     })), /*#__PURE__*/React.createElement("button", {
