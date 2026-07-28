@@ -132,9 +132,6 @@ const BASE_GEAR = [{
   text: 'Stoviglie, posate personali e bicchiere riutilizzabile',
   emphasis: true
 }, {
-  text: 'Ospite nun fa Ospiti',
-  emphasis: true
-}, {
   text: 'Borraccia'
 }, {
   text: 'Canovacci'

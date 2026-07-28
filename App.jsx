@@ -77,7 +77,6 @@ const wmoInfo = (code) => {
 const BASE_GEAR = [
   { text: 'SEDIA PERSONALE PER ADULTI E EVENTUALI BAMBINI', emphasis: true },
   { text: 'Stoviglie, posate personali e bicchiere riutilizzabile', emphasis: true },
-  { text: 'Ospite nun fa Ospiti', emphasis: true },
   { text: 'Borraccia' },
   { text: 'Canovacci' },
   { text: 'Luci LED' },
