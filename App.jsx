@@ -82,7 +82,7 @@ const CAMP_RULES = [
   'Amici, parenti e prole al seguito sono sotto la stretta giurisdizione di chi li ha trascinati qui. Siete i domatori ufficiali delle vostre creature, grandi o piccole che siano: fate in modo che rispettino le regole dell\'accampamento. Istruiteli a dovere anche sull\'attrezzatura da portarsi.',
   'Il vincitore del minigioco Bandy sarà premiato da El Presidente in una sontuosa cerimonia.',
   'Siamo in montagna, non ad Hogwarts. La griglia non si accende per magia, l\'acqua non levita fino alla cucina e le incrostazioni sulle pentole non scompaiono con un incantesimo. È richiesto l\'impegno di tutti, per far rilassare tutti.',
-  'Il bicchiere di chi sta cuocendo sulla graticola deve essere sempre pieno: adoperatevi di conseguenza se non volete incorrere nelle ire del Presidente.',
+  'Il bicchiere di chi sta cuocendo sulla braticola deve essere sempre pieno: adoperatevi di conseguenza se non volete incorrere nelle ire del Presidente.',
   'Gli ospiti non fanno ospiti. Niente di personale, ovviamente: per fortuna la montagna offre notevole spazio.',
   'Membri o ospiti single, di ambo i sessi, sono sempre i ben accetti nella tenda di El Presidente.',
 ];
