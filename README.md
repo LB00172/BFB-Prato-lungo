@@ -30,6 +30,12 @@ preparazione** e **offline al campo**, dove non c'è linea.
 - **Logistica e attrezzatura acquistata** → **quota fissa uguale** per ogni
   adulto presente: nessuno paga più di una quota.
 - **Bambini**: gratis, il loro costo è ripartito sugli adulti.
+- **Conto separato** (facoltativo): in Calendario si spuntano i giorni che fanno
+  cassa a parte, e in fase di registrazione una spesa di cibo/bevande si può
+  mettere sul "conto separato". Quella spesa si divide solo sui pasti dei giorni
+  spuntati, e quei pasti **escono dal divisore comune**, così chi c'era non paga
+  due volte. Logistica e attrezzatura restano sempre comuni. Senza giorni
+  spuntati il comportamento è identico a prima.
 - Le quote sono arrotondate a **0,10 €** (niente monetine da 1/2/5 cent); lo
   scarto viene riconciliato solo se ≥ 0,50 €.
 - **Saldi**: per ogni persona `anticipato − dovuto` → "riceve" o "dà", più le

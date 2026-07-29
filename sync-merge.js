@@ -32,6 +32,12 @@
     ['g', 'gear'],
   ];
 
+  // Insiemi di chiavi (niente id: la chiave e' il valore stesso).
+  var SETS = [
+    ['s', 'settled'],   // rimborsi segnati come saldati
+    ['x', 'sepDays'],   // giorni assegnati al conto separato
+  ];
+
   // Le lapidi si tengono 90 giorni: oltre, la voce è cancellata ovunque da un
   // pezzo e la lapide diventa solo peso morto.
   var TOMB_TTL = 90 * 24 * 60 * 60 * 1000;
@@ -50,7 +56,9 @@
         if (it && it.id != null) f[pair[0] + '|' + it.id] = JSON.stringify(it);
       });
     });
-    arr(st.settled).forEach(function (k) { f['s|' + k] = '1'; });
+    SETS.forEach(function (pair) {
+      arr(st[pair[1]]).forEach(function (k) { f[pair[0] + '|' + k] = '1'; });
+    });
     if (isObj(st.campData)) {
       Object.keys(st.campData).forEach(function (date) {
         var day = st.campData[date];
@@ -174,24 +182,28 @@
       state[key] = out;
     });
 
-    // Rimborsi saldati: insieme di chiavi, stessa logica (presente/cancellato).
-    var settledKeys = new Map();
-    arr(local.settled).forEach(function (k) { settledKeys.set(String(k), { l: true }); });
-    arr(remote.settled).forEach(function (k) {
-      var e = settledKeys.get(String(k)) || {};
-      e.r = true;
-      settledKeys.set(String(k), e);
+    // Insiemi di chiavi (rimborsi saldati, giorni del conto separato): stessa
+    // logica, dove la voce e' la chiave stessa.
+    SETS.forEach(function (pair) {
+      var prefix = pair[0], key = pair[1];
+      var keys = new Map();
+      arr(local[key]).forEach(function (k) { keys.set(String(k), { l: true }); });
+      arr(remote[key]).forEach(function (k) {
+        var e = keys.get(String(k)) || {};
+        e.r = true;
+        keys.set(String(k), e);
+      });
+      var out = [];
+      keys.forEach(function (e, k) {
+        var path = prefix + '|' + k;
+        var res = pick(!!e.l, k, revOf(lmeta, path), !!e.r, k, revOf(rmeta, path), maxDel(path, lmeta, rmeta));
+        if (!res) return;
+        out.push(k);
+        rev[path] = res.rev;
+        delete del[path];
+      });
+      state[key] = out;
     });
-    var settled = [];
-    settledKeys.forEach(function (e, k) {
-      var path = 's|' + k;
-      var res = pick(!!e.l, k, revOf(lmeta, path), !!e.r, k, revOf(rmeta, path), maxDel(path, lmeta, rmeta));
-      if (!res) return;
-      settled.push(k);
-      rev[path] = res.rev;
-      delete del[path];
-    });
-    state.settled = settled;
 
     // Giorni del campo: si fondono presenza per presenza (un membro alla
     // volta) e campo per campo (note, menù…), non giorno intero: così due

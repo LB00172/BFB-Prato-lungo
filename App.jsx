@@ -674,6 +674,7 @@ function App() {
   const [pPrice, setPPrice] = useState('');
   const [pType, setPType] = useState('alimentare');
   const [pBuyer, setPBuyer] = useState('');
+  const [pAccount, setPAccount] = useState('comune'); // conto della spesa in corso
   const [pReceipt, setPReceipt] = useState(null); // foto scontrino in attesa di Salva
   const [viewReceipt, setViewReceipt] = useState(null); // foto aperta a schermo intero
   const [snapList, setSnapList] = useState(null); // elenco snapshot per il ripristino
@@ -703,6 +704,11 @@ function App() {
   // passa nella cronologia (diventa un acquisto con lo stesso id, così l'even-
   // tuale foto dello scontrino resta collegata).
   const [toBuy, setToBuy] = useState(() => load('cambusa_tobuy', []));
+  // Conto separato: giorni le cui presenze fanno cassa a parte. Il cibo e le
+  // bevande marcati "separato" si dividono solo sui pasti di questi giorni;
+  // gli altri giorni restano nel conto comune. Vuoto = tutto in comune.
+  const [sepDays, setSepDays] = useState(() => load('cambusa_sepdays', []));
+
   const [newBuyName, setNewBuyName] = useState('');
   const [newBuyQty, setNewBuyQty] = useState('');
   const [buying, setBuying] = useState(null); // voce in fase di registrazione acquisto
@@ -761,7 +767,7 @@ function App() {
   // Stato sincronizzato sempre aggiornato: serve alla fusione, che deve
   // partire dai dati di ADESSO e non da quelli di quando ci si è connessi.
   const syncStateRef = useRef(null);
-  syncStateRef.current = { members, campData, purchases, gear, settled, equipment, toBuy };
+  syncStateRef.current = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays };
 
   // Cronologia delle modifiche (data di ultima modifica/cancellazione per ogni
   // voce). Al primo avvio i dati già presenti restano "senza data": qualsiasi
@@ -792,6 +798,7 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_settled', JSON.stringify(settled)), [settled]);
   useEffect(() => localStorage.setItem('cambusa_equipment', JSON.stringify(equipment)), [equipment]);
   useEffect(() => localStorage.setItem('cambusa_tobuy', JSON.stringify(toBuy)), [toBuy]);
+  useEffect(() => localStorage.setItem('cambusa_sepdays', JSON.stringify(sepDays)), [sepDays]);
   useEffect(() => localStorage.setItem('cambusa_weather', JSON.stringify(weather)), [weather]);
   useEffect(() => {
     try { localStorage.setItem('cambusa_archives', JSON.stringify(archives)); }
@@ -896,6 +903,7 @@ function App() {
       if (Array.isArray(remote.settled)) { setSettled(remote.settled); next.settled = remote.settled; }
       if (Array.isArray(remote.equipment)) { setEquipment(remote.equipment); next.equipment = remote.equipment; }
       if (Array.isArray(remote.toBuy)) { setToBuy(remote.toBuy); next.toBuy = remote.toBuy; }
+      if (Array.isArray(remote.sepDays)) { setSepDays(remote.sepDays); next.sepDays = remote.sepDays; }
       if (SM) saveMeta({ flat: SM.flatten(next), rev: metaRef.current.rev, del: metaRef.current.del });
       setTimeout(() => { suppressPushRef.current = false; }, 0);
       return;
@@ -914,6 +922,7 @@ function App() {
     setSettled(res.state.settled);
     setEquipment(res.state.equipment);
     setToBuy(res.state.toBuy);
+    setSepDays(res.state.sepDays);
     saveMeta(res.meta);
     setTimeout(() => { suppressPushRef.current = false; }, 0);
   };
@@ -981,7 +990,7 @@ function App() {
     if (window.CloudSync) {
       window.CloudSync.pushState({ ...st, _meta: { v: SM ? SM.VERSION : 0, rev: m.rev, del: m.del } });
     }
-  }, [members, campData, purchases, gear, settled, equipment, toBuy]);
+  }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays]);
 
   // ---------- Dati per giorno ----------
   const getDayData = (dateStr) => ({ ...initialDayState(), ...(campData[dateStr] || {}) });
@@ -1114,6 +1123,7 @@ function App() {
     setPurchases((prev) => [...prev, {
       id: buying.id, name: fullName, price, type: buying.type,
       buyer: (buying.buyer || '').trim(), at: Date.now(), fromList: true,
+      ...(buying.account === 'sep' && buying.type !== 'logistica' ? { account: 'sep' } : {}),
     }]);
     setToBuy((prev) => prev.filter((x) => x.id !== buying.id));
     setBuying(null);
@@ -1128,7 +1138,10 @@ function App() {
       return;
     }
     const id = uid();
-    setPurchases((prev) => [...prev, { id, name, price, type: pType, buyer: pBuyer.trim(), at: Date.now() }]);
+    setPurchases((prev) => [...prev, {
+      id, name, price, type: pType, buyer: pBuyer.trim(), at: Date.now(),
+      ...(pAccount === 'sep' && pType !== 'logistica' ? { account: 'sep' } : {}),
+    }]);
     if (pReceipt) {
       setReceipts((prev) => ({ ...prev, [id]: pReceipt }));
       if (window.CloudSync) window.CloudSync.putReceipt(id, pReceipt);
@@ -1138,6 +1151,13 @@ function App() {
     setPType('alimentare');
     setPBuyer('');
     setPReceipt(null);
+    // Il conto NON si azzera: chi sta registrando la spesa separata di solito
+    // ne inserisce più di una di fila.
+  };
+
+  // ---------- Conto separato ----------
+  const toggleSepDay = (dateStr) => {
+    setSepDays((prev) => (prev.includes(dateStr) ? prev.filter((d) => d !== dateStr) : [...prev, dateStr].sort()));
   };
 
   const removePurchase = (id) => {
@@ -1199,6 +1219,7 @@ function App() {
       setSettled(Array.isArray(d.settled) ? d.settled : []);
       setEquipment(Array.isArray(d.equipment) ? d.equipment : []);
       setToBuy(Array.isArray(d.toBuy) ? d.toBuy : []);
+      setSepDays(Array.isArray(d.sepDays) ? d.sepDays : []);
       setSnapList(null);
       window.alert('Dati ripristinati: tra qualche secondo saranno su tutti i dispositivi.');
     } catch (e) {
@@ -1213,6 +1234,9 @@ function App() {
     lines.push(`🏕️ ${BRAND.appTitle} — Conti finali`);
     lines.push('');
     lines.push(`💶 Totale spese: ${money(t.overallTotal)} €`);
+    if (t.foodDrinksSep > 0 || t.sepDaysCount > 0) {
+      lines.push(`   di cui conto separato: ${money(t.foodDrinksSep)} € su ${t.sepDaysCount} ${t.sepDaysCount === 1 ? 'giorno' : 'giorni'} (${money(t.costPerMealSep)} € a pasto)`);
+    }
     if (t.transfers.length > 0) {
       lines.push('');
       lines.push('👉 Chi paga chi:');
@@ -1364,24 +1388,42 @@ function App() {
     const totalFoodDrinks = totalFood + totalDrinks;
     const overallTotal = totalFoodDrinks + totalAccessory;
 
-    // Pasti per membro sull'intero campo.
+    // --- Conto separato ---
+    // I giorni spuntati fanno cassa a parte: il cibo/bevande marcato
+    // "separato" si divide SOLO sui pasti di quei giorni, e quei pasti escono
+    // dal divisore comune (altrimenti chi c'era pagherebbe due volte).
+    const sepSet = new Set(sepDays);
+    const isSepPurchase = (p) => p.account === 'sep' && p.type !== 'logistica';
+    const foodDrinksSep = purchases.reduce(
+      (s, p) => (isSepPurchase(p) ? s + posNum(p.price) : s), 0);
+    const foodDrinksCommon = totalFoodDrinks - foodDrinksSep;
+
+    // Pasti per membro, distinti fra giorni comuni e giorni del conto separato.
     const mealsByMember = {};
-    members.forEach((m) => (mealsByMember[m.id] = 0));
+    members.forEach((m) => (mealsByMember[m.id] = { common: 0, sep: 0, total: 0 }));
 
     let adultMealsTotal = 0;
+    let adultMealsSep = 0;
     const attendingAdults = new Set();
     const attendingForEquip = new Set(); // presenti NON esenti da attrezzatura
+    const sepPeople = new Set();         // adulti che mangiano nei giorni separati
 
-    Object.values(campData).forEach((day) => {
+    Object.keys(campData).forEach((dateStr) => {
+      const day = campData[dateStr];
       const meals = (day && day.meals) || {};
+      const inSep = sepSet.has(dateStr);
       members.forEach((m) => {
         const mm = meals[m.id];
         if (!mm) return;
         const count = (mm.lunch ? 1 : 0) + (mm.dinner ? 1 : 0);
         if (count === 0) return;
-        mealsByMember[m.id] += count;
+        const rec = mealsByMember[m.id];
+        if (!rec) return;
+        rec.total += count;
+        if (inSep) rec.sep += count; else rec.common += count;
         if (!m.isChild) {
           adultMealsTotal += count;
+          if (inSep) { adultMealsSep += count; sepPeople.add(m.id); }
           attendingAdults.add(m.id);
           // L'esenzione vale solo se la funzione e' attiva (vedi FEATURES).
           if (!(FEATURES.equipExemption && m.equipExempt)) attendingForEquip.add(m.id);
@@ -1389,8 +1431,12 @@ function App() {
       });
     });
 
-    // Cibo+bevande ripartiti sui pasti degli adulti (bambini = gratis).
-    const costPerMeal = adultMealsTotal > 0 ? totalFoodDrinks / adultMealsTotal : 0;
+    const adultMealsCommon = adultMealsTotal - adultMealsSep;
+
+    // Cibo+bevande ripartiti sui pasti degli adulti (bambini = gratis),
+    // ognuno sulla sua cassa.
+    const costPerMeal = adultMealsCommon > 0 ? foodDrinksCommon / adultMealsCommon : 0;
+    const costPerMealSep = adultMealsSep > 0 ? foodDrinksSep / adultMealsSep : 0;
     // Logistica: parti uguali tra tutti gli adulti presenti.
     const logisticsPerAdult = attendingAdults.size > 0 ? logisticsPurchases / attendingAdults.size : 0;
     // Attrezzatura: parti uguali tra i presenti non esenti. Se sono tutti
@@ -1402,13 +1448,14 @@ function App() {
 
     // Quota dovuta da ciascun membro (valore esatto).
     const breakdown = members.map((m) => {
-      const mealCount = mealsByMember[m.id] || 0;
-      const foodShare = m.isChild ? 0 : mealCount * costPerMeal;
+      const rec = mealsByMember[m.id] || { common: 0, sep: 0, total: 0 };
+      const mealCount = rec.total;
+      const foodShare = m.isChild ? 0 : rec.common * costPerMeal + rec.sep * costPerMealSep;
       const present = !m.isChild && mealCount > 0;
       const logShare =
         (present ? logisticsPerAdult : 0) +
         (present && equipDivisorSet.has(m.id) ? equipPerAdult : 0);
-      return { ...m, mealCount, foodShare, logShare, owed: foodShare + logShare };
+      return { ...m, mealCount, mealsCommon: rec.common, mealsSep: rec.sep, foodShare, logShare, owed: foodShare + logShare };
     });
 
     // --- Arrotondamento "cassa-friendly" ---
@@ -1515,7 +1562,9 @@ function App() {
       totalFood, totalDrinks, totalAccessory, totalFoodDrinks, overallTotal,
       costPerMeal, logisticsPerAdult, equipPerAdult, accessoryPerAdult,
       logisticsPurchases, equipBought, equipPayersCount: equipDivisorSet.size,
-      adultMealsTotal,
+      adultMealsTotal, adultMealsCommon, adultMealsSep,
+      foodDrinksCommon, foodDrinksSep, costPerMealSep,
+      sepPeopleCount: sepPeople.size, sepDaysCount: sepDays.length,
       attendingAdultsCount: attendingAdults.size, breakdown,
       collected, roundingDiff, byBuyer, settlement, unattributed, transfers,
     };
@@ -1537,7 +1586,7 @@ function App() {
   const exportData = () => {
     downloadJson(`bandone-backup-${toDateStr(new Date())}.json`, {
       version: 6, exportedAt: new Date().toISOString(),
-      members, campData, purchases, gear, settled, equipment, toBuy, receipts,
+      members, campData, purchases, gear, settled, equipment, toBuy, sepDays, receipts,
     });
   };
 
@@ -1556,6 +1605,7 @@ function App() {
         if (Array.isArray(d.settled)) setSettled(d.settled);
         if (Array.isArray(d.equipment)) setEquipment(d.equipment);
         if (Array.isArray(d.toBuy)) setToBuy(d.toBuy);
+        if (Array.isArray(d.sepDays)) setSepDays(d.sepDays);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
@@ -1607,7 +1657,7 @@ function App() {
     if (!window.confirm(conferma)) return;
 
     const id = toDateStr(new Date()) + '-' + uid();
-    const state = { members, campData, purchases, gear, settled, equipment, toBuy };
+    const state = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays };
     const meta = {
       id,
       name,
@@ -1649,6 +1699,7 @@ function App() {
     setPurchases([]);
     setToBuy([]);
     setEquipment([]);
+    setSepDays([]);
     setGear([]);
     setSettled([]);
     setReceipts({});
@@ -1751,6 +1802,7 @@ function App() {
     { k: 'attrezzatura', icon: '🪛', title: 'Attrezzatura', body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. Con l\'icona 📷 alleghi lo scontrino, anche in un secondo momento. In fondo vedi il totale previsto e quello effettivamente acquistato; se indichi l\'acquirente, gli verrà rimborsata.' },
     { k: 'spesa', icon: '💶', title: 'Spese Totali', body: 'Quattro sotto-sezioni. Totali: quanto si è speso per cibo, bevande, logistica e attrezzatura. Quote: quanto costa a testa. Saldi: chi deve dare o ricevere. Dati: backup e sincronizzazione. I totali non si scrivono a mano, nascono dalla Lista della Spesa e dall\'attrezzatura acquistata.' },
     { k: 'conti', icon: '⚖️', title: 'Come si dividono', body: 'Cibo e bevande sono divisi per il numero di pasti: chi mangia di più paga di più. Logistica e attrezzatura sono una quota fissa uguale per ogni adulto presente: nessuno paga più di una quota. Le cifre sono arrotondate a 10 centesimi, così non servono monetine da 1, 2 o 5 cent.' },
+    { k: 'separato', icon: '🍽️', title: 'Conto separato', body: 'Serve quando in certi giorni un gruppo fa la spesa per conto suo. In Calendario spunta quei giorni nel riquadro "Conto separato": le presenze di quei giorni fanno cassa a parte. Poi, quando registri una spesa di cibo o bevande, nel menu "Conto" scegli "Conto separato" invece di "Conto comune". Quella spesa si dividerà solo fra chi era presente ai pasti dei giorni spuntati, e quei pasti escono dal conto comune, così nessuno paga due volte. Logistica e attrezzatura restano sempre di tutti. Se non spunti nessun giorno non cambia niente: funziona tutto come prima.' },
     { k: 'saldi', icon: '🤝', title: 'Saldi e rimborsi', body: 'Per ogni persona l\'app confronta quanto ha anticipato con quanto deve, e dice se riceve o se deve dare. Sotto, in "Chi paga chi", trovi i pochi passaggi di denaro necessari per pareggiare tutto: tocca una riga quando il rimborso è stato fatto e resta barrata. Con "Condividi resoconto" mandi il riepilogo pronto nel gruppo WhatsApp.' },
     { k: 'dotazioni', icon: '🎒', title: 'Dotazioni personali', body: 'Cosa portarsi da casa: una dotazione base uguale per tutti (sedia personale, stoviglie e posate, borraccia, canovacci, luci LED) che non si modifica, e un elenco di aggiunte per questo campo che potete integrare quando serve.' },
     { k: 'backup', icon: '🛟', title: 'Backup e sicurezza', body: 'Ogni giorno viene salvata da sola una copia dei dati nel cloud: se qualcosa va storto, "Ripristino di emergenza" (in Spese Totali → Dati) permette di tornare a un giorno preciso. In più puoi esportare tutto su file con Esporta e ricaricarlo con Importa. Prima di eliminare qualcosa l\'app chiede sempre conferma.' },
@@ -1869,6 +1921,45 @@ function App() {
                   </button>
                 );
               })}
+            </div>
+
+            {/* Giorni del conto separato: le presenze di questi giorni fanno
+                cassa a parte (vedi calculateTotals). */}
+            <div className="bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] uppercase font-bold text-[#5C4A3C]">Conto separato</span>
+                <span className="text-[9px] text-gray-500">
+                  {sepDays.length === 0 ? 'nessun giorno' : `${sepDays.length} ${sepDays.length === 1 ? 'giorno' : 'giorni'} in totale`}
+                </span>
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {weekDays.map((d) => {
+                  const dateStr = toDateStr(d);
+                  const on = sepDays.includes(dateStr);
+                  return (
+                    <label
+                      key={dateStr}
+                      title={`${d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}: conto separato`}
+                      className={`flex flex-col items-center gap-0.5 py-1.5 rounded cursor-pointer border ${
+                        on ? 'bg-[#5C4A3C]/15 border-[#5C4A3C]/50' : 'bg-[#F0F4F1]/50 border-transparent hover:bg-[#E2EAE4]'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => toggleSepDay(dateStr)}
+                        className="w-3.5 h-3.5 accent-[#5C4A3C]"
+                      />
+                      <span className={`text-[9px] font-bold ${on ? 'text-[#5C4A3C]' : 'text-gray-400'}`}>{d.getDate()}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-[9px] text-gray-400 italic mt-2 leading-snug">
+                Spunta i giorni che fanno cassa a parte: cibo e bevande registrati sul
+                <span className="font-bold"> conto separato</span> si dividono solo fra chi era presente ai pasti di quei giorni.
+                Gli altri giorni restano nel conto comune. Logistica e attrezzatura restano sempre in comune.
+              </p>
             </div>
 
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
@@ -2112,6 +2203,12 @@ function App() {
                   </div>
                 ))}
               </div>
+              {totals.foodDrinksSep > 0 && (
+                <div className="flex justify-between items-center bg-[#5C4A3C]/10 px-3 py-2 rounded border border-[#5C4A3C]/30">
+                  <span className="text-[10px] uppercase font-bold text-[#5C4A3C]">di cui sul conto separato</span>
+                  <span className="font-bold text-[#5C4A3C]">{money(totals.foodDrinksSep)} €</span>
+                </div>
+              )}
               <div className="bg-[#2D392C]/10 p-3 rounded border border-[#2D392C]/20 flex justify-between items-center mt-2">
                 <span className="font-bold text-xs uppercase">Importo Complessivo:</span>
                 <span className="font-rustic font-bold text-lg text-[#2D392C]">{money(totals.overallTotal)} €</span>
@@ -2124,7 +2221,10 @@ function App() {
                 <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
                   <span className="text-[10px] uppercase text-[#8F9E8B] block">Quota Singolo Pasto</span>
                   <span className="font-rustic text-xl text-[#D97706]">{money(totals.costPerMeal)} €</span>
-                  <p className="text-[9px] text-gray-400 mt-1">Cibo+bevande ({money(totals.totalFoodDrinks)} €) / {totals.adultMealsTotal} pasti adulti.</p>
+                  <p className="text-[9px] text-gray-400 mt-1">
+                    Cibo+bevande ({money(totals.foodDrinksCommon)} €) / {totals.adultMealsCommon} pasti adulti
+                    {totals.sepDaysCount > 0 ? ' dei giorni comuni' : ''}.
+                  </p>
                 </div>
                 <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
                   <span className="text-[10px] uppercase text-[#8F9E8B] block">Logistica a testa</span>
@@ -2140,6 +2240,17 @@ function App() {
                       : (totals.equipPayersCount === 1 ? 'adulto presente' : 'adulti presenti')}.
                   </p>
                 </div>
+                {(totals.sepDaysCount > 0 || totals.foodDrinksSep > 0) && (
+                  <div className="bg-[#1F271E] p-3 rounded border border-[#5C4A3C] col-span-2">
+                    <span className="text-[10px] uppercase text-[#8F9E8B] block">Conto separato — quota pasto</span>
+                    <span className="font-rustic text-xl text-[#D97706]">{money(totals.costPerMealSep)} €</span>
+                    <p className="text-[9px] text-gray-400 mt-1">
+                      Cibo+bevande separati ({money(totals.foodDrinksSep)} €) / {totals.adultMealsSep} pasti adulti
+                      su {totals.sepDaysCount} {totals.sepDaysCount === 1 ? 'giorno' : 'giorni'},
+                      {' '}{totals.sepPeopleCount} {totals.sepPeopleCount === 1 ? 'persona' : 'persone'}.
+                    </p>
+                  </div>
+                )}
               </div>
               <p className="text-[9px] text-gray-400 italic">I pasti dei bambini sono gratis: il loro costo è ripartito sugli adulti.</p>
             </div>
@@ -2162,6 +2273,29 @@ function App() {
                   </p>
                 </div>
               )}
+              {/* Spese sul conto separato ma nessun pasto in quei giorni:
+                  non c'è nessuno su cui dividerle. */}
+              {totals.foodDrinksSep > 0 && totals.adultMealsSep === 0 && (
+                <div className="mb-3 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
+                  <p className="text-[11px] text-[#5C4A3C] leading-snug">
+                    <span className="font-bold">Attenzione:</span> ci sono {money(totals.foodDrinksSep)} € sul
+                    conto separato ma nessun pasto nei giorni spuntati. Spunta i giorni in
+                    <span className="font-bold"> Calendario</span> e segna le
+                    <span className="font-bold"> Presenze</span>, altrimenti quella spesa non entra nelle quote.
+                  </p>
+                </div>
+              )}
+              {/* Caso opposto: tutti i giorni con pasti sono sul conto separato,
+                  ma ci sono spese comuni da dividere. */}
+              {totals.foodDrinksCommon > 0 && totals.adultMealsCommon === 0 && totals.adultMealsTotal > 0 && (
+                <div className="mb-3 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
+                  <p className="text-[11px] text-[#5C4A3C] leading-snug">
+                    <span className="font-bold">Attenzione:</span> tutti i giorni con presenze sono spuntati come
+                    conto separato, ma ci sono {money(totals.foodDrinksCommon)} € di cibo e bevande sul conto comune.
+                    Sposta quelle spese sul conto separato, oppure togli la spunta ai giorni che sono di tutti.
+                  </p>
+                </div>
+              )}
               {totals.breakdown.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">Aggiungi membri e segna le presenze per vedere la ripartizione.</p>
               ) : (
@@ -2171,7 +2305,11 @@ function App() {
                       <li key={b.id} className="flex items-center justify-between py-2">
                         <div className="flex flex-col">
                           <span className="text-sm font-bold text-[#2D392C]">{b.name}</span>
-                          <span className="text-[10px] text-gray-500">{b.mealCount} {b.mealCount === 1 ? 'pasto' : 'pasti'}{b.isChild ? ' · bambino' : ''}</span>
+                          <span className="text-[10px] text-gray-500">
+                            {b.mealCount} {b.mealCount === 1 ? 'pasto' : 'pasti'}
+                            {b.mealsSep > 0 ? ` (${b.mealsCommon} comuni + ${b.mealsSep} separati)` : ''}
+                            {b.isChild ? ' · bambino' : ''}
+                          </span>
                         </div>
                         <span className={`font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-[#2D392C]'}`}>
                           {b.isChild ? 'Gratis' : `${money(b.pay)} €`}
@@ -2444,7 +2582,7 @@ function App() {
                         <button onClick={() => removeToBuy(it.id)} aria-label="Rimuovi" className="shrink-0 text-red-700 font-bold px-1.5 hover:text-red-900">&times;</button>
                       </div>
                       <button
-                        onClick={() => setBuying({ id: it.id, name: it.name, qty: it.qty, price: '', buyer: '', type: 'alimentare' })}
+                        onClick={() => setBuying({ id: it.id, name: it.name, qty: it.qty, price: '', buyer: '', type: 'alimentare', account: 'comune' })}
                         className="mt-2 w-full py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
                       >
                         Segna come acquistata
@@ -2534,6 +2672,29 @@ function App() {
                 </div>
               </div>
 
+              {/* Conto su cui addebitare cibo e bevande. La logistica è sempre
+                  comune, quindi per quella il menu non serve. */}
+              {pType !== 'logistica' && (
+                <div>
+                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Conto</label>
+                  <select
+                    value={pAccount}
+                    onChange={(e) => setPAccount(e.target.value)}
+                    className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold focus:outline-none focus:border-[#2D392C]"
+                  >
+                    <option value="comune">Conto comune</option>
+                    <option value="sep">Conto separato</option>
+                  </select>
+                  {pAccount === 'sep' && (
+                    <p className="text-[9px] mt-1 leading-snug text-[#5C4A3C]">
+                      {sepDays.length === 0
+                        ? '⚠ Nessun giorno spuntato come "conto separato": vai in Calendario e spunta i giorni, altrimenti questa spesa non sa fra chi dividersi.'
+                        : `Si dividerà solo fra chi era presente ai pasti dei ${sepDays.length} giorni spuntati in Calendario.`}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <button onClick={addPurchase} className="w-full py-3 bg-[#2D392C] text-white rounded font-bold uppercase text-sm tracking-wide hover:bg-[#1F271E]">
                 Salva
               </button>
@@ -2558,6 +2719,9 @@ function App() {
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-[#2D392C] truncate">{p.name}</span>
                           <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B] shrink-0">{PURCHASE_TYPES[p.type] || p.type}</span>
+                          {p.account === 'sep' && p.type !== 'logistica' && (
+                            <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C] shrink-0">Separato</span>
+                          )}
                           {p.fromList && <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C] shrink-0">acquistata</span>}
                         </div>
                         <span className="text-[9px] text-gray-400">
@@ -2964,6 +3128,24 @@ function App() {
                 {Object.keys(PURCHASE_TYPES).map((k) => (<option key={k} value={k}>{PURCHASE_TYPES[k]}</option>))}
               </select>
             </div>
+            {buying.type !== 'logistica' && (
+              <div>
+                <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Conto</label>
+                <select
+                  value={buying.account || 'comune'}
+                  onChange={(e) => setBuying((b) => ({ ...b, account: e.target.value }))}
+                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
+                >
+                  <option value="comune">Conto comune</option>
+                  <option value="sep">Conto separato</option>
+                </select>
+                {buying.account === 'sep' && sepDays.length === 0 && (
+                  <p className="text-[9px] mt-1 leading-snug text-[#5C4A3C]">
+                    ⚠ Nessun giorno spuntato come "conto separato" in Calendario.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="flex gap-2 pt-1">
               <button onClick={() => setBuying(null)} className="flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase">Annulla</button>
               <button onClick={confirmBuy} className="flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Conferma</button>
