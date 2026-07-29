@@ -128,6 +128,8 @@ const wmoInfo = code => {
 
 // Dotazione personale base: uguale per tutti, non modificabile dall'app.
 // Le voci con emphasis: true sono mostrate in evidenza (piu' grandi e sottolineate).
+// Regole dell'accampamento (mostrate in maiuscolo e sottolineate).
+const CAMP_RULES = ['Amici, parenti e prole al seguito sono sotto la stretta giurisdizione di chi li ha trascinati qui. Siete i domatori ufficiali delle vostre creature, grandi o piccole che siano: fate in modo che rispettino le regole dell\'accampamento. Istruiteli a dovere anche sull\'attrezzatura da portarsi.', 'Il vincitore del minigioco Bandy sarà premiato da El Presidente in una sontuosa cerimonia.', 'Siamo in montagna, non ad Hogwarts. La griglia non si accende per magia, l\'acqua non levita fino alla cucina e le incrostazioni sulle pentole non scompaiono con un incantesimo. È richiesto l\'impegno di tutti, per far rilassare tutti.', 'Il bicchiere di chi sta cuocendo sulla graticola deve essere sempre pieno: adoperatevi di conseguenza se non volete incorrere nelle ire del Presidente.', 'Gli ospiti non fanno ospiti. Niente di personale, ovviamente: per fortuna la montagna offre notevole spazio.', 'Membri o ospiti single, di ambo i sessi, sono sempre i ben accetti nella tenda di El Presidente.'];
 const BASE_GEAR = [{
   text: 'SEDIA PERSONALE PER ADULTI E EVENTUALI BAMBINI',
   emphasis: true
@@ -3078,12 +3080,19 @@ function App() {
   })(), activeTab === 'regole' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-6 rounded-lg border-2 border-[#2D392C]/20 shadow-sm text-center"
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C] mb-2"
-  }, "Regole"), /*#__PURE__*/React.createElement("p", {
-    className: "text-sm text-gray-400 italic"
-  }, "Work in progress"))), activeTab === 'dotazioni' && /*#__PURE__*/React.createElement("div", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+  }, "Regole dell'accampamento"), /*#__PURE__*/React.createElement("ol", {
+    className: "space-y-3"
+  }, CAMP_RULES.map((text, i) => /*#__PURE__*/React.createElement("li", {
+    key: i,
+    className: "flex gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic text-lg text-[#5C4A3C] leading-none shrink-0"
+  }, i + 1, "."), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] leading-relaxed uppercase underline underline-offset-2 decoration-[#8F9E8B]/70 font-bold text-[#2D392C]"
+  }, text)))))), activeTab === 'dotazioni' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
