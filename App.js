@@ -1911,7 +1911,7 @@ function App() {
     k: 'dotazioni',
     icon: '🎒',
     title: 'Dotazioni personali',
-    body: 'Cosa portarsi da casa: una dotazione base uguale per tutti (tenda, sacco a pelo, stoviglie, borraccia…) che non si modifica, e un elenco di aggiunte per questo campo che potete integrare quando serve.'
+    body: 'Cosa portarsi da casa: una dotazione base uguale per tutti (sedia personale, stoviglie e posate, borraccia, canovacci, luci LED) che non si modifica, e un elenco di aggiunte per questo campo che potete integrare quando serve.'
   }, {
     k: 'backup',
     icon: '🛟',
