@@ -86,6 +86,7 @@ const CAMP_RULES = [
   'Il bicchiere di chi sta cuocendo sulla braticola deve essere sempre pieno, adoperatevi di conseguenza se non volete incorrere nelle ire del presidente.',
   'Gli ospiti non fanno ospiti. Niente, di personale ovviamente. Per fortuna la montagna offre notevole spazio.',
   'Membri o ospiti single, di ambo i sessi, sono sempre i ben accetti nella tenda del El Presidente.',
+  'Se Madre Natura ti offre gentilmente il suo bagno all\'aperto, cerca di essere educato. Usa esclusivamente prodotti che la foresta possa digerire in fretta e lascia tutto pulito e sistemato. Copri o sotterra i fazzolettini biodegradabili ad ogni utilizzo per il bene di tutti.',
 ];
 
 const BASE_GEAR = [
