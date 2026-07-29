@@ -2221,6 +2221,11 @@ function App() {
     title: 'Chiusura e Archivio',
     body: 'A conti fatti, in Spese Totali → Dati usa "Chiudi il campo": salva tutto (un file sul telefono e una copia nel cloud), lo mette in Archivio e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini su tutti i dispositivi. L\'app resta pronta per il campo dell\'anno dopo. In Archivio rivedi il resoconto di ogni campo chiuso e puoi riscaricarne i dati; il file scaricato alla chiusura è l\'unico che contiene anche le foto degli scontrini, quindi conservalo.'
   }, {
+    k: 'gioco',
+    icon: '🎮',
+    title: 'Aiuta Bandy',
+    body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si va in città, la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).'
+  }, {
     k: 'installa',
     icon: '📲',
     title: 'Installa l\'app',
