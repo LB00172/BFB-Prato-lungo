@@ -7,8 +7,10 @@
 //
 // Modello dati: collezione "camps", documento con id = codice campo (es.
 // "Bandone"), contenente { data: <stato JSON>, updatedBy, updatedAt }.
-// Strategia: last-write-wins, con guardia anti-loop (ignora gli echi dei
-// propri stessi salvataggi tramite un deviceId).
+// Strategia: lo stato viaggia insieme alla data di ultima modifica di ogni
+// singola voce (campo _meta). Chi riceve FONDE le due versioni voce per voce
+// (vedi sync-merge.js), cosi' due telefoni che hanno lavorato offline non si
+// cancellano il lavoro a vicenda. Guardia anti-loop tramite deviceId.
 // ============================================================================
 (function () {
   const SDK = 'https://www.gstatic.com/firebasejs/10.12.5/';
@@ -219,6 +221,58 @@
     }
   }
 
+  // --- Archivio dei campi chiusi ---
+  // camps/<code>/archives/<id> = { meta: <riepilogo JSON>, data: <stato JSON> }.
+  // Il riepilogo e' piccolo e serve per l'elenco; lo stato completo si scarica
+  // solo quando serve. Le foto NON entrano qui (restano nel file scaricato).
+  async function putArchive(id, meta, data) {
+    if (!state.connected || !db || !fb) return false;
+    try {
+      await fb.setDoc(fb.doc(db, 'camps', state.code, 'archives', id), {
+        meta: JSON.stringify(meta),
+        data: JSON.stringify(data),
+        savedBy: deviceId,
+        savedAt: fb.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function listArchives() {
+    if (!state.connected || !db || !fb) return [];
+    try {
+      const snap = await fb.getDocs(fb.collection(db, 'camps', state.code, 'archives'));
+      const out = [];
+      snap.forEach((d) => {
+        const v = d.data();
+        if (!v || typeof v.meta !== 'string') return;
+        try { out.push(Object.assign(JSON.parse(v.meta), { id: d.id })); } catch (e) { /* ignora */ }
+      });
+      return out.sort((a, b) => String(b.closedAt || '').localeCompare(String(a.closedAt || '')));
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async function getArchive(id) {
+    if (!state.connected || !db || !fb) return null;
+    try {
+      const s = await fb.getDoc(fb.doc(db, 'camps', state.code, 'archives', id));
+      return s.exists() ? JSON.parse(s.data().data) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function deleteArchive(id) {
+    if (!state.connected || !db || !fb) return;
+    try {
+      await fb.deleteDoc(fb.doc(db, 'camps', state.code, 'archives', id));
+    } catch (e) { /* ignora */ }
+  }
+
   async function deleteReceipt(purchaseId) {
     if (!state.connected || !db || !fb) return;
     try {
@@ -242,6 +296,10 @@
     deleteReceipt,
     listSnapshots,
     getSnapshot,
+    putArchive,
+    listArchives,
+    getArchive,
+    deleteArchive,
     submitScore,
     listScores,
     disconnect,

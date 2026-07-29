@@ -24,6 +24,9 @@ const load = (key, fallback) => {
   }
 };
 
+// Cronologia delle modifiche per la fusione fra dispositivi (vedi sync-merge.js).
+const SYNC_META_KEY = 'cambusa_syncmeta';
+
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const money = (n) => (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
 // Numero >= 0 a partire da una stringa di input.
@@ -693,6 +696,13 @@ function App() {
   const [buying, setBuying] = useState(null); // voce in fase di registrazione acquisto
   const [listaSection, setListaSection] = useState('daacquistare'); // sotto-sezione Lista della Spesa
 
+  // Campi chiusi e archiviati: restano consultabili e scaricabili, ma non
+  // fanno più parte dei dati di lavoro.
+  const [archives, setArchives] = useState(() => load('cambusa_archives', []));
+  const [closing, setClosing] = useState(false);   // modale "Chiudi il campo"
+  const [closeName, setCloseName] = useState('');
+  const [viewArchive, setViewArchive] = useState(null); // resoconto aperto
+
   // ---------- Mini gioco "Aiuta Bandy" ----------
   const [gamePlayer, setGamePlayer] = useState(() => localStorage.getItem('cambusa_player') || '');
   const [gameRunning, setGameRunning] = useState(false);
@@ -736,6 +746,27 @@ function App() {
   const cloudConnectedRef = useRef(false);
   const suppressPushRef = useRef(false);
 
+  // Stato sincronizzato sempre aggiornato: serve alla fusione, che deve
+  // partire dai dati di ADESSO e non da quelli di quando ci si è connessi.
+  const syncStateRef = useRef(null);
+  syncStateRef.current = { members, campData, purchases, gear, settled, equipment, toBuy };
+
+  // Cronologia delle modifiche (data di ultima modifica/cancellazione per ogni
+  // voce). Al primo avvio i dati già presenti restano "senza data": qualsiasi
+  // modifica altrui, essendo datata, ha la precedenza.
+  const metaRef = useRef(null);
+  if (metaRef.current === null) {
+    const saved = load(SYNC_META_KEY, null);
+    const SM = window.SyncMerge;
+    metaRef.current = saved && saved.rev
+      ? { flat: saved.flat || {}, rev: saved.rev, del: saved.del || {} }
+      : { flat: SM ? SM.flatten(syncStateRef.current) : {}, rev: {}, del: {} };
+  }
+  const saveMeta = (m) => {
+    metaRef.current = m;
+    try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(m)); } catch (e) { /* spazio esaurito */ }
+  };
+
   // ---------- Persistenza ----------
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2000);
@@ -750,6 +781,10 @@ function App() {
   useEffect(() => localStorage.setItem('cambusa_equipment', JSON.stringify(equipment)), [equipment]);
   useEffect(() => localStorage.setItem('cambusa_tobuy', JSON.stringify(toBuy)), [toBuy]);
   useEffect(() => localStorage.setItem('cambusa_weather', JSON.stringify(weather)), [weather]);
+  useEffect(() => {
+    try { localStorage.setItem('cambusa_archives', JSON.stringify(archives)); }
+    catch (e) { console.warn('Spazio esaurito: l\'archivio resta nel cloud e nei file scaricati.'); }
+  }, [archives]);
 
   // Scarica le previsioni (16 giorni) se c'è linea, la località è impostata e
   // la cache ha più di un'ora. Navigando tra i giorni i dati sono già pronti.
@@ -828,16 +863,46 @@ function App() {
   }, []);
 
   // ---------- Sincronizzazione cloud ----------
-  // Applica al locale i dati arrivati dal cloud (senza rimbalzarli indietro).
+  // Arrivano i dati di un altro dispositivo: si FONDONO con i nostri voce per
+  // voce (vedi sync-merge.js). Senza questa fusione, due telefoni che hanno
+  // lavorato offline al campo si cancellerebbero il lavoro a vicenda: il
+  // secondo che torna online sovrascriverebbe tutto.
   const applyRemote = (remote) => {
-    suppressPushRef.current = true;
-    if (Array.isArray(remote.members)) setMembers(remote.members);
-    if (remote.campData && typeof remote.campData === 'object') setCampData(remote.campData);
-    if (Array.isArray(remote.purchases)) setPurchases(remote.purchases);
-    if (Array.isArray(remote.gear)) setGear(remote.gear);
-    if (Array.isArray(remote.settled)) setSettled(remote.settled);
-    if (Array.isArray(remote.equipment)) setEquipment(remote.equipment);
-    if (Array.isArray(remote.toBuy)) setToBuy(remote.toBuy);
+    const SM = window.SyncMerge;
+    const rmeta = remote && remote._meta;
+    const local = syncStateRef.current;
+
+    // Dispositivo con la versione vecchia (dati senza cronologia): si torna al
+    // comportamento di prima, cioè si prende quello che arriva.
+    if (!SM || !rmeta || rmeta.v !== SM.VERSION) {
+      suppressPushRef.current = true;
+      const next = { ...local };
+      if (Array.isArray(remote.members)) { setMembers(remote.members); next.members = remote.members; }
+      if (remote.campData && typeof remote.campData === 'object') { setCampData(remote.campData); next.campData = remote.campData; }
+      if (Array.isArray(remote.purchases)) { setPurchases(remote.purchases); next.purchases = remote.purchases; }
+      if (Array.isArray(remote.gear)) { setGear(remote.gear); next.gear = remote.gear; }
+      if (Array.isArray(remote.settled)) { setSettled(remote.settled); next.settled = remote.settled; }
+      if (Array.isArray(remote.equipment)) { setEquipment(remote.equipment); next.equipment = remote.equipment; }
+      if (Array.isArray(remote.toBuy)) { setToBuy(remote.toBuy); next.toBuy = remote.toBuy; }
+      if (SM) saveMeta({ flat: SM.flatten(next), rev: metaRef.current.rev, del: metaRef.current.del });
+      setTimeout(() => { suppressPushRef.current = false; }, 0);
+      return;
+    }
+
+    const remoteState = { ...remote };
+    delete remoteState._meta;
+    const res = SM.merge(local, metaRef.current, remoteState, rmeta);
+    // Se il risultato è già identico a quello ricevuto non c'è niente da
+    // rimandare indietro; altrimenti il push riporta all'altro ciò che gli manca.
+    suppressPushRef.current = SM.sameAs(res.meta, remoteState, rmeta);
+    setMembers(res.state.members);
+    setCampData(res.state.campData);
+    setPurchases(res.state.purchases);
+    setGear(res.state.gear);
+    setSettled(res.state.settled);
+    setEquipment(res.state.equipment);
+    setToBuy(res.state.toBuy);
+    saveMeta(res.meta);
     setTimeout(() => { suppressPushRef.current = false; }, 0);
   };
 
@@ -891,12 +956,19 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Push verso il cloud quando i dati cambiano. Se offline, Firestore mette la
-  // scrittura in coda e la invia da solo al ritorno della linea.
+  // Ogni modifica viene datata (anche offline: è proprio lì che serve, perché
+  // al ritorno della linea si sappia cosa è più recente) e poi inviata.
+  // Se offline, Firestore mette la scrittura in coda e la invia da solo.
   useEffect(() => {
+    const SM = window.SyncMerge;
+    const st = syncStateRef.current;
+    if (SM && !suppressPushRef.current) saveMeta(SM.bump(st, metaRef.current, Date.now()));
     if (!cloudConnectedRef.current) return;
     if (suppressPushRef.current) return;
-    if (window.CloudSync) window.CloudSync.pushState({ members, campData, purchases, gear, settled, equipment, toBuy });
+    const m = metaRef.current;
+    if (window.CloudSync) {
+      window.CloudSync.pushState({ ...st, _meta: { v: SM ? SM.VERSION : 0, rev: m.rev, del: m.del } });
+    }
   }, [members, campData, purchases, gear, settled, equipment, toBuy]);
 
   // ---------- Dati per giorno ----------
@@ -1112,6 +1184,9 @@ function App() {
       setCampData(d.campData && typeof d.campData === 'object' ? d.campData : {});
       setPurchases(Array.isArray(d.purchases) ? d.purchases : []);
       setGear(Array.isArray(d.gear) ? d.gear : []);
+      setSettled(Array.isArray(d.settled) ? d.settled : []);
+      setEquipment(Array.isArray(d.equipment) ? d.equipment : []);
+      setToBuy(Array.isArray(d.toBuy) ? d.toBuy : []);
       setSnapList(null);
       window.alert('Dati ripristinati: tra qualche secondo saranno su tutti i dispositivi.');
     } catch (e) {
@@ -1437,15 +1512,21 @@ function App() {
   const totals = calculateTotals();
 
   // ---------- Backup (Export / Import) ----------
-  const exportData = () => {
-    const payload = { version: 6, exportedAt: new Date().toISOString(), members, campData, purchases, gear, settled, equipment, toBuy, receipts };
+  const downloadJson = (filename, payload) => {
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `bandone-backup-${toDateStr(new Date())}.json`;
+    a.download = filename;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+
+  const exportData = () => {
+    downloadJson(`bandone-backup-${toDateStr(new Date())}.json`, {
+      version: 6, exportedAt: new Date().toISOString(),
+      members, campData, purchases, gear, settled, equipment, toBuy, receipts,
+    });
   };
 
   const importData = (e) => {
@@ -1471,6 +1552,147 @@ function App() {
     reader.readAsText(file);
     e.target.value = '';
   };
+
+  // ---------- Chiusura del campo e archivio ----------
+  // "Chiudi il campo" salva tutto (file + cloud), lo mette in Archivio e poi
+  // azzera i dati di lavoro: l'app resta pronta per l'evento successivo.
+  const campRange = () => {
+    const days = Object.keys(campData).filter((d) => {
+      const day = campData[d];
+      if (!day) return false;
+      const meals = day.meals || {};
+      return Object.keys(meals).some((k) => meals[k] && (meals[k].lunch || meals[k].dinner));
+    }).sort();
+    if (days.length) return { from: days[0], to: days[days.length - 1] };
+    return { from: CAMP_START, to: CAMP_END };
+  };
+
+  const openClose = () => {
+    const hasData = members.length > 0 || purchases.length > 0 || toBuy.length > 0 || equipment.length > 0;
+    if (!hasData) {
+      window.alert('Non c\'è niente da chiudere: membri e spese sono già vuoti.');
+      return;
+    }
+    setCloseName(BRAND.appTitle || 'Campo');
+    setClosing(true);
+  };
+
+  const closeCamp = async () => {
+    const name = (closeName || '').trim() || 'Campo';
+    const range = campRange();
+    const t = totals;
+    const unpaid = t.transfers.filter((x) => !settled.includes(`${x.from}→${x.to}@${Math.round(x.amount * 100)}`));
+    const warn = unpaid.length > 0
+      ? `\n\nATTENZIONE: ci sono ancora ${unpaid.length} rimborsi non segnati come saldati.`
+      : '';
+    const conferma =
+      `Chiudere "${name}"?\n\n` +
+      `Verrà archiviato tutto (spese ${money(t.overallTotal)} €, ${members.length} membri) ` +
+      'e scaricato un file di salvataggio con foto degli scontrini comprese.\n\n' +
+      'Poi membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e ' +
+      'scontrini verranno AZZERATI su tutti i dispositivi, per ripartire con il ' +
+      'prossimo evento.' + warn;
+    if (!window.confirm(conferma)) return;
+
+    const id = toDateStr(new Date()) + '-' + uid();
+    const state = { members, campData, purchases, gear, settled, equipment, toBuy };
+    const meta = {
+      id,
+      name,
+      closedAt: new Date().toISOString(),
+      from: range.from,
+      to: range.to,
+      report: buildReport(),
+      totals: {
+        overall: t.overallTotal,
+        food: t.totalFood,
+        drinks: t.totalDrinks,
+        logistics: t.logisticsPurchases,
+        equipment: t.equipBought,
+        members: members.length,
+        adults: members.filter((m) => !m.isChild).length,
+        meals: t.adultMealsTotal,
+        purchases: purchases.length,
+      },
+    };
+
+    // 1) Copia su file (l'unica che contiene anche le foto).
+    downloadJson(`bandone-archivio-${toDateStr(new Date())}.json`, { version: 6, archive: meta, ...state, receipts });
+
+    // 2) Copia nel cloud, visibile anche dagli altri dispositivi.
+    const CS = window.CloudSync;
+    let cloudOk = false;
+    if (CS && CS.isConnected && CS.isConnected()) {
+      cloudOk = await CS.putArchive(id, meta, state);
+      Object.keys(receipts).forEach((rid) => CS.deleteReceipt(rid));
+    }
+
+    // 3) Copia locale (senza foto, per non riempire la memoria del telefono).
+    setArchives((prev) => [{ ...meta, state, cloud: cloudOk }, ...prev]);
+
+    // 4) Azzeramento: i dati vuoti vengono sincronizzati e puliscono anche
+    //    gli altri telefoni (le cancellazioni sono datate, quindi non tornano).
+    setMembers([]);
+    setCampData({});
+    setPurchases([]);
+    setToBuy([]);
+    setEquipment([]);
+    setGear([]);
+    setSettled([]);
+    setReceipts({});
+    setBuying(null);
+    setSelectedDateStr(defaultDateStr());
+    setClosing(false);
+    setActiveTab('archivio');
+    window.alert(
+      'Campo chiuso e archiviato.' +
+      (cloudOk ? ' La copia è anche nel cloud.' : ' (Senza linea: la copia nel cloud verrà fatta a mano quando torna la rete — il file scaricato è già completo.)')
+    );
+  };
+
+  const downloadArchive = async (a) => {
+    let state = a.state;
+    if (!state) {
+      const CS = window.CloudSync;
+      if (CS && CS.isConnected && CS.isConnected()) state = await CS.getArchive(a.id);
+      if (!state) { window.alert('Per scaricare questo archivio serve la connessione.'); return; }
+    }
+    downloadJson(`bandone-archivio-${a.id}.json`, { version: 6, archive: a, ...state });
+  };
+
+  const removeArchive = (a) => {
+    if (!window.confirm(`Eliminare l'archivio "${a.name}"?\nSe non hai il file scaricato, i dati di quel campo andranno persi.`)) return;
+    setArchives((prev) => prev.filter((x) => x.id !== a.id));
+    const CS = window.CloudSync;
+    if (CS && CS.deleteArchive) CS.deleteArchive(a.id);
+  };
+
+  const shareArchive = async (a) => {
+    const text = a.report || '';
+    if (!text) { window.alert('Questo archivio non ha un resoconto salvato.'); return; }
+    if (navigator.share) {
+      try { await navigator.share({ title: a.name, text }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  };
+
+  // Quando si apre l'Archivio si recuperano anche i campi chiusi da altri
+  // dispositivi (quelli che questo telefono non ha mai visto).
+  useEffect(() => {
+    if (activeTab !== 'archivio') return;
+    const CS = window.CloudSync;
+    if (!CS || !CS.listArchives || !CS.isConnected()) return;
+    CS.listArchives().then((remote) => {
+      if (!Array.isArray(remote) || !remote.length) return;
+      setArchives((prev) => {
+        const have = new Set(prev.map((a) => a.id));
+        const add = remote.filter((a) => !have.has(a.id));
+        if (!add.length) return prev;
+        return [...prev, ...add].sort((a, b) => String(b.closedAt || '').localeCompare(String(a.closedAt || '')));
+      });
+    }).catch(() => {});
+  }, [activeTab, cloud.connected]);
 
   // ---------- Render ----------
   if (showSplash) {
@@ -1501,6 +1723,7 @@ function App() {
     attrezzatura: 'Attrezzatura',
     regole: 'Regole',
     dotazioni: 'Dotazioni personali',
+    archivio: 'Archivio',
     gioco: 'Aiuta Bandy',
     guida: 'Come funziona',
   };
@@ -1519,7 +1742,8 @@ function App() {
     { k: 'saldi', icon: '🤝', title: 'Saldi e rimborsi', body: 'Per ogni persona l\'app confronta quanto ha anticipato con quanto deve, e dice se riceve o se deve dare. Sotto, in "Chi paga chi", trovi i pochi passaggi di denaro necessari per pareggiare tutto: tocca una riga quando il rimborso è stato fatto e resta barrata. Con "Condividi resoconto" mandi il riepilogo pronto nel gruppo WhatsApp.' },
     { k: 'dotazioni', icon: '🎒', title: 'Dotazioni personali', body: 'Cosa portarsi da casa: una dotazione base uguale per tutti (sedia personale, stoviglie e posate, borraccia, canovacci, luci LED) che non si modifica, e un elenco di aggiunte per questo campo che potete integrare quando serve.' },
     { k: 'backup', icon: '🛟', title: 'Backup e sicurezza', body: 'Ogni giorno viene salvata da sola una copia dei dati nel cloud: se qualcosa va storto, "Ripristino di emergenza" (in Spese Totali → Dati) permette di tornare a un giorno preciso. In più puoi esportare tutto su file con Esporta e ricaricarlo con Importa. Prima di eliminare qualcosa l\'app chiede sempre conferma.' },
-    { k: 'sync', icon: '☁️', title: 'Sincronizzazione', body: 'La connessione al campo è automatica: quando c\'è linea i dati si allineano da soli fra i telefoni, in tempo reale, foto degli scontrini comprese. Senza linea si continua a lavorare normalmente e tutto viene inviato appena la rete torna. Il pallino in alto a destra indica se sei online o offline.' },
+    { k: 'sync', icon: '☁️', title: 'Sincronizzazione', body: 'La connessione al campo è automatica: quando c\'è linea i dati si allineano da soli fra i telefoni, in tempo reale, foto degli scontrini comprese. Senza linea si continua a lavorare normalmente e tutto viene inviato appena la rete torna. Se in due avete lavorato offline, al ritorno della linea le due versioni si uniscono voce per voce: nessuno cancella il lavoro dell\'altro. Il pallino in alto a destra indica se sei online o offline.' },
+    { k: 'chiusura', icon: '🏁', title: 'Chiusura e Archivio', body: 'A conti fatti, in Spese Totali → Dati usa "Chiudi il campo": salva tutto (un file sul telefono e una copia nel cloud), lo mette in Archivio e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini su tutti i dispositivi. L\'app resta pronta per il campo dell\'anno dopo. In Archivio rivedi il resoconto di ogni campo chiuso e puoi riscaricarne i dati; il file scaricato alla chiusura è l\'unico che contiene anche le foto degli scontrini, quindi conservalo.' },
     { k: 'installa', icon: '📲', title: 'Installa l\'app', body: 'Conviene installarla, così si apre a schermo intero e funziona anche senza rete. Su iPhone: Condividi (il quadrato con la freccia) e poi "Aggiungi alla schermata Home". Su Android: menu del browser e "Installa app". Quando usciamo un aggiornamento, l\'app si aggiorna da sola: se non vedi una novità, chiudila e riaprila.' },
   ];
 
@@ -2066,6 +2290,24 @@ function App() {
               </button>
             </div>
 
+            {/* Chiusura del campo */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#5C4A3C]/30 shadow-sm space-y-3">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Chiusura del campo</h3>
+              <p className="text-[10px] text-gray-500">
+                A conti fatti e rimborsi saldati: salva tutto (file + cloud), lo mette in <span className="font-bold">Archivio</span> e
+                azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini.
+                L'app resta pronta per il prossimo evento. I dati archiviati restano consultabili.
+              </p>
+              <button onClick={openClose} className="w-full py-3 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase tracking-wide hover:bg-[#463628]">
+                🏁 Chiudi il campo e archivia
+              </button>
+              {archives.length > 0 && (
+                <button onClick={() => goTo('archivio')} className="w-full py-2 text-[10px] uppercase font-bold text-[#5C4A3C] hover:underline">
+                  Vedi l'archivio ({archives.length})
+                </button>
+              )}
+            </div>
+
             {/* Sincronizzazione Cloud (online) */}
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
               <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
@@ -2498,6 +2740,51 @@ function App() {
           </div>
         )}
 
+        {/* ---------- ARCHIVIO (campi chiusi) ---------- */}
+        {activeTab === 'archivio' && (
+          <div className="space-y-4">
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Archivio</h3>
+              {archives.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">
+                  Nessun campo archiviato. Quando i conti sono chiusi, usa <span className="font-bold">Spese Totali → Dati → Chiudi il campo</span>:
+                  tutto finisce qui e l'app riparte pulita per l'evento successivo.
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {archives.map((a) => (
+                    <li key={a.id} className="bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-rustic text-base text-[#2D392C] truncate">{a.name}</p>
+                          <p className="text-[10px] text-gray-500">
+                            {a.from === a.to ? a.from : `${a.from} → ${a.to}`} · chiuso il {new Date(a.closedAt).toLocaleDateString('it-IT')}
+                          </p>
+                        </div>
+                        <span className="font-rustic font-bold text-[#2D392C] shrink-0">{money((a.totals && a.totals.overall) || 0)} €</span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500">
+                        <span>{(a.totals && a.totals.members) || 0} membri</span>
+                        <span>{(a.totals && a.totals.purchases) || 0} spese</span>
+                        <span>{(a.totals && a.totals.meals) || 0} pasti</span>
+                        {!a.state && <span className="text-[#8F9E8B] italic">solo cloud</span>}
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setViewArchive(a)} className="flex-1 py-2 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase hover:bg-[#1F271E]">Resoconto</button>
+                        <button onClick={() => downloadArchive(a)} className="flex-1 py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase hover:bg-[#463628]">Scarica</button>
+                        <button onClick={() => removeArchive(a)} aria-label="Elimina archivio" className="px-3 py-2 bg-white border-2 border-red-700/30 text-red-700 rounded text-[10px] font-bold uppercase hover:bg-red-50">Elimina</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <p className="text-[9px] text-gray-400 italic text-center px-4">
+              Il file scaricato alla chiusura è l'unica copia che contiene anche le foto degli scontrini: conservalo.
+            </p>
+          </div>
+        )}
+
         {/* ---------- AIUTA BANDY (mini gioco) ---------- */}
         {activeTab === 'gioco' && (
           <div className="space-y-4">
@@ -2679,6 +2966,46 @@ function App() {
               </button>
             ))}
             <button onClick={() => setSnapList(null)} className="w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700">Annulla</button>
+          </div>
+        </div>
+      )}
+
+      {/* Chiusura del campo: nome dell'archivio e riepilogo di cosa succede */}
+      {closing && (
+        <div onClick={() => setClosing(false)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl">
+            <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">Chiudi il campo</h3>
+            <label className="block text-[10px] uppercase font-bold text-gray-500">Nome dell'archivio</label>
+            <input
+              type="text"
+              value={closeName}
+              onChange={(e) => setCloseName(e.target.value)}
+              placeholder="Es. Prato Lungo 2026"
+              className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+            />
+            <div className="bg-[#F0F4F1]/60 rounded p-3 text-[11px] text-gray-600 space-y-1">
+              <p className="font-bold text-[#2D392C]">Verrà archiviato:</p>
+              <p>{money(totals.overallTotal)} € di spese · {purchases.length} acquisti · {members.length} membri</p>
+              <p className="font-bold text-[#2D392C] pt-1">Poi verranno azzerati:</p>
+              <p>membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e foto degli scontrini — su tutti i dispositivi.</p>
+              <p className="pt-1 italic">Restano: archivio, classifica del gioco e impostazioni.</p>
+            </div>
+            <button onClick={closeCamp} className="w-full py-3 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase tracking-wide hover:bg-[#463628]">
+              Archivia e azzera
+            </button>
+            <button onClick={() => setClosing(false)} className="w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700">Annulla</button>
+          </div>
+        </div>
+      )}
+
+      {/* Resoconto di un campo archiviato */}
+      {viewArchive && (
+        <div onClick={() => setViewArchive(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl">
+            <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">{viewArchive.name}</h3>
+            <pre className="text-[11px] text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">{viewArchive.report || 'Nessun resoconto salvato.'}</pre>
+            <button onClick={() => shareArchive(viewArchive)} className="w-full py-2.5 bg-[#25D366] text-white rounded text-xs font-bold uppercase hover:brightness-95">📤 Condividi</button>
+            <button onClick={() => setViewArchive(null)} className="w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700">Chiudi</button>
           </div>
         </div>
       )}

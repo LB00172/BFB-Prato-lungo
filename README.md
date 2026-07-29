@@ -20,6 +20,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
 | **Aggiunta Attrezzatura** | Attrezzatura da comprare con prezzo; se spuntata entra nelle spese |
 | **Spese Totali** | Totali · Quote · Saldi (chi paga chi + condividi resoconto) · Dati (backup) |
 | **Dotazioni personali** | Dotazione base fissa + aggiunte per il campo |
+| **Archivio** | Campi chiusi: resoconto, dati scaricabili, eliminazione |
 | **Come funziona** | Guida interna all'app |
 
 ## Come vengono ripartite le spese
@@ -42,8 +43,21 @@ preparazione** e **offline al campo**, dove non c'è linea.
   **Firestore** (documento condiviso `camps/<codice campo>` + sotto-collezioni
   per foto scontrini e snapshot). La connessione è **automatica** all'avvio.
 - Offline le modifiche restano in coda e partono da sole al ritorno della rete.
+- **Fusione, non sovrascrittura** (`sync-merge.js`): ogni voce porta con sé la
+  data della sua ultima modifica (o cancellazione). Quando due dispositivi che
+  hanno lavorato **offline** tornano online, le due versioni si uniscono voce
+  per voce — voci nuove da entrambe le parti, sulla stessa voce vince la
+  modifica più recente, le cancellazioni non fanno "resuscitare" nulla. La
+  regola è identica sui due dispositivi, quindi la sincronizzazione converge
+  senza rimbalzi. Senza questo, al campo (dove non c'è linea) il secondo
+  telefono che si agganciava cancellava il lavoro del primo.
 - **Snapshot giornaliero** automatico + "Ripristino di emergenza" nella scheda
   Dati. In più, backup manuale **Esporta/Importa** su file JSON.
+- **Chiusura del campo** (Spese Totali → Dati): archivia tutto (file scaricato
+  con le foto + copia nel cloud in `camps/<codice>/archives/<id>`), poi azzera
+  membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e
+  scontrini su tutti i dispositivi. L'app resta pronta per l'evento successivo
+  e i campi chiusi restano consultabili in **Archivio**.
 - Le librerie (React, Tailwind) e i font sono **self-hosted** in `vendor/`:
   nessuna dipendenza da CDN esterni.
 
@@ -79,6 +93,7 @@ Serve inoltre l'accesso **Anonymous** abilitato in Firebase Authentication.
 | `sw.js` | Service worker (cache offline). `CACHE_NAME` è rigenerato dalla build |
 | `firebase-config.js` | Configurazione: Firebase, campo, meteo, branding, feature flag |
 | `firebase-sync.js` | Sincronizzazione cloud (`window.CloudSync`), caricata solo online |
+| `sync-merge.js` | Fusione degli stati fra dispositivi (`window.SyncMerge`), usata dalla sincronizzazione |
 | `build.js` | Compila `App.jsx` → `App.js` e aggiorna `CACHE_NAME` |
 | `vendor/` | React, Tailwind e font self-hosted |
 
