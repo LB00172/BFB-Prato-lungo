@@ -20,6 +20,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
 | **Aggiunta Attrezzatura** | Attrezzatura da comprare con prezzo; se spuntata entra nelle spese |
 | **Spese Totali** | Totali · Quote · Saldi (chi paga chi + condividi resoconto) · Dati (backup) |
 | **Dotazioni personali** | Dotazione base fissa + aggiunte per il campo |
+| **Impostazioni** | Tema chiaro/scuro/automatico, blocco con password, dati locali, versione |
 | **Archivio** | Campi chiusi: resoconto, dati scaricabili, eliminazione |
 | **Come funziona** | Guida interna all'app |
 
@@ -66,6 +67,42 @@ preparazione** e **offline al campo**, dove non c'è linea.
   e i campi chiusi restano consultabili in **Archivio**.
 - Le librerie (React, Tailwind) e i font sono **self-hosted** in `vendor/`:
   nessuna dipendenza da CDN esterni.
+
+## Sicurezza: cosa protegge cosa
+
+| | Protetto da | Note |
+|---|---|---|
+| Aprire l'app | **Blocco con password** (`window.APP_LOCK` in `firebase-config.js`) | Impronta PBKDF2-SHA256, 200.000 giri, con sale: nel codice **non** c'è la password in chiaro. Attesa progressiva dopo 5 tentativi sbagliati. Gira sul telefono, quindi è una barriera, non una cassaforte |
+| Dati sul telefono | `localStorage` del browser + blocco dell'app | Chi ha il telefono sbloccato e sa aprire gli strumenti da sviluppatore li legge: la difesa vera è il codice di sblocco del telefono |
+| **Dati nel cloud** | **solo le Regole di Firestore** | ⚠️ Con l'accesso anonimo attuale, chiunque scarichi il JavaScript dell'app (è pubblico) può leggere e scrivere `camps/<codice>`. Il blocco con password **non** difende il cloud |
+
+**Come chiudere davvero il cloud** (10 minuti nella console Firebase, da fare
+quando si vuole):
+
+1. Authentication → Sign-in method → abilita **Email/Password** e disabilita
+   *Anonimo*.
+2. Authentication → Users → crea **un utente condiviso** (es.
+   `campo@brigatabandone.it`) con la password del campo.
+3. Regole Firestore: `allow read, write: if request.auth != null &&
+   request.auth.token.email == "campo@brigatabandone.it";`
+4. Nell'app, il login usa la password digitata per entrare in Firebase invece
+   dell'accesso anonimo (la password resta fuori dal codice).
+
+Da quel momento senza password non si leggono i dati nemmeno interrogando
+Firestore direttamente. Costo: la **prima** apertura su ogni dispositivo
+richiede la linea; poi la sessione resta valida anche offline.
+
+Altre accortezze utili, senza scrivere codice:
+
+- La password va nel gruppo del campo e da nessun'altra parte: se gira troppo,
+  si rigenera l'impronta e si cambia (istruzioni in `firebase-config.js`).
+- Il **file di archivio** creato alla chiusura contiene tutto, foto degli
+  scontrini comprese: conservalo dove conservi i documenti, non in una cartella
+  condivisa.
+- Gli scontrini fotografati possono mostrare dati della carta: se si vedono,
+  meglio inquadrare solo la parte degli importi.
+- La classifica del minigioco contiene i nomi dei giocatori: sta nello stesso
+  database, quindi valgono le stesse considerazioni.
 
 ### Configurazione Firebase
 

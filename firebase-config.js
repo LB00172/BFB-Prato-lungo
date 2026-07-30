@@ -20,6 +20,31 @@ window.FIREBASE_CONFIG = {
 // Codice del campo: chi conosce questo codice accede ai dati condivisi.
 window.CAMP_CODE_DEFAULT = "Bandone";
 
+// ============================================================================
+//  BLOCCO CON PASSWORD
+// ============================================================================
+// L'app non si apre senza password. Qui NON c'e' la password in chiaro: c'e'
+// solo la sua impronta (PBKDF2-SHA256, 200.000 giri, con sale). Al login la
+// password digitata viene ripassata nella stessa funzione e si confrontano le
+// impronte: dal file non si risale alla password.
+//
+// Cosa protegge: impedisce a chi arriva sull'indirizzo di curiosare fra spese,
+// nomi e scontrini. NON e' una cassaforte: e' un controllo che gira sul
+// telefono, quindi chi ha competenze tecniche e voglia puo' aggirarlo.
+// La difesa dei dati nel cloud sta nelle Regole di Firestore (vedi README).
+//
+// Per cambiare password: rigenera l'impronta e incolla i tre valori qui sotto.
+//   node -e 'const c=require("crypto");const s=c.randomBytes(16);
+//     console.log(s.toString("hex"),
+//       c.pbkdf2Sync("NUOVA_PASSWORD",s,200000,32,"sha256").toString("hex"))'
+// Mettere lock: null disattiva il blocco.
+window.APP_LOCK = {
+  salt: "43fae8e332f167f7b612255eec80a82a",
+  hash: "432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14",
+  iter: 200000,
+  hint: "Password del campo — chiedila a chi organizza.",
+};
+
 // Località del campo per il meteo (Open-Meteo, gratuito, senza chiave).
 window.CAMP_LOCATION = { lat: 42.059, lon: 13.1, label: "Pereto (AQ)" };
 

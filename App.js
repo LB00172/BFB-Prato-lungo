@@ -33,6 +33,76 @@ const load = (key, fallback) => {
 
 // Cronologia delle modifiche per la fusione fra dispositivi (vedi sync-merge.js).
 const SYNC_META_KEY = 'cambusa_syncmeta';
+
+// ============================================================================
+//  BLOCCO CON PASSWORD
+// ============================================================================
+// L'impronta della password sta in firebase-config.js (window.APP_LOCK): qui si
+// ricalcola l'impronta di quello che viene digitato e si confrontano. La
+// password in chiaro non viene mai salvata da nessuna parte.
+const LOCK = typeof window !== 'undefined' && window.APP_LOCK || null;
+const UNLOCK_KEY = 'cambusa_unlock';
+const LOCK_ALWAYS_KEY = 'cambusa_lock_always';
+const FAIL_KEY = 'cambusa_lock_fail';
+const UNTIL_KEY = 'cambusa_lock_until';
+const toHex = buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+const fromHex = s => new Uint8Array((String(s).match(/.{2}/g) || []).map(h => parseInt(h, 16)));
+
+// Ritorna l'impronta della password, o null se il browser non offre le
+// funzioni crittografiche (servono https oppure localhost).
+async function derivePassword(pwd) {
+  const subtle = window.crypto && window.crypto.subtle;
+  if (!subtle || !LOCK) return null;
+  const base = await subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveBits']);
+  const bits = await subtle.deriveBits({
+    name: 'PBKDF2',
+    salt: fromHex(LOCK.salt),
+    iterations: LOCK.iter || 200000,
+    hash: 'SHA-256'
+  }, base, 256);
+  return toHex(bits);
+}
+const lockAlways = () => localStorage.getItem(LOCK_ALWAYS_KEY) === '1';
+// Sbloccato = da qualche parte c'è l'impronta giusta. Con "chiedi ogni volta"
+// si usa la memoria di sessione, che si svuota chiudendo l'app.
+const isUnlocked = () => {
+  if (!LOCK || !LOCK.hash) return true;
+  try {
+    return sessionStorage.getItem(UNLOCK_KEY) === LOCK.hash || !lockAlways() && localStorage.getItem(UNLOCK_KEY) === LOCK.hash;
+  } catch (e) {
+    return false;
+  }
+};
+const rememberUnlock = () => {
+  try {
+    sessionStorage.setItem(UNLOCK_KEY, LOCK.hash);
+    if (!lockAlways()) localStorage.setItem(UNLOCK_KEY, LOCK.hash);
+    localStorage.removeItem(FAIL_KEY);
+    localStorage.removeItem(UNTIL_KEY);
+  } catch (e) {/* memoria non disponibile: resta sbloccato solo per ora */}
+};
+const forgetUnlock = () => {
+  try {
+    sessionStorage.removeItem(UNLOCK_KEY);
+    localStorage.removeItem(UNLOCK_KEY);
+  } catch (e) {/* ignora */}
+};
+
+// ---------- Tema (chiaro / scuro / automatico) ----------
+const THEME_KEY = 'cambusa_theme';
+const readTheme = () => {
+  const t = localStorage.getItem(THEME_KEY);
+  return t === 'light' || t === 'dark' ? t : 'auto';
+};
+// Applica il tema al documento: da qui dipende il CSS in index.html.
+const applyTheme = pref => {
+  const dark = pref === 'dark' || pref === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const root = document.documentElement;
+  if (dark) root.setAttribute('data-theme', 'dark');else root.removeAttribute('data-theme');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', dark ? '#1a201a' : '#2D392C');
+  return dark;
+};
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const money = n => (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
 // Numero >= 0 a partire da una stringa di input.
@@ -806,7 +876,112 @@ function BandyGame({
     className: "w-full py-1.5 text-[11px] uppercase font-bold text-[#8F9E8B] hover:text-white shrink-0"
   }, "Esci dal gioco"));
 }
+
+// ============================================================================
+//  SCHERMATA DI BLOCCO
+// ============================================================================
+function LockScreen({
+  onUnlock
+}) {
+  const [pwd, setPwd] = useState('');
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [waitLeft, setWaitLeft] = useState(0);
+
+  // Attesa progressiva dopo troppi tentativi sbagliati: rende inutile
+  // provare le password a raffica.
+  useEffect(() => {
+    const tick = () => {
+      const until = Number(localStorage.getItem(UNTIL_KEY) || 0);
+      setWaitLeft(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, []);
+  const submit = async () => {
+    if (busy || waitLeft > 0) return;
+    if (!pwd) {
+      setError('Scrivi la password.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const digest = await derivePassword(pwd);
+      if (digest === null) {
+        setError('Questo browser non può verificare la password: apri l\'app su https (l\'indirizzo pubblicato) invece di una copia locale.');
+        return;
+      }
+      if (digest === LOCK.hash) {
+        rememberUnlock();
+        setPwd('');
+        onUnlock();
+        return;
+      }
+      const fails = Number(localStorage.getItem(FAIL_KEY) || 0) + 1;
+      localStorage.setItem(FAIL_KEY, String(fails));
+      if (fails >= 5) {
+        const secs = Math.min(600, 30 * Math.pow(2, fails - 5));
+        localStorage.setItem(UNTIL_KEY, String(Date.now() + secs * 1000));
+        setError(`Password sbagliata. Troppi tentativi: riprova fra ${secs} secondi.`);
+      } else {
+        setError(`Password sbagliata. ${5 - fails} ${5 - fails === 1 ? 'tentativo' : 'tentativi'} prima dell'attesa.`);
+      }
+      setPwd('');
+    } catch (e) {
+      setError('Verifica non riuscita. Riprova.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 bg-[#2D392C] flex flex-col items-center justify-center text-[#F0F4F1] z-50 px-8"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-28 h-28 mb-5 rounded-full overflow-hidden shadow-2xl border-4 border-[#8F9E8B] bg-[#F0F4F1] shrink-0"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: "./logo.png",
+    alt: `Logo ${BRAND.groupName}`,
+    className: "w-full h-full object-cover"
+  })), /*#__PURE__*/React.createElement("h1", {
+    className: "font-rustic text-2xl tracking-widest text-[#8F9E8B] text-center"
+  }, BRAND.splashLine1), /*#__PURE__*/React.createElement("h2", {
+    className: "font-rustic text-lg tracking-widest text-[#F0F4F1] text-center mb-6"
+  }, BRAND.splashLine2), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs space-y-3"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[10px] uppercase tracking-widest text-[#8F9E8B] font-bold"
+  }, "Password del campo"), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: show ? 'text' : 'password',
+    value: pwd,
+    autoFocus: true,
+    autoComplete: "current-password",
+    onChange: e => setPwd(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && submit(),
+    disabled: waitLeft > 0,
+    placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+    className: "flex-grow min-w-0 p-3 rounded bg-[#1F271E] border-2 border-[#8F9E8B]/40 text-[#F0F4F1] placeholder-[#8F9E8B]/50 focus:outline-none focus:border-[#8F9E8B] disabled:opacity-50"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShow(s => !s),
+    "aria-label": show ? 'Nascondi la password' : 'Mostra la password',
+    className: "shrink-0 px-3 rounded bg-[#1F271E] border-2 border-[#8F9E8B]/40 text-lg leading-none hover:border-[#8F9E8B]"
+  }, show ? '🙈' : '👁️')), /*#__PURE__*/React.createElement("button", {
+    onClick: submit,
+    disabled: busy || waitLeft > 0,
+    className: "w-full py-3 rounded bg-[#8F9E8B] text-[#1F271E] font-bold uppercase text-sm tracking-widest hover:brightness-110 disabled:opacity-50"
+  }, busy ? 'Verifica…' : waitLeft > 0 ? `Attendi ${waitLeft} s` : 'Entra'), error && /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[#F0A0A0] leading-snug"
+  }, error), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-[#8F9E8B]/80 leading-snug"
+  }, LOCK && LOCK.hint || 'Chiedi la password a chi organizza il campo.')), /*#__PURE__*/React.createElement("p", {
+    className: "absolute bottom-4 left-0 right-0 text-center text-[9px] tracking-wide text-[#8F9E8B]/70 px-6"
+  }, BRAND.credits));
+}
 function App() {
+  const [locked, setLocked] = useState(() => !isUnlocked());
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState('calendario');
   const [currentDate, setCurrentDate] = useState(() => parseDate(defaultDateStr()));
@@ -902,6 +1077,45 @@ function App() {
   const [newEquipPrice, setNewEquipPrice] = useState('');
   const [newEquipBuyer, setNewEquipBuyer] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // ---------- Aspetto ----------
+  const [theme, setTheme] = useState(readTheme);
+  const [isDark, setIsDark] = useState(() => document.documentElement.getAttribute('data-theme') === 'dark');
+  useEffect(() => {
+    localStorage.setItem(THEME_KEY, theme);
+    setIsDark(applyTheme(theme));
+    // Con "automatico" si segue il telefono anche se cambia mentre l'app è aperta.
+    if (theme !== 'auto' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => setIsDark(applyTheme('auto'));
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [theme]);
+
+  // Blocco: "chiedi la password ogni volta che apro l'app".
+  const [askAlways, setAskAlways] = useState(lockAlways);
+  const toggleAskAlways = () => {
+    const next = !askAlways;
+    setAskAlways(next);
+    if (next) {
+      localStorage.setItem(LOCK_ALWAYS_KEY, '1');
+      try {
+        localStorage.removeItem(UNLOCK_KEY);
+      } catch (e) {/* ignora */}
+    } else {
+      localStorage.removeItem(LOCK_ALWAYS_KEY);
+      if (LOCK && LOCK.hash) {
+        try {
+          localStorage.setItem(UNLOCK_KEY, LOCK.hash);
+        } catch (e) {/* ignora */}
+      }
+    }
+  };
+  const lockNow = () => {
+    forgetUnlock();
+    setMenuOpen(false);
+    setLocked(true);
+  };
 
   // Suggerimento installazione PWA: mostrato finché l'app non è installata
   // (o finché l'utente non lo chiude). Su iOS l'installazione è solo manuale.
@@ -2177,6 +2391,29 @@ function App() {
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
   };
 
+  // ---------- Impostazioni: dati locali ----------
+  // Versione installata, letta dal nome della cache del service worker.
+  const [swVersion, setSwVersion] = useState('');
+  useEffect(() => {
+    if (!window.caches) return;
+    window.caches.keys().then(keys => {
+      const k = keys.find(x => x.indexOf('brigata-bandone-') === 0);
+      if (k) setSwVersion(k.replace('brigata-bandone-', ''));
+    }).catch(() => {});
+  }, []);
+
+  // Svuota questo telefono. I dati nel cloud NON vengono toccati: alla
+  // riapertura, se c'è linea, tornano da soli.
+  const wipeLocal = () => {
+    if (!window.confirm('Cancellare tutti i dati dell\'app da QUESTO telefono?\n\n' + 'Il cloud non viene toccato: con la linea i dati tornano da soli alla riapertura. ' + 'Senza linea invece resteresti senza dati.')) return;
+    if (!window.confirm('Confermi? Verrà chiesta di nuovo la password.')) return;
+    try {
+      Object.keys(localStorage).filter(k => k.indexOf('cambusa_') === 0).forEach(k => localStorage.removeItem(k));
+      sessionStorage.removeItem(UNLOCK_KEY);
+    } catch (e) {/* ignora */}
+    window.location.reload();
+  };
+
   // Quando si apre l'Archivio si recuperano anche i campi chiusi da altri
   // dispositivi (quelli che questo telefono non ha mai visto).
   useEffect(() => {
@@ -2195,6 +2432,10 @@ function App() {
   }, [activeTab, cloud.connected]);
 
   // ---------- Render ----------
+  // Il blocco viene prima di tutto: senza password non si vede nulla.
+  if (locked) return /*#__PURE__*/React.createElement(LockScreen, {
+    onUnlock: () => setLocked(false)
+  });
   if (showSplash) {
     return /*#__PURE__*/React.createElement("div", {
       onClick: () => setShowSplash(false),
@@ -2226,7 +2467,8 @@ function App() {
     dotazioni: 'Dotazioni personali',
     archivio: 'Archivio',
     gioco: 'Aiuta Bandy',
-    guida: 'Come funziona'
+    guida: 'Come funziona',
+    impostazioni: 'Impostazioni'
   };
   const goTo = tab => {
     setActiveTab(tab);
@@ -2304,6 +2546,11 @@ function App() {
     icon: '🎮',
     title: 'Aiuta Bandy',
     body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si va in città, la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).'
+  }, {
+    k: 'impostazioni',
+    icon: '⚙️',
+    title: 'Impostazioni',
+    body: 'Aspetto: tema chiaro, scuro o automatico (segue il telefono) — comodo la sera in tenda. Blocco con password: puoi chiedere la password a ogni apertura e bloccare l\'app subito con "Blocca ora". Dati su questo telefono: backup immediato e, se presti o cambi telefono, "Cancella i dati da questo telefono" — il cloud non viene toccato e con la linea i dati tornano da soli. In fondo trovi la versione installata.'
   }, {
     k: 'installa',
     icon: '📲',
@@ -3459,7 +3706,88 @@ function App() {
     className: "font-bold"
   }, "Spese Totali \u2192 Saldi"), " vedi chi deve dare o ricevere e chi paga chi, e con ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Condividi resoconto"), " lo mandi nel gruppo."))))), buying && /*#__PURE__*/React.createElement("div", {
+  }, "Condividi resoconto"), " lo mandi nel gruppo.")))), activeTab === 'impostazioni' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  }, "Aspetto"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-2"
+  }, [['auto', 'Automatico', '🌗'], ['light', 'Chiaro', '☀️'], ['dark', 'Scuro', '🌙']].map(([k, l, icon]) => /*#__PURE__*/React.createElement("button", {
+    key: k,
+    onClick: () => setTheme(k),
+    className: `py-2.5 rounded text-[10px] font-bold uppercase tracking-wide border-b-4 transition-all ${theme === k ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-base leading-none mb-1"
+  }, icon), l))), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500"
+  }, theme === 'auto' ? `Segue le impostazioni del telefono: adesso è ${isDark ? 'scuro' : 'chiaro'}.` : `Sempre ${theme === 'dark' ? 'scuro' : 'chiaro'}, indipendentemente dal telefono.`, ' ', "Comodo la sera in tenda: schermo scuro, meno luce in faccia a tutti.")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg text-[#2D392C]"
+  }, "Blocco con password"), /*#__PURE__*/React.createElement("span", {
+    className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
+  }, LOCK && LOCK.hash ? 'Attivo' : 'Non attivo')), LOCK && LOCK.hash ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug"
+  }, "All'apertura serve la password del campo. Tienila nel gruppo, non pubblicarla altrove. Serve a non lasciare spese, nomi e scontrini alla portata di chi capita sull'indirizzo: non \xE8 una cassaforte, perch\xE9 il controllo gira sul telefono."), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: askAlways,
+    onChange: toggleAskAlways,
+    className: "w-4 h-4 accent-[#2D392C] shrink-0"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-[#2D392C] leading-snug"
+  }, "Chiedi la password ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "ogni volta"), " che apro l'app", /*#__PURE__*/React.createElement("span", {
+    className: "block text-[9px] text-gray-500"
+  }, "Senza la spunta il telefono resta sbloccato fino a \"Blocca ora\"."))), /*#__PURE__*/React.createElement("button", {
+    onClick: lockNow,
+    className: "w-full py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]"
+  }, "\uD83D\uDD12 Blocca ora")) : /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500"
+  }, "Nessuna password impostata: l'app si apre a chiunque abbia l'indirizzo.")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  }, "Dati su questo telefono"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] uppercase font-bold text-gray-500"
+  }, "Sincronizzazione"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-bold text-[#2D392C]"
+  }, cloud.connected ? 'Connessa' : isOnline ? 'Non connessa' : 'Offline')), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: exportData,
+    className: "flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]"
+  }, "Esporta backup"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => goTo('spesa'),
+    className: "flex-1 py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-xs font-bold uppercase hover:bg-[#E2EAE4]"
+  }, "Gestione dati")), /*#__PURE__*/React.createElement("button", {
+    onClick: wipeLocal,
+    className: "w-full py-2.5 bg-white border-2 border-red-700/40 text-red-700 rounded text-xs font-bold uppercase hover:bg-red-50"
+  }, "Cancella i dati da questo telefono"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic leading-snug"
+  }, "Utile se presti o cambi telefono. Il cloud non viene toccato: con la linea i dati tornano da soli.")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1"
+  }, "Info"), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[11px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[#8F9E8B]"
+  }, "Versione installata"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, swVersion || '—')), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-[#F0F4F1]/70 leading-snug"
+  }, "L'app si aggiorna da sola: se non vedi una novit\xE0, chiudila e riaprila."), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-[#8F9E8B]/80 pt-1"
+  }, BRAND.credits)))), buying && /*#__PURE__*/React.createElement("div", {
     onClick: () => setBuying(null),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5"
   }, /*#__PURE__*/React.createElement("div", {
