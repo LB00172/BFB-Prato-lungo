@@ -913,6 +913,7 @@ function App() {
   const [editing, setEditing] = useState(null);
   // Ricerca nella cronologia: con un centinaio di voci serve per ritrovarle.
   const [purchaseQuery, setPurchaseQuery] = useState('');
+  const [toBuyQuery, setToBuyQuery] = useState('');
   const [listaSection, setListaSection] = useState('daacquistare'); // sotto-sezione Lista della Spesa
 
   // Campi chiusi e archiviati: restano consultabili e scaricabili, ma non
@@ -2299,7 +2300,7 @@ function App() {
     { k: 'gioco', icon: '🎮', title: 'Aiuta Bandy', body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si va in città, la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).' },
     { k: 'impostazioni', icon: '⚙️', title: 'Impostazioni', body: 'Aspetto: tema chiaro, scuro o automatico (segue il telefono) — comodo la sera in tenda. Blocco con password: puoi chiedere la password a ogni apertura e bloccare l\'app subito con "Blocca ora". Dati su questo telefono: backup immediato e, se presti o cambi telefono, "Cancella i dati da questo telefono" — il cloud non viene toccato e con la linea i dati tornano da soli. In fondo trovi la versione installata.' },
     { k: 'pronto', icon: '🎒', title: 'Pronto per il campo', body: 'In Impostazioni, in cima, ci sono tre spie: app scaricata sul telefono, dati del campo ricevuti, accesso al database a posto. Devono essere tutte verdi PRIMA di partire, perché a Prato Lungo non c\'è linea e lassù non si sistemano. Finché qualcosa manca, in Calendario compare un avviso che porta lì. Sistemarlo è sempre la stessa cosa: apri l\'app con la linea attiva e aspetta qualche secondo.' },
-    { k: 'correggi', icon: '✏️', title: 'Correggere una spesa', body: 'Sbagliato un prezzo o l\'acquirente? Nella cronologia degli acquisti, e nell\'elenco dell\'attrezzatura, ogni riga ha una matita: apre la voce e permette di correggere nome, acquirente, prezzo, tipologia e conto, tenendo la foto dello scontrino attaccata. Non serve cancellare e rifare, che invece porterebbe via anche la foto. Se le spese sono tante, il campo di ricerca sopra la cronologia le filtra per nome, acquirente o tipologia e mostra il totale di quelle trovate.' },
+    { k: 'correggi', icon: '✏️', title: 'Correggere una spesa', body: 'Sbagliato un prezzo o l\'acquirente? Nella cronologia degli acquisti, e nell\'elenco dell\'attrezzatura, ogni riga ha una matita: apre la voce e permette di correggere nome, acquirente, prezzo, tipologia e conto, tenendo la foto dello scontrino attaccata. Non serve cancellare e rifare, che invece porterebbe via anche la foto. Se le voci sono tante, sopra la cronologia degli acquisti c\'e\' un campo di ricerca che filtra per nome, acquirente o tipologia e mostra il totale di quelle trovate; lo stesso campo c\'e\' anche sopra la lista di "Da acquistare", dove cerca per nome e quantita\'.' },
     { k: 'installa', icon: '📲', title: 'Installa l\'app', body: 'Conviene installarla, così si apre a schermo intero e funziona anche senza rete. Su iPhone: Condividi (il quadrato con la freccia) e poi "Aggiungi alla schermata Home". Su Android: menu del browser e "Installa app". Quando usciamo un aggiornamento, l\'app si aggiorna da sola: se non vedi una novità, chiudila e riaprila.' },
   ];
 
@@ -3164,11 +3165,44 @@ function App() {
                 <button onClick={addToBuy} aria-label="Aggiungi alla lista" className="shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold text-lg leading-none hover:bg-[#1F271E]">+</button>
               </div>
 
+              {/* Ricerca: la lista della spesa arriva a decine di voci, e
+                  ritrovarne una scorrendo col dito e' impraticabile. */}
+              {toBuy.length > 4 && (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={toBuyQuery}
+                    onChange={(e) => setToBuyQuery(e.target.value)}
+                    placeholder="Cerca nella lista…"
+                    className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+                  />
+                  {toBuyQuery && (
+                    <button onClick={() => setToBuyQuery('')} aria-label="Azzera la ricerca" className="shrink-0 px-3 text-gray-400 font-bold hover:text-gray-600">&times;</button>
+                  )}
+                </div>
+              )}
+
               {toBuy.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">Lista vuota. Scrivi cosa serve e premi +.</p>
-              ) : (
+              ) : (() => {
+                const q = toBuyQuery.trim().toLowerCase();
+                const visibili = toBuy.filter((it) => !q ||
+                  (it.name || '').toLowerCase().includes(q) ||
+                  (it.qty || '').toLowerCase().includes(q));
+                return (
+                <>
+                {q && (
+                  <div className="flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20">
+                    <span className="text-[10px] uppercase font-bold text-gray-500">
+                      {visibili.length} {visibili.length === 1 ? 'voce trovata' : 'voci trovate'} su {toBuy.length}
+                    </span>
+                  </div>
+                )}
+                {visibili.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">Niente in lista corrisponde a "{toBuyQuery}".</p>
+                ) : (
                 <ul className="space-y-2">
-                  {toBuy.map((it) => (
+                  {visibili.map((it) => (
                     <li key={it.id} className="bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
                       <div className="flex items-center gap-2">
                         <div className="flex-grow min-w-0">
@@ -3192,7 +3226,10 @@ function App() {
                     </li>
                   ))}
                 </ul>
-              )}
+                )}
+                </>
+                );
+              })()}
               <p className="text-[9px] text-gray-400 italic">Quando una voce viene acquistata passa in "Acquistato": lì si mettono prezzo, acquirente e la foto dello scontrino.</p>
             </div>
             )}

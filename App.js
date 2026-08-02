@@ -1079,6 +1079,7 @@ function App() {
   const [editing, setEditing] = useState(null);
   // Ricerca nella cronologia: con un centinaio di voci serve per ritrovarle.
   const [purchaseQuery, setPurchaseQuery] = useState('');
+  const [toBuyQuery, setToBuyQuery] = useState('');
   const [listaSection, setListaSection] = useState('daacquistare'); // sotto-sezione Lista della Spesa
 
   // Campi chiusi e archiviati: restano consultabili e scaricabili, ma non
@@ -2861,7 +2862,7 @@ function App() {
     k: 'correggi',
     icon: '✏️',
     title: 'Correggere una spesa',
-    body: 'Sbagliato un prezzo o l\'acquirente? Nella cronologia degli acquisti, e nell\'elenco dell\'attrezzatura, ogni riga ha una matita: apre la voce e permette di correggere nome, acquirente, prezzo, tipologia e conto, tenendo la foto dello scontrino attaccata. Non serve cancellare e rifare, che invece porterebbe via anche la foto. Se le spese sono tante, il campo di ricerca sopra la cronologia le filtra per nome, acquirente o tipologia e mostra il totale di quelle trovate.'
+    body: 'Sbagliato un prezzo o l\'acquirente? Nella cronologia degli acquisti, e nell\'elenco dell\'attrezzatura, ogni riga ha una matita: apre la voce e permette di correggere nome, acquirente, prezzo, tipologia e conto, tenendo la foto dello scontrino attaccata. Non serve cancellare e rifare, che invece porterebbe via anche la foto. Se le voci sono tante, sopra la cronologia degli acquisti c\'e\' un campo di ricerca che filtra per nome, acquirente o tipologia e mostra il totale di quelle trovate; lo stesso campo c\'e\' anche sopra la lista di "Da acquistare", dove cerca per nome e quantita\'.'
   }, {
     k: 'installa',
     icon: '📲',
@@ -3589,41 +3590,63 @@ function App() {
     onClick: addToBuy,
     "aria-label": "Aggiungi alla lista",
     className: "shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold text-lg leading-none hover:bg-[#1F271E]"
-  }, "+")), toBuy.length === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, "+")), toBuy.length > 4 && /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: toBuyQuery,
+    onChange: e => setToBuyQuery(e.target.value),
+    placeholder: "Cerca nella lista\u2026",
+    className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  }), toBuyQuery && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setToBuyQuery(''),
+    "aria-label": "Azzera la ricerca",
+    className: "shrink-0 px-3 text-gray-400 font-bold hover:text-gray-600"
+  }, "\xD7")), toBuy.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
-  }, "Lista vuota. Scrivi cosa serve e premi +.") : /*#__PURE__*/React.createElement("ul", {
-    className: "space-y-2"
-  }, toBuy.map(it => /*#__PURE__*/React.createElement("li", {
-    key: it.id,
-    className: "bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex-grow min-w-0"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-bold text-[#2D392C] leading-snug break-words"
-  }, it.name), it.qty && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-gray-500"
-  }, "Quantit\xE0: ", it.qty)), receipts[it.id] && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setViewReceipt(receipts[it.id]),
-    "aria-label": "Vedi scontrino",
-    className: "shrink-0 px-2 py-1.5 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white leading-none"
-  }, "\uD83D\uDCF7"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => removeToBuy(it.id),
-    "aria-label": "Rimuovi",
-    className: "shrink-0 text-red-700 font-bold px-1.5 hover:text-red-900"
-  }, "\xD7")), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setBuying({
-      id: it.id,
-      name: it.name,
-      qty: it.qty,
-      price: '',
-      buyer: '',
-      type: 'alimentare',
-      account: 'comune'
-    }),
-    className: "mt-2 w-full py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
-  }, "Segna come acquistata")))), /*#__PURE__*/React.createElement("p", {
+  }, "Lista vuota. Scrivi cosa serve e premi +.") : (() => {
+    const q = toBuyQuery.trim().toLowerCase();
+    const visibili = toBuy.filter(it => !q || (it.name || '').toLowerCase().includes(q) || (it.qty || '').toLowerCase().includes(q));
+    return /*#__PURE__*/React.createElement(React.Fragment, null, q && /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] uppercase font-bold text-gray-500"
+    }, visibili.length, " ", visibili.length === 1 ? 'voce trovata' : 'voci trovate', " su ", toBuy.length)), visibili.length === 0 ? /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-gray-400 italic"
+    }, "Niente in lista corrisponde a \"", toBuyQuery, "\".") : /*#__PURE__*/React.createElement("ul", {
+      className: "space-y-2"
+    }, visibili.map(it => /*#__PURE__*/React.createElement("li", {
+      key: it.id,
+      className: "bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex-grow min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-sm font-bold text-[#2D392C] leading-snug break-words"
+    }, it.name), it.qty && /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-gray-500"
+    }, "Quantit\xE0: ", it.qty)), receipts[it.id] && /*#__PURE__*/React.createElement("button", {
+      onClick: () => setViewReceipt(receipts[it.id]),
+      "aria-label": "Vedi scontrino",
+      className: "shrink-0 px-2 py-1.5 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white leading-none"
+    }, "\uD83D\uDCF7"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => removeToBuy(it.id),
+      "aria-label": "Rimuovi",
+      className: "shrink-0 text-red-700 font-bold px-1.5 hover:text-red-900"
+    }, "\xD7")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setBuying({
+        id: it.id,
+        name: it.name,
+        qty: it.qty,
+        price: '',
+        buyer: '',
+        type: 'alimentare',
+        account: 'comune'
+      }),
+      className: "mt-2 w-full py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
+    }, "Segna come acquistata")))));
+  })(), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic"
   }, "Quando una voce viene acquistata passa in \"Acquistato\": l\xEC si mettono prezzo, acquirente e la foto dello scontrino.")), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, !manualOpen ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setManualOpen(true),
