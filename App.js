@@ -1985,6 +1985,45 @@ function App() {
   };
   const weekDays = getDaysOfWeek(currentDate);
 
+  // Striscia dei giorni: la stessa in Calendario e in Menù, così il giorno
+  // scelto in una scheda è già scelto anche nell'altra.
+  const renderWeekStrip = () => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => changeWeek(-7),
+    "aria-label": "Settimana precedente",
+    className: "p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
+  }, "\u2190"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-sm text-[#2D392C] uppercase font-rustic"
+  }, "Settimana Selezionata"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => changeWeek(7),
+    "aria-label": "Settimana successiva",
+    className: "p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
+  }, "\u2192")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-7 gap-1"
+  }, weekDays.map(d => {
+    const dateStr = toDateStr(d);
+    const isSelected = dateStr === selectedDateStr;
+    const isCampPeriod = dateStr >= CAMP_START && dateStr <= CAMP_END;
+    const label = d.toLocaleDateString('it-IT', {
+      weekday: 'short'
+    });
+    return /*#__PURE__*/React.createElement("button", {
+      key: dateStr,
+      onClick: () => {
+        setSelectedDateStr(dateStr);
+        setCurrentDate(new Date(d));
+      },
+      className: `p-2 flex flex-col items-center rounded-lg border transition-all ${isSelected ? 'bg-[#5C4A3C] text-white border-[#5C4A3C]' : isCampPeriod ? 'bg-[#2D392C]/10 text-[#2D392C] border-[#2D392C]' : 'bg-white text-gray-400 border-gray-200'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] uppercase font-bold"
+    }, label), /*#__PURE__*/React.createElement("span", {
+      className: "text-lg font-bold font-rustic"
+    }, d.getDate()), isCampPeriod && /*#__PURE__*/React.createElement("span", {
+      className: "w-1.5 h-1.5 bg-[#D97706] rounded-full mt-0.5"
+    }));
+  })));
+
   // ---------- Calcolo ripartizione (coerente: somma quote = totale) ----------
   const calculateTotals = () => {
     // I totali di spesa sono generati dal taccuino (per tipologia).
@@ -2506,6 +2545,7 @@ function App() {
   }
   const tabs = {
     calendario: 'Calendario',
+    menu: 'Menù',
     membri: 'Membri',
     presenze: 'Presenze',
     spesa: 'Spese Totali',
@@ -2528,7 +2568,12 @@ function App() {
     k: 'calendario',
     icon: '📅',
     title: 'Calendario',
-    body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e uno spazio per le note su menù, legna, turni. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.'
+    body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e uno spazio per le il collegamento al Menù del giorno. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.'
+  }, {
+    k: 'menu',
+    icon: '🍝',
+    title: 'Menù',
+    body: 'Scheda a parte per scrivere cosa si mangia, giorno per giorno. In alto c\'è la stessa striscia dei giorni del Calendario: il giorno scelto è lo stesso nelle due schede, quindi puoi passare dall\'una all\'altra senza ricercarlo. Sotto vedi quanti pasti preparare a pranzo e a cena, e il foglio a righe dove scrivere una pietanza per riga. In fondo l\'elenco dei giorni del campo con la prima riga del menù già scritto: si vede a colpo d\'occhio cosa manca. Tutto si sincronizza: chi cucina lo trova già pronto.'
   }, {
     k: 'membri',
     icon: '👥',
@@ -2668,40 +2713,7 @@ function App() {
     className: "flex-grow p-4"
   }, activeTab === 'calendario' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => changeWeek(-7),
-    className: "p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
-  }, "\u2190"), /*#__PURE__*/React.createElement("span", {
-    className: "font-bold text-sm text-[#2D392C] uppercase font-rustic"
-  }, "Settimana Selezionata"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => changeWeek(7),
-    className: "p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
-  }, "\u2192")), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-7 gap-1"
-  }, weekDays.map(d => {
-    const dateStr = toDateStr(d);
-    const isSelected = dateStr === selectedDateStr;
-    const isCampPeriod = dateStr >= CAMP_START && dateStr <= CAMP_END;
-    const label = d.toLocaleDateString('it-IT', {
-      weekday: 'short'
-    });
-    return /*#__PURE__*/React.createElement("button", {
-      key: dateStr,
-      onClick: () => {
-        setSelectedDateStr(dateStr);
-        setCurrentDate(new Date(d));
-      },
-      className: `p-2 flex flex-col items-center rounded-lg border transition-all ${isSelected ? 'bg-[#5C4A3C] text-white border-[#5C4A3C]' : isCampPeriod ? 'bg-[#2D392C]/10 text-[#2D392C] border-[#2D392C]' : 'bg-white text-gray-400 border-gray-200'}`
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] uppercase font-bold"
-    }, label), /*#__PURE__*/React.createElement("span", {
-      className: "text-lg font-bold font-rustic"
-    }, d.getDate()), isCampPeriod && /*#__PURE__*/React.createElement("span", {
-      className: "w-1.5 h-1.5 bg-[#D97706] rounded-full mt-0.5"
-    }));
-  })), /*#__PURE__*/React.createElement("div", {
+  }, renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-2"
@@ -2799,25 +2811,80 @@ function App() {
     }, " \xB7 "), dinner, " ", /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-normal text-gray-500"
     }, "a cena")));
-  })()), /*#__PURE__*/React.createElement("div", {
+  })(), /*#__PURE__*/React.createElement("button", {
+    onClick: () => goTo('menu'),
+    className: "w-full py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]"
+  }, "\uD83C\uDF5D Men\xF9 del giorno", (getDayData(selectedDateStr).note || '').trim() ? ' · già scritto' : ' · da scrivere'))), activeTab === 'menu' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-baseline justify-between border-b border-dashed border-[#8F9E8B] pb-1"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C]"
-  }, "Men\xF9"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] uppercase font-bold text-gray-400"
-  }, parseDate(selectedDateStr).toLocaleDateString('it-IT', {
+  }, "Men\xF9 di ", parseDate(selectedDateStr).toLocaleDateString('it-IT', {
+    weekday: 'long',
     day: 'numeric',
-    month: 'short'
-  }))), /*#__PURE__*/React.createElement("textarea", {
+    month: 'long'
+  }))), (() => {
+    const lunch = members.filter(m => getMeal(selectedDateStr, m.id).lunch).length;
+    const dinner = members.filter(m => getMeal(selectedDateStr, m.id).dinner).length;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 bg-[#2D392C]/5 px-3 py-2 rounded border border-[#2D392C]/15"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-xl leading-none"
+    }, "\uD83C\uDF72"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] uppercase font-bold text-gray-500"
+    }, "Da preparare"), /*#__PURE__*/React.createElement("span", {
+      className: "ml-auto text-sm font-bold text-[#2D392C]"
+    }, lunch, " ", /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-normal text-gray-500"
+    }, "a pranzo"), /*#__PURE__*/React.createElement("span", {
+      className: "text-gray-300"
+    }, " \xB7 "), dinner, " ", /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-normal text-gray-500"
+    }, "a cena")));
+  })(), /*#__PURE__*/React.createElement("textarea", {
     value: getDayData(selectedDateStr).note,
     onChange: e => updateDayData(selectedDateStr, 'note', e.target.value),
     placeholder: 'Pranzo: pasta al pomodoro\nInsalata\nCena: grigliata\nPatate al forno',
     className: "lined-paper w-full p-3 rounded-lg border border-[#8F9E8B]/30 focus:outline-none focus:border-[#2D392C] resize-y"
   }), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic"
-  }, "Una pietanza per riga. Si sincronizza con gli altri: chi cucina lo trova gi\xE0 scritto."))), activeTab === 'membri' && /*#__PURE__*/React.createElement("div", {
+  }, "Una pietanza per riga. Si sincronizza con gli altri: chi cucina lo trova gi\xE0 scritto.")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+  }, "Giorni del campo"), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-1.5"
+  }, (() => {
+    const giorni = [];
+    for (let d = parseDate(CAMP_START); toDateStr(d) <= CAMP_END; d.setDate(d.getDate() + 1)) {
+      giorni.push(toDateStr(d));
+    }
+    return giorni.map(ds => {
+      const testo = (getDayData(ds).note || '').trim();
+      const prima = testo.split('\n')[0] || '';
+      return /*#__PURE__*/React.createElement("li", {
+        key: ds
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          setSelectedDateStr(ds);
+          setCurrentDate(parseDate(ds));
+        },
+        className: `w-full text-left flex items-center gap-2 px-3 py-2 rounded border transition-colors ${ds === selectedDateStr ? 'bg-[#5C4A3C]/15 border-[#5C4A3C]/50' : 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20 hover:bg-[#E2EAE4]'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-bold text-[#2D392C] shrink-0 w-16"
+      }, parseDate(ds).toLocaleDateString('it-IT', {
+        weekday: 'short',
+        day: 'numeric'
+      })), /*#__PURE__*/React.createElement("span", {
+        className: `text-[10px] truncate ${testo ? 'text-gray-600' : 'text-gray-400 italic'}`
+      }, testo ? prima : 'da scrivere'), testo && /*#__PURE__*/React.createElement("span", {
+        className: "ml-auto text-[10px] shrink-0"
+      }, "\u2714")));
+    });
+  })()))), activeTab === 'membri' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
@@ -3817,7 +3884,22 @@ function App() {
     className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
   }, LOCK && LOCK.hash ? 'Attivo' : 'Non attivo')), LOCK && LOCK.hash ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 leading-snug"
-  }, "All'apertura serve la password del campo. Tienila nel gruppo, non pubblicarla altrove. Serve a non lasciare spese, nomi e scontrini alla portata di chi capita sull'indirizzo: non \xE8 una cassaforte, perch\xE9 il controllo gira sul telefono."), /*#__PURE__*/React.createElement("label", {
+  }, "All'apertura serve la password del campo. Tienila nel gruppo, non pubblicarla altrove. Serve a non lasciare spese, nomi e scontrini alla portata di chi capita sull'indirizzo: non \xE8 una cassaforte, perch\xE9 il controllo gira sul telefono."), (() => {
+    const lock = window.APP_LOCK || {};
+    if (!lock.dbEmail) return null;
+    const protetto = cloud.authMode === 'shared';
+    return /*#__PURE__*/React.createElement("div", {
+      className: `p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : 'bg-[#D97706]/10 border-[#D97706]/40'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] uppercase font-bold text-gray-500"
+    }, "Database"), /*#__PURE__*/React.createElement("span", {
+      className: `text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : 'text-[#D97706]'}`
+    }, protetto ? '🔒 protetto dalla password' : '⚠ accesso aperto')), /*#__PURE__*/React.createElement("p", {
+      className: "text-[10px] text-gray-500 leading-snug mt-1"
+    }, protetto ? 'L\'app entra nel database con l\'utente del campo: senza password i dati non si leggono nemmeno da fuori.' : 'I dati nel cloud sono ancora raggiungibili senza password. Per chiuderli servono i passaggi nella console Firebase (utente condiviso + regole): finché non sono fatti, il blocco protegge solo la schermata.'));
+  })(), /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer"
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",

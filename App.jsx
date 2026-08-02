@@ -1629,6 +1629,44 @@ function App() {
 
   const weekDays = getDaysOfWeek(currentDate);
 
+  // Striscia dei giorni: la stessa in Calendario e in Menù, così il giorno
+  // scelto in una scheda è già scelto anche nell'altra.
+  const renderWeekStrip = () => (
+    <>
+      <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm">
+        <button onClick={() => changeWeek(-7)} aria-label="Settimana precedente" className="p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&larr;</button>
+        <span className="font-bold text-sm text-[#2D392C] uppercase font-rustic">Settimana Selezionata</span>
+        <button onClick={() => changeWeek(7)} aria-label="Settimana successiva" className="p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&rarr;</button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {weekDays.map((d) => {
+          const dateStr = toDateStr(d);
+          const isSelected = dateStr === selectedDateStr;
+          const isCampPeriod = dateStr >= CAMP_START && dateStr <= CAMP_END;
+          const label = d.toLocaleDateString('it-IT', { weekday: 'short' });
+          return (
+            <button
+              key={dateStr}
+              onClick={() => { setSelectedDateStr(dateStr); setCurrentDate(new Date(d)); }}
+              className={`p-2 flex flex-col items-center rounded-lg border transition-all ${
+                isSelected
+                  ? 'bg-[#5C4A3C] text-white border-[#5C4A3C]'
+                  : isCampPeriod
+                  ? 'bg-[#2D392C]/10 text-[#2D392C] border-[#2D392C]'
+                  : 'bg-white text-gray-400 border-gray-200'
+              }`}
+            >
+              <span className="text-[10px] uppercase font-bold">{label}</span>
+              <span className="text-lg font-bold font-rustic">{d.getDate()}</span>
+              {isCampPeriod && <span className="w-1.5 h-1.5 bg-[#D97706] rounded-full mt-0.5"></span>}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+
   // ---------- Calcolo ripartizione (coerente: somma quote = totale) ----------
   const calculateTotals = () => {
     // I totali di spesa sono generati dal taccuino (per tipologia).
@@ -2068,6 +2106,7 @@ function App() {
 
   const tabs = {
     calendario: 'Calendario',
+    menu: 'Menù',
     membri: 'Membri',
     presenze: 'Presenze',
     spesa: 'Spese Totali',
@@ -2085,7 +2124,8 @@ function App() {
 
   // Guida: una "pill" per ogni area di lavoro.
   const GUIDE = [
-    { k: 'calendario', icon: '📅', title: 'Calendario', body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e uno spazio per le note su menù, legna, turni. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.' },
+    { k: 'calendario', icon: '📅', title: 'Calendario', body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e uno spazio per le il collegamento al Menù del giorno. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.' },
+    { k: 'menu', icon: '🍝', title: 'Menù', body: 'Scheda a parte per scrivere cosa si mangia, giorno per giorno. In alto c\'è la stessa striscia dei giorni del Calendario: il giorno scelto è lo stesso nelle due schede, quindi puoi passare dall\'una all\'altra senza ricercarlo. Sotto vedi quanti pasti preparare a pranzo e a cena, e il foglio a righe dove scrivere una pietanza per riga. In fondo l\'elenco dei giorni del campo con la prima riga del menù già scritto: si vede a colpo d\'occhio cosa manca. Tutto si sincronizza: chi cucina lo trova già pronto.' },
     { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e il suggerimento dei nomi quando registri una spesa.' },
     { k: 'presenze', icon: '🍽️', title: 'Presenze', body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta usa "Tutti a pranzo" o "Tutti a cena" e poi togli i pochi assenti, oppure "Copia da ieri". In alto trovi il conteggio del giorno. Durante il campo l\'app si apre già sulla data di oggi.' },
     { k: 'lista', icon: '🧾', title: 'Lista della Spesa', body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; ogni voce ha l\'icona 📷 per lo scontrino (foto o galleria) e il tasto "Segna come acquistata", che chiede prezzo, acquirente e tipologia e la sposta in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.' },
@@ -2182,37 +2222,7 @@ function App() {
         {/* ---------- CALENDARIO ---------- */}
         {activeTab === 'calendario' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm">
-              <button onClick={() => changeWeek(-7)} className="p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&larr;</button>
-              <span className="font-bold text-sm text-[#2D392C] uppercase font-rustic">Settimana Selezionata</span>
-              <button onClick={() => changeWeek(7)} className="p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&rarr;</button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1">
-              {weekDays.map((d) => {
-                const dateStr = toDateStr(d);
-                const isSelected = dateStr === selectedDateStr;
-                const isCampPeriod = dateStr >= CAMP_START && dateStr <= CAMP_END;
-                const label = d.toLocaleDateString('it-IT', { weekday: 'short' });
-                return (
-                  <button
-                    key={dateStr}
-                    onClick={() => { setSelectedDateStr(dateStr); setCurrentDate(new Date(d)); }}
-                    className={`p-2 flex flex-col items-center rounded-lg border transition-all ${
-                      isSelected
-                        ? 'bg-[#5C4A3C] text-white border-[#5C4A3C]'
-                        : isCampPeriod
-                        ? 'bg-[#2D392C]/10 text-[#2D392C] border-[#2D392C]'
-                        : 'bg-white text-gray-400 border-gray-200'
-                    }`}
-                  >
-                    <span className="text-[10px] uppercase font-bold">{label}</span>
-                    <span className="text-lg font-bold font-rustic">{d.getDate()}</span>
-                    {isCampPeriod && <span className="w-1.5 h-1.5 bg-[#D97706] rounded-full mt-0.5"></span>}
-                  </button>
-                );
-              })}
-            </div>
+            {renderWeekStrip()}
 
             {/* Giorni del conto separato: le presenze di questi giorni fanno
                 cassa a parte (vedi calculateTotals). */}
@@ -2324,16 +2334,48 @@ function App() {
                 );
               })()}
 
+              {/* Scorciatoia alla scheda Menù, che lavora sullo stesso giorno */}
+              <button
+                onClick={() => goTo('menu')}
+                className="w-full py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]"
+              >
+                🍝 Menù del giorno
+                {(getDayData(selectedDateStr).note || '').trim() ? ' · già scritto' : ' · da scrivere'}
+              </button>
             </div>
+          </div>
+        )}
 
-            {/* Menù del giorno: foglio a righe, una pietanza per riga. */}
+        {/* ---------- MENÙ ---------- */}
+        {activeTab === 'menu' && (
+          <div className="space-y-4">
+            {/* Stessa striscia del Calendario: il giorno scelto è condiviso */}
+            {renderWeekStrip()}
+
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-2">
               <div className="flex items-baseline justify-between border-b border-dashed border-[#8F9E8B] pb-1">
-                <h3 className="font-rustic text-lg text-[#2D392C]">Menù</h3>
-                <span className="text-[9px] uppercase font-bold text-gray-400">
-                  {parseDate(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
-                </span>
+                <h3 className="font-rustic text-lg text-[#2D392C]">
+                  Menù di {parseDate(selectedDateStr).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </h3>
               </div>
+
+              {/* Quante persone stai cucinando: serve proprio mentre scrivi */}
+              {(() => {
+                const lunch = members.filter((m) => getMeal(selectedDateStr, m.id).lunch).length;
+                const dinner = members.filter((m) => getMeal(selectedDateStr, m.id).dinner).length;
+                return (
+                  <div className="flex items-center gap-2 bg-[#2D392C]/5 px-3 py-2 rounded border border-[#2D392C]/15">
+                    <span className="text-xl leading-none">🍲</span>
+                    <span className="text-[11px] uppercase font-bold text-gray-500">Da preparare</span>
+                    <span className="ml-auto text-sm font-bold text-[#2D392C]">
+                      {lunch} <span className="text-[10px] font-normal text-gray-500">a pranzo</span>
+                      <span className="text-gray-300"> · </span>
+                      {dinner} <span className="text-[10px] font-normal text-gray-500">a cena</span>
+                    </span>
+                  </div>
+                );
+              })()}
+
               <textarea
                 value={getDayData(selectedDateStr).note}
                 onChange={(e) => updateDayData(selectedDateStr, 'note', e.target.value)}
@@ -2341,6 +2383,41 @@ function App() {
                 className="lined-paper w-full p-3 rounded-lg border border-[#8F9E8B]/30 focus:outline-none focus:border-[#2D392C] resize-y"
               />
               <p className="text-[9px] text-gray-400 italic">Una pietanza per riga. Si sincronizza con gli altri: chi cucina lo trova già scritto.</p>
+            </div>
+
+            {/* Colpo d'occhio sui giorni del campo con il menù già scritto */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Giorni del campo</h3>
+              <ul className="space-y-1.5">
+                {(() => {
+                  const giorni = [];
+                  for (let d = parseDate(CAMP_START); toDateStr(d) <= CAMP_END; d.setDate(d.getDate() + 1)) {
+                    giorni.push(toDateStr(d));
+                  }
+                  return giorni.map((ds) => {
+                    const testo = (getDayData(ds).note || '').trim();
+                    const prima = testo.split('\n')[0] || '';
+                    return (
+                      <li key={ds}>
+                        <button
+                          onClick={() => { setSelectedDateStr(ds); setCurrentDate(parseDate(ds)); }}
+                          className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded border transition-colors ${
+                            ds === selectedDateStr ? 'bg-[#5C4A3C]/15 border-[#5C4A3C]/50' : 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20 hover:bg-[#E2EAE4]'
+                          }`}
+                        >
+                          <span className="text-[11px] font-bold text-[#2D392C] shrink-0 w-16">
+                            {parseDate(ds).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' })}
+                          </span>
+                          <span className={`text-[10px] truncate ${testo ? 'text-gray-600' : 'text-gray-400 italic'}`}>
+                            {testo ? prima : 'da scrivere'}
+                          </span>
+                          {testo && <span className="ml-auto text-[10px] shrink-0">✔</span>}
+                        </button>
+                      </li>
+                    );
+                  });
+                })()}
+              </ul>
             </div>
           </div>
         )}
@@ -3458,6 +3535,28 @@ function App() {
                     Serve a non lasciare spese, nomi e scontrini alla portata di chi capita sull'indirizzo:
                     non è una cassaforte, perché il controllo gira sul telefono.
                   </p>
+                  {/* Stato reale della protezione del database: il blocco
+                      dell'app e la chiusura del cloud sono due cose diverse. */}
+                  {(() => {
+                    const lock = window.APP_LOCK || {};
+                    if (!lock.dbEmail) return null;
+                    const protetto = cloud.authMode === 'shared';
+                    return (
+                      <div className={`p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] uppercase font-bold text-gray-500">Database</span>
+                          <span className={`text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : 'text-[#D97706]'}`}>
+                            {protetto ? '🔒 protetto dalla password' : '⚠ accesso aperto'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 leading-snug mt-1">
+                          {protetto
+                            ? 'L\'app entra nel database con l\'utente del campo: senza password i dati non si leggono nemmeno da fuori.'
+                            : 'I dati nel cloud sono ancora raggiungibili senza password. Per chiuderli servono i passaggi nella console Firebase (utente condiviso + regole): finché non sono fatti, il blocco protegge solo la schermata.'}
+                        </p>
+                      </div>
+                    );
+                  })()}
                   <label className="flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer">
                     <input type="checkbox" checked={askAlways} onChange={toggleAskAlways} className="w-4 h-4 accent-[#2D392C] shrink-0" />
                     <span className="text-[11px] text-[#2D392C] leading-snug">
