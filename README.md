@@ -94,19 +94,9 @@ funziona come prima, quindi non c'è fretta e non si rompe niente.
    **quella del campo**. Nessuno la digiterà: la usa l'app.
 3. Verifica dal tuo telefono: Impostazioni → Blocco con password, la riga
    *Database* deve passare a **protetto dalla password**.
-4. Solo allora stringi le Regole Firestore:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /camps/{document=**} {
-      allow read, write: if request.auth != null
-        && request.auth.token.email == "campo@brigatabandone.it";
-    }
-  }
-}
-```
+4. Solo allora stringi le Regole Firestore: copia il contenuto di
+   **[`firestore.rules`](firestore.rules)** e incollalo in Firestore Database →
+   scheda *Regole* → sostituisci tutto → *Pubblica*.
 
 5. Authentication → Sign-in method → **disabilita Anonimo**.
 
@@ -139,20 +129,11 @@ Firestore, codice campo predefinito, località per il meteo, branding e feature
 flag. L'`apiKey` di Firebase non è un segreto (è un identificatore pubblico
 lato client): la sicurezza è data dalle Regole di Firestore.
 
-Regole Firestore attualmente in uso:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /camps/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
-
-Serve inoltre l'accesso **Anonymous** abilitato in Firebase Authentication.
+Le regole del database stanno in **`firestore.rules`**, pronte da incollare
+nella console (Firestore Database → Regole → Pubblica). Richiedono l'accesso
+**Email/Password** abilitato in Firebase Authentication e l'utente condiviso
+creato; l'accesso **Anonimo** va disabilitato solo dopo che tutti i telefoni
+risultano "protetti dalla password".
 
 ## Struttura del progetto
 
@@ -165,6 +146,7 @@ Serve inoltre l'accesso **Anonymous** abilitato in Firebase Authentication.
 | `firebase-config.js` | Configurazione: Firebase, campo, meteo, branding, feature flag |
 | `firebase-sync.js` | Sincronizzazione cloud (`window.CloudSync`), caricata solo online |
 | `sync-merge.js` | Fusione degli stati fra dispositivi (`window.SyncMerge`), usata dalla sincronizzazione |
+| `firestore.rules` | Regole di sicurezza del database, da incollare nella console Firebase |
 | `build.js` | Compila `App.jsx` → `App.js` e aggiorna `CACHE_NAME` |
 | `vendor/` | React, Tailwind e font self-hosted |
 

@@ -1,0 +1,38 @@
+// ============================================================================
+//  REGOLE FIRESTORE — Brigata Fabio Bandone
+// ============================================================================
+// Da incollare in: console.firebase.google.com -> progetto brigata-bandone
+// -> Firestore Database -> scheda "Regole" (Rules) -> sostituisci tutto
+// -> Pubblica.
+//
+// Cosa fanno: al database si entra SOLO con l'utente condiviso del campo,
+// quello che l'app usa dietro le quinte con la password del blocco. Chi non ha
+// la password non legge e non scrive niente, nemmeno interrogando Firestore
+// direttamente.
+//
+// La regola copre il documento del campo e tutte le sue sotto-collezioni:
+// scontrini, snapshot giornalieri, archivi dei campi chiusi, meteo condiviso e
+// classifica del minigioco.
+//
+// PRIMA di pubblicare: controlla che l'app dica gia' "Database: protetto dalla
+// password" (Impostazioni -> Blocco con password). Se dice ancora "accesso
+// aperto", pubblicando queste regole la sincronizzazione si ferma.
+// DOPO aver pubblicato: Authentication -> Sign-in method -> disabilita Anonimo.
+// ============================================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /camps/{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == "campo@brigatabandone.it";
+    }
+
+    // Tutto il resto e' chiuso.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

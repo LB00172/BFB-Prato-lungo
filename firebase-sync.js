@@ -153,7 +153,11 @@
       localStorage.setItem('cambusa_camp_code', code);
       emit({ connected: true, code, status: 'connected', error: null });
     } catch (e) {
-      emit({ status: 'error', error: e.message || String(e), connected: false });
+      // Anche quando l'accesso fallisce va detto COME si e' provato a entrare:
+      // senza, un telefono che resta fuori (es. accesso anonimo disattivato in
+      // console) mostrerebbe solo un errore, invece di farsi chiedere la
+      // password dall'app.
+      emit({ status: 'error', error: e.message || String(e), connected: false, authMode });
       throw e;
     }
   }
