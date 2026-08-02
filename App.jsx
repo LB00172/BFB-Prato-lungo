@@ -2172,7 +2172,7 @@ function App() {
     { k: 'menu', icon: '🍝', title: 'Menù', body: 'Scheda a parte per scrivere cosa si mangia, giorno per giorno. In alto c\'è la stessa striscia dei giorni del Calendario: il giorno scelto è lo stesso nelle due schede, quindi puoi passare dall\'una all\'altra senza ricercarlo. Sotto vedi quanti pasti preparare a pranzo e a cena, e il foglio a righe dove scrivere una pietanza per riga. In fondo l\'elenco dei giorni del campo con la prima riga del menù già scritto: si vede a colpo d\'occhio cosa manca. Tutto si sincronizza: chi cucina lo trova già pronto.' },
     { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e il suggerimento dei nomi quando registri una spesa.' },
     { k: 'presenze', icon: '🍽️', title: 'Presenze', body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta usa "Tutti a pranzo" o "Tutti a cena" e poi togli i pochi assenti, oppure "Copia da ieri". In alto trovi il conteggio del giorno. Durante il campo l\'app si apre già sulla data di oggi.' },
-    { k: 'lista', icon: '🧾', title: 'Lista della Spesa', body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; ogni voce ha l\'icona 📷 per lo scontrino (foto o galleria) e il tasto "Segna come acquistata", che chiede prezzo, acquirente e tipologia e la sposta in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.' },
+    { k: 'lista', icon: '🧾', title: 'Lista della Spesa', body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; il tasto "Segna come acquistata" apre una maschera che chiede prezzo, acquirente, tipologia e la foto dello scontrino, e sposta la voce in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.' },
     { k: 'attrezzatura', icon: '🪛', title: 'Attrezzatura', body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. Con l\'icona 📷 alleghi lo scontrino, anche in un secondo momento. In fondo vedi il totale previsto e quello effettivamente acquistato; se indichi l\'acquirente, gli verrà rimborsata.' },
     { k: 'spesa', icon: '💶', title: 'Spese Totali', body: 'Quattro sotto-sezioni. Totali: quanto si è speso per cibo, bevande, logistica e attrezzatura. Quote: quanto costa a testa. Saldi: chi deve dare o ricevere. Dati: backup e sincronizzazione. I totali non si scrivono a mano, nascono dalla Lista della Spesa e dall\'attrezzatura acquistata.' },
     { k: 'conti', icon: '⚖️', title: 'Come si dividono', body: 'Cibo e bevande sono divisi per il numero di pasti: chi mangia di più paga di più. Logistica e attrezzatura sono una quota fissa uguale per ogni adulto presente: nessuno paga più di una quota. Le cifre sono arrotondate a 10 centesimi, così non servono monetine da 1, 2 o 5 cent.' },
@@ -3022,14 +3022,11 @@ function App() {
                           <div className="text-sm font-bold text-[#2D392C] leading-snug break-words">{it.name}</div>
                           {it.qty && <div className="text-[10px] text-gray-500">Quantità: {it.qty}</div>}
                         </div>
-                        {/* Foto scontrino della singola voce */}
-                        {receipts[it.id] ? (
+                        {/* Lo scontrino si allega al momento dell'acquisto,
+                            nella maschera di "Segna come acquistata": è lì che
+                            si ha in mano, non mentre si scrive la lista. */}
+                        {receipts[it.id] && (
                           <button onClick={() => setViewReceipt(receipts[it.id])} aria-label="Vedi scontrino" className="shrink-0 px-2 py-1.5 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white leading-none">📷</button>
-                        ) : (
-                          <label title="Scontrino: scatta una foto o scegli dalla galleria" aria-label="Allega scontrino" className="shrink-0 cursor-pointer px-2 py-1.5 rounded border-2 border-[#8F9E8B]/50 bg-white leading-none hover:bg-[#E2EAE4]">
-                            📷
-                            <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, it.id)} className="hidden" />
-                          </label>
                         )}
                         <button onClick={() => removeToBuy(it.id)} aria-label="Rimuovi" className="shrink-0 text-red-700 font-bold px-1.5 hover:text-red-900">&times;</button>
                       </div>
@@ -3043,7 +3040,7 @@ function App() {
                   ))}
                 </ul>
               )}
-              <p className="text-[9px] text-gray-400 italic">Con 📷 puoi scattare lo scontrino o prenderlo dalla galleria. Quando una voce viene acquistata passa in "Acquistato", con prezzo e acquirente.</p>
+              <p className="text-[9px] text-gray-400 italic">Quando una voce viene acquistata passa in "Acquistato": lì si mettono prezzo, acquirente e la foto dello scontrino.</p>
             </div>
             )}
 
@@ -3683,9 +3680,35 @@ function App() {
       {buying && (
         <div onClick={() => setBuying(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 shadow-2xl">
-            <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">
-              Acquistata: {buying.name}{buying.qty ? ` (${buying.qty})` : ''}
-            </h3>
+            <div className="flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2">
+              <h3 className="font-rustic text-lg text-[#2D392C] min-w-0 break-words">
+                Acquistata: {buying.name}{buying.qty ? ` (${buying.qty})` : ''}
+              </h3>
+              {/* Foto dello scontrino: si allega qui, con lo scontrino in mano */}
+              {receipts[buying.id] ? (
+                <button
+                  onClick={() => setViewReceipt(receipts[buying.id])}
+                  aria-label="Vedi scontrino"
+                  className="shrink-0 px-3 py-2 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-lg leading-none"
+                >
+                  📷
+                </button>
+              ) : (
+                <label
+                  title="Scontrino: scatta una foto o scegli dalla galleria"
+                  aria-label="Allega scontrino"
+                  className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]"
+                >
+                  📷
+                  <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, buying.id)} className="hidden" />
+                </label>
+              )}
+            </div>
+            <p className="text-[10px] text-gray-500 -mt-1">
+              {receipts[buying.id]
+                ? 'Scontrino allegato: tocca 📷 per rivederlo.'
+                : 'Tocca 📷 per allegare lo scontrino: puoi scattarlo o prenderlo dalla galleria.'}
+            </p>
             <div>
               <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Prezzo (€)</label>
               <input

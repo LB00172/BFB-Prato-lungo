@@ -2652,7 +2652,7 @@ function App() {
     k: 'lista',
     icon: '🧾',
     title: 'Lista della Spesa',
-    body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; ogni voce ha l\'icona 📷 per lo scontrino (foto o galleria) e il tasto "Segna come acquistata", che chiede prezzo, acquirente e tipologia e la sposta in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.'
+    body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; il tasto "Segna come acquistata" apre una maschera che chiede prezzo, acquirente, tipologia e la foto dello scontrino, e sposta la voce in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.'
   }, {
     k: 'attrezzatura',
     icon: '🪛',
@@ -3427,20 +3427,11 @@ function App() {
     className: "text-sm font-bold text-[#2D392C] leading-snug break-words"
   }, it.name), it.qty && /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-gray-500"
-  }, "Quantit\xE0: ", it.qty)), receipts[it.id] ? /*#__PURE__*/React.createElement("button", {
+  }, "Quantit\xE0: ", it.qty)), receipts[it.id] && /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[it.id]),
     "aria-label": "Vedi scontrino",
     className: "shrink-0 px-2 py-1.5 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white leading-none"
-  }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
-    title: "Scontrino: scatta una foto o scegli dalla galleria",
-    "aria-label": "Allega scontrino",
-    className: "shrink-0 cursor-pointer px-2 py-1.5 rounded border-2 border-[#8F9E8B]/50 bg-white leading-none hover:bg-[#E2EAE4]"
-  }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
-    type: "file",
-    accept: "image/*",
-    onChange: e => attachReceiptTo(e, it.id),
-    className: "hidden"
-  })), /*#__PURE__*/React.createElement("button", {
+  }, "\uD83D\uDCF7"), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeToBuy(it.id),
     "aria-label": "Rimuovi",
     className: "shrink-0 text-red-700 font-bold px-1.5 hover:text-red-900"
@@ -3457,7 +3448,7 @@ function App() {
     className: "mt-2 w-full py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
   }, "Segna come acquistata")))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic"
-  }, "Con \uD83D\uDCF7 puoi scattare lo scontrino o prenderlo dalla galleria. Quando una voce viene acquistata passa in \"Acquistato\", con prezzo e acquirente.")), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, "Quando una voce viene acquistata passa in \"Acquistato\": l\xEC si mettono prezzo, acquirente e la foto dello scontrino.")), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
@@ -4046,9 +4037,26 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     onClick: e => e.stopPropagation(),
     className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-3 shadow-2xl"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
-  }, "Acquistata: ", buying.name, buying.qty ? ` (${buying.qty})` : ''), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "font-rustic text-lg text-[#2D392C] min-w-0 break-words"
+  }, "Acquistata: ", buying.name, buying.qty ? ` (${buying.qty})` : ''), receipts[buying.id] ? /*#__PURE__*/React.createElement("button", {
+    onClick: () => setViewReceipt(receipts[buying.id]),
+    "aria-label": "Vedi scontrino",
+    className: "shrink-0 px-3 py-2 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-lg leading-none"
+  }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
+    title: "Scontrino: scatta una foto o scegli dalla galleria",
+    "aria-label": "Allega scontrino",
+    className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]"
+  }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: "image/*",
+    onChange: e => attachReceiptTo(e, buying.id),
+    className: "hidden"
+  }))), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 -mt-1"
+  }, receipts[buying.id] ? 'Scontrino allegato: tocca 📷 per rivederlo.' : 'Tocca 📷 per allegare lo scontrino: puoi scattarlo o prenderlo dalla galleria.'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
   }, "Prezzo (\u20AC)"), /*#__PURE__*/React.createElement("input", {
     type: "number",
