@@ -907,6 +907,12 @@ function App() {
   // La maschera di inserimento manuale è chiusa: da aprire quando serve, così
   // la cronologia degli acquisti resta subito sotto le due linguette.
   const [manualOpen, setManualOpen] = useState(false);
+  // Voce in correzione (spesa o attrezzatura). Al campo si registra in fretta:
+  // un prezzo sbagliato dev'essere correggibile senza cancellare e rifare,
+  // che porterebbe via anche la foto dello scontrino.
+  const [editing, setEditing] = useState(null);
+  // Ricerca nella cronologia: con un centinaio di voci serve per ritrovarle.
+  const [purchaseQuery, setPurchaseQuery] = useState('');
   const [listaSection, setListaSection] = useState('daacquistare'); // sotto-sezione Lista della Spesa
 
   // Campi chiusi e archiviati: restano consultabili e scaricabili, ma non
@@ -1452,6 +1458,35 @@ function App() {
   // ---------- Conto separato ----------
   const toggleSepDay = (dateStr) => {
     setSepDays((prev) => (prev.includes(dateStr) ? prev.filter((d) => d !== dateStr) : [...prev, dateStr].sort()));
+  };
+
+  // ---------- Correzione di una voce già registrata ----------
+  const openEditPurchase = (p) => setEditing({
+    kind: 'purchase', id: p.id, name: p.name, price: String(posNum(p.price)),
+    buyer: p.buyer || '', type: p.type || 'alimentare', account: p.account === 'sep' ? 'sep' : 'comune',
+  });
+  const openEditEquip = (e) => setEditing({
+    kind: 'equip', id: e.id, name: e.text, price: String(posNum(e.price)), buyer: e.buyer || '',
+  });
+
+  const saveEdit = () => {
+    if (!editing) return;
+    const name = (editing.name || '').trim();
+    const price = posNum(editing.price);
+    if (!name) { window.alert('Il nome non può restare vuoto.'); return; }
+    if (editing.kind === 'purchase') {
+      if (price <= 0) { window.alert('Inserisci un prezzo maggiore di zero.'); return; }
+      setPurchases((prev) => prev.map((p) => (p.id !== editing.id ? p : {
+        ...p, name, price, type: editing.type, buyer: (editing.buyer || '').trim(),
+        // il conto vale solo per cibo e bevande: la logistica è sempre comune
+        ...(editing.account === 'sep' && editing.type !== 'logistica' ? { account: 'sep' } : { account: undefined }),
+      })));
+    } else {
+      setEquipment((prev) => prev.map((e) => (e.id !== editing.id ? e : {
+        ...e, text: name, price, buyer: (editing.buyer || '').trim(),
+      })));
+    }
+    setEditing(null);
   };
 
   const removePurchase = (id) => {
@@ -2079,6 +2114,43 @@ function App() {
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
   };
 
+  // ---------- Pronto per il campo ----------
+  // A Prato Lungo non c'è linea: chi apre l'app per la prima volta lassù non
+  // ha né l'app in cache né i dati. Questi tre controlli dicono, PRIMA di
+  // partire, se il telefono è a posto.
+  const [readiness, setReadiness] = useState({ sw: false, cache: false });
+  useEffect(() => {
+    let vivo = true;
+    const controlla = async () => {
+      const sw = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+      let cache = false;
+      try {
+        if (window.caches) {
+          const keys = await window.caches.keys();
+          cache = keys.some((k) => k.indexOf('brigata-bandone-') === 0);
+        }
+      } catch (e) { /* niente cache: resta false */ }
+      if (vivo) setReadiness({ sw, cache });
+    };
+    controlla();
+    const id = setInterval(controlla, 5000);
+    return () => { vivo = false; clearInterval(id); };
+  }, []);
+
+  const readyChecks = [
+    { ok: readiness.sw && readiness.cache, titolo: 'App scaricata sul telefono',
+      no: 'Resta su questa pagina qualche secondo con la linea attiva, poi chiudi e riapri l\'app.' },
+    { ok: members.length > 0, titolo: 'Dati del campo ricevuti',
+      no: 'Apri l\'app con la linea: membri, spese e liste arrivano da soli.' },
+    // Si segnala SOLO un ripiego accertato: 'anon' è anche il valore di
+    // partenza, prima ancora di provare a collegarsi, e farebbe lampeggiare
+    // un allarme falso a ogni avvio.
+    { ok: !(LOCK && LOCK.dbEmail && (cloud.authMode === 'anon-nopass' || cloud.authMode === 'anon-fallback')),
+      titolo: 'Accesso al database a posto',
+      no: 'Serve rientrare con la password del campo: l\'app te la chiede da sola quando c\'è linea.' },
+  ];
+  const readyOk = readyChecks.every((c) => c.ok);
+
   // ---------- Impostazioni: dati locali ----------
   // Versione installata, letta dal nome della cache del service worker.
   const [swVersion, setSwVersion] = useState('');
@@ -2226,6 +2298,8 @@ function App() {
     { k: 'chiusura', icon: '🏁', title: 'Chiusura e Archivio', body: 'A conti fatti, in Spese Totali → Dati usa "Chiudi il campo": salva tutto (un file sul telefono e una copia nel cloud), lo mette in Archivio e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini su tutti i dispositivi. L\'app resta pronta per il campo dell\'anno dopo. In Archivio rivedi il resoconto di ogni campo chiuso e puoi riscaricarne i dati; il file scaricato alla chiusura è l\'unico che contiene anche le foto degli scontrini, quindi conservalo.' },
     { k: 'gioco', icon: '🎮', title: 'Aiuta Bandy', body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si va in città, la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).' },
     { k: 'impostazioni', icon: '⚙️', title: 'Impostazioni', body: 'Aspetto: tema chiaro, scuro o automatico (segue il telefono) — comodo la sera in tenda. Blocco con password: puoi chiedere la password a ogni apertura e bloccare l\'app subito con "Blocca ora". Dati su questo telefono: backup immediato e, se presti o cambi telefono, "Cancella i dati da questo telefono" — il cloud non viene toccato e con la linea i dati tornano da soli. In fondo trovi la versione installata.' },
+    { k: 'pronto', icon: '🎒', title: 'Pronto per il campo', body: 'In Impostazioni, in cima, ci sono tre spie: app scaricata sul telefono, dati del campo ricevuti, accesso al database a posto. Devono essere tutte verdi PRIMA di partire, perché a Prato Lungo non c\'è linea e lassù non si sistemano. Finché qualcosa manca, in Calendario compare un avviso che porta lì. Sistemarlo è sempre la stessa cosa: apri l\'app con la linea attiva e aspetta qualche secondo.' },
+    { k: 'correggi', icon: '✏️', title: 'Correggere una spesa', body: 'Sbagliato un prezzo o l\'acquirente? Nella cronologia degli acquisti, e nell\'elenco dell\'attrezzatura, ogni riga ha una matita: apre la voce e permette di correggere nome, acquirente, prezzo, tipologia e conto, tenendo la foto dello scontrino attaccata. Non serve cancellare e rifare, che invece porterebbe via anche la foto. Se le spese sono tante, il campo di ricerca sopra la cronologia le filtra per nome, acquirente o tipologia e mostra il totale di quelle trovate.' },
     { k: 'installa', icon: '📲', title: 'Installa l\'app', body: 'Conviene installarla, così si apre a schermo intero e funziona anche senza rete. Su iPhone: Condividi (il quadrato con la freccia) e poi "Aggiungi alla schermata Home". Su Android: menu del browser e "Installa app". Quando usciamo un aggiornamento, l\'app si aggiorna da sola: se non vedi una novità, chiudila e riaprila.' },
   ];
 
@@ -2317,6 +2391,18 @@ function App() {
         {/* ---------- CALENDARIO ---------- */}
         {activeTab === 'calendario' && (
           <div className="space-y-4">
+            {!readyOk && (
+              <button
+                onClick={() => goTo('impostazioni')}
+                className="w-full bg-[#D97706]/10 border border-[#D97706]/40 rounded-lg p-3 text-left flex items-start gap-2 hover:bg-[#D97706]/15"
+              >
+                <span className="text-base leading-none mt-0.5">⚠️</span>
+                <span className="text-[11px] text-[#5C4A3C] leading-snug">
+                  <span className="font-bold">Questo telefono non è ancora pronto per il campo.</span>{' '}
+                  Al campo non c'è linea: tocca qui per vedere cosa manca, finché sei collegato.
+                </span>
+              </button>
+            )}
             {renderWeekStrip()}
 
             {/* Giorni del conto separato: le presenze di questi giorni fanno
@@ -3234,11 +3320,47 @@ function App() {
                 )}
               </div>
 
+              {/* Ricerca: con un centinaio di voci ritrovarne una scorrendo
+                  è impraticabile. Filtra su nome, acquirente e tipologia. */}
+              {purchases.length > 4 && (
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={purchaseQuery}
+                    onChange={(e) => setPurchaseQuery(e.target.value)}
+                    placeholder="Cerca fra le spese…"
+                    className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+                  />
+                  {purchaseQuery && (
+                    <button onClick={() => setPurchaseQuery('')} aria-label="Azzera la ricerca" className="shrink-0 px-3 text-gray-400 font-bold hover:text-gray-600">&times;</button>
+                  )}
+                </div>
+              )}
+
               {purchases.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">Nessun acquisto registrato. Compila il form qui sopra e premi Salva.</p>
-              ) : (
+              ) : (() => {
+                const q = purchaseQuery.trim().toLowerCase();
+                const visibili = purchases.slice().reverse().filter((p) => !q ||
+                  (p.name || '').toLowerCase().includes(q) ||
+                  (p.buyer || '').toLowerCase().includes(q) ||
+                  (PURCHASE_TYPES[p.type] || '').toLowerCase().includes(q));
+                const sommaVisibili = visibili.reduce((s, p) => s + posNum(p.price), 0);
+                return (
+                <>
+                {q && (
+                  <div className="flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20 mb-2">
+                    <span className="text-[10px] uppercase font-bold text-gray-500">
+                      {visibili.length} {visibili.length === 1 ? 'voce trovata' : 'voci trovate'} su {purchases.length}
+                    </span>
+                    <span className="font-rustic font-bold text-[#2D392C] text-sm">{money(sommaVisibili)} €</span>
+                  </div>
+                )}
+                {visibili.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">Nessuna spesa corrisponde a "{purchaseQuery}".</p>
+                ) : (
                 <ul className="space-y-2">
-                  {purchases.slice().reverse().map((p) => (
+                  {visibili.map((p) => (
                     // Due livelli: sopra il nome del prodotto, che ha tutta la
                     // riga per sé (prima veniva tagliato dalle etichette e dal
                     // prezzo che gli stavano accanto); sotto le informazioni.
@@ -3267,12 +3389,16 @@ function App() {
                             <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, p.id)} className="hidden" />
                           </label>
                         )}
+                        <button onClick={() => openEditPurchase(p)} aria-label="Correggi" title="Correggi questa spesa" className="shrink-0 px-1.5 text-[#8F9E8B] hover:text-[#2D392C] text-sm leading-none">✏️</button>
                         <button onClick={() => removePurchase(p.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0">&times;</button>
                       </div>
                     </li>
                   ))}
                 </ul>
-              )}
+                )}
+                </>
+                );
+              })()}
               <p className="text-[9px] text-gray-400 italic mt-2">Manca uno scontrino? Tocca 📷 sulla voce: puoi scattarlo o scegliere una foto dalla galleria, anche dopo. Le foto si sincronizzano tra i dispositivi del campo e sono incluse nel backup.</p>
             </div>
             </>)}
@@ -3350,6 +3476,7 @@ function App() {
                           <input type="file" accept="image/*" onChange={(ev) => attachReceiptTo(ev, e.id)} className="hidden" />
                         </label>
                       )}
+                      <button onClick={() => openEditEquip(e)} aria-label="Correggi" title="Correggi questa voce" className="shrink-0 px-1 text-[#8F9E8B] hover:text-[#2D392C] text-sm leading-none">✏️</button>
                       <button onClick={() => removeEquip(e.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0">&times;</button>
                     </li>
                   ))}
@@ -3613,6 +3740,34 @@ function App() {
         {/* ---------- IMPOSTAZIONI ---------- */}
         {activeTab === 'impostazioni' && (
           <div className="space-y-4">
+            {/* Pronto per il campo */}
+            <div className={`p-4 rounded-lg border-2 shadow-sm space-y-3 ${readyOk ? 'bg-white border-[#2D392C]/20' : 'bg-white border-[#D97706]/50'}`}>
+              <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
+                <h3 className="font-rustic text-lg text-[#2D392C]">Pronto per il campo</h3>
+                <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${readyOk ? 'bg-[#2D392C] text-white' : 'bg-[#D97706] text-white'}`}>
+                  {readyOk ? 'Sì' : 'Non ancora'}
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-500 leading-snug">
+                A Prato Lungo non c'è linea. Controlla queste tre cose <span className="font-bold">prima di partire</span>:
+                lassù non si sistemano.
+              </p>
+              <ul className="space-y-2">
+                {readyChecks.map((c) => (
+                  <li key={c.titolo} className={`flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
+                    <span className="text-base leading-none shrink-0">{c.ok ? '✅' : '⚠️'}</span>
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-bold text-[#2D392C]">{c.titolo}</div>
+                      {!c.ok && <div className="text-[10px] text-[#5C4A3C] leading-snug mt-0.5">{c.no}</div>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {readyOk && (
+                <p className="text-[9px] text-gray-400 italic">Questo telefono funziona anche senza linea. Ricontrolla il giorno della partenza.</p>
+              )}
+            </div>
+
             {/* Aspetto */}
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Aspetto</h3>
@@ -3823,6 +3978,86 @@ function App() {
             <div className="flex gap-2 pt-1">
               <button onClick={() => setBuying(null)} className="flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase">Annulla</button>
               <button onClick={confirmBuy} className="flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Conferma</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Correzione di una voce già registrata */}
+      {editing && (
+        <div onClick={() => setEditing(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2">
+              <h3 className="font-rustic text-lg text-[#2D392C]">
+                {editing.kind === 'purchase' ? 'Correggi la spesa' : 'Correggi la voce'}
+              </h3>
+              {/* Anche in correzione si può mettere o rivedere lo scontrino */}
+              {receipts[editing.id] ? (
+                <button onClick={() => setViewReceipt(receipts[editing.id])} aria-label="Vedi scontrino" className="shrink-0 px-3 py-2 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-lg leading-none">📷</button>
+              ) : (
+                <label title="Scontrino: scatta una foto o scegli dalla galleria" aria-label="Allega scontrino" className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]">
+                  📷
+                  <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, editing.id)} className="hidden" />
+                </label>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Nome</label>
+              <input
+                type="text"
+                value={editing.name}
+                onChange={(e) => setEditing((x) => ({ ...x, name: e.target.value }))}
+                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Acquirente</label>
+              {renderBuyerSelect(editing.buyer, (v) => setEditing((x) => ({ ...x, buyer: v })))}
+            </div>
+
+            <div className={editing.kind === 'purchase' ? 'grid grid-cols-2 gap-3' : ''}>
+              <div>
+                <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Prezzo (€)</label>
+                <input
+                  type="number" min="0" step="0.01" inputMode="decimal"
+                  value={editing.price}
+                  onChange={(e) => setEditing((x) => ({ ...x, price: e.target.value }))}
+                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
+                />
+              </div>
+              {editing.kind === 'purchase' && (
+                <div>
+                  <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Tipologia</label>
+                  <select
+                    value={editing.type}
+                    onChange={(e) => setEditing((x) => ({ ...x, type: e.target.value }))}
+                    className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
+                  >
+                    {Object.keys(PURCHASE_TYPES).map((k) => (<option key={k} value={k}>{PURCHASE_TYPES[k]}</option>))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {editing.kind === 'purchase' && editing.type !== 'logistica' && (
+              <div>
+                <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Conto</label>
+                <select
+                  value={editing.account}
+                  onChange={(e) => setEditing((x) => ({ ...x, account: e.target.value }))}
+                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
+                >
+                  <option value="comune">Conto comune</option>
+                  <option value="sep">Conto separato</option>
+                </select>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setEditing(null)} className="flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase">Annulla</button>
+              <button onClick={saveEdit} className="flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Salva</button>
             </div>
           </div>
         </div>

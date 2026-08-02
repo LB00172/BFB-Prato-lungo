@@ -17,11 +17,11 @@ preparazione** e **offline al campo**, dove non c'è linea.
 | **Menù** | Cosa si mangia, giorno per giorno, su foglio a righe; condivide il giorno scelto con il Calendario |
 | **Membri** | Elenco partecipanti; i bambini mangiano gratis |
 | **Presenze** | Chi c'è a pranzo/cena, con "Tutti a pranzo/cena" e "Copia da ieri" |
-| **Lista della Spesa** | Ogni acquisto: nome, acquirente, prezzo, tipologia, foto scontrino |
+| **Lista della Spesa** | Ogni acquisto: nome, acquirente, prezzo, tipologia, foto scontrino; ricerca e correzione delle voci registrate |
 | **Aggiunta Attrezzatura** | Attrezzatura da comprare con prezzo; se spuntata entra nelle spese |
 | **Spese Totali** | Totali · Quote · Saldi (chi paga chi + condividi resoconto) · Dati (backup) |
 | **Dotazioni personali** | Dotazione base fissa + aggiunte per il campo |
-| **Impostazioni** | Tema chiaro/scuro/automatico, blocco con password, dati locali, versione |
+| **Impostazioni** | Pronto per il campo, tema chiaro/scuro/automatico, blocco con password, dati locali, versione |
 | **Archivio** | Campi chiusi: resoconto, dati scaricabili, eliminazione |
 | **Come funziona** | Guida interna all'app |
 

@@ -1073,6 +1073,12 @@ function App() {
   // La maschera di inserimento manuale è chiusa: da aprire quando serve, così
   // la cronologia degli acquisti resta subito sotto le due linguette.
   const [manualOpen, setManualOpen] = useState(false);
+  // Voce in correzione (spesa o attrezzatura). Al campo si registra in fretta:
+  // un prezzo sbagliato dev'essere correggibile senza cancellare e rifare,
+  // che porterebbe via anche la foto dello scontrino.
+  const [editing, setEditing] = useState(null);
+  // Ricerca nella cronologia: con un centinaio di voci serve per ritrovarle.
+  const [purchaseQuery, setPurchaseQuery] = useState('');
   const [listaSection, setListaSection] = useState('daacquistare'); // sotto-sezione Lista della Spesa
 
   // Campi chiusi e archiviati: restano consultabili e scaricabili, ma non
@@ -1785,6 +1791,60 @@ function App() {
   // ---------- Conto separato ----------
   const toggleSepDay = dateStr => {
     setSepDays(prev => prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr].sort());
+  };
+
+  // ---------- Correzione di una voce già registrata ----------
+  const openEditPurchase = p => setEditing({
+    kind: 'purchase',
+    id: p.id,
+    name: p.name,
+    price: String(posNum(p.price)),
+    buyer: p.buyer || '',
+    type: p.type || 'alimentare',
+    account: p.account === 'sep' ? 'sep' : 'comune'
+  });
+  const openEditEquip = e => setEditing({
+    kind: 'equip',
+    id: e.id,
+    name: e.text,
+    price: String(posNum(e.price)),
+    buyer: e.buyer || ''
+  });
+  const saveEdit = () => {
+    if (!editing) return;
+    const name = (editing.name || '').trim();
+    const price = posNum(editing.price);
+    if (!name) {
+      window.alert('Il nome non può restare vuoto.');
+      return;
+    }
+    if (editing.kind === 'purchase') {
+      if (price <= 0) {
+        window.alert('Inserisci un prezzo maggiore di zero.');
+        return;
+      }
+      setPurchases(prev => prev.map(p => p.id !== editing.id ? p : {
+        ...p,
+        name,
+        price,
+        type: editing.type,
+        buyer: (editing.buyer || '').trim(),
+        // il conto vale solo per cibo e bevande: la logistica è sempre comune
+        ...(editing.account === 'sep' && editing.type !== 'logistica' ? {
+          account: 'sep'
+        } : {
+          account: undefined
+        })
+      }));
+    } else {
+      setEquipment(prev => prev.map(e => e.id !== editing.id ? e : {
+        ...e,
+        text: name,
+        price,
+        buyer: (editing.buyer || '').trim()
+      }));
+    }
+    setEditing(null);
   };
   const removePurchase = id => {
     const p = purchases.find(x => x.id === id);
@@ -2522,6 +2582,56 @@ function App() {
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
   };
 
+  // ---------- Pronto per il campo ----------
+  // A Prato Lungo non c'è linea: chi apre l'app per la prima volta lassù non
+  // ha né l'app in cache né i dati. Questi tre controlli dicono, PRIMA di
+  // partire, se il telefono è a posto.
+  const [readiness, setReadiness] = useState({
+    sw: false,
+    cache: false
+  });
+  useEffect(() => {
+    let vivo = true;
+    const controlla = async () => {
+      const sw = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+      let cache = false;
+      try {
+        if (window.caches) {
+          const keys = await window.caches.keys();
+          cache = keys.some(k => k.indexOf('brigata-bandone-') === 0);
+        }
+      } catch (e) {/* niente cache: resta false */}
+      if (vivo) setReadiness({
+        sw,
+        cache
+      });
+    };
+    controlla();
+    const id = setInterval(controlla, 5000);
+    return () => {
+      vivo = false;
+      clearInterval(id);
+    };
+  }, []);
+  const readyChecks = [{
+    ok: readiness.sw && readiness.cache,
+    titolo: 'App scaricata sul telefono',
+    no: 'Resta su questa pagina qualche secondo con la linea attiva, poi chiudi e riapri l\'app.'
+  }, {
+    ok: members.length > 0,
+    titolo: 'Dati del campo ricevuti',
+    no: 'Apri l\'app con la linea: membri, spese e liste arrivano da soli.'
+  },
+  // Si segnala SOLO un ripiego accertato: 'anon' è anche il valore di
+  // partenza, prima ancora di provare a collegarsi, e farebbe lampeggiare
+  // un allarme falso a ogni avvio.
+  {
+    ok: !(LOCK && LOCK.dbEmail && (cloud.authMode === 'anon-nopass' || cloud.authMode === 'anon-fallback')),
+    titolo: 'Accesso al database a posto',
+    no: 'Serve rientrare con la password del campo: l\'app te la chiede da sola quando c\'è linea.'
+  }];
+  const readyOk = readyChecks.every(c => c.ok);
+
   // ---------- Impostazioni: dati locali ----------
   // Versione installata, letta dal nome della cache del service worker.
   const [swVersion, setSwVersion] = useState('');
@@ -2743,6 +2853,16 @@ function App() {
     title: 'Impostazioni',
     body: 'Aspetto: tema chiaro, scuro o automatico (segue il telefono) — comodo la sera in tenda. Blocco con password: puoi chiedere la password a ogni apertura e bloccare l\'app subito con "Blocca ora". Dati su questo telefono: backup immediato e, se presti o cambi telefono, "Cancella i dati da questo telefono" — il cloud non viene toccato e con la linea i dati tornano da soli. In fondo trovi la versione installata.'
   }, {
+    k: 'pronto',
+    icon: '🎒',
+    title: 'Pronto per il campo',
+    body: 'In Impostazioni, in cima, ci sono tre spie: app scaricata sul telefono, dati del campo ricevuti, accesso al database a posto. Devono essere tutte verdi PRIMA di partire, perché a Prato Lungo non c\'è linea e lassù non si sistemano. Finché qualcosa manca, in Calendario compare un avviso che porta lì. Sistemarlo è sempre la stessa cosa: apri l\'app con la linea attiva e aspetta qualche secondo.'
+  }, {
+    k: 'correggi',
+    icon: '✏️',
+    title: 'Correggere una spesa',
+    body: 'Sbagliato un prezzo o l\'acquirente? Nella cronologia degli acquisti, e nell\'elenco dell\'attrezzatura, ogni riga ha una matita: apre la voce e permette di correggere nome, acquirente, prezzo, tipologia e conto, tenendo la foto dello scontrino attaccata. Non serve cancellare e rifare, che invece porterebbe via anche la foto. Se le spese sono tante, il campo di ricerca sopra la cronologia le filtra per nome, acquirente o tipologia e mostra il totale di quelle trovate.'
+  }, {
     k: 'installa',
     icon: '📲',
     title: 'Installa l\'app',
@@ -2824,7 +2944,16 @@ function App() {
     className: "flex-grow p-4"
   }, activeTab === 'calendario' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
-  }, renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
+  }, !readyOk && /*#__PURE__*/React.createElement("button", {
+    onClick: () => goTo('impostazioni'),
+    className: "w-full bg-[#D97706]/10 border border-[#D97706]/40 rounded-lg p-3 text-left flex items-start gap-2 hover:bg-[#D97706]/15"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-base leading-none mt-0.5"
+  }, "\u26A0\uFE0F"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-[#5C4A3C] leading-snug"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Questo telefono non \xE8 ancora pronto per il campo."), ' ', "Al campo non c'\xE8 linea: tocca qui per vedere cosa manca, finch\xE9 sei collegato.")), renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-2"
@@ -3594,64 +3723,94 @@ function App() {
     className: "font-rustic text-lg text-[#2D392C]"
   }, "Cronologia acquisti"), purchases.length > 0 && /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C]"
-  }, money(totals.overallTotal), " \u20AC")), purchases.length === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, money(totals.overallTotal), " \u20AC")), purchases.length > 4 && /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 mb-3"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: purchaseQuery,
+    onChange: e => setPurchaseQuery(e.target.value),
+    placeholder: "Cerca fra le spese\u2026",
+    className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  }), purchaseQuery && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setPurchaseQuery(''),
+    "aria-label": "Azzera la ricerca",
+    className: "shrink-0 px-3 text-gray-400 font-bold hover:text-gray-600"
+  }, "\xD7")), purchases.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
-  }, "Nessun acquisto registrato. Compila il form qui sopra e premi Salva.") : /*#__PURE__*/React.createElement("ul", {
-    className: "space-y-2"
-  }, purchases.slice().reverse().map(p =>
-  /*#__PURE__*/
-  // Due livelli: sopra il nome del prodotto, che ha tutta la
-  // riga per sé (prima veniva tagliato dalle etichette e dal
-  // prezzo che gli stavano accanto); sotto le informazioni.
-  React.createElement("li", {
-    key: p.id,
-    className: "bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20 space-y-1.5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-start justify-between gap-2"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-sm font-bold text-[#2D392C] leading-snug break-words min-w-0"
-  }, p.name), /*#__PURE__*/React.createElement("span", {
-    className: "font-rustic font-bold text-[#2D392C] shrink-0 whitespace-nowrap"
-  }, money(posNum(p.price)), " \u20AC")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-wrap items-center gap-1 min-w-0 flex-grow"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B]"
-  }, PURCHASE_TYPES[p.type] || p.type), p.account === 'sep' && p.type !== 'logistica' && /*#__PURE__*/React.createElement("span", {
-    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
-  }, "Separato"), p.fromList && /*#__PURE__*/React.createElement("span", {
-    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
-  }, "acquistata"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] text-gray-400 basis-full"
-  }, p.buyer ? /*#__PURE__*/React.createElement("span", {
-    className: "text-[#5C4A3C] font-bold"
-  }, p.buyer) : /*#__PURE__*/React.createElement("span", {
-    className: "italic"
-  }, "acquirente non indicato"), p.at && ` · ${new Date(p.at).toLocaleDateString('it-IT', {
-    day: 'numeric',
-    month: 'short'
-  })} ${new Date(p.at).toLocaleTimeString('it-IT', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })}`)), receipts[p.id] ? /*#__PURE__*/React.createElement("button", {
-    onClick: () => setViewReceipt(receipts[p.id]),
-    "aria-label": "Vedi scontrino",
-    className: "shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none"
-  }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
-    title: "Scontrino: scatta una foto o scegli dalla galleria",
-    "aria-label": "Allega scontrino",
-    className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]"
-  }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
-    type: "file",
-    accept: "image/*",
-    onChange: e => attachReceiptTo(e, p.id),
-    className: "hidden"
-  })), /*#__PURE__*/React.createElement("button", {
-    onClick: () => removePurchase(p.id),
-    "aria-label": "Rimuovi",
-    className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
-  }, "\xD7"))))), /*#__PURE__*/React.createElement("p", {
+  }, "Nessun acquisto registrato. Compila il form qui sopra e premi Salva.") : (() => {
+    const q = purchaseQuery.trim().toLowerCase();
+    const visibili = purchases.slice().reverse().filter(p => !q || (p.name || '').toLowerCase().includes(q) || (p.buyer || '').toLowerCase().includes(q) || (PURCHASE_TYPES[p.type] || '').toLowerCase().includes(q));
+    const sommaVisibili = visibili.reduce((s, p) => s + posNum(p.price), 0);
+    return /*#__PURE__*/React.createElement(React.Fragment, null, q && /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20 mb-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] uppercase font-bold text-gray-500"
+    }, visibili.length, " ", visibili.length === 1 ? 'voce trovata' : 'voci trovate', " su ", purchases.length), /*#__PURE__*/React.createElement("span", {
+      className: "font-rustic font-bold text-[#2D392C] text-sm"
+    }, money(sommaVisibili), " \u20AC")), visibili.length === 0 ? /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-gray-400 italic"
+    }, "Nessuna spesa corrisponde a \"", purchaseQuery, "\".") : /*#__PURE__*/React.createElement("ul", {
+      className: "space-y-2"
+    }, visibili.map(p =>
+    /*#__PURE__*/
+    // Due livelli: sopra il nome del prodotto, che ha tutta la
+    // riga per sé (prima veniva tagliato dalle etichette e dal
+    // prezzo che gli stavano accanto); sotto le informazioni.
+    React.createElement("li", {
+      key: p.id,
+      className: "bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20 space-y-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-sm font-bold text-[#2D392C] leading-snug break-words min-w-0"
+    }, p.name), /*#__PURE__*/React.createElement("span", {
+      className: "font-rustic font-bold text-[#2D392C] shrink-0 whitespace-nowrap"
+    }, money(posNum(p.price)), " \u20AC")), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-wrap items-center gap-1 min-w-0 flex-grow"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B]"
+    }, PURCHASE_TYPES[p.type] || p.type), p.account === 'sep' && p.type !== 'logistica' && /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
+    }, "Separato"), p.fromList && /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
+    }, "acquistata"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] text-gray-400 basis-full"
+    }, p.buyer ? /*#__PURE__*/React.createElement("span", {
+      className: "text-[#5C4A3C] font-bold"
+    }, p.buyer) : /*#__PURE__*/React.createElement("span", {
+      className: "italic"
+    }, "acquirente non indicato"), p.at && ` · ${new Date(p.at).toLocaleDateString('it-IT', {
+      day: 'numeric',
+      month: 'short'
+    })} ${new Date(p.at).toLocaleTimeString('it-IT', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })}`)), receipts[p.id] ? /*#__PURE__*/React.createElement("button", {
+      onClick: () => setViewReceipt(receipts[p.id]),
+      "aria-label": "Vedi scontrino",
+      className: "shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none"
+    }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
+      title: "Scontrino: scatta una foto o scegli dalla galleria",
+      "aria-label": "Allega scontrino",
+      className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]"
+    }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
+      type: "file",
+      accept: "image/*",
+      onChange: e => attachReceiptTo(e, p.id),
+      className: "hidden"
+    })), /*#__PURE__*/React.createElement("button", {
+      onClick: () => openEditPurchase(p),
+      "aria-label": "Correggi",
+      title: "Correggi questa spesa",
+      className: "shrink-0 px-1.5 text-[#8F9E8B] hover:text-[#2D392C] text-sm leading-none"
+    }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => removePurchase(p.id),
+      "aria-label": "Rimuovi",
+      className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
+    }, "\xD7"))))));
+  })(), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
   }, "Manca uno scontrino? Tocca \uD83D\uDCF7 sulla voce: puoi scattarlo o scegliere una foto dalla galleria, anche dopo. Le foto si sincronizzano tra i dispositivi del campo e sono incluse nel backup.")))), activeTab === 'attrezzatura' && (() => {
     const equipBoughtTotal = equipment.reduce((s, e) => e.bought ? s + posNum(e.price) : s, 0);
@@ -3728,6 +3887,11 @@ function App() {
       onChange: ev => attachReceiptTo(ev, e.id),
       className: "hidden"
     })), /*#__PURE__*/React.createElement("button", {
+      onClick: () => openEditEquip(e),
+      "aria-label": "Correggi",
+      title: "Correggi questa voce",
+      className: "shrink-0 px-1 text-[#8F9E8B] hover:text-[#2D392C] text-sm leading-none"
+    }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => removeEquip(e.id),
       "aria-label": "Rimuovi",
       className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
@@ -3967,6 +4131,33 @@ function App() {
   }, "Condividi resoconto"), " lo mandi nel gruppo.")))), activeTab === 'impostazioni' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
+    className: `p-4 rounded-lg border-2 shadow-sm space-y-3 ${readyOk ? 'bg-white border-[#2D392C]/20' : 'bg-white border-[#D97706]/50'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg text-[#2D392C]"
+  }, "Pronto per il campo"), /*#__PURE__*/React.createElement("span", {
+    className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${readyOk ? 'bg-[#2D392C] text-white' : 'bg-[#D97706] text-white'}`
+  }, readyOk ? 'Sì' : 'Non ancora')), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug"
+  }, "A Prato Lungo non c'\xE8 linea. Controlla queste tre cose ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "prima di partire"), ": lass\xF9 non si sistemano."), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-2"
+  }, readyChecks.map(c => /*#__PURE__*/React.createElement("li", {
+    key: c.titolo,
+    className: `flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20' : 'bg-[#D97706]/10 border-[#D97706]/40'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-base leading-none shrink-0"
+  }, c.ok ? '✅' : '⚠️'), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-bold text-[#2D392C]"
+  }, c.titolo), !c.ok && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-[#5C4A3C] leading-snug mt-0.5"
+  }, c.no))))), readyOk && /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic"
+  }, "Questo telefono funziona anche senza linea. Ricontrolla il giorno della partenza.")), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
@@ -4150,7 +4341,93 @@ function App() {
   }, "Annulla"), /*#__PURE__*/React.createElement("button", {
     onClick: confirmBuy,
     className: "flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]"
-  }, "Conferma")))), snapList && /*#__PURE__*/React.createElement("div", {
+  }, "Conferma")))), editing && /*#__PURE__*/React.createElement("div", {
+    onClick: () => setEditing(null),
+    className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5"
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[85vh] overflow-y-auto shadow-2xl"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg text-[#2D392C]"
+  }, editing.kind === 'purchase' ? 'Correggi la spesa' : 'Correggi la voce'), receipts[editing.id] ? /*#__PURE__*/React.createElement("button", {
+    onClick: () => setViewReceipt(receipts[editing.id]),
+    "aria-label": "Vedi scontrino",
+    className: "shrink-0 px-3 py-2 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-lg leading-none"
+  }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
+    title: "Scontrino: scatta una foto o scegli dalla galleria",
+    "aria-label": "Allega scontrino",
+    className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]"
+  }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: "image/*",
+    onChange: e => attachReceiptTo(e, editing.id),
+    className: "hidden"
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Nome"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: editing.name,
+    onChange: e => setEditing(x => ({
+      ...x,
+      name: e.target.value
+    })),
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Acquirente"), renderBuyerSelect(editing.buyer, v => setEditing(x => ({
+    ...x,
+    buyer: v
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: editing.kind === 'purchase' ? 'grid grid-cols-2 gap-3' : ''
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Prezzo (\u20AC)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "0",
+    step: "0.01",
+    inputMode: "decimal",
+    value: editing.price,
+    onChange: e => setEditing(x => ({
+      ...x,
+      price: e.target.value
+    })),
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
+  })), editing.kind === 'purchase' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Tipologia"), /*#__PURE__*/React.createElement("select", {
+    value: editing.type,
+    onChange: e => setEditing(x => ({
+      ...x,
+      type: e.target.value
+    })),
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
+  }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
+    key: k,
+    value: k
+  }, PURCHASE_TYPES[k]))))), editing.kind === 'purchase' && editing.type !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  }, "Conto"), /*#__PURE__*/React.createElement("select", {
+    value: editing.account,
+    onChange: e => setEditing(x => ({
+      ...x,
+      account: e.target.value
+    })),
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "comune"
+  }, "Conto comune"), /*#__PURE__*/React.createElement("option", {
+    value: "sep"
+  }, "Conto separato"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 pt-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setEditing(null),
+    className: "flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase"
+  }, "Annulla"), /*#__PURE__*/React.createElement("button", {
+    onClick: saveEdit,
+    className: "flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]"
+  }, "Salva")))), snapList && /*#__PURE__*/React.createElement("div", {
     onClick: () => setSnapList(null),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
   }, /*#__PURE__*/React.createElement("div", {
