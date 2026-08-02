@@ -92,8 +92,8 @@ funziona come prima, quindi non c'è fretta e non si rompe niente.
 2. Authentication → Users → **Add user**: email `campo@brigatabandone.it`
    (la stessa scritta in `firebase-config.js` come `dbEmail`), password
    **quella del campo**. Nessuno la digiterà: la usa l'app.
-3. Verifica dai telefoni che la sincronizzazione funzioni ancora (in
-   Impostazioni → Blocco, e in Spese Totali → Dati).
+3. Verifica dal tuo telefono: Impostazioni → Blocco con password, la riga
+   *Database* deve passare a **protetto dalla password**.
 4. Solo allora stringi le Regole Firestore:
 
 ```
@@ -112,9 +112,13 @@ service cloud.firestore {
 
 Da quel momento senza password non si leggono i dati nemmeno interrogando
 Firestore direttamente. Costo: la **prima** apertura su ogni dispositivo
-richiede la linea; poi la sessione Firebase resta valida anche offline. Se un
-telefono perde quella sessione, Impostazioni lo segnala e basta "Blocca ora" e
-rientrare con la password.
+richiede la linea; poi la sessione Firebase resta valida anche offline.
+
+**Gli altri partecipanti non devono fare nulla.** Quando a un telefono serve la
+password per entrare nel database (tipico di chi era già sbloccato da prima),
+è l'app a chiederla da sola, con la solita schermata di blocco e una riga che
+spiega perché. Nessun menu da cercare, nessun account da creare: l'utente del
+database è uno solo, condiviso e invisibile.
 
 Altre accortezze utili, senza scrivere codice:
 

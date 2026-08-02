@@ -719,7 +719,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
 // ============================================================================
 //  SCHERMATA DI BLOCCO
 // ============================================================================
-function LockScreen({ onUnlock }) {
+function LockScreen({ onUnlock, reason }) {
   const [pwd, setPwd] = useState('');
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -782,6 +782,11 @@ function LockScreen({ onUnlock }) {
       <h2 className="font-rustic text-lg tracking-widest text-[#F0F4F1] text-center mb-6">{BRAND.splashLine2}</h2>
 
       <div className="w-full max-w-xs space-y-3">
+        {reason && (
+          <div className="bg-[#1F271E] border border-[#8F9E8B]/30 rounded p-3 mb-1">
+            <p className="text-[11px] text-[#F0F4F1] leading-snug">{reason}</p>
+          </div>
+        )}
         <label className="block text-[10px] uppercase tracking-widest text-[#8F9E8B] font-bold">Password del campo</label>
         <div className="flex gap-2">
           <input
@@ -827,6 +832,7 @@ function LockScreen({ onUnlock }) {
 
 function App() {
   const [locked, setLocked] = useState(() => !isUnlocked());
+  const [lockReason, setLockReason] = useState('');
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState('calendario');
   const [currentDate, setCurrentDate] = useState(() => parseDate(defaultDateStr()));
@@ -945,9 +951,10 @@ function App() {
       if (LOCK && LOCK.hash) { try { localStorage.setItem(UNLOCK_KEY, LOCK.hash); } catch (e) { /* ignora */ } }
     }
   };
-  const lockNow = () => {
+  const lockNow = (reason) => {
     forgetUnlock();
     sessionPassword = null;
+    setLockReason(typeof reason === 'string' ? reason : '');
     // Stacca anche la sincronizzazione: al rientro si riparte dalla password
     // appena digitata, che è quella che apre il database con l'utente del
     // campo. Senza questo si resterebbe agganciati con l'accesso di ripiego.
@@ -1236,6 +1243,21 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locked]);
+
+  // Se il database è protetto dall'utente condiviso ma questo telefono si è
+  // agganciato con l'accesso di ripiego (capita a chi era già sbloccato da
+  // prima), la password serve e l'app la chiede DA SOLA, una volta: nessuno
+  // deve sapere che esiste un utente, un menu o un pulsante da premere.
+  const dbAskedRef = useRef(false);
+  useEffect(() => {
+    const lock = window.APP_LOCK || {};
+    if (!lock.dbEmail || !lock.hash) return;
+    if (locked || dbAskedRef.current) return;
+    if (cloud.authMode !== 'anon-nopass') return;
+    dbAskedRef.current = true;
+    lockNow('Per sincronizzare con gli altri serve di nuovo la password del campo. È la stessa di sempre.');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloud.authMode, locked]);
 
   // Ogni modifica viene datata (anche offline: è proprio lì che serve, perché
   // al ritorno della linea si sappia cosa è più recente) e poi inviata.
@@ -2088,7 +2110,7 @@ function App() {
 
   // ---------- Render ----------
   // Il blocco viene prima di tutto: senza password non si vede nulla.
-  if (locked) return <LockScreen onUnlock={() => setLocked(false)} />;
+  if (locked) return <LockScreen reason={lockReason} onUnlock={() => { setLockReason(''); setLocked(false); }} />;
 
   if (showSplash) {
     return (
@@ -3572,9 +3594,9 @@ function App() {
                   {window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && (
                     <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
                       <p className="text-[11px] text-[#5C4A3C] leading-snug">
-                        La sincronizzazione sta usando l'accesso di ripiego: per rientrare nel
-                        database con l'utente del campo serve digitare di nuovo la password.
-                        Tocca <span className="font-bold">Blocca ora</span> e rientra.
+                        La sincronizzazione sta usando l'accesso di ripiego. L'app chiede la
+                        password da sola quando serve: se non è successo, tocca
+                        <span className="font-bold"> Blocca ora</span> e rientra.
                       </p>
                     </div>
                   )}
