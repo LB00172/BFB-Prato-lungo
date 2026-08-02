@@ -2610,10 +2610,10 @@ function App() {
   // Il menu raggruppa le aree per momento d'uso: prima quello che si tocca
   // ogni giorno, poi i soldi, poi le cose del gruppo, in fondo il resto.
   const MENU_GROUPS = [{
-    title: 'Il campo',
+    title: 'Pianificazione',
     items: ['calendario', 'menu', 'presenze']
   }, {
-    title: 'Cambusa e soldi',
+    title: 'Spese',
     items: ['lista', 'attrezzatura', 'spesa']
   }, {
     title: 'Il gruppo',
