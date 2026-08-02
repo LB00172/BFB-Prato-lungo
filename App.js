@@ -1070,6 +1070,9 @@ function App() {
   const [newBuyName, setNewBuyName] = useState('');
   const [newBuyQty, setNewBuyQty] = useState('');
   const [buying, setBuying] = useState(null); // voce in fase di registrazione acquisto
+  // La maschera di inserimento manuale è chiusa: da aprire quando serve, così
+  // la cronologia degli acquisti resta subito sotto le due linguette.
+  const [manualOpen, setManualOpen] = useState(false);
   const [listaSection, setListaSection] = useState('daacquistare'); // sotto-sezione Lista della Spesa
 
   // Campi chiusi e archiviati: restano consultabili e scaricabili, ma non
@@ -1774,6 +1777,7 @@ function App() {
     setPType('alimentare');
     setPBuyer('');
     setPReceipt(null);
+    setManualOpen(false); // si richiude: la spesa appena salvata si vede in cronologia
     // Il conto NON si azzera: chi sta registrando la spesa separata di solito
     // ne inserisce più di una di fila.
   };
@@ -3492,13 +3496,22 @@ function App() {
     className: "mt-2 w-full py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
   }, "Segna come acquistata")))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic"
-  }, "Quando una voce viene acquistata passa in \"Acquistato\": l\xEC si mettono prezzo, acquirente e la foto dello scontrino.")), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, "Quando una voce viene acquistata passa in \"Acquistato\": l\xEC si mettono prezzo, acquirente e la foto dello scontrino.")), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, !manualOpen ? /*#__PURE__*/React.createElement("button", {
+    onClick: () => setManualOpen(true),
+    className: "w-full bg-white p-3 rounded-lg border-2 border-dashed border-[#8F9E8B]/60 text-[#2D392C] hover:bg-[#E2EAE4] flex items-center justify-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-lg leading-none"
+  }, "\uFF0B"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold uppercase text-xs tracking-wide"
+  }, "Aggiungi un prodotto a mano")) : /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C]"
-  }, "Prodotto acquistato"), /*#__PURE__*/React.createElement("label", {
+  }, "Prodotto acquistato"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("label", {
     title: "Scontrino: scatta una foto o scegli dalla galleria",
     "aria-label": "Allega scontrino",
     className: `cursor-pointer px-3 py-2 rounded border-2 text-lg leading-none ${pReceipt ? 'bg-[#2D392C] border-[#2D392C]' : 'bg-white border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'}`
@@ -3507,7 +3520,11 @@ function App() {
     accept: "image/*",
     onChange: onReceiptFile,
     className: "hidden"
-  }))), /*#__PURE__*/React.createElement("p", {
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setManualOpen(false),
+    "aria-label": "Chiudi la maschera",
+    className: "px-2 py-1 text-gray-400 font-bold text-xl leading-none hover:text-gray-600"
+  }, "\xD7"))), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 -mt-1"
   }, "Per un prodotto che non era in \"Da acquistare\"."), pReceipt && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-2 rounded border border-[#8F9E8B]/30"
