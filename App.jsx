@@ -2147,11 +2147,28 @@ function App() {
     impostazioni: 'Impostazioni',
   };
 
+  // Icona per ogni area: nel menu aiuta a trovare la voce senza leggerle tutte.
+  const TAB_ICONS = {
+    calendario: '📅', menu: '🍝', presenze: '🍽️',
+    lista: '🧾', attrezzatura: '🪛', spesa: '💶',
+    membri: '👥', regole: '📜', dotazioni: '🎒',
+    gioco: '🎮', archivio: '🗄️', guida: '❓', impostazioni: '⚙️',
+  };
+
+  // Il menu raggruppa le aree per momento d'uso: prima quello che si tocca
+  // ogni giorno, poi i soldi, poi le cose del gruppo, in fondo il resto.
+  const MENU_GROUPS = [
+    { title: 'Il campo', items: ['calendario', 'menu', 'presenze'] },
+    { title: 'Cambusa e soldi', items: ['lista', 'attrezzatura', 'spesa'] },
+    { title: 'Il gruppo', items: ['membri', 'regole', 'dotazioni'] },
+    { title: 'Altro', items: ['gioco', 'archivio', 'guida', 'impostazioni'] },
+  ];
+
   const goTo = (tab) => { setActiveTab(tab); setMenuOpen(false); };
 
   // Guida: una "pill" per ogni area di lavoro.
   const GUIDE = [
-    { k: 'calendario', icon: '📅', title: 'Calendario', body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e uno spazio per le il collegamento al Menù del giorno. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.' },
+    { k: 'calendario', icon: '📅', title: 'Calendario', body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e il collegamento al Menù del giorno. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.' },
     { k: 'menu', icon: '🍝', title: 'Menù', body: 'Scheda a parte per scrivere cosa si mangia, giorno per giorno. In alto c\'è la stessa striscia dei giorni del Calendario: il giorno scelto è lo stesso nelle due schede, quindi puoi passare dall\'una all\'altra senza ricercarlo. Sotto vedi quanti pasti preparare a pranzo e a cena, e il foglio a righe dove scrivere una pietanza per riga. In fondo l\'elenco dei giorni del campo con la prima riga del menù già scritto: si vede a colpo d\'occhio cosa manca. Tutto si sincronizza: chi cucina lo trova già pronto.' },
     { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e il suggerimento dei nomi quando registri una spesa.' },
     { k: 'presenze', icon: '🍽️', title: 'Presenze', body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta usa "Tutti a pranzo" o "Tutti a cena" e poi togli i pochi assenti, oppure "Copia da ieri". In alto trovi il conteggio del giorno. Durante il campo l\'app si apre già sulla data di oggi.' },
@@ -2213,16 +2230,25 @@ function App() {
               <div className="text-[9px] uppercase tracking-wider text-[#8F9E8B]">{BRAND.groupName}</div>
             </div>
           </div>
-          {Object.keys(tabs).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => goTo(tab)}
-              className={`w-full text-left px-4 py-3 rounded font-bold uppercase text-sm tracking-wide transition-colors ${
-                activeTab === tab ? 'bg-[#2D392C] text-[#F0F4F1]' : 'text-[#2D392C] hover:bg-[#E2EAE4]'
-              }`}
-            >
-              {tabs[tab]}
-            </button>
+          {MENU_GROUPS.map((group) => (
+            <div key={group.title} className="pt-2 first:pt-0">
+              <div className="flex items-center gap-2 px-1 pb-1">
+                <span className="text-[9px] uppercase tracking-widest font-bold text-[#8F9E8B] shrink-0">{group.title}</span>
+                <span className="flex-grow h-px bg-[#8F9E8B]/30"></span>
+              </div>
+              {group.items.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => goTo(tab)}
+                  className={`w-full text-left px-3 py-2.5 rounded font-bold uppercase text-[13px] tracking-wide transition-colors flex items-center gap-2.5 ${
+                    activeTab === tab ? 'bg-[#2D392C] text-[#F0F4F1]' : 'text-[#2D392C] hover:bg-[#E2EAE4]'
+                  }`}
+                >
+                  <span className="text-base leading-none w-5 text-center shrink-0">{TAB_ICONS[tab]}</span>
+                  <span className="min-w-0 truncate">{tabs[tab]}</span>
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         </div>
@@ -3568,17 +3594,22 @@ function App() {
                     const lock = window.APP_LOCK || {};
                     if (!lock.dbEmail) return null;
                     const protetto = cloud.authMode === 'shared';
+                    // Senza collegamento non si può sapere come si entrerà nel
+                    // database: meglio dirlo, invece di allarmare chi è offline.
+                    const ignoto = !protetto && !cloud.connected;
                     return (
-                      <div className={`p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
+                      <div className={`p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : ignoto ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/30' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[10px] uppercase font-bold text-gray-500">Database</span>
-                          <span className={`text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : 'text-[#D97706]'}`}>
-                            {protetto ? '🔒 protetto dalla password' : '⚠ accesso aperto'}
+                          <span className={`text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`}>
+                            {protetto ? '🔒 protetto dalla password' : ignoto ? '— non collegato' : '⚠ accesso aperto'}
                           </span>
                         </div>
                         <p className="text-[10px] text-gray-500 leading-snug mt-1">
                           {protetto
                             ? 'L\'app entra nel database con l\'utente del campo: senza password i dati non si leggono nemmeno da fuori.'
+                            : ignoto
+                            ? 'Senza linea non c\'è nulla da proteggere: si lavora in locale. Il controllo si aggiorna al prossimo collegamento.'
                             : 'I dati nel cloud sono ancora raggiungibili senza password. Per chiuderli servono i passaggi nella console Firebase (utente condiviso + regole): finché non sono fatti, il blocco protegge solo la schermata.'}
                         </p>
                       </div>

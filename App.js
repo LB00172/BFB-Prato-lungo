@@ -2589,6 +2589,39 @@ function App() {
     guida: 'Come funziona',
     impostazioni: 'Impostazioni'
   };
+
+  // Icona per ogni area: nel menu aiuta a trovare la voce senza leggerle tutte.
+  const TAB_ICONS = {
+    calendario: '📅',
+    menu: '🍝',
+    presenze: '🍽️',
+    lista: '🧾',
+    attrezzatura: '🪛',
+    spesa: '💶',
+    membri: '👥',
+    regole: '📜',
+    dotazioni: '🎒',
+    gioco: '🎮',
+    archivio: '🗄️',
+    guida: '❓',
+    impostazioni: '⚙️'
+  };
+
+  // Il menu raggruppa le aree per momento d'uso: prima quello che si tocca
+  // ogni giorno, poi i soldi, poi le cose del gruppo, in fondo il resto.
+  const MENU_GROUPS = [{
+    title: 'Il campo',
+    items: ['calendario', 'menu', 'presenze']
+  }, {
+    title: 'Cambusa e soldi',
+    items: ['lista', 'attrezzatura', 'spesa']
+  }, {
+    title: 'Il gruppo',
+    items: ['membri', 'regole', 'dotazioni']
+  }, {
+    title: 'Altro',
+    items: ['gioco', 'archivio', 'guida', 'impostazioni']
+  }];
   const goTo = tab => {
     setActiveTab(tab);
     setMenuOpen(false);
@@ -2599,7 +2632,7 @@ function App() {
     k: 'calendario',
     icon: '📅',
     title: 'Calendario',
-    body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e uno spazio per le il collegamento al Menù del giorno. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.'
+    body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e il collegamento al Menù del giorno. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.'
   }, {
     k: 'menu',
     icon: '🍝',
@@ -2724,11 +2757,24 @@ function App() {
     className: "font-rustic text-[#2D392C] leading-tight"
   }, BRAND.appTitle), /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] uppercase tracking-wider text-[#8F9E8B]"
-  }, BRAND.groupName))), Object.keys(tabs).map(tab => /*#__PURE__*/React.createElement("button", {
+  }, BRAND.groupName))), MENU_GROUPS.map(group => /*#__PURE__*/React.createElement("div", {
+    key: group.title,
+    className: "pt-2 first:pt-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 px-1 pb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] uppercase tracking-widest font-bold text-[#8F9E8B] shrink-0"
+  }, group.title), /*#__PURE__*/React.createElement("span", {
+    className: "flex-grow h-px bg-[#8F9E8B]/30"
+  })), group.items.map(tab => /*#__PURE__*/React.createElement("button", {
     key: tab,
     onClick: () => goTo(tab),
-    className: `w-full text-left px-4 py-3 rounded font-bold uppercase text-sm tracking-wide transition-colors ${activeTab === tab ? 'bg-[#2D392C] text-[#F0F4F1]' : 'text-[#2D392C] hover:bg-[#E2EAE4]'}`
-  }, tabs[tab]))))), showInstallHint && /*#__PURE__*/React.createElement("div", {
+    className: `w-full text-left px-3 py-2.5 rounded font-bold uppercase text-[13px] tracking-wide transition-colors flex items-center gap-2.5 ${activeTab === tab ? 'bg-[#2D392C] text-[#F0F4F1]' : 'text-[#2D392C] hover:bg-[#E2EAE4]'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-base leading-none w-5 text-center shrink-0"
+  }, TAB_ICONS[tab]), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, tabs[tab])))))))), showInstallHint && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-b border-[#D97706]/40 px-4 py-2.5 flex items-start gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-base leading-none mt-0.5"
@@ -3919,17 +3965,20 @@ function App() {
     const lock = window.APP_LOCK || {};
     if (!lock.dbEmail) return null;
     const protetto = cloud.authMode === 'shared';
+    // Senza collegamento non si può sapere come si entrerà nel
+    // database: meglio dirlo, invece di allarmare chi è offline.
+    const ignoto = !protetto && !cloud.connected;
     return /*#__PURE__*/React.createElement("div", {
-      className: `p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : 'bg-[#D97706]/10 border-[#D97706]/40'}`
+      className: `p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : ignoto ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/30' : 'bg-[#D97706]/10 border-[#D97706]/40'}`
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] uppercase font-bold text-gray-500"
     }, "Database"), /*#__PURE__*/React.createElement("span", {
-      className: `text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : 'text-[#D97706]'}`
-    }, protetto ? '🔒 protetto dalla password' : '⚠ accesso aperto')), /*#__PURE__*/React.createElement("p", {
+      className: `text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`
+    }, protetto ? '🔒 protetto dalla password' : ignoto ? '— non collegato' : '⚠ accesso aperto')), /*#__PURE__*/React.createElement("p", {
       className: "text-[10px] text-gray-500 leading-snug mt-1"
-    }, protetto ? 'L\'app entra nel database con l\'utente del campo: senza password i dati non si leggono nemmeno da fuori.' : 'I dati nel cloud sono ancora raggiungibili senza password. Per chiuderli servono i passaggi nella console Firebase (utente condiviso + regole): finché non sono fatti, il blocco protegge solo la schermata.'));
+    }, protetto ? 'L\'app entra nel database con l\'utente del campo: senza password i dati non si leggono nemmeno da fuori.' : ignoto ? 'Senza linea non c\'è nulla da proteggere: si lavora in locale. Il controllo si aggiorna al prossimo collegamento.' : 'I dati nel cloud sono ancora raggiungibili senza password. Per chiuderli servono i passaggi nella console Firebase (utente condiviso + regole): finché non sono fatti, il blocco protegge solo la schermata.'));
   })(), /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer"
   }, /*#__PURE__*/React.createElement("input", {
