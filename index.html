@@ -43,6 +43,38 @@
       }
     }
 
+    /* Menù: foglio a righe. L'altezza della riga combacia con il passo delle
+       righe disegnate, così ogni pietanza scritta ci finisce sopra.
+       background-attachment: local fa scorrere le righe insieme al testo. */
+    .lined-paper {
+      --riga: 28px;
+      font-size: 14px;
+      line-height: var(--riga);
+      min-height: calc(var(--riga) * 8);
+      background-color: #F7FAF7;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent calc(var(--riga) - 1px),
+        rgba(143, 158, 139, 0.45) calc(var(--riga) - 1px),
+        rgba(143, 158, 139, 0.45) var(--riga)
+      );
+      background-attachment: local;
+      /* Il padding verticale è un multiplo della riga: il testo resta allineato */
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+    :root[data-theme="dark"] .lined-paper {
+      background-color: #2c352b !important;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent calc(var(--riga) - 1px),
+        rgba(143, 158, 139, 0.28) calc(var(--riga) - 1px),
+        rgba(143, 158, 139, 0.28) var(--riga)
+      ) !important;
+    }
+
     /* ======================================================================
        TEMA SCURO
        ======================================================================

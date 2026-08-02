@@ -54,6 +54,10 @@ async function derivePassword(pwd) {
   return toHex(bits);
 }
 
+// Password digitata in questa sessione: serve per entrare nel database con
+// l'utente condiviso. Vive solo in memoria, non viene mai salvata.
+let sessionPassword = null;
+
 const lockAlways = () => localStorage.getItem(LOCK_ALWAYS_KEY) === '1';
 // Sbloccato = da qualche parte c'è l'impronta giusta. Con "chiedi ogni volta"
 // si usa la memoria di sessione, che si svuota chiudendo l'app.
@@ -746,6 +750,7 @@ function LockScreen({ onUnlock }) {
         return;
       }
       if (digest === LOCK.hash) {
+        sessionPassword = pwd;   // solo in memoria, per l'accesso al database
         rememberUnlock();
         setPwd('');
         onUnlock();
@@ -1019,13 +1024,22 @@ function App() {
     catch (e) { console.warn('Spazio esaurito: l\'archivio resta nel cloud e nei file scaricati.'); }
   }, [archives]);
 
-  // Scarica le previsioni (16 giorni) se c'è linea, la località è impostata e
-  // la cache ha più di un'ora. Navigando tra i giorni i dati sono già pronti.
-  useEffect(() => {
+  // ---------- Meteo ----------
+  // Servizio: Open-Meteo (gratuito, senza chiave), modello ICON per l'Europa,
+  // 16 giorni, fuso orario della località. Le previsioni sono UNA SOLA per
+  // tutto il campo: chi ha linea le scarica e le mette nel cloud, gli altri
+  // le ricevono. Prima ogni telefono scaricava per conto suo in momenti
+  // diversi e si vedevano numeri diversi.
+  const [wxBusy, setWxBusy] = useState(false);
+  const weatherRef = useRef(weather);
+  useEffect(() => { weatherRef.current = weather; }, [weather]);
+
+  const fetchWeather = (force) => {
     const loc = window.CAMP_LOCATION;
     if (!loc || typeof loc.lat !== 'number' || typeof loc.lon !== 'number') return;
     if (!navigator.onLine) return;
-    if (Date.now() - weather.fetchedAt < 60 * 60 * 1000) return;
+    if (!force && Date.now() - (weatherRef.current.fetchedAt || 0) < 60 * 60 * 1000) return;
+    setWxBusy(true);
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=16`)
       .then((r) => r.json())
       .then((j) => {
@@ -1040,11 +1054,28 @@ function App() {
             rain: d.precipitation_probability_max[i],
           };
         });
-        setWeather({ fetchedAt: Date.now(), byDate });
+        const next = { fetchedAt: Date.now(), byDate, lat: loc.lat, lon: loc.lon };
+        setWeather(next);
+        // Condivide la stessa previsione con tutto il campo.
+        if (window.CloudSync && window.CloudSync.putWeather) window.CloudSync.putWeather(next);
       })
-      .catch(() => { /* offline o API non raggiungibile: resta la cache */ });
+      .catch(() => { /* offline o API non raggiungibile: resta la cache */ })
+      .finally(() => setWxBusy(false));
+  };
+
+  useEffect(() => {
+    fetchWeather(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, selectedDateStr]);
+
+  // Previsioni in arrivo da un altro dispositivo: si adottano se più recenti
+  // delle nostre, così tutti guardano gli stessi numeri.
+  const handleCloudWeather = (remote) => {
+    if (!remote || typeof remote.fetchedAt !== 'number' || !remote.byDate) return;
+    if (remote.fetchedAt <= (weatherRef.current.fetchedAt || 0)) return;
+    weatherRef.current = remote;
+    setWeather(remote);
+  };
   useEffect(() => {
     receiptsRef.current = receipts;
     try {
@@ -1082,7 +1113,7 @@ function App() {
       const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
       if (CS && CS.isConfigured() && !cloudConnectedRef.current && !optedOut) {
         const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
-        if (code) CS.connect(window.FIREBASE_CONFIG, code, applyRemote).catch(() => {});
+        if (code) CS.connect(window.FIREBASE_CONFIG, code, applyRemote, { password: sessionPassword }).catch(() => {});
       }
     };
     const off = () => setIsOnline(false);
@@ -1151,7 +1182,7 @@ function App() {
     if (!c) { window.alert('Inserisci il codice del campo.'); return; }
     localStorage.removeItem('cambusa_sync_optout'); // riattiva l'auto-connessione
     try {
-      await CS.connect(window.FIREBASE_CONFIG, c, applyRemote);
+      await CS.connect(window.FIREBASE_CONFIG, c, applyRemote, { password: sessionPassword });
     } catch (e) {
       window.alert('Connessione fallita: ' + (e && e.message ? e.message : e));
     }
@@ -1182,14 +1213,24 @@ function App() {
     if (!CS) return;
     CS.onStatus((s) => { cloudConnectedRef.current = s.connected; setCloud(s); });
     if (CS.onReceipts) CS.onReceipts(handleCloudReceipts);
-    const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
-    const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
-    if (code && CS.isConfigured() && !optedOut) {
-      setCampCodeInput(code);
-      CS.connect(window.FIREBASE_CONFIG, code, applyRemote).catch(() => {});
-    }
+    if (CS.onWeather) CS.onWeather(handleCloudWeather);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // La connessione parte DOPO lo sblocco: la password appena digitata serve
+  // anche per entrare nel database con l'utente condiviso.
+  useEffect(() => {
+    if (locked) return;
+    const CS = window.CloudSync;
+    if (!CS) return;
+    const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
+    const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
+    if (code && CS.isConfigured() && !optedOut && !CS.isConnected()) {
+      setCampCodeInput(code);
+      CS.connect(window.FIREBASE_CONFIG, code, applyRemote, { password: sessionPassword }).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locked]);
 
   // Ogni modifica viene datata (anche offline: è proprio lì che serve, perché
   // al ritorno della linea si sappia cosa è più recente) e poi inviata.
@@ -2214,7 +2255,7 @@ function App() {
 
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
               <h3 className="font-rustic text-lg border-b border-dashed border-[#8F9E8B] pb-1">
-                Note del {parseDate(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
+                {parseDate(selectedDateStr).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
               </h3>
 
               {/* Meteo previsto per il giorno selezionato */}
@@ -2223,24 +2264,44 @@ function App() {
                 const locOk = loc && typeof loc.lat === 'number' && typeof loc.lon === 'number';
                 const wx = weather.byDate[selectedDateStr];
                 return (
-                  <div className="flex items-center gap-2 bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20">
-                    {!locOk ? (
-                      <span className="text-[10px] text-gray-400 italic">Meteo: località del campo da impostare.</span>
-                    ) : wx ? (
-                      <>
-                        <span className="text-2xl leading-none">{wmoInfo(wx.code).icon}</span>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-[#2D392C]">{wmoInfo(wx.code).label}</span>
-                          {loc.label && <span className="text-[9px] text-gray-400">{loc.label}</span>}
-                        </div>
-                        <span className="ml-auto text-xs text-gray-600 font-bold">
-                          {Math.round(wx.tmax)}° / {Math.round(wx.tmin)}°{wx.rain != null ? <span className="text-[#5C8AA8]"> · 💧{wx.rain}%</span> : null}
+                  <div className="bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20 space-y-1">
+                    <div className="flex items-center gap-2">
+                      {!locOk ? (
+                        <span className="text-[10px] text-gray-400 italic">Meteo: località del campo da impostare.</span>
+                      ) : wx ? (
+                        <>
+                          <span className="text-2xl leading-none">{wmoInfo(wx.code).icon}</span>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-bold text-[#2D392C]">{wmoInfo(wx.code).label}</span>
+                            {loc.label && <span className="text-[9px] text-gray-400">{loc.label}</span>}
+                          </div>
+                          <span className="ml-auto text-xs text-gray-600 font-bold shrink-0">
+                            {Math.round(wx.tmax)}° / {Math.round(wx.tmin)}°{wx.rain != null ? <span className="text-[#5C8AA8]"> · 💧{wx.rain}%</span> : null}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-[10px] text-gray-400 italic">
+                          Previsione non ancora disponibile per questo giorno{isOnline ? ' (copre 16 giorni in avanti)' : ' (offline)'}.
                         </span>
-                      </>
-                    ) : (
-                      <span className="text-[10px] text-gray-400 italic">
-                        Previsione non ancora disponibile per questo giorno{isOnline ? ' (copre ~16 giorni in avanti)' : ' (offline)'}.
-                      </span>
+                      )}
+                    </div>
+                    {/* Stessa previsione per tutti: si vede quando è stata
+                        scaricata, così è chiaro se qualcuno ha numeri vecchi. */}
+                    {locOk && (
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#8F9E8B]/20">
+                        <span className="text-[9px] text-gray-400">
+                          {weather.fetchedAt
+                            ? `Previsioni del ${new Date(weather.fetchedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} alle ${new Date(weather.fetchedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} · uguali per tutto il campo`
+                            : 'Previsioni non ancora scaricate.'}
+                        </span>
+                        <button
+                          onClick={() => fetchWeather(true)}
+                          disabled={!isOnline || wxBusy}
+                          className="shrink-0 text-[9px] uppercase font-bold text-[#2D392C] px-2 py-1 rounded border border-[#8F9E8B]/40 hover:bg-[#E2EAE4] disabled:opacity-40"
+                        >
+                          {wxBusy ? '…' : 'Aggiorna'}
+                        </button>
+                      </div>
                     )}
                   </div>
                 );
@@ -2263,12 +2324,23 @@ function App() {
                 );
               })()}
 
+            </div>
+
+            {/* Menù del giorno: foglio a righe, una pietanza per riga. */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-2">
+              <div className="flex items-baseline justify-between border-b border-dashed border-[#8F9E8B] pb-1">
+                <h3 className="font-rustic text-lg text-[#2D392C]">Menù</h3>
+                <span className="text-[9px] uppercase font-bold text-gray-400">
+                  {parseDate(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
+                </span>
+              </div>
               <textarea
                 value={getDayData(selectedDateStr).note}
                 onChange={(e) => updateDayData(selectedDateStr, 'note', e.target.value)}
-                placeholder="Inserisci note sul menu, meteo o legna per oggi..."
-                className="w-full h-32 p-3 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded-lg text-sm focus:outline-none focus:border-[#2D392C] resize-none"
+                placeholder={'Pranzo: pasta al pomodoro\nInsalata\nCena: grigliata\nPatate al forno'}
+                className="lined-paper w-full p-3 rounded-lg border border-[#8F9E8B]/30 focus:outline-none focus:border-[#2D392C] resize-y"
               />
+              <p className="text-[9px] text-gray-400 italic">Una pietanza per riga. Si sincronizza con gli altri: chi cucina lo trova già scritto.</p>
             </div>
           </div>
         )}
@@ -2817,7 +2889,7 @@ function App() {
                     <li key={it.id} className="bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
                       <div className="flex items-center gap-2">
                         <div className="flex-grow min-w-0">
-                          <div className="text-sm font-bold text-[#2D392C] truncate">{it.name}</div>
+                          <div className="text-sm font-bold text-[#2D392C] leading-snug break-words">{it.name}</div>
                           {it.qty && <div className="text-[10px] text-gray-500">Quantità: {it.qty}</div>}
                         </div>
                         {/* Foto scontrino della singola voce */}
@@ -2964,31 +3036,36 @@ function App() {
               ) : (
                 <ul className="space-y-2">
                   {purchases.slice().reverse().map((p) => (
-                    <li key={p.id} className="flex items-center gap-2 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
-                      <div className="flex-grow min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-[#2D392C] truncate">{p.name}</span>
-                          <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B] shrink-0">{PURCHASE_TYPES[p.type] || p.type}</span>
-                          {p.account === 'sep' && p.type !== 'logistica' && (
-                            <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C] shrink-0">Separato</span>
-                          )}
-                          {p.fromList && <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C] shrink-0">acquistata</span>}
-                        </div>
-                        <span className="text-[9px] text-gray-400">
-                          {p.buyer ? <span className="text-[#5C4A3C] font-bold">{p.buyer}</span> : <span className="italic">acquirente non indicato</span>}
-                          {p.at && ` · ${new Date(p.at).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} ${new Date(p.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`}
-                        </span>
+                    // Due livelli: sopra il nome del prodotto, che ha tutta la
+                    // riga per sé (prima veniva tagliato dalle etichette e dal
+                    // prezzo che gli stavano accanto); sotto le informazioni.
+                    <li key={p.id} className="bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20 space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-sm font-bold text-[#2D392C] leading-snug break-words min-w-0">{p.name}</span>
+                        <span className="font-rustic font-bold text-[#2D392C] shrink-0 whitespace-nowrap">{money(posNum(p.price))} €</span>
                       </div>
-                      <span className="font-rustic font-bold text-[#2D392C] shrink-0">{money(posNum(p.price))} €</span>
-                      {receipts[p.id] ? (
-                        <button onClick={() => setViewReceipt(receipts[p.id])} aria-label="Vedi scontrino" className="shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none">📷</button>
-                      ) : (
-                        <label title="Scontrino: scatta una foto o scegli dalla galleria" aria-label="Allega scontrino" className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]">
-                          📷
-                          <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, p.id)} className="hidden" />
-                        </label>
-                      )}
-                      <button onClick={() => removePurchase(p.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0">&times;</button>
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1 min-w-0 flex-grow">
+                          <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B]">{PURCHASE_TYPES[p.type] || p.type}</span>
+                          {p.account === 'sep' && p.type !== 'logistica' && (
+                            <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]">Separato</span>
+                          )}
+                          {p.fromList && <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]">acquistata</span>}
+                          <span className="text-[9px] text-gray-400 basis-full">
+                            {p.buyer ? <span className="text-[#5C4A3C] font-bold">{p.buyer}</span> : <span className="italic">acquirente non indicato</span>}
+                            {p.at && ` · ${new Date(p.at).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} ${new Date(p.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`}
+                          </span>
+                        </div>
+                        {receipts[p.id] ? (
+                          <button onClick={() => setViewReceipt(receipts[p.id])} aria-label="Vedi scontrino" className="shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none">📷</button>
+                        ) : (
+                          <label title="Scontrino: scatta una foto o scegli dalla galleria" aria-label="Allega scontrino" className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]">
+                            📷
+                            <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, p.id)} className="hidden" />
+                          </label>
+                        )}
+                        <button onClick={() => removePurchase(p.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0">&times;</button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -3388,6 +3465,15 @@ function App() {
                       <span className="block text-[9px] text-gray-500">Senza la spunta il telefono resta sbloccato fino a "Blocca ora".</span>
                     </span>
                   </label>
+                  {window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && (
+                    <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
+                      <p className="text-[11px] text-[#5C4A3C] leading-snug">
+                        La sincronizzazione sta usando l'accesso di ripiego: per rientrare nel
+                        database con l'utente del campo serve digitare di nuovo la password.
+                        Tocca <span className="font-bold">Blocca ora</span> e rientra.
+                      </p>
+                    </div>
+                  )}
                   <button onClick={lockNow} className="w-full py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]">
                     🔒 Blocca ora
                   </button>

@@ -38,11 +38,19 @@ window.CAMP_CODE_DEFAULT = "Bandone";
 //     console.log(s.toString("hex"),
 //       c.pbkdf2Sync("NUOVA_PASSWORD",s,200000,32,"sha256").toString("hex"))'
 // Mettere lock: null disattiva il blocco.
+//
+// dbEmail: utente CONDIVISO con cui l'app entra nel database, uguale per
+// tutti e invisibile (nessuno lo digita). L'app ci accede con la password
+// scritta nella schermata di blocco, che quindi diventa la chiave dei dati e
+// non solo della schermata. Finche' l'utente non esiste in Firebase
+// (Authentication -> Email/Password), l'app ricade sull'accesso anonimo di
+// prima: si puo' quindi attivare senza fretta. Vedi README, "Sicurezza".
 window.APP_LOCK = {
   salt: "43fae8e332f167f7b612255eec80a82a",
   hash: "432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14",
   iter: 200000,
   hint: "Password del campo — chiedila a chi organizza.",
+  dbEmail: "campo@brigatabandone.it",
 };
 
 // Località del campo per il meteo (Open-Meteo, gratuito, senza chiave).

@@ -18,12 +18,15 @@
   let fb = null;              // moduli Firebase caricati
   let app, db, auth, unsub;   // handle Firebase
   let receiptsUnsub = null;   // listener sotto-collezione scontrini
+  let weatherUnsub = null;    // listener meteo condiviso
   let onRemote = null;        // callback quando arrivano dati remoti
   let onReceiptsCb = null;    // callback quando arrivano foto scontrini
+  let onWeatherCb = null;     // callback quando arriva il meteo condiviso
   let onStatusCb = null;      // callback di stato per la UI
   let pushTimer = null;
   let lastAppliedJson = null; // ultimo stato ricevuto/applicato dal cloud
   let lastPushedJson = null;  // ultimo stato inviato al cloud
+  let authMode = 'anon';      // anon | shared | anon-fallback | anon-nopass
 
   let deviceId = localStorage.getItem('cambusa_device_id');
   if (!deviceId) {
@@ -31,7 +34,7 @@
     localStorage.setItem('cambusa_device_id', deviceId);
   }
 
-  const state = { connected: false, code: null, status: 'idle', lastSync: null, error: null };
+  const state = { connected: false, code: null, status: 'idle', lastSync: null, error: null, authMode: 'anon' };
   const emit = (patch) => {
     Object.assign(state, patch || {});
     if (onStatusCb) onStatusCb({ ...state });
@@ -48,7 +51,48 @@
     return fb;
   }
 
-  async function connect(config, code, remoteCb) {
+  // Accesso al database. Se in firebase-config.js e' configurato un utente
+  // condiviso (APP_LOCK.dbEmail), l'app entra con quello usando la password
+  // digitata nella schermata di blocco: la password non e' nel codice e non
+  // viene salvata, quindi senza di essa i dati non si leggono nemmeno
+  // interrogando Firestore direttamente. Se l'utente non esiste ancora (o il
+  // metodo Email/Password non e' abilitato) si ricade sull'accesso anonimo,
+  // cosi' il passaggio si puo' fare con calma senza rompere niente.
+  async function signIn(creds) {
+    const lock = (typeof window !== 'undefined' && window.APP_LOCK) || {};
+    const email = lock.dbEmail;
+    if (!email) { authMode = 'anon'; await fb.signInAnonymously(auth); return; }
+
+    // Sessione gia' aperta su questo dispositivo: niente password da chiedere.
+    try {
+      if (auth.authStateReady) await auth.authStateReady();
+    } catch (e) { /* SDK piu' vecchio: si prosegue */ }
+    if (auth.currentUser && !auth.currentUser.isAnonymous) { authMode = 'shared'; return; }
+
+    if (creds && creds.password) {
+      try {
+        await fb.signInWithEmailAndPassword(auth, email, creds.password);
+        authMode = 'shared';
+        return;
+      } catch (e) {
+        const code = (e && e.code) || '';
+        // Utente non ancora creato o metodo non abilitato: si continua come prima.
+        if (/user-not-found|operation-not-allowed|invalid-credential|wrong-password|invalid-email/.test(code)) {
+          authMode = 'anon-fallback';
+          await fb.signInAnonymously(auth);
+          return;
+        }
+        throw e;
+      }
+    }
+
+    // Nessuna password a disposizione (app sbloccata in una sessione
+    // precedente): si prova comunque, ma lo stato lo segnala alla UI.
+    authMode = 'anon-nopass';
+    await fb.signInAnonymously(auth);
+  }
+
+  async function connect(config, code, remoteCb, creds) {
     onRemote = remoteCb;
     emit({ status: 'connecting', error: null });
     try {
@@ -66,7 +110,8 @@
           db = fb.getFirestore(app); // fallback (già inizializzato o persistenza non disponibile)
         }
       }
-      await fb.signInAnonymously(auth);
+      await signIn(creds);
+      emit({ authMode });
 
       const ref = fb.doc(db, 'camps', code);
       if (unsub) unsub();
@@ -102,6 +147,8 @@
         },
         () => { /* es. regole non aggiornate: la sync principale continua */ }
       );
+
+      watchWeather(code);
 
       localStorage.setItem('cambusa_camp_code', code);
       emit({ connected: true, code, status: 'connected', error: null });
@@ -221,6 +268,34 @@
     }
   }
 
+  // --- Meteo condiviso ---
+  // camps/<code>/meta/weather: una sola copia delle previsioni per tutto il
+  // campo, così tutti vedono gli stessi numeri invece di quelli scaricati dal
+  // proprio telefono in momenti diversi. Chi ha linea la aggiorna, gli altri
+  // la ricevono (anche chi è offline se la riceve prima di perdere la rete).
+  async function putWeather(obj) {
+    if (!state.connected || !db || !fb) return;
+    try {
+      await fb.setDoc(fb.doc(db, 'camps', state.code, 'meta', 'weather'), {
+        data: JSON.stringify(obj), updatedBy: deviceId, updatedAt: fb.serverTimestamp(),
+      });
+    } catch (e) { /* offline o regole: riprovera' al prossimo aggiornamento */ }
+  }
+
+  function watchWeather(code) {
+    if (weatherUnsub) weatherUnsub();
+    weatherUnsub = fb.onSnapshot(
+      fb.doc(db, 'camps', code, 'meta', 'weather'),
+      (snap) => {
+        if (!snap.exists() || !onWeatherCb) return;
+        const v = snap.data();
+        if (!v || typeof v.data !== 'string') return;
+        try { onWeatherCb(JSON.parse(v.data)); } catch (e) { /* dati non validi */ }
+      },
+      () => { /* regole non aggiornate: il resto continua */ }
+    );
+  }
+
   // --- Archivio dei campi chiusi ---
   // camps/<code>/archives/<id> = { meta: <riepilogo JSON>, data: <stato JSON> }.
   // Il riepilogo e' piccolo e serve per l'elenco; lo stato completo si scarica
@@ -283,6 +358,7 @@
   function disconnect() {
     if (unsub) { unsub(); unsub = null; }
     if (receiptsUnsub) { receiptsUnsub(); receiptsUnsub = null; }
+    if (weatherUnsub) { weatherUnsub(); weatherUnsub = null; }
     localStorage.removeItem('cambusa_camp_code');
     lastAppliedJson = null;
     lastPushedJson = null;
@@ -296,6 +372,7 @@
     deleteReceipt,
     listSnapshots,
     getSnapshot,
+    putWeather,
     putArchive,
     listArchives,
     getArchive,
@@ -305,7 +382,13 @@
     disconnect,
     onStatus: (cb) => { onStatusCb = cb; cb({ ...state }); },
     onReceipts: (cb) => { onReceiptsCb = cb; },
+    onWeather: (cb) => { onWeatherCb = cb; },
     isConnected: () => state.connected,
+    authMode: () => authMode,
+    needsPassword: () => {
+      const lock = (typeof window !== 'undefined' && window.APP_LOCK) || {};
+      return !!lock.dbEmail && authMode === 'anon-nopass';
+    },
     savedCode: () => localStorage.getItem('cambusa_camp_code'),
     isConfigured: () => {
       const c = window.FIREBASE_CONFIG;

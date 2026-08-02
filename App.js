@@ -62,6 +62,10 @@ async function derivePassword(pwd) {
   }, base, 256);
   return toHex(bits);
 }
+
+// Password digitata in questa sessione: serve per entrare nel database con
+// l'utente condiviso. Vive solo in memoria, non viene mai salvata.
+let sessionPassword = null;
 const lockAlways = () => localStorage.getItem(LOCK_ALWAYS_KEY) === '1';
 // Sbloccato = da qualche parte c'è l'impronta giusta. Con "chiedi ogni volta"
 // si usa la memoria di sessione, che si svuota chiudendo l'app.
@@ -915,6 +919,7 @@ function LockScreen({
         return;
       }
       if (digest === LOCK.hash) {
+        sessionPassword = pwd; // solo in memoria, per l'accesso al database
         rememberUnlock();
         setPwd('');
         onUnlock();
@@ -1215,13 +1220,23 @@ function App() {
     }
   }, [archives]);
 
-  // Scarica le previsioni (16 giorni) se c'è linea, la località è impostata e
-  // la cache ha più di un'ora. Navigando tra i giorni i dati sono già pronti.
+  // ---------- Meteo ----------
+  // Servizio: Open-Meteo (gratuito, senza chiave), modello ICON per l'Europa,
+  // 16 giorni, fuso orario della località. Le previsioni sono UNA SOLA per
+  // tutto il campo: chi ha linea le scarica e le mette nel cloud, gli altri
+  // le ricevono. Prima ogni telefono scaricava per conto suo in momenti
+  // diversi e si vedevano numeri diversi.
+  const [wxBusy, setWxBusy] = useState(false);
+  const weatherRef = useRef(weather);
   useEffect(() => {
+    weatherRef.current = weather;
+  }, [weather]);
+  const fetchWeather = force => {
     const loc = window.CAMP_LOCATION;
     if (!loc || typeof loc.lat !== 'number' || typeof loc.lon !== 'number') return;
     if (!navigator.onLine) return;
-    if (Date.now() - weather.fetchedAt < 60 * 60 * 1000) return;
+    if (!force && Date.now() - (weatherRef.current.fetchedAt || 0) < 60 * 60 * 1000) return;
+    setWxBusy(true);
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=16`).then(r => r.json()).then(j => {
       const d = j && j.daily;
       if (!d || !Array.isArray(d.time)) return;
@@ -1234,13 +1249,30 @@ function App() {
           rain: d.precipitation_probability_max[i]
         };
       });
-      setWeather({
+      const next = {
         fetchedAt: Date.now(),
-        byDate
-      });
-    }).catch(() => {/* offline o API non raggiungibile: resta la cache */});
+        byDate,
+        lat: loc.lat,
+        lon: loc.lon
+      };
+      setWeather(next);
+      // Condivide la stessa previsione con tutto il campo.
+      if (window.CloudSync && window.CloudSync.putWeather) window.CloudSync.putWeather(next);
+    }).catch(() => {/* offline o API non raggiungibile: resta la cache */}).finally(() => setWxBusy(false));
+  };
+  useEffect(() => {
+    fetchWeather(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, selectedDateStr]);
+
+  // Previsioni in arrivo da un altro dispositivo: si adottano se più recenti
+  // delle nostre, così tutti guardano gli stessi numeri.
+  const handleCloudWeather = remote => {
+    if (!remote || typeof remote.fetchedAt !== 'number' || !remote.byDate) return;
+    if (remote.fetchedAt <= (weatherRef.current.fetchedAt || 0)) return;
+    weatherRef.current = remote;
+    setWeather(remote);
+  };
   useEffect(() => {
     receiptsRef.current = receipts;
     try {
@@ -1275,7 +1307,9 @@ function App() {
       const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
       if (CS && CS.isConfigured() && !cloudConnectedRef.current && !optedOut) {
         const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
-        if (code) CS.connect(window.FIREBASE_CONFIG, code, applyRemote).catch(() => {});
+        if (code) CS.connect(window.FIREBASE_CONFIG, code, applyRemote, {
+          password: sessionPassword
+        }).catch(() => {});
       }
     };
     const off = () => setIsOnline(false);
@@ -1381,7 +1415,9 @@ function App() {
     }
     localStorage.removeItem('cambusa_sync_optout'); // riattiva l'auto-connessione
     try {
-      await CS.connect(window.FIREBASE_CONFIG, c, applyRemote);
+      await CS.connect(window.FIREBASE_CONFIG, c, applyRemote, {
+        password: sessionPassword
+      });
     } catch (e) {
       window.alert('Connessione fallita: ' + (e && e.message ? e.message : e));
     }
@@ -1417,14 +1453,26 @@ function App() {
       setCloud(s);
     });
     if (CS.onReceipts) CS.onReceipts(handleCloudReceipts);
-    const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
-    const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
-    if (code && CS.isConfigured() && !optedOut) {
-      setCampCodeInput(code);
-      CS.connect(window.FIREBASE_CONFIG, code, applyRemote).catch(() => {});
-    }
+    if (CS.onWeather) CS.onWeather(handleCloudWeather);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // La connessione parte DOPO lo sblocco: la password appena digitata serve
+  // anche per entrare nel database con l'utente condiviso.
+  useEffect(() => {
+    if (locked) return;
+    const CS = window.CloudSync;
+    if (!CS) return;
+    const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
+    const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
+    if (code && CS.isConfigured() && !optedOut && !CS.isConnected()) {
+      setCampCodeInput(code);
+      CS.connect(window.FIREBASE_CONFIG, code, applyRemote, {
+        password: sessionPassword
+      }).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locked]);
 
   // Ogni modifica viene datata (anche offline: è proprio lì che serve, perché
   // al ritorno della linea si sappia cosa è più recente) e poi inviata.
@@ -2690,7 +2738,8 @@ function App() {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-dashed border-[#8F9E8B] pb-1"
-  }, "Note del ", parseDate(selectedDateStr).toLocaleDateString('it-IT', {
+  }, parseDate(selectedDateStr).toLocaleDateString('it-IT', {
+    weekday: 'long',
     day: 'numeric',
     month: 'long'
   })), (() => {
@@ -2698,24 +2747,40 @@ function App() {
     const locOk = loc && typeof loc.lat === 'number' && typeof loc.lon === 'number';
     const wx = weather.byDate[selectedDateStr];
     return /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
+      className: "bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20 space-y-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
     }, !locOk ? /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] text-gray-400 italic"
     }, "Meteo: localit\xE0 del campo da impostare.") : wx ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
       className: "text-2xl leading-none"
     }, wmoInfo(wx.code).icon), /*#__PURE__*/React.createElement("div", {
-      className: "flex flex-col"
+      className: "flex flex-col min-w-0"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-sm font-bold text-[#2D392C]"
     }, wmoInfo(wx.code).label), loc.label && /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-gray-400"
     }, loc.label)), /*#__PURE__*/React.createElement("span", {
-      className: "ml-auto text-xs text-gray-600 font-bold"
+      className: "ml-auto text-xs text-gray-600 font-bold shrink-0"
     }, Math.round(wx.tmax), "\xB0 / ", Math.round(wx.tmin), "\xB0", wx.rain != null ? /*#__PURE__*/React.createElement("span", {
       className: "text-[#5C8AA8]"
     }, " \xB7 \uD83D\uDCA7", wx.rain, "%") : null)) : /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] text-gray-400 italic"
-    }, "Previsione non ancora disponibile per questo giorno", isOnline ? ' (copre ~16 giorni in avanti)' : ' (offline)', "."));
+    }, "Previsione non ancora disponibile per questo giorno", isOnline ? ' (copre 16 giorni in avanti)' : ' (offline)', ".")), locOk && /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2 pt-1 border-t border-[#8F9E8B]/20"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] text-gray-400"
+    }, weather.fetchedAt ? `Previsioni del ${new Date(weather.fetchedAt).toLocaleDateString('it-IT', {
+      day: 'numeric',
+      month: 'short'
+    })} alle ${new Date(weather.fetchedAt).toLocaleTimeString('it-IT', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })} · uguali per tutto il campo` : 'Previsioni non ancora scaricate.'), /*#__PURE__*/React.createElement("button", {
+      onClick: () => fetchWeather(true),
+      disabled: !isOnline || wxBusy,
+      className: "shrink-0 text-[9px] uppercase font-bold text-[#2D392C] px-2 py-1 rounded border border-[#8F9E8B]/40 hover:bg-[#E2EAE4] disabled:opacity-40"
+    }, wxBusy ? '…' : 'Aggiorna')));
   })(), (() => {
     const lunch = members.filter(m => getMeal(selectedDateStr, m.id).lunch).length;
     const dinner = members.filter(m => getMeal(selectedDateStr, m.id).dinner).length;
@@ -2734,12 +2799,25 @@ function App() {
     }, " \xB7 "), dinner, " ", /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-normal text-gray-500"
     }, "a cena")));
-  })(), /*#__PURE__*/React.createElement("textarea", {
+  })()), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline justify-between border-b border-dashed border-[#8F9E8B] pb-1"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg text-[#2D392C]"
+  }, "Men\xF9"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] uppercase font-bold text-gray-400"
+  }, parseDate(selectedDateStr).toLocaleDateString('it-IT', {
+    day: 'numeric',
+    month: 'short'
+  }))), /*#__PURE__*/React.createElement("textarea", {
     value: getDayData(selectedDateStr).note,
     onChange: e => updateDayData(selectedDateStr, 'note', e.target.value),
-    placeholder: "Inserisci note sul menu, meteo o legna per oggi...",
-    className: "w-full h-32 p-3 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded-lg text-sm focus:outline-none focus:border-[#2D392C] resize-none"
-  }))), activeTab === 'membri' && /*#__PURE__*/React.createElement("div", {
+    placeholder: 'Pranzo: pasta al pomodoro\nInsalata\nCena: grigliata\nPatate al forno',
+    className: "lined-paper w-full p-3 rounded-lg border border-[#8F9E8B]/30 focus:outline-none focus:border-[#2D392C] resize-y"
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic"
+  }, "Una pietanza per riga. Si sincronizza con gli altri: chi cucina lo trova gi\xE0 scritto."))), activeTab === 'membri' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
@@ -3202,7 +3280,7 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex-grow min-w-0"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-bold text-[#2D392C] truncate"
+    className: "text-sm font-bold text-[#2D392C] leading-snug break-words"
   }, it.name), it.qty && /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-gray-500"
   }, "Quantit\xE0: ", it.qty)), receipts[it.id] ? /*#__PURE__*/React.createElement("button", {
@@ -3336,23 +3414,32 @@ function App() {
     className: "text-sm text-gray-400 italic"
   }, "Nessun acquisto registrato. Compila il form qui sopra e premi Salva.") : /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
-  }, purchases.slice().reverse().map(p => /*#__PURE__*/React.createElement("li", {
+  }, purchases.slice().reverse().map(p =>
+  /*#__PURE__*/
+  // Due livelli: sopra il nome del prodotto, che ha tutta la
+  // riga per sé (prima veniva tagliato dalle etichette e dal
+  // prezzo che gli stavano accanto); sotto le informazioni.
+  React.createElement("li", {
     key: p.id,
-    className: "flex items-center gap-2 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
+    className: "bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20 space-y-1.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex-grow min-w-0"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "flex items-start justify-between gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-sm font-bold text-[#2D392C] truncate"
+    className: "text-sm font-bold text-[#2D392C] leading-snug break-words min-w-0"
   }, p.name), /*#__PURE__*/React.createElement("span", {
-    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B] shrink-0"
+    className: "font-rustic font-bold text-[#2D392C] shrink-0 whitespace-nowrap"
+  }, money(posNum(p.price)), " \u20AC")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap items-center gap-1 min-w-0 flex-grow"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B]"
   }, PURCHASE_TYPES[p.type] || p.type), p.account === 'sep' && p.type !== 'logistica' && /*#__PURE__*/React.createElement("span", {
-    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C] shrink-0"
+    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
   }, "Separato"), p.fromList && /*#__PURE__*/React.createElement("span", {
-    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C] shrink-0"
-  }, "acquistata")), /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] text-gray-400"
+    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
+  }, "acquistata"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] text-gray-400 basis-full"
   }, p.buyer ? /*#__PURE__*/React.createElement("span", {
     className: "text-[#5C4A3C] font-bold"
   }, p.buyer) : /*#__PURE__*/React.createElement("span", {
@@ -3363,9 +3450,7 @@ function App() {
   })} ${new Date(p.at).toLocaleTimeString('it-IT', {
     hour: '2-digit',
     minute: '2-digit'
-  })}`)), /*#__PURE__*/React.createElement("span", {
-    className: "font-rustic font-bold text-[#2D392C] shrink-0"
-  }, money(posNum(p.price)), " \u20AC"), receipts[p.id] ? /*#__PURE__*/React.createElement("button", {
+  })}`)), receipts[p.id] ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[p.id]),
     "aria-label": "Vedi scontrino",
     className: "shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none"
@@ -3382,7 +3467,7 @@ function App() {
     onClick: () => removePurchase(p.id),
     "aria-label": "Rimuovi",
     className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
-  }, "\xD7")))), /*#__PURE__*/React.createElement("p", {
+  }, "\xD7"))))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
   }, "Manca uno scontrino? Tocca \uD83D\uDCF7 sulla voce: puoi scattarlo o scegliere una foto dalla galleria, anche dopo. Le foto si sincronizzano tra i dispositivi del campo e sono incluse nel backup.")))), activeTab === 'attrezzatura' && (() => {
     const equipBoughtTotal = equipment.reduce((s, e) => e.bought ? s + posNum(e.price) : s, 0);
@@ -3745,7 +3830,13 @@ function App() {
     className: "font-bold"
   }, "ogni volta"), " che apro l'app", /*#__PURE__*/React.createElement("span", {
     className: "block text-[9px] text-gray-500"
-  }, "Senza la spunta il telefono resta sbloccato fino a \"Blocca ora\"."))), /*#__PURE__*/React.createElement("button", {
+  }, "Senza la spunta il telefono resta sbloccato fino a \"Blocca ora\"."))), window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[#5C4A3C] leading-snug"
+  }, "La sincronizzazione sta usando l'accesso di ripiego: per rientrare nel database con l'utente del campo serve digitare di nuovo la password. Tocca ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Blocca ora"), " e rientra.")), /*#__PURE__*/React.createElement("button", {
     onClick: lockNow,
     className: "w-full py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]"
   }, "\uD83D\uDD12 Blocca ora")) : /*#__PURE__*/React.createElement("p", {

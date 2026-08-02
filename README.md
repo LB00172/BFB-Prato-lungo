@@ -50,6 +50,13 @@ preparazione** e **offline al campo**, dove non c'è linea.
   **Firestore** (documento condiviso `camps/<codice campo>` + sotto-collezioni
   per foto scontrini e snapshot). La connessione è **automatica** all'avvio.
 - Offline le modifiche restano in coda e partono da sole al ritorno della rete.
+- **Meteo**: previsioni di [Open-Meteo](https://open-meteo.com) (gratuito, senza
+  chiave), 16 giorni, fuso orario della località. Sono **una sola copia per
+  tutto il campo**: chi ha linea le scarica e le pubblica in
+  `camps/<codice>/meta/weather`, gli altri le ricevono e le adottano se più
+  recenti delle proprie. Nel Calendario si vede l'ora dello scaricamento e c'è
+  un tasto Aggiorna. Prima ogni telefono scaricava per conto suo e si vedevano
+  numeri diversi.
 - **Fusione, non sovrascrittura** (`sync-merge.js`): ogni voce porta con sé la
   data della sua ultima modifica (o cancellazione). Quando due dispositivi che
   hanno lavorato **offline** tornano online, le due versioni si uniscono voce
@@ -74,23 +81,39 @@ preparazione** e **offline al campo**, dove non c'è linea.
 |---|---|---|
 | Aprire l'app | **Blocco con password** (`window.APP_LOCK` in `firebase-config.js`) | Impronta PBKDF2-SHA256, 200.000 giri, con sale: nel codice **non** c'è la password in chiaro. Attesa progressiva dopo 5 tentativi sbagliati. Gira sul telefono, quindi è una barriera, non una cassaforte |
 | Dati sul telefono | `localStorage` del browser + blocco dell'app | Chi ha il telefono sbloccato e sa aprire gli strumenti da sviluppatore li legge: la difesa vera è il codice di sblocco del telefono |
-| **Dati nel cloud** | **solo le Regole di Firestore** | ⚠️ Con l'accesso anonimo attuale, chiunque scarichi il JavaScript dell'app (è pubblico) può leggere e scrivere `camps/<codice>`. Il blocco con password **non** difende il cloud |
+| **Dati nel cloud** | **Regole di Firestore** + utente condiviso | L'app entra nel database con un **utente unico e invisibile** (`APP_LOCK.dbEmail`), usando la password digitata al blocco. Finché quell'utente non esiste in Firebase, l'app ricade sull'accesso anonimo di prima ⚠️ |
 
-**Come chiudere davvero il cloud** (10 minuti nella console Firebase, da fare
-quando si vuole):
+**Utente condiviso: come attivarlo** (10 minuti nella console Firebase). Il
+codice è già pronto e aspetta solo che l'utente esista: fino ad allora tutto
+funziona come prima, quindi non c'è fretta e non si rompe niente.
 
-1. Authentication → Sign-in method → abilita **Email/Password** e disabilita
-   *Anonimo*.
-2. Authentication → Users → crea **un utente condiviso** (es.
-   `campo@brigatabandone.it`) con la password del campo.
-3. Regole Firestore: `allow read, write: if request.auth != null &&
-   request.auth.token.email == "campo@brigatabandone.it";`
-4. Nell'app, il login usa la password digitata per entrare in Firebase invece
-   dell'accesso anonimo (la password resta fuori dal codice).
+1. Authentication → Sign-in method → abilita **Email/Password**.
+2. Authentication → Users → **Add user**: email `campo@brigatabandone.it`
+   (la stessa scritta in `firebase-config.js` come `dbEmail`), password
+   **quella del campo**. Nessuno la digiterà: la usa l'app.
+3. Verifica dai telefoni che la sincronizzazione funzioni ancora (in
+   Impostazioni → Blocco, e in Spese Totali → Dati).
+4. Solo allora stringi le Regole Firestore:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /camps/{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == "campo@brigatabandone.it";
+    }
+  }
+}
+```
+
+5. Authentication → Sign-in method → **disabilita Anonimo**.
 
 Da quel momento senza password non si leggono i dati nemmeno interrogando
 Firestore direttamente. Costo: la **prima** apertura su ogni dispositivo
-richiede la linea; poi la sessione resta valida anche offline.
+richiede la linea; poi la sessione Firebase resta valida anche offline. Se un
+telefono perde quella sessione, Impostazioni lo segnala e basta "Blocca ora" e
+rientrare con la password.
 
 Altre accortezze utili, senza scrivere codice:
 
