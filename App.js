@@ -1118,6 +1118,11 @@ function App() {
   };
   const lockNow = () => {
     forgetUnlock();
+    sessionPassword = null;
+    // Stacca anche la sincronizzazione: al rientro si riparte dalla password
+    // appena digitata, che è quella che apre il database con l'utente del
+    // campo. Senza questo si resterebbe agganciati con l'accesso di ripiego.
+    if (window.CloudSync && window.CloudSync.isConnected()) window.CloudSync.disconnect();
     setMenuOpen(false);
     setLocked(true);
   };
