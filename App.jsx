@@ -1338,6 +1338,14 @@ function App() {
   const addMember = () => {
     const name = newMemberName.trim();
     if (!name) return;
+    // Due persone con lo stesso nome verrebbero trattate come una sola nei
+    // saldi (i pagamenti si abbinano per nome): meglio dirlo subito.
+    const gia = members.some((m) => m.name.trim().toLowerCase() === name.toLowerCase());
+    if (gia && !window.confirm(
+      `C'è già un membro che si chiama "${name}".\n\n` +
+      'Nei conti finali le due persone verrebbero confuse. Aggiungi un cognome ' +
+      'o un soprannome per distinguerle.\n\nVuoi aggiungerlo lo stesso?'
+    )) return;
     setMembers((prev) => [...prev, { id: uid(), name, isChild: newMemberChild }]);
     setNewMemberName('');
     setNewMemberChild(false);
@@ -1851,6 +1859,13 @@ function App() {
       owedByName[key].owed += b.pay; // già arrotondato; bambini = 0
     });
     const unattributed = paidByName['—'] ? paidByName['—'].paid : 0;
+    // Spese intestate a un nome che non è fra i membri: succede se un membro
+    // viene rinominato o eliminato dopo l'acquisto. Non è un errore di calcolo
+    // (i saldi restano a somma zero) ma va mostrato, perché quella persona
+    // compare nei rimborsi pur non essendo del campo.
+    const unknownBuyers = Object.keys(paidByName)
+      .filter((k) => k !== '—' && !owedByName[k])
+      .map((k) => ({ name: paidByName[k].display, paid: paidByName[k].paid }));
     const allKeys = new Set([...Object.keys(paidByName), ...Object.keys(owedByName)]);
     allKeys.delete('—');
     const settlement = [];
@@ -1886,7 +1901,7 @@ function App() {
       foodDrinksCommon, foodDrinksSep, costPerMealSep,
       sepPeopleCount: sepPeople.size, sepDaysCount: sepDays.length,
       attendingAdultsCount: attendingAdults.size, breakdown,
-      collected, roundingDiff, byBuyer, settlement, unattributed, transfers,
+      collected, roundingDiff, byBuyer, settlement, unattributed, unknownBuyers, transfers,
     };
   };
 
@@ -2164,13 +2179,36 @@ function App() {
     { title: 'Altro', items: ['gioco', 'archivio', 'guida', 'impostazioni'] },
   ];
 
+  // Acquirente: si sceglie dai membri, non si scrive. Un nome digitato a mano
+  // con una lettera diversa creerebbe una persona fantasma nei saldi finali.
+  const renderBuyerSelect = (value, onChange, extraClass) => (
+    <>
+      <select
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] ${extraClass || ''}`}
+      >
+        <option value="">— non indicato —</option>
+        {members.map((m) => (<option key={m.id} value={m.name}>{m.name}</option>))}
+        {/* Un acquirente registrato prima e non più fra i membri resta
+            selezionabile, altrimenti aprendo la scheda si perderebbe. */}
+        {value && !members.some((m) => m.name === value) && (
+          <option value={value}>{value} (non più fra i membri)</option>
+        )}
+      </select>
+      {members.length === 0 && (
+        <p className="text-[9px] text-[#D97706] mt-1">Aggiungi prima le persone nella scheda Membri.</p>
+      )}
+    </>
+  );
+
   const goTo = (tab) => { setActiveTab(tab); setMenuOpen(false); };
 
   // Guida: una "pill" per ogni area di lavoro.
   const GUIDE = [
     { k: 'calendario', icon: '📅', title: 'Calendario', body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e il collegamento al Menù del giorno. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.' },
     { k: 'menu', icon: '🍝', title: 'Menù', body: 'Scheda a parte per scrivere cosa si mangia, giorno per giorno. In alto c\'è la stessa striscia dei giorni del Calendario: il giorno scelto è lo stesso nelle due schede, quindi puoi passare dall\'una all\'altra senza ricercarlo. Sotto vedi quanti pasti preparare a pranzo e a cena, e il foglio a righe dove scrivere una pietanza per riga. In fondo l\'elenco dei giorni del campo con la prima riga del menù già scritto: si vede a colpo d\'occhio cosa manca. Tutto si sincronizza: chi cucina lo trova già pronto.' },
-    { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e il suggerimento dei nomi quando registri una spesa.' },
+    { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e la tendina dell\'acquirente quando registri una spesa: i nomi non si scrivono a mano, si scelgono, così un refuso non può creare una persona fantasma nei saldi.' },
     { k: 'presenze', icon: '🍽️', title: 'Presenze', body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta usa "Tutti a pranzo" o "Tutti a cena" e poi togli i pochi assenti, oppure "Copia da ieri". In alto trovi il conteggio del giorno. Durante il campo l\'app si apre già sulla data di oggi.' },
     { k: 'lista', icon: '🧾', title: 'Lista della Spesa', body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; il tasto "Segna come acquistata" apre una maschera che chiede prezzo, acquirente, tipologia e la foto dello scontrino, e sposta la voce in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.' },
     { k: 'attrezzatura', icon: '🪛', title: 'Attrezzatura', body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. Con l\'icona 📷 alleghi lo scontrino, anche in un secondo momento. In fondo vedi il totale previsto e quello effettivamente acquistato; se indichi l\'acquirente, gli verrà rimborsata.' },
@@ -2866,6 +2904,31 @@ function App() {
                   Attenzione: {money(totals.unattributed)} € di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti.
                 </p>
               )}
+              {totals.unknownBuyers.length > 0 && (
+                <div className="mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
+                  <p className="text-[11px] text-[#5C4A3C] leading-snug">
+                    <span className="font-bold">Da controllare:</span> ci sono spese intestate a{' '}
+                    {totals.unknownBuyers.map((u, i) => (
+                      <span key={u.name}>
+                        {i > 0 ? ', ' : ''}<span className="font-bold">{u.name}</span> ({money(u.paid)} €)
+                      </span>
+                    ))}
+                    , che non {totals.unknownBuyers.length === 1 ? 'è' : 'sono'} fra i membri. Compare comunque nei
+                    rimborsi: se è un nome scritto male o una persona eliminata, correggi l'acquirente nella
+                    <span className="font-bold"> Lista della Spesa</span>.
+                  </p>
+                </div>
+              )}
+              {/* Le quote arrotondate a 0,10 € fanno raccogliere qualche
+                  centesimo in più (o in meno) del speso: quei centesimi non
+                  hanno un destinatario, quindi l'ultimo passaggio non combacia
+                  col saldo. Senza spiegarlo sembra un errore di conto. */}
+              {Math.abs(totals.roundingDiff) >= 0.005 && totals.transfers.length > 0 && (
+                <p className="text-[9px] text-gray-400 italic mt-2">
+                  Arrotondamento: i passaggi qui sopra valgono in tutto {money(Math.abs(totals.roundingDiff))} € in meno
+                  dei saldi indicati. È lo scarto delle quote arrotondate a 0,10 € (così non servono monetine da 1, 2 o 5 cent).
+                </p>
+              )}
               <p className="text-[9px] text-gray-400 italic mt-1">"Riceve" = ha anticipato più di quanto deve; "dà" = deve versare la differenza.</p>
             </div>
 
@@ -3082,17 +3145,7 @@ function App() {
 
               <div>
                 <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Acquirente</label>
-                <input
-                  type="text"
-                  list="acquirenti"
-                  value={pBuyer}
-                  onChange={(e) => setPBuyer(e.target.value)}
-                  placeholder="Chi ha acquistato"
-                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
-                />
-                <datalist id="acquirenti">
-                  {members.map((m) => (<option key={m.id} value={m.name} />))}
-                </datalist>
+                {renderBuyerSelect(pBuyer, setPBuyer)}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -3219,17 +3272,10 @@ function App() {
                 placeholder="Es. Corda, gazebo, tanica…"
                 className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
               />
-              <input
-                type="text"
-                list="acquirenti-attrezzatura"
-                value={newEquipBuyer}
-                onChange={(e) => setNewEquipBuyer(e.target.value)}
-                placeholder="Acquirente (facoltativo)"
-                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
-              />
-              <datalist id="acquirenti-attrezzatura">
-                {members.map((m) => (<option key={m.id} value={m.name} />))}
-              </datalist>
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Acquirente (facoltativo)</label>
+                {renderBuyerSelect(newEquipBuyer, setNewEquipBuyer)}
+              </div>
               <div className="flex gap-2">
                 <input
                   type="number" min="0" step="0.01" inputMode="decimal"
@@ -3442,7 +3488,6 @@ function App() {
                     <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Nome giocatore</label>
                     <input
                       type="text"
-                      list="acquirenti"
                       value={gamePlayer}
                       onChange={(e) => setGamePlayer(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && startGame()}
@@ -3722,14 +3767,7 @@ function App() {
             </div>
             <div>
               <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Acquirente</label>
-              <input
-                type="text"
-                list="acquirenti"
-                value={buying.buyer}
-                onChange={(e) => setBuying((b) => ({ ...b, buyer: e.target.value }))}
-                placeholder="Chi ha acquistato"
-                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm"
-              />
+              {renderBuyerSelect(buying.buyer, (v) => setBuying((b) => ({ ...b, buyer: v })))}
             </div>
             <div>
               <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Tipologia</label>

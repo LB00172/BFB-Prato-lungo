@@ -1637,6 +1637,10 @@ function App() {
   const addMember = () => {
     const name = newMemberName.trim();
     if (!name) return;
+    // Due persone con lo stesso nome verrebbero trattate come una sola nei
+    // saldi (i pagamenti si abbinano per nome): meglio dirlo subito.
+    const gia = members.some(m => m.name.trim().toLowerCase() === name.toLowerCase());
+    if (gia && !window.confirm(`C'è già un membro che si chiama "${name}".\n\n` + 'Nei conti finali le due persone verrebbero confuse. Aggiungi un cognome ' + 'o un soprannome per distinguerle.\n\nVuoi aggiungerlo lo stesso?')) return;
     setMembers(prev => [...prev, {
       id: uid(),
       name,
@@ -2229,6 +2233,14 @@ function App() {
       owedByName[key].owed += b.pay; // già arrotondato; bambini = 0
     });
     const unattributed = paidByName['—'] ? paidByName['—'].paid : 0;
+    // Spese intestate a un nome che non è fra i membri: succede se un membro
+    // viene rinominato o eliminato dopo l'acquisto. Non è un errore di calcolo
+    // (i saldi restano a somma zero) ma va mostrato, perché quella persona
+    // compare nei rimborsi pur non essendo del campo.
+    const unknownBuyers = Object.keys(paidByName).filter(k => k !== '—' && !owedByName[k]).map(k => ({
+      name: paidByName[k].display,
+      paid: paidByName[k].paid
+    }));
     const allKeys = new Set([...Object.keys(paidByName), ...Object.keys(owedByName)]);
     allKeys.delete('—');
     const settlement = [];
@@ -2299,6 +2311,7 @@ function App() {
       byBuyer,
       settlement,
       unattributed,
+      unknownBuyers,
       transfers
     };
   };
@@ -2622,6 +2635,23 @@ function App() {
     title: 'Altro',
     items: ['gioco', 'archivio', 'guida', 'impostazioni']
   }];
+
+  // Acquirente: si sceglie dai membri, non si scrive. Un nome digitato a mano
+  // con una lettera diversa creerebbe una persona fantasma nei saldi finali.
+  const renderBuyerSelect = (value, onChange, extraClass) => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("select", {
+    value: value || '',
+    onChange: e => onChange(e.target.value),
+    className: `w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] ${extraClass || ''}`
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "\u2014 non indicato \u2014"), members.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m.id,
+    value: m.name
+  }, m.name)), value && !members.some(m => m.name === value) && /*#__PURE__*/React.createElement("option", {
+    value: value
+  }, value, " (non pi\xF9 fra i membri)")), members.length === 0 && /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-[#D97706] mt-1"
+  }, "Aggiungi prima le persone nella scheda Membri."));
   const goTo = tab => {
     setActiveTab(tab);
     setMenuOpen(false);
@@ -2642,7 +2672,7 @@ function App() {
     k: 'membri',
     icon: '👥',
     title: 'Membri',
-    body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e il suggerimento dei nomi quando registri una spesa.'
+    body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e la tendina dell\'acquirente quando registri una spesa: i nomi non si scrivono a mano, si scelgono, così un refuso non può creare una persona fantasma nei saldi.'
   }, {
     k: 'presenze',
     icon: '🍽️',
@@ -3297,7 +3327,21 @@ function App() {
     }, "\u2713")));
   }))), totals.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-[#D97706] italic mt-2"
-  }, "Attenzione: ", money(totals.unattributed), " \u20AC di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti."), /*#__PURE__*/React.createElement("p", {
+  }, "Attenzione: ", money(totals.unattributed), " \u20AC di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti."), totals.unknownBuyers.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[#5C4A3C] leading-snug"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Da controllare:"), " ci sono spese intestate a", ' ', totals.unknownBuyers.map((u, i) => /*#__PURE__*/React.createElement("span", {
+    key: u.name
+  }, i > 0 ? ', ' : '', /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, u.name), " (", money(u.paid), " \u20AC)")), ", che non ", totals.unknownBuyers.length === 1 ? 'è' : 'sono', " fra i membri. Compare comunque nei rimborsi: se \xE8 un nome scritto male o una persona eliminata, correggi l'acquirente nella", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, " Lista della Spesa"), ".")), Math.abs(totals.roundingDiff) >= 0.005 && totals.transfers.length > 0 && /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic mt-2"
+  }, "Arrotondamento: i passaggi qui sopra valgono in tutto ", money(Math.abs(totals.roundingDiff)), " \u20AC in meno dei saldi indicati. \xC8 lo scarto delle quote arrotondate a 0,10 \u20AC (cos\xEC non servono monetine da 1, 2 o 5 cent)."), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-1"
   }, "\"Riceve\" = ha anticipato pi\xF9 di quanto deve; \"d\xE0\" = deve versare la differenza.")), /*#__PURE__*/React.createElement("button", {
     onClick: shareReport,
@@ -3487,19 +3531,7 @@ function App() {
     className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-  }, "Acquirente"), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    list: "acquirenti",
-    value: pBuyer,
-    onChange: e => setPBuyer(e.target.value),
-    placeholder: "Chi ha acquistato",
-    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
-  }), /*#__PURE__*/React.createElement("datalist", {
-    id: "acquirenti"
-  }, members.map(m => /*#__PURE__*/React.createElement("option", {
-    key: m.id,
-    value: m.name
-  })))), /*#__PURE__*/React.createElement("div", {
+  }, "Acquirente"), renderBuyerSelect(pBuyer, setPBuyer)), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
@@ -3619,19 +3651,9 @@ function App() {
       onChange: e => setNewEquipText(e.target.value),
       placeholder: "Es. Corda, gazebo, tanica\u2026",
       className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
-    }), /*#__PURE__*/React.createElement("input", {
-      type: "text",
-      list: "acquirenti-attrezzatura",
-      value: newEquipBuyer,
-      onChange: e => setNewEquipBuyer(e.target.value),
-      placeholder: "Acquirente (facoltativo)",
-      className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
-    }), /*#__PURE__*/React.createElement("datalist", {
-      id: "acquirenti-attrezzatura"
-    }, members.map(m => /*#__PURE__*/React.createElement("option", {
-      key: m.id,
-      value: m.name
-    }))), /*#__PURE__*/React.createElement("div", {
+    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block text-[10px] uppercase font-bold text-gray-500 mb-1"
+    }, "Acquirente (facoltativo)"), renderBuyerSelect(newEquipBuyer, setNewEquipBuyer)), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-2"
     }, /*#__PURE__*/React.createElement("input", {
       type: "number",
@@ -3835,7 +3857,6 @@ function App() {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
   }, "Nome giocatore"), /*#__PURE__*/React.createElement("input", {
     type: "text",
-    list: "acquirenti",
     value: gamePlayer,
     onChange: e => setGamePlayer(e.target.value),
     onKeyDown: e => e.key === 'Enter' && startGame(),
@@ -4074,17 +4095,10 @@ function App() {
     className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-  }, "Acquirente"), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    list: "acquirenti",
-    value: buying.buyer,
-    onChange: e => setBuying(b => ({
-      ...b,
-      buyer: e.target.value
-    })),
-    placeholder: "Chi ha acquistato",
-    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm"
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, "Acquirente"), renderBuyerSelect(buying.buyer, v => setBuying(b => ({
+    ...b,
+    buyer: v
+  })))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
   }, "Tipologia"), /*#__PURE__*/React.createElement("select", {
     value: buying.type,

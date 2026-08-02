@@ -42,6 +42,10 @@ preparazione** e **offline al campo**, dove non c'è linea.
   scarto viene riconciliato solo se ≥ 0,50 €.
 - **Saldi**: per ogni persona `anticipato − dovuto` → "riceve" o "dà", più le
   transazioni di pareggio ("chi paga chi") col minor numero di passaggi.
+- **Acquirente**: si sceglie dalla tendina dei membri, non si scrive. Gli
+  abbinamenti dei saldi avvengono per nome, quindi un refuso creerebbe una
+  persona fantasma; se una spesa risulta intestata a un nome che non è (più)
+  fra i membri, i Saldi lo segnalano.
 
 ## Dati, offline e sincronizzazione
 
