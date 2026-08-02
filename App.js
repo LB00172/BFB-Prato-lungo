@@ -117,6 +117,45 @@ const initialDayState = () => ({
   meals: {}
 });
 
+// ---- Dati per farsi rimborsare (PayPal / IBAN) ----
+// L'IBAN si controlla davvero: una lettera sbagliata manda i soldi altrove (o
+// li fa rimbalzare dopo giorni). Controllo standard mod-97 (ISO 13616).
+const ibanClean = v => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const ibanPretty = v => ibanClean(v).replace(/(.{4})/g, '$1 ').trim();
+const ibanValid = v => {
+  const s = ibanClean(v);
+  if (s.length < 15 || s.length > 34 || !/^[A-Z]{2}\d{2}[A-Z0-9]+$/.test(s)) return false;
+  const rot = s.slice(4) + s.slice(0, 4);
+  let resto = 0;
+  for (let i = 0; i < rot.length; i++) {
+    const c = rot.charCodeAt(i);
+    const n = c >= 65 ? c - 55 : c - 48; // A=10 … Z=35
+    resto = (resto * (n > 9 ? 100 : 10) + n) % 97;
+  }
+  return resto === 1;
+};
+
+// Copia negli appunti, con ripiego per i browser che non danno il permesso.
+const copyToClipboard = testo => {
+  const t = String(testo || '');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(t).then(() => true).catch(() => false);
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return Promise.resolve(ok);
+  } catch (e) {
+    return Promise.resolve(false);
+  }
+};
+
 // Branding e funzionalità: letti da window.APP_CONFIG (firebase-config.js),
 // con fallback ai valori attuali se la configurazione non è presente.
 const CFG = typeof window !== 'undefined' && window.APP_CONFIG || {};
@@ -1026,6 +1065,8 @@ function App() {
   });
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberChild, setNewMemberChild] = useState(false);
+  const [infoMember, setInfoMember] = useState(null); // membro con la scheda pagamenti aperta
+  const [copied, setCopied] = useState(''); // ultima cosa copiata (feedback)
   const [pName, setPName] = useState('');
   const [pPrice, setPPrice] = useState('');
   const [pType, setPType] = useState('alimentare');
@@ -1669,6 +1710,21 @@ function App() {
       ...m,
       isChild: !m.isChild
     } : m));
+  };
+
+  // Dati di pagamento del membro (PayPal / IBAN): campi liberi e facoltativi.
+  const setMemberField = (id, campo, valore) => {
+    setMembers(prev => prev.map(m => m.id === id ? {
+      ...m,
+      [campo]: valore
+    } : m));
+  };
+  const copiaDato = (etichetta, valore) => {
+    copyToClipboard(valore).then(ok => {
+      setCopied(ok ? etichetta : '');
+      if (!ok) window.alert(etichetta + ':\n\n' + valore);
+    });
+    window.setTimeout(() => setCopied(''), 1800);
   };
 
   // Esenzione dalla spesa per l'attrezzatura aggiunta.
@@ -2787,7 +2843,7 @@ function App() {
     k: 'membri',
     icon: '👥',
     title: 'Membri',
-    body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e la tendina dell\'acquirente quando registri una spesa: i nomi non si scrivono a mano, si scelgono, così un refuso non può creare una persona fantasma nei saldi.'
+    body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e la tendina dell\'acquirente quando registri una spesa: i nomi non si scrivono a mano, si scelgono, così un refuso non può creare una persona fantasma nei saldi. La "i" accanto al nome apre PayPal e IBAN: chi li compila se li vede comparire nei Saldi, accanto al rimborso che deve ricevere, con il tasto per copiarli.'
   }, {
     k: 'presenze',
     icon: '🍽️',
@@ -3164,15 +3220,56 @@ function App() {
     className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-sm text-[#2D392C] truncate"
-  }, m.name), /*#__PURE__*/React.createElement("div", {
+  }, m.name, (m.paypal || m.iban) && /*#__PURE__*/React.createElement("span", {
+    className: "ml-1.5 text-[9px] text-[#8F9E8B]",
+    title: "Ha inserito i dati per il rimborso"
+  }, "\uD83D\uDCB3")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setInfoMember(v => v === m.id ? null : m.id),
+    "aria-label": `Dati di pagamento di ${m.name}`,
+    title: "Dati per il rimborso (PayPal / IBAN)",
+    className: `w-6 h-6 rounded-full border-2 font-serif italic font-bold text-[11px] leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B] text-[#5C4A3C]'}`
+  }, "i"), /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleChild(m.id),
     className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${m.isChild ? 'bg-[#D97706] text-white' : 'bg-gray-200 text-gray-500'}`
   }, m.isChild ? 'Bambino' : 'Adulto'), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeMember(m.id),
     className: "text-red-700 font-bold px-2 hover:text-red-900"
-  }, "\xD7"))), FEATURES.equipExemption && /*#__PURE__*/React.createElement("button", {
+  }, "\xD7"))), infoMember === m.id && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2.5 pt-2.5 border-t border-[#8F9E8B]/30 space-y-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug"
+  }, "Come farsi rimborsare a campo finito. Facoltativi: si vedono in", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, " Spese Totali \u2192 Saldi"), ", accanto a chi deve ricevere."), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1"
+  }, "PayPal"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    inputMode: "email",
+    value: m.paypal || '',
+    onChange: e => setMemberField(m.id, 'paypal', e.target.value),
+    placeholder: "paypal.me/nome oppure email",
+    className: "w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1"
+  }, "IBAN"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: m.iban || '',
+    onChange: e => setMemberField(m.id, 'iban', e.target.value.toUpperCase()),
+    onBlur: e => {
+      const p = ibanPretty(e.target.value);
+      if (p !== (m.iban || '')) setMemberField(m.id, 'iban', p);
+    },
+    placeholder: "IT00 X000 0000 0000 0000 0000 000",
+    className: "w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-xs font-mono focus:outline-none focus:border-[#2D392C]"
+  }), (m.iban || '').trim() !== '' && (ibanValid(m.iban) ? /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-[#2D392C] mt-1"
+  }, "\u2714 IBAN formalmente corretto") : /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-[#D97706] mt-1"
+  }, "Controlla l'IBAN: non supera la verifica standard (manca o \xE8 sbagliato un carattere)."))), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic leading-snug"
+  }, "Finiscono nel database del campo, come tutto il resto: li vede chi ha la password dell'app. Alla chiusura del campo vengono azzerati insieme ai membri.")), FEATURES.equipExemption && /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleEquipExempt(m.id),
     "aria-label": "Esenzione attrezzatura",
     className: "mt-1.5 flex items-center gap-2 text-left"
@@ -3440,10 +3537,15 @@ function App() {
   }, totals.transfers.map((t, i) => {
     const key = `${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
     const paid = settled.includes(key);
+    // Dati di pagamento di chi deve ricevere (scheda Membri, tasto "i").
+    const dest = members.find(m => m.name === t.to);
+    const mostraDati = !paid && dest && (dest.paypal || dest.iban);
     return /*#__PURE__*/React.createElement("li", {
       key: key + i,
       onClick: () => toggleSettled(key),
-      className: `cursor-pointer select-none flex items-center justify-between bg-[#1F271E] px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-[#8F9E8B]/20'}`
+      className: `cursor-pointer select-none bg-[#1F271E] px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-[#8F9E8B]/20'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between"
     }, /*#__PURE__*/React.createElement("span", {
       className: `text-xs ${paid ? 'line-through text-gray-400' : ''}`
     }, /*#__PURE__*/React.createElement("span", {
@@ -3458,8 +3560,34 @@ function App() {
       className: `font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-[#D97706]'}`
     }, money(t.amount), " \u20AC"), paid && /*#__PURE__*/React.createElement("span", {
       className: "text-[#8FBF8F] text-sm font-bold"
-    }, "\u2713")));
-  }))), totals.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
+    }, "\u2713"))), mostraDati && /*#__PURE__*/React.createElement("div", {
+      className: "mt-1.5 pt-1.5 border-t border-[#8F9E8B]/20 space-y-1"
+    }, [['PayPal', dest.paypal], ['IBAN', dest.iban]].filter(r => r[1]).map(r => /*#__PURE__*/React.createElement("div", {
+      key: r[0],
+      className: "flex items-start gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] uppercase font-bold text-[#8F9E8B] w-11 shrink-0 pt-0.5"
+    }, r[0]), /*#__PURE__*/React.createElement("span", {
+      className: `text-[10px] text-[#F0F4F1] break-all leading-snug ${r[0] === 'IBAN' ? 'font-mono' : ''}`
+    }, r[1]), /*#__PURE__*/React.createElement("button", {
+      onClick: e => {
+        e.stopPropagation();
+        copiaDato(`${r[0]} di ${t.to}`, r[1]);
+      },
+      className: "ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#2D392C] border border-[#8F9E8B]/30 text-[#8F9E8B] hover:text-white"
+    }, copied === `${r[0]} di ${t.to}` ? 'copiato ✓' : 'copia')))));
+  })), (() => {
+    const senza = [...new Set(totals.transfers.map(t => t.to))].filter(n => {
+      const d = members.find(m => m.name === n);
+      return d && !d.paypal && !d.iban;
+    });
+    if (senza.length === 0) return null;
+    return /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-gray-400 italic mt-2"
+    }, senza.join(', '), " ", senza.length === 1 ? 'deve' : 'devono', " ricevere ma non ", senza.length === 1 ? 'ha' : 'hanno', " inserito PayPal o IBAN: si aggiungono in ", /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, "Membri"), ", con la \"i\" accanto al nome.");
+  })()), totals.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-[#D97706] italic mt-2"
   }, "Attenzione: ", money(totals.unattributed), " \u20AC di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti."), totals.unknownBuyers.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"

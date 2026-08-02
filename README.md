@@ -15,7 +15,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
 |---|---|
 | **Calendario** | Meteo previsto del giorno (Pereto, AQ), riepilogo cucina (quanti pasti preparare), giorni del conto separato |
 | **Menù** | Cosa si mangia, giorno per giorno, su foglio a righe; condivide il giorno scelto con il Calendario |
-| **Membri** | Elenco partecipanti; i bambini mangiano gratis |
+| **Membri** | Elenco partecipanti; i bambini mangiano gratis; la "i" accanto al nome apre PayPal e IBAN per farsi rimborsare |
 | **Presenze** | Chi c'è a pranzo/cena, con "Tutti a pranzo/cena" e "Copia da ieri" |
 | **Lista della Spesa** | Ogni acquisto: nome, acquirente, prezzo, tipologia, foto scontrino; ricerca e correzione delle voci registrate |
 | **Aggiunta Attrezzatura** | Attrezzatura da comprare con prezzo; se spuntata entra nelle spese |
@@ -42,6 +42,15 @@ preparazione** e **offline al campo**, dove non c'è linea.
   scarto viene riconciliato solo se ≥ 0,50 €.
 - **Saldi**: per ogni persona `anticipato − dovuto` → "riceve" o "dà", più le
   transazioni di pareggio ("chi paga chi") col minor numero di passaggi.
+- **Come farsi rimborsare**: ogni membro può lasciare **PayPal** e **IBAN**
+  (Membri → "i" accanto al nome, entrambi facoltativi). Compaiono in
+  *Saldi → chi paga chi*, sotto il passaggio da fare, con il tasto **copia**;
+  spariscono quando il rimborso viene segnato come saldato. L'IBAN è
+  verificato con il controllo standard mod-97: se manca o è sbagliato un
+  carattere l'app lo dice subito, invece di scoprirlo col bonifico che torna
+  indietro. Non finiscono nel messaggio di "Condividi resoconto": restano
+  dentro l'app, non nel gruppo WhatsApp. Alla chiusura del campo si azzerano
+  insieme ai membri.
 - **Acquirente**: si sceglie dalla tendina dei membri, non si scrive. Gli
   abbinamenti dei saldi avvengono per nome, quindi un refuso creerebbe una
   persona fantasma; se una spesa risulta intestata a un nome che non è (più)

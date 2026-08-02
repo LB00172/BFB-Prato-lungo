@@ -110,6 +110,43 @@ const posNum = (v) => Math.max(0, parseFloat(v) || 0);
 
 const initialDayState = () => ({ note: '', guestsNames: '', meals: {} });
 
+// ---- Dati per farsi rimborsare (PayPal / IBAN) ----
+// L'IBAN si controlla davvero: una lettera sbagliata manda i soldi altrove (o
+// li fa rimbalzare dopo giorni). Controllo standard mod-97 (ISO 13616).
+const ibanClean = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const ibanPretty = (v) => ibanClean(v).replace(/(.{4})/g, '$1 ').trim();
+const ibanValid = (v) => {
+  const s = ibanClean(v);
+  if (s.length < 15 || s.length > 34 || !/^[A-Z]{2}\d{2}[A-Z0-9]+$/.test(s)) return false;
+  const rot = s.slice(4) + s.slice(0, 4);
+  let resto = 0;
+  for (let i = 0; i < rot.length; i++) {
+    const c = rot.charCodeAt(i);
+    const n = c >= 65 ? c - 55 : c - 48;   // A=10 … Z=35
+    resto = (resto * (n > 9 ? 100 : 10) + n) % 97;
+  }
+  return resto === 1;
+};
+
+// Copia negli appunti, con ripiego per i browser che non danno il permesso.
+const copyToClipboard = (testo) => {
+  const t = String(testo || '');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(t).then(() => true).catch(() => false);
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return Promise.resolve(ok);
+  } catch (e) { return Promise.resolve(false); }
+};
+
 // Branding e funzionalità: letti da window.APP_CONFIG (firebase-config.js),
 // con fallback ai valori attuali se la configurazione non è presente.
 const CFG = (typeof window !== 'undefined' && window.APP_CONFIG) || {};
@@ -862,6 +899,8 @@ function App() {
 
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberChild, setNewMemberChild] = useState(false);
+  const [infoMember, setInfoMember] = useState(null); // membro con la scheda pagamenti aperta
+  const [copied, setCopied] = useState('');            // ultima cosa copiata (feedback)
   const [pName, setPName] = useState('');
   const [pPrice, setPPrice] = useState('');
   const [pType, setPType] = useState('alimentare');
@@ -1369,6 +1408,19 @@ function App() {
 
   const toggleChild = (id) => {
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, isChild: !m.isChild } : m)));
+  };
+
+  // Dati di pagamento del membro (PayPal / IBAN): campi liberi e facoltativi.
+  const setMemberField = (id, campo, valore) => {
+    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, [campo]: valore } : m)));
+  };
+
+  const copiaDato = (etichetta, valore) => {
+    copyToClipboard(valore).then((ok) => {
+      setCopied(ok ? etichetta : '');
+      if (!ok) window.alert(etichetta + ':\n\n' + valore);
+    });
+    window.setTimeout(() => setCopied(''), 1800);
   };
 
   // Esenzione dalla spesa per l'attrezzatura aggiunta.
@@ -2285,7 +2337,7 @@ function App() {
   const GUIDE = [
     { k: 'calendario', icon: '📅', title: 'Calendario', body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e il collegamento al Menù del giorno. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.' },
     { k: 'menu', icon: '🍝', title: 'Menù', body: 'Scheda a parte per scrivere cosa si mangia, giorno per giorno. In alto c\'è la stessa striscia dei giorni del Calendario: il giorno scelto è lo stesso nelle due schede, quindi puoi passare dall\'una all\'altra senza ricercarlo. Sotto vedi quanti pasti preparare a pranzo e a cena, e il foglio a righe dove scrivere una pietanza per riga. In fondo l\'elenco dei giorni del campo con la prima riga del menù già scritto: si vede a colpo d\'occhio cosa manca. Tutto si sincronizza: chi cucina lo trova già pronto.' },
-    { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e la tendina dell\'acquirente quando registri una spesa: i nomi non si scrivono a mano, si scelgono, così un refuso non può creare una persona fantasma nei saldi.' },
+    { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e la tendina dell\'acquirente quando registri una spesa: i nomi non si scrivono a mano, si scelgono, così un refuso non può creare una persona fantasma nei saldi. La "i" accanto al nome apre PayPal e IBAN: chi li compila se li vede comparire nei Saldi, accanto al rimborso che deve ricevere, con il tasto per copiarli.' },
     { k: 'presenze', icon: '🍽️', title: 'Presenze', body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta usa "Tutti a pranzo" o "Tutti a cena" e poi togli i pochi assenti, oppure "Copia da ieri". In alto trovi il conteggio del giorno. Durante il campo l\'app si apre già sulla data di oggi.' },
     { k: 'lista', icon: '🧾', title: 'Lista della Spesa', body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; il tasto "Segna come acquistata" apre una maschera che chiede prezzo, acquirente, tipologia e la foto dello scontrino, e sposta la voce in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.' },
     { k: 'attrezzatura', icon: '🪛', title: 'Attrezzatura', body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. Con l\'icona 📷 alleghi lo scontrino, anche in un secondo momento. In fondo vedi il totale previsto e quello effettivamente acquistato; se indichi l\'acquirente, gli verrà rimborsata.' },
@@ -2637,8 +2689,19 @@ function App() {
                   {members.map((m) => (
                     <li key={m.id} className="bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-sm text-[#2D392C] truncate">{m.name}</span>
+                        <span className="font-bold text-sm text-[#2D392C] truncate">
+                          {m.name}
+                          {(m.paypal || m.iban) && <span className="ml-1.5 text-[9px] text-[#8F9E8B]" title="Ha inserito i dati per il rimborso">💳</span>}
+                        </span>
                         <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => setInfoMember((v) => (v === m.id ? null : m.id))}
+                            aria-label={`Dati di pagamento di ${m.name}`}
+                            title="Dati per il rimborso (PayPal / IBAN)"
+                            className={`w-6 h-6 rounded-full border-2 font-serif italic font-bold text-[11px] leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B] text-[#5C4A3C]'}`}
+                          >
+                            i
+                          </button>
                           <button
                             onClick={() => toggleChild(m.id)}
                             className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${m.isChild ? 'bg-[#D97706] text-white' : 'bg-gray-200 text-gray-500'}`}
@@ -2648,6 +2711,47 @@ function App() {
                           <button onClick={() => removeMember(m.id)} className="text-red-700 font-bold px-2 hover:text-red-900">&times;</button>
                         </div>
                       </div>
+                      {/* Dati per farsi rimborsare dopo il campo. Si aprono con la "i". */}
+                      {infoMember === m.id && (
+                        <div className="mt-2.5 pt-2.5 border-t border-[#8F9E8B]/30 space-y-2">
+                          <p className="text-[10px] text-gray-500 leading-snug">
+                            Come farsi rimborsare a campo finito. Facoltativi: si vedono in
+                            <span className="font-bold"> Spese Totali → Saldi</span>, accanto a chi deve ricevere.
+                          </p>
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1">PayPal</label>
+                            <input
+                              type="text"
+                              inputMode="email"
+                              value={m.paypal || ''}
+                              onChange={(e) => setMemberField(m.id, 'paypal', e.target.value)}
+                              placeholder="paypal.me/nome oppure email"
+                              className="w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1">IBAN</label>
+                            <input
+                              type="text"
+                              value={m.iban || ''}
+                              onChange={(e) => setMemberField(m.id, 'iban', e.target.value.toUpperCase())}
+                              onBlur={(e) => { const p = ibanPretty(e.target.value); if (p !== (m.iban || '')) setMemberField(m.id, 'iban', p); }}
+                              placeholder="IT00 X000 0000 0000 0000 0000 000"
+                              className="w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-xs font-mono focus:outline-none focus:border-[#2D392C]"
+                            />
+                            {/* Un IBAN sbagliato si scopre solo quando il bonifico torna indietro. */}
+                            {(m.iban || '').trim() !== '' && (
+                              ibanValid(m.iban)
+                                ? <p className="text-[9px] text-[#2D392C] mt-1">✔ IBAN formalmente corretto</p>
+                                : <p className="text-[9px] text-[#D97706] mt-1">Controlla l'IBAN: non supera la verifica standard (manca o è sbagliato un carattere).</p>
+                            )}
+                          </div>
+                          <p className="text-[9px] text-gray-400 italic leading-snug">
+                            Finiscono nel database del campo, come tutto il resto: li vede chi ha la password dell'app.
+                            Alla chiusura del campo vengono azzerati insieme ai membri.
+                          </p>
+                        </div>
+                      )}
                       {/* Esenzione attrezzatura: nascosta finche' FEATURES.equipExemption e' false */}
                       {FEATURES.equipExemption && (
                         <button
@@ -2969,25 +3073,58 @@ function App() {
                     {totals.transfers.map((t, i) => {
                       const key = `${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
                       const paid = settled.includes(key);
+                      // Dati di pagamento di chi deve ricevere (scheda Membri, tasto "i").
+                      const dest = members.find((m) => m.name === t.to);
+                      const mostraDati = !paid && dest && (dest.paypal || dest.iban);
                       return (
                         <li
                           key={key + i}
                           onClick={() => toggleSettled(key)}
-                          className={`cursor-pointer select-none flex items-center justify-between bg-[#1F271E] px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-[#8F9E8B]/20'}`}
+                          className={`cursor-pointer select-none bg-[#1F271E] px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-[#8F9E8B]/20'}`}
                         >
-                          <span className={`text-xs ${paid ? 'line-through text-gray-400' : ''}`}>
-                            <span className="font-bold">{t.from}</span>
-                            <span className="text-[#8F9E8B]"> → </span>
-                            <span className="font-bold">{t.to}</span>
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <span className={`font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-[#D97706]'}`}>{money(t.amount)} €</span>
-                            {paid && <span className="text-[#8FBF8F] text-sm font-bold">✓</span>}
-                          </span>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-xs ${paid ? 'line-through text-gray-400' : ''}`}>
+                              <span className="font-bold">{t.from}</span>
+                              <span className="text-[#8F9E8B]"> → </span>
+                              <span className="font-bold">{t.to}</span>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <span className={`font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-[#D97706]'}`}>{money(t.amount)} €</span>
+                              {paid && <span className="text-[#8FBF8F] text-sm font-bold">✓</span>}
+                            </span>
+                          </div>
+                          {mostraDati && (
+                            <div className="mt-1.5 pt-1.5 border-t border-[#8F9E8B]/20 space-y-1">
+                              {[['PayPal', dest.paypal], ['IBAN', dest.iban]].filter((r) => r[1]).map((r) => (
+                                <div key={r[0]} className="flex items-start gap-2">
+                                  <span className="text-[9px] uppercase font-bold text-[#8F9E8B] w-11 shrink-0 pt-0.5">{r[0]}</span>
+                                  <span className={`text-[10px] text-[#F0F4F1] break-all leading-snug ${r[0] === 'IBAN' ? 'font-mono' : ''}`}>{r[1]}</span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); copiaDato(`${r[0]} di ${t.to}`, r[1]); }}
+                                    className="ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#2D392C] border border-[#8F9E8B]/30 text-[#8F9E8B] hover:text-white"
+                                  >
+                                    {copied === `${r[0]} di ${t.to}` ? 'copiato ✓' : 'copia'}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </li>
                       );
                     })}
                   </ul>
+                  {/* Chi deve incassare ma non ha lasciato PayPal/IBAN. */}
+                  {(() => {
+                    const senza = [...new Set(totals.transfers.map((t) => t.to))]
+                      .filter((n) => { const d = members.find((m) => m.name === n); return d && !d.paypal && !d.iban; });
+                    if (senza.length === 0) return null;
+                    return (
+                      <p className="text-[9px] text-gray-400 italic mt-2">
+                        {senza.join(', ')} {senza.length === 1 ? 'deve' : 'devono'} ricevere ma non {senza.length === 1 ? 'ha' : 'hanno'} inserito
+                        PayPal o IBAN: si aggiungono in <span className="font-bold">Membri</span>, con la "i" accanto al nome.
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
               {totals.unattributed > 0.005 && (
