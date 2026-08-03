@@ -20,7 +20,7 @@
   'use strict';
 
   var A4 = { w: 595.28, h: 841.89 };
-  var MARGINE = 50;
+  var MARGINE = 44;
   var PER_PAGINA = 4;          // 2 x 2: sotto sono francobolli, sopra è un elenco
   var MAX_FOTO = 12;           // oltre, il ricordo diventa un catalogo
 
@@ -246,26 +246,42 @@
     // montagne, e lo sfondo è metà del senso di questa pagina.
     var alto = A4.h - 112;
     var basso = 108;
+    // Le colonne restano due anche con una foto sola: serve a tenere la stessa
+    // misura di polaroid in tutte le pagine. Le righe invece si contano sulle
+    // foto che ci sono davvero, altrimenti una pagina con due foto le tiene in
+    // alto e lascia mezza pagina vuota sotto.
     var colonne = 2;
-    var righe = Math.ceil(PER_PAGINA / colonne);
-    var spazio = 26;
+    var righe = Math.ceil(fotoPagina.length / colonne);
+    var spazio = 34;
     var largh = (A4.w - MARGINE * 2 - spazio * (colonne - 1)) / colonne;
-    var alt = largh * 0.95;      // quasi quadrata: la foto sta dentro comunque
+    var alt = largh * 0.88;      // la foto ci sta dentro comunque, ridotta a scala
     // Il blocco si centra nella fascia libera invece di allungarsi.
     var altezzaBlocco = righe * alt + (righe - 1) * spazio;
     var cima = basso + (alto - basso + altezzaBlocco) / 2;
 
+    // Sfalsature e inclinazioni: devono sembrare foto buttate sul tavolo, non
+    // incollate su una griglia. Il rumore è ripetibile (stesso seme, stesso
+    // risultato), altrimenti due generazioni della stessa pagina darebbero file
+    // diversi e la prova di ripetibilità non avrebbe senso.
+    var s = caso(31337 + numero * 7919);
+    var INCLINA = [-7.5, 5.5, 6.5, -6];
+
     for (var i = 0; i < fotoPagina.length; i++) {
       var col = i % colonne;
       var rig = Math.floor(i / colonne);
+      // Ultima riga incompleta (es. tre foto): si centra invece di restare
+      // appesa a sinistra.
+      var inRiga = Math.min(colonne, fotoPagina.length - rig * colonne);
+      var rientro = (colonne - inRiga) * (largh + spazio) / 2;
+      var scartoX = (s() - 0.5) * 34;
+      var scartoY = (s() - 0.5) * 40;
       var riquadro = {
-        x: MARGINE + col * (largh + spazio),
-        y: cima - (rig + 1) * alt - rig * spazio,
+        x: MARGINE + rientro + col * (largh + spazio) + scartoX,
+        y: cima - (rig + 1) * alt - rig * spazio + scartoY,
         w: largh,
         h: alt,
       };
-      // Inclinazioni alternate: fa "foto appoggiate", non griglia di schedario.
-      var ruota = [-2.2, 1.8, 1.4, -1.6][i % 4];
+      var ruota = INCLINA[i % 4] + (s() - 0.5) * 3;
       c += polaroid(indiciGlobali[i], fotoPagina[i], riquadro, ruota);
     }
 
