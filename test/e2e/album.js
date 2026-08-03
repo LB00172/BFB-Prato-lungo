@@ -105,8 +105,18 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
 
   await scegli.setInputFiles([FOTO, FOTO]);
   await p.waitForTimeout(1500);
-  ok('le foto caricate compaiono nell\'album', (await p.locator('main .grid button').count()) === 2);
-  ok('la miniatura porta il nome di chi l\'ha scattata', (await p.locator('main .grid button').first().innerText()).includes('Lorenzo'));
+
+  // --- Vista Album: è quella d'ingresso ---
+  ok('si apre in vista Album', (await p.locator('.album-pagina').count()) === 1);
+  ok('le foto caricate compaiono come polaroid', (await p.locator('.polaroid').count()) === 2);
+  ok('la polaroid porta il nome di chi l\'ha scattata', (await p.locator('.polaroid .didascalia').first().innerText()).includes('Lorenzo'));
+  ok('l\'indicatore di pagina parte da 1', /1 \/ 1/.test(await p.locator('main').innerText()));
+
+  // --- Passaggio alla Griglia ---
+  await p.locator('button', { hasText: 'Griglia' }).first().click();
+  await p.waitForTimeout(300);
+  ok('la griglia mostra le stesse foto', (await p.locator('main .grid button').count()) === 2);
+  ok('in griglia la miniatura porta il nome', (await p.locator('main .grid button').first().innerText()).includes('Lorenzo'));
 
   const conservate = await p.evaluate(() => window.__foto.size);
   ok('le foto sono finite nel cloud, non altrove', conservate === 2);
@@ -148,6 +158,17 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
   await p.waitForTimeout(200);
   ok('il tetto è per persona, non per album', /restano/i.test(await p.locator('main').innerText()));
 
+  // Con cinque foto l'album deve sdoppiarsi: quattro per pagina, come il PDF.
+  await p.locator('button', { hasText: 'Album' }).first().click();
+  await p.waitForTimeout(400);
+  ok('con cinque foto l\'album fa due pagine', (await p.locator('.album-pagina').count()) === 2);
+  ok('l\'indicatore mostra il totale delle pagine', /1 \/ 2/.test(await p.locator('main').innerText()));
+  await p.locator('button[aria-label="Pagina successiva"]').click();
+  await p.waitForTimeout(1200);
+  ok('si sfoglia alla pagina dopo', /2 \/ 2/.test(await p.locator('main').innerText()));
+  await p.locator('button', { hasText: 'Griglia' }).first().click();
+  await p.waitForTimeout(300);
+
   // ---- Visione a schermo pieno ----
   await p.locator('main .grid button').first().click();
   await p.waitForTimeout(600);
@@ -164,11 +185,18 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
   ok('eliminando resta un posto libero', (await p.locator('main .grid button').count()) === 4);
   ok('la foto sparisce anche dal cloud', (await p.evaluate(() => window.__foto.size)) === 4);
 
-  // ---- Foto ricordo: scelta delle foto e PDF ----
-  await p.locator('button', { hasText: 'Foto ricordo' }).click();
+  // ---- Album ricordo: scelta delle foto e PDF ----
+  // Si torna in Album per verificare che la scelta ci riporti da sola in
+  // Griglia: sfogliando dodici pagine, selezionare sarebbe impraticabile.
+  await p.locator('button', { hasText: 'Album' }).first().click();
   await p.waitForTimeout(300);
+  ok('quattro foto stanno in una pagina sola', (await p.locator('.album-pagina').count()) === 1);
+
+  await p.locator('button', { hasText: 'Crea album ricordo' }).click();
+  await p.waitForTimeout(300);
+  ok('scegliere le foto riporta da solo in griglia', (await p.locator('main .grid button').count()) === 4);
   ok('la modalità di scelta si apre', /Tocca le foto da mettere nel ricordo/.test(await p.locator('main').innerText()));
-  ok('senza scelte il tasto è spento', await p.locator('button', { hasText: /^Genera foto ricordo/ }).isDisabled());
+  ok('senza scelte il tasto è spento', await p.locator('button', { hasText: /^Crea album ricordo/ }).isDisabled());
 
   const miniature = p.locator('main .grid button');
   await miniature.nth(0).click();
@@ -185,7 +213,7 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
 
   const [scarico] = await Promise.all([
     p.waitForEvent('download', { timeout: 25000 }).catch(() => null),
-    p.locator('button', { hasText: /^Genera foto ricordo/ }).click(),
+    p.locator('button', { hasText: /^Crea album ricordo/ }).click(),
   ]);
   await p.waitForTimeout(600);
 
@@ -202,7 +230,7 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
     ok('porta il nome di chi ha scattato', /\(Lorenzo · /.test(t) || t.includes('(Lorenzo'));
   }
   ok('finita la stampa si esce dalla modalità di scelta',
-    (await p.locator('button', { hasText: 'Foto ricordo' }).count()) > 0);
+    (await p.locator('button', { hasText: 'Crea album ricordo' }).count()) > 0);
 
   // ---- Chiusura del campo: le foto non si perdono, cambiano posto ----
   // Serve una spesa, altrimenti la chiusura si rifiuta di partire.

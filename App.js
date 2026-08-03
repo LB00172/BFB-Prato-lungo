@@ -1146,6 +1146,9 @@ function App() {
   const [photoBusy, setPhotoBusy] = useState(''); // messaggio di avanzamento
   const [viewPhoto, setViewPhoto] = useState(null); // { id, by, at, full }
   const [album, setAlbum] = useState(null); // album di un campo chiuso
+  const [galleryView, setGalleryView] = useState('album'); // album | griglia
+  const [albumPage, setAlbumPage] = useState(0);
+  const albumRef = useRef(null);
   const [picking, setPicking] = useState(false); // modalità "scegli le foto"
   const [picked, setPicked] = useState([]); // id scelti per il ricordo
   const [pdfBusy, setPdfBusy] = useState(''); // avanzamento della stampa
@@ -2161,6 +2164,26 @@ function App() {
   // La griglia ha solo le miniature: per la stampa servono gli originali, che
   // si scaricano uno a uno. Da qui l'avanzamento e il tetto di dodici.
   const MAX_RICORDO = window.PdfRicordo && window.PdfRicordo.MAX_FOTO || 12;
+
+  // Album: quattro foto per pagina, come nel PDF.
+  const PER_PAGINA_ALBUM = window.PdfRicordo && window.PdfRicordo.PER_PAGINA || 4;
+  const paginaAlbum = elenco => {
+    const out = [];
+    for (let i = 0; i < elenco.length; i += PER_PAGINA_ALBUM) out.push(elenco.slice(i, i + PER_PAGINA_ALBUM));
+    return out;
+  };
+  const sfoglia = verso => {
+    const el = albumRef.current;
+    if (!el) return;
+    el.scrollBy({
+      left: verso * (el.clientWidth + 10),
+      behavior: 'smooth'
+    });
+  };
+  const onScrollAlbum = e => {
+    const el = e.currentTarget;
+    setAlbumPage(Math.round(el.scrollLeft / (el.clientWidth + 10)));
+  };
   const togglePicked = id => {
     setPicked(prev => {
       if (prev.includes(id)) return prev.filter(x => x !== id);
@@ -3144,7 +3167,7 @@ function App() {
     k: 'galleria',
     icon: '📸',
     title: 'Galleria',
-    body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Il tasto "Foto ricordo" ti fa scegliere fino a dodici foto e ne fa un PDF con uno sfondo di montagna, quattro per pagina: da mandare nel gruppo o da stampare.'
+    body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Si guarda in due modi: "Album" sfoglia le foto come polaroid appoggiate su un paesaggio di montagna, una spinta col dito per pagina; "Griglia" le mette tutte in fila, ed è la vista comoda per cercarne una. Il tasto "Crea album ricordo" ti fa scegliere fino a dodici foto e ne fa un PDF con lo stesso paesaggio, quattro per pagina: da mandare nel gruppo o da stampare.'
   }, {
     k: 'gioco',
     icon: '🎮',
@@ -4417,19 +4440,59 @@ function App() {
   }, photoCap, " foto a testa"), " (si cambia in Impostazioni): serve a scegliere le belle, non a svuotare il rullino. \xC8 un accordo fra noi, non un lucchetto: il nome si sceglie dalla tendina. Le foto vengono rimpicciolite prima di partire."))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
+    className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3 gap-2"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C]"
-  }, "Album ", photos.length > 0 ? `(${photos.length})` : ''), photos.length > 0 && cloud.connected && /*#__PURE__*/React.createElement("button", {
-    onClick: () => picking ? uscitaScelta() : setPicking(true),
-    className: `text-[10px] uppercase font-bold px-3 py-1.5 rounded border-2 shrink-0 ${picking ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white text-[#2D392C] border-[#8F9E8B]/50'}`
-  }, picking ? 'Annulla' : '🖼️ Foto ricordo')), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
+    className: "font-rustic text-lg text-[#2D392C] shrink-0"
+  }, "Album ", photos.length > 0 ? `(${photos.length})` : ''), photos.length > 0 && !picking && /*#__PURE__*/React.createElement("div", {
+    className: "flex rounded border border-[#8F9E8B]/40 overflow-hidden shrink-0"
+  }, [['album', '📖 Album'], ['griglia', '▦ Griglia']].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
+    key: k,
+    onClick: () => setGalleryView(k),
+    className: `text-[10px] uppercase font-bold px-2.5 py-1.5 ${galleryView === k ? 'bg-[#2D392C] text-white' : 'bg-white text-[#2D392C]'}`
+  }, l))), picking && /*#__PURE__*/React.createElement("button", {
+    onClick: uscitaScelta,
+    className: "text-[10px] uppercase font-bold px-3 py-1.5 rounded border-2 shrink-0 bg-[#2D392C] text-white border-[#2D392C]"
+  }, "Annulla")), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
   }, "Senza linea l'album non si pu\xF2 sfogliare.") : !photosReady ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
   }, "Carico l'album\u2026") : photos.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
-  }, "Ancora nessuna foto. Comincia tu.") : /*#__PURE__*/React.createElement("div", {
+  }, "Ancora nessuna foto. Comincia tu.") : galleryView === 'album' && !picking ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "album-sfoglio",
+    ref: albumRef,
+    onScroll: onScrollAlbum
+  }, paginaAlbum(photos).map((gruppo, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: `album-pagina ${gruppo.length === 1 ? '' : ''}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `album-griglia ${gruppo.length === 1 ? 'una' : ''}`
+  }, gruppo.map(p => /*#__PURE__*/React.createElement("button", {
+    key: p.id,
+    onClick: () => openPhoto(p),
+    className: "polaroid",
+    "aria-label": `Foto di ${p.by || 'anonimo'}`
+  }, /*#__PURE__*/React.createElement("img", {
+    src: p.thumb,
+    alt: "",
+    loading: "lazy"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "didascalia"
+  }, p.by || 'anonimo', p.at ? ` · ${new Date(p.at).toLocaleDateString('it-IT')}` : ''))))))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-center gap-4 mt-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => sfoglia(-1),
+    disabled: albumPage <= 0,
+    "aria-label": "Pagina precedente",
+    className: `w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage <= 0 ? 'text-gray-300' : 'text-[#2D392C]'}`
+  }, "\u2039"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] uppercase tracking-widest text-gray-500"
+  }, Math.min(albumPage + 1, paginaAlbum(photos).length), " / ", paginaAlbum(photos).length), /*#__PURE__*/React.createElement("button", {
+    onClick: () => sfoglia(1),
+    disabled: albumPage >= paginaAlbum(photos).length - 1,
+    "aria-label": "Pagina successiva",
+    className: `w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage >= paginaAlbum(photos).length - 1 ? 'text-gray-300' : 'text-[#2D392C]'}`
+  }, "\u203A"))) : /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-1.5"
   }, photos.map(p => {
     const scelta = picked.indexOf(p.id);
@@ -4458,11 +4521,17 @@ function App() {
     onClick: () => generaRicordo(photos),
     disabled: picked.length === 0 || !!pdfBusy,
     className: `w-full py-3 rounded font-bold uppercase text-sm tracking-wide ${picked.length > 0 && !pdfBusy ? 'bg-[#5C4A3C] text-white hover:bg-[#463628]' : 'bg-gray-200 text-gray-400'}`
-  }, pdfBusy || `Genera foto ricordo${picked.length ? ` (${picked.length})` : ''}`), /*#__PURE__*/React.createElement("p", {
+  }, pdfBusy || `Crea album ricordo${picked.length ? ` (${picked.length})` : ''}`), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic leading-snug"
-  }, "Crea un PDF con le foto scelte su uno sfondo di montagna, quattro per pagina. Le foto vengono scaricate a piena qualit\xE0, quindi ci vuole qualche secondo.")), photos.length > 0 && !picking && /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-400 italic mt-3"
-  }, "Tocca una foto per vederla grande. Le foto restano nel campo: alla chiusura finiscono nell'archivio insieme ai conti."))), activeTab === 'archivio' && /*#__PURE__*/React.createElement("div", {
+  }, "Crea un PDF con le foto scelte su uno sfondo di montagna, quattro per pagina. Le foto vengono scaricate a piena qualit\xE0, quindi ci vuole qualche secondo.")), photos.length > 0 && !picking && cloud.connected && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setGalleryView('griglia');
+      setPicking(true);
+    },
+    className: "w-full mt-3 py-2.5 rounded border-2 border-[#5C4A3C]/40 text-[#5C4A3C] font-bold uppercase text-xs tracking-wide hover:bg-[#5C4A3C]/10"
+  }, "\uD83D\uDCD5 Crea album ricordo"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic mt-2"
+  }, "Tocca una foto per vederla grande. Le foto restano nel campo: alla chiusura finiscono nell'archivio insieme ai conti.")))), activeTab === 'archivio' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"

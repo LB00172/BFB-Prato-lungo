@@ -21,7 +21,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
 | **Aggiunta Attrezzatura** | Attrezzatura da comprare con prezzo; se spuntata entra nelle spese |
 | **Spese Totali** | Totali · Quote · Saldi (chi paga chi + condividi resoconto) · Dati (backup) |
 | **Dotazioni personali** | Dotazione base fissa + aggiunte per il campo |
-| **Galleria** | L'album del campo, da riempire al ritorno: foto a nome di un membro, con un tetto per persona, e "Foto ricordo" che ne fa un PDF |
+| **Galleria** | L'album del campo, da riempire al ritorno: si sfoglia come polaroid o si guarda a griglia; "Crea album ricordo" ne fa un PDF |
 | **Impostazioni** | Pronto per il campo, tema chiaro/scuro/automatico, blocco con password, dati locali, versione |
 | **Archivio** | Campi chiusi: resoconto, dati scaricabili, eliminazione |
 | **Come funziona** | Guida interna all'app |
@@ -89,7 +89,15 @@ preparazione** e **offline al campo**, dove non c'è linea.
   scarica solo quando apri la foto. Cento foto = ~600 KB di miniature invece di
   16 MB: è ciò che rende l'album sfogliabile da telefono. Le miniature si
   ascoltano **solo mentre la Galleria è aperta**.
-  **Foto ricordo**: dalla Galleria si scelgono fino a **12 foto** e l'app ne fa
+  Due modi di guardare le stesse foto, con un interruttore in cima: **Album**
+  (quello d'ingresso) le mostra come polaroid inclinate su un paesaggio di
+  montagna e si sfoglia in orizzontale con l'aggancio a pagina — una spinta col
+  dito e il telefono ferma la pagina da solo, senza animazioni scritte a mano né
+  pagine che si curvano; **Griglia** le mette tutte in fila, ed è la vista in cui
+  si cerca, si sceglie e si cancella. Premendo "Crea album ricordo" si passa da
+  soli in Griglia: sfogliando dodici pagine, selezionarne otto sarebbe un
+  supplizio.
+  **Album ricordo**: dalla Galleria si scelgono fino a **12 foto** e l'app ne fa
   un **PDF** con uno sfondo di montagna disegnato, quattro polaroid per pagina,
   titolo e motto del campo. Da telefono si apre la condivisione (si manda nel
   gruppo), altrimenti si scarica. Il generatore è `pdf-ricordo.js`, scritto a

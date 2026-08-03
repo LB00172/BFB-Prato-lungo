@@ -978,6 +978,9 @@ function App() {
   const [photoBusy, setPhotoBusy] = useState('');    // messaggio di avanzamento
   const [viewPhoto, setViewPhoto] = useState(null);  // { id, by, at, full }
   const [album, setAlbum] = useState(null);          // album di un campo chiuso
+  const [galleryView, setGalleryView] = useState('album'); // album | griglia
+  const [albumPage, setAlbumPage] = useState(0);
+  const albumRef = useRef(null);
   const [picking, setPicking] = useState(false);     // modalità "scegli le foto"
   const [picked, setPicked] = useState([]);          // id scelti per il ricordo
   const [pdfBusy, setPdfBusy] = useState('');        // avanzamento della stampa
@@ -1778,6 +1781,25 @@ function App() {
   // si scaricano uno a uno. Da qui l'avanzamento e il tetto di dodici.
   const MAX_RICORDO = (window.PdfRicordo && window.PdfRicordo.MAX_FOTO) || 12;
 
+  // Album: quattro foto per pagina, come nel PDF.
+  const PER_PAGINA_ALBUM = (window.PdfRicordo && window.PdfRicordo.PER_PAGINA) || 4;
+  const paginaAlbum = (elenco) => {
+    const out = [];
+    for (let i = 0; i < elenco.length; i += PER_PAGINA_ALBUM) out.push(elenco.slice(i, i + PER_PAGINA_ALBUM));
+    return out;
+  };
+
+  const sfoglia = (verso) => {
+    const el = albumRef.current;
+    if (!el) return;
+    el.scrollBy({ left: verso * (el.clientWidth + 10), behavior: 'smooth' });
+  };
+
+  const onScrollAlbum = (e) => {
+    const el = e.currentTarget;
+    setAlbumPage(Math.round(el.scrollLeft / (el.clientWidth + 10)));
+  };
+
   const togglePicked = (id) => {
     setPicked((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
@@ -2546,7 +2568,7 @@ function App() {
     { k: 'backup', icon: '🛟', title: 'Backup e sicurezza', body: 'Ogni giorno viene salvata da sola una copia dei dati nel cloud: se qualcosa va storto, "Ripristino di emergenza" (in Spese Totali → Dati) permette di tornare a un giorno preciso. In più puoi esportare tutto su file con Esporta e ricaricarlo con Importa. Prima di eliminare qualcosa l\'app chiede sempre conferma.' },
     { k: 'sync', icon: '☁️', title: 'Sincronizzazione', body: 'La connessione al campo è automatica: quando c\'è linea i dati si allineano da soli fra i telefoni, in tempo reale, foto degli scontrini comprese. Senza linea si continua a lavorare normalmente e tutto viene inviato appena la rete torna. Se in due avete lavorato offline, al ritorno della linea le due versioni si uniscono voce per voce: nessuno cancella il lavoro dell\'altro. Il pallino in alto a destra indica se sei online o offline.' },
     { k: 'chiusura', icon: '🏁', title: 'Chiusura e Archivio', body: 'A conti fatti, in Spese Totali → Dati usa "Chiudi il campo": salva tutto (un file sul telefono e una copia nel cloud), lo mette in Archivio e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini su tutti i dispositivi. L\'app resta pronta per il campo dell\'anno dopo. In Archivio rivedi il resoconto di ogni campo chiuso e puoi riscaricarne i dati; il file scaricato alla chiusura è l\'unico che contiene anche le foto degli scontrini, quindi conservalo.' },
-    { k: 'galleria', icon: '📸', title: 'Galleria', body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Il tasto "Foto ricordo" ti fa scegliere fino a dodici foto e ne fa un PDF con uno sfondo di montagna, quattro per pagina: da mandare nel gruppo o da stampare.' },
+    { k: 'galleria', icon: '📸', title: 'Galleria', body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Si guarda in due modi: "Album" sfoglia le foto come polaroid appoggiate su un paesaggio di montagna, una spinta col dito per pagina; "Griglia" le mette tutte in fila, ed è la vista comoda per cercarne una. Il tasto "Crea album ricordo" ti fa scegliere fino a dodici foto e ne fa un PDF con lo stesso paesaggio, quattro per pagina: da mandare nel gruppo o da stampare.' },
     { k: 'gioco', icon: '🎮', title: 'Aiuta Bandy', body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si va in città, la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).' },
     { k: 'impostazioni', icon: '⚙️', title: 'Impostazioni', body: 'Aspetto: tema chiaro, scuro o automatico (segue il telefono) — comodo la sera in tenda. Blocco con password: puoi chiedere la password a ogni apertura e bloccare l\'app subito con "Blocca ora". Dati su questo telefono: backup immediato e, se presti o cambi telefono, "Cancella i dati da questo telefono" — il cloud non viene toccato e con la linea i dati tornano da soli. In fondo trovi la versione installata.' },
     { k: 'pronto', icon: '🎒', title: 'Pronto per il campo', body: 'In Impostazioni, in cima, ci sono tre spie: app scaricata sul telefono, dati del campo ricevuti, accesso al database a posto. Devono essere tutte verdi PRIMA di partire, perché a Prato Lungo non c\'è linea e lassù non si sistemano. Finché qualcosa manca, in Calendario compare un avviso che porta lì. Sistemarlo è sempre la stessa cosa: apri l\'app con la linea attiva e aspetta qualche secondo.' },
@@ -4006,16 +4028,32 @@ function App() {
 
             {/* Griglia */}
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
-              <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3">
-                <h3 className="font-rustic text-lg text-[#2D392C]">
+              <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3 gap-2">
+                <h3 className="font-rustic text-lg text-[#2D392C] shrink-0">
                   Album {photos.length > 0 ? `(${photos.length})` : ''}
                 </h3>
-                {photos.length > 0 && cloud.connected && (
+                {/* Due modi di guardare le stesse foto: l'album per sfogliarle,
+                    la griglia per trovarle. La scelta per il ricordo funziona
+                    solo in griglia, quindi ci passa da sola. */}
+                {photos.length > 0 && !picking && (
+                  <div className="flex rounded border border-[#8F9E8B]/40 overflow-hidden shrink-0">
+                    {[['album', '📖 Album'], ['griglia', '▦ Griglia']].map(([k, l]) => (
+                      <button
+                        key={k}
+                        onClick={() => setGalleryView(k)}
+                        className={`text-[10px] uppercase font-bold px-2.5 py-1.5 ${galleryView === k ? 'bg-[#2D392C] text-white' : 'bg-white text-[#2D392C]'}`}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {picking && (
                   <button
-                    onClick={() => (picking ? uscitaScelta() : setPicking(true))}
-                    className={`text-[10px] uppercase font-bold px-3 py-1.5 rounded border-2 shrink-0 ${picking ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white text-[#2D392C] border-[#8F9E8B]/50'}`}
+                    onClick={uscitaScelta}
+                    className="text-[10px] uppercase font-bold px-3 py-1.5 rounded border-2 shrink-0 bg-[#2D392C] text-white border-[#2D392C]"
                   >
-                    {picking ? 'Annulla' : '🖼️ Foto ricordo'}
+                    Annulla
                   </button>
                 )}
               </div>
@@ -4025,6 +4063,48 @@ function App() {
                 <p className="text-sm text-gray-400 italic">Carico l'album…</p>
               ) : photos.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">Ancora nessuna foto. Comincia tu.</p>
+              ) : galleryView === 'album' && !picking ? (
+                <div>
+                  <div className="album-sfoglio" ref={albumRef} onScroll={onScrollAlbum}>
+                    {paginaAlbum(photos).map((gruppo, i) => (
+                      <div key={i} className={`album-pagina ${gruppo.length === 1 ? '' : ''}`}>
+                        <div className={`album-griglia ${gruppo.length === 1 ? 'una' : ''}`}>
+                          {gruppo.map((p) => (
+                            <button key={p.id} onClick={() => openPhoto(p)} className="polaroid" aria-label={`Foto di ${p.by || 'anonimo'}`}>
+                              <img src={p.thumb} alt="" loading="lazy" />
+                              <span className="didascalia">
+                                {p.by || 'anonimo'}
+                                {p.at ? ` · ${new Date(p.at).toLocaleDateString('it-IT')}` : ''}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Comandi di sfoglio: col dito basta la spinta, col mouse no. */}
+                  <div className="flex items-center justify-center gap-4 mt-2">
+                    <button
+                      onClick={() => sfoglia(-1)}
+                      disabled={albumPage <= 0}
+                      aria-label="Pagina precedente"
+                      className={`w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage <= 0 ? 'text-gray-300' : 'text-[#2D392C]'}`}
+                    >
+                      ‹
+                    </button>
+                    <span className="text-[10px] uppercase tracking-widest text-gray-500">
+                      {Math.min(albumPage + 1, paginaAlbum(photos).length)} / {paginaAlbum(photos).length}
+                    </span>
+                    <button
+                      onClick={() => sfoglia(1)}
+                      disabled={albumPage >= paginaAlbum(photos).length - 1}
+                      aria-label="Pagina successiva"
+                      className={`w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage >= paginaAlbum(photos).length - 1 ? 'text-gray-300' : 'text-[#2D392C]'}`}
+                    >
+                      ›
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div className="grid grid-cols-3 gap-1.5">
                   {photos.map((p) => {
@@ -4066,7 +4146,7 @@ function App() {
                     disabled={picked.length === 0 || !!pdfBusy}
                     className={`w-full py-3 rounded font-bold uppercase text-sm tracking-wide ${picked.length > 0 && !pdfBusy ? 'bg-[#5C4A3C] text-white hover:bg-[#463628]' : 'bg-gray-200 text-gray-400'}`}
                   >
-                    {pdfBusy || `Genera foto ricordo${picked.length ? ` (${picked.length})` : ''}`}
+                    {pdfBusy || `Crea album ricordo${picked.length ? ` (${picked.length})` : ''}`}
                   </button>
                   <p className="text-[9px] text-gray-400 italic leading-snug">
                     Crea un PDF con le foto scelte su uno sfondo di montagna, quattro per pagina.
@@ -4075,11 +4155,19 @@ function App() {
                 </div>
               )}
 
-              {photos.length > 0 && !picking && (
-                <p className="text-[9px] text-gray-400 italic mt-3">
-                  Tocca una foto per vederla grande. Le foto restano nel campo: alla chiusura finiscono
-                  nell'archivio insieme ai conti.
-                </p>
+              {photos.length > 0 && !picking && cloud.connected && (
+                <>
+                  <button
+                    onClick={() => { setGalleryView('griglia'); setPicking(true); }}
+                    className="w-full mt-3 py-2.5 rounded border-2 border-[#5C4A3C]/40 text-[#5C4A3C] font-bold uppercase text-xs tracking-wide hover:bg-[#5C4A3C]/10"
+                  >
+                    📕 Crea album ricordo
+                  </button>
+                  <p className="text-[9px] text-gray-400 italic mt-2">
+                    Tocca una foto per vederla grande. Le foto restano nel campo: alla chiusura finiscono
+                    nell'archivio insieme ai conti.
+                  </p>
+                </>
               )}
             </div>
           </div>
