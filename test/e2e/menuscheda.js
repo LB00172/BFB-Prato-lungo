@@ -28,7 +28,10 @@ const H = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
 
   // 1. In Calendario scelgo il 13 agosto
   await menu('Calendario');
-  for (let i = 0; i < 8 && !(await p.locator('label[title*="13 agosto"]').count()); i++) {
+  // Ci si sposta finché la striscia mostra il 13 agosto. (Prima si guardava la
+  // checkbox del conto separato, che ora sta dentro una riga chiusa.)
+  const haIl13 = async () => (await p.locator('.grid.grid-cols-7 button').filter({ hasText: /(^|\D)13(\D|$)/ }).count()) > 0;
+  for (let i = 0; i < 8 && !(await haIl13()); i++) {
     await p.locator('button', { hasText: '→' }).first().click(); await p.waitForTimeout(200);
   }
   await p.locator('.grid.grid-cols-7 button', { hasText: '13' }).first().click();

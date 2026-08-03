@@ -13,7 +13,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
 
 | Area | A cosa serve |
 |---|---|
-| **Calendario** | Meteo previsto del giorno (Pereto, AQ), riepilogo cucina (quanti pasti preparare), giorni del conto separato |
+| **Calendario** | Meteo previsto del giorno (Pereto, AQ), riepilogo cucina (quanti pasti preparare), note libere del giorno, giorni del conto separato (riga richiudibile) |
 | **Menù** | Cosa si mangia, giorno per giorno, su foglio a righe; condivide il giorno scelto con il Calendario |
 | **Membri** | Elenco partecipanti; i bambini mangiano gratis; la "i" accanto al nome apre PayPal e IBAN per farsi rimborsare |
 | **Presenze** | Chi c'è a pranzo/cena, con "Tutti a pranzo/cena" e "Copia da ieri" |

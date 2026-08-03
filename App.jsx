@@ -108,7 +108,11 @@ const money = (n) => (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
 // Numero >= 0 a partire da una stringa di input.
 const posNum = (v) => Math.max(0, parseFloat(v) || 0);
 
-const initialDayState = () => ({ note: '', guestsNames: '', meals: {} });
+// "note" tiene il MENÙ del giorno (la scheda Menù scrive lì da sempre);
+// "appunti" sono le note libere del Calendario. Due campi distinti: unirli
+// vorrebbe dire che chi scrive la lista della cena cancella il promemoria
+// della legna.
+const initialDayState = () => ({ note: '', appunti: '', guestsNames: '', meals: {} });
 
 // ---- Dati per farsi rimborsare (PayPal / IBAN) ----
 // L'IBAN si controlla davvero: una lettera sbagliata manda i soldi altrove (o
@@ -978,6 +982,7 @@ function App() {
   const [photoBusy, setPhotoBusy] = useState('');    // messaggio di avanzamento
   const [viewPhoto, setViewPhoto] = useState(null);  // { id, by, at, full }
   const [album, setAlbum] = useState(null);          // album di un campo chiuso
+  const [sepOpen, setSepOpen] = useState(false);     // riga "Conto separato" aperta
   const [galleryView, setGalleryView] = useState('album'); // album | griglia
   const [albumPage, setAlbumPage] = useState(0);
   const albumRef = useRef(null);
@@ -2554,7 +2559,7 @@ function App() {
 
   // Guida: una "pill" per ogni area di lavoro.
   const GUIDE = [
-    { k: 'calendario', icon: '📅', title: 'Calendario', body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e il collegamento al Menù del giorno. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.' },
+    { k: 'calendario', icon: '📅', title: 'Calendario', body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, le note libere del giorno (promemoria, turni, cose da ricordare — il menù invece ha la sua scheda) e il collegamento al Menù. Scorri le settimane con le frecce: meteo, note e cucina si aggiornano sul giorno scelto. In cima, la riga "Conto separato" si apre solo quando serve: dentro ci sono i giorni da spuntare per far cassa a parte.' },
     { k: 'menu', icon: '🍝', title: 'Menù', body: 'Scheda a parte per scrivere cosa si mangia, giorno per giorno. In alto c\'è la stessa striscia dei giorni del Calendario: il giorno scelto è lo stesso nelle due schede, quindi puoi passare dall\'una all\'altra senza ricercarlo. Sotto vedi quanti pasti preparare a pranzo e a cena, e il foglio a righe dove scrivere una pietanza per riga. In fondo l\'elenco dei giorni del campo con la prima riga del menù già scritto: si vede a colpo d\'occhio cosa manca. Tutto si sincronizza: chi cucina lo trova già pronto.' },
     { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e la tendina dell\'acquirente quando registri una spesa: i nomi non si scrivono a mano, si scelgono, così un refuso non può creare una persona fantasma nei saldi. La "i" accanto al nome apre PayPal e IBAN: chi li compila se li vede comparire nei Saldi, accanto al rimborso che deve ricevere, con il tasto per copiarli.' },
     { k: 'presenze', icon: '🍽️', title: 'Presenze', body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta usa "Tutti a pranzo" o "Tutti a cena" e poi togli i pochi assenti, oppure "Copia da ieri". In alto trovi il conteggio del giorno. Durante il campo l\'app si apre già sulla data di oggi.' },
@@ -2679,14 +2684,20 @@ function App() {
             {renderWeekStrip()}
 
             {/* Giorni del conto separato: le presenze di questi giorni fanno
-                cassa a parte (vedi calculateTotals). */}
-            <div className="bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] uppercase font-bold text-[#5C4A3C]">Conto separato</span>
-                <span className="text-[9px] text-gray-500">
+                cassa a parte (vedi calculateTotals). Sta chiuso: è una cosa che
+                si imposta una volta, non a ogni apertura del Calendario. */}
+            <div className="bg-white rounded-lg border border-[#8F9E8B]/30 shadow-sm overflow-hidden">
+              <button
+                onClick={() => setSepOpen((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-[#E2EAE4]/60"
+              >
+                <span className="text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0">Conto separato</span>
+                <span className="ml-auto text-[9px] text-gray-500 truncate">
                   {sepDays.length === 0 ? 'nessun giorno' : `${sepDays.length} ${sepDays.length === 1 ? 'giorno' : 'giorni'} in totale`}
                 </span>
-              </div>
+                <span className={`text-[10px] text-[#5C4A3C] shrink-0 transition-transform ${sepOpen ? 'rotate-180' : ''}`}>▾</span>
+              </button>
+              {sepOpen && (<div className="px-3 pb-3">
               <div className="grid grid-cols-7 gap-1">
                 {weekDays.map((d) => {
                   const dateStr = toDateStr(d);
@@ -2715,6 +2726,7 @@ function App() {
                 <span className="font-bold"> conto separato</span> si dividono solo fra chi era presente ai pasti di quei giorni.
                 Gli altri giorni restano nel conto comune. Logistica e attrezzatura restano sempre in comune.
               </p>
+              </div>)}
             </div>
 
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
@@ -2787,6 +2799,27 @@ function App() {
                   </div>
                 );
               })()}
+
+              {/* Note libere del giorno: promemoria, turni, cose da ricordare.
+                  Si sincronizzano come tutto il resto. */}
+              <div>
+                <label className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wide">Note del giorno</span>
+                  {(getDayData(selectedDateStr).appunti || '').trim() && (
+                    <span className="text-[9px] text-[#2D392C]">✔ scritte</span>
+                  )}
+                </label>
+                <textarea
+                  value={getDayData(selectedDateStr).appunti || ''}
+                  onChange={(e) => updateDayData(selectedDateStr, 'appunti', e.target.value)}
+                  rows={3}
+                  placeholder={'Legna da prendere al bosco\nTurno cucina: Bruno e Anna\nChiamare il rifugio'}
+                  className="w-full p-3 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm leading-snug focus:outline-none focus:border-[#2D392C] resize-y"
+                />
+                <p className="text-[9px] text-gray-400 italic mt-1">
+                  Promemoria del giorno, visibili a tutti. Il <span className="font-bold">menù</span> ha la sua scheda: qui ci vanno le altre cose.
+                </p>
+              </div>
 
               {/* Scorciatoia alla scheda Menù, che lavora sullo stesso giorno */}
               <button

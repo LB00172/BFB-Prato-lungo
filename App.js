@@ -111,8 +111,14 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const money = n => (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
 // Numero >= 0 a partire da una stringa di input.
 const posNum = v => Math.max(0, parseFloat(v) || 0);
+
+// "note" tiene il MENÙ del giorno (la scheda Menù scrive lì da sempre);
+// "appunti" sono le note libere del Calendario. Due campi distinti: unirli
+// vorrebbe dire che chi scrive la lista della cena cancella il promemoria
+// della legna.
 const initialDayState = () => ({
   note: '',
+  appunti: '',
   guestsNames: '',
   meals: {}
 });
@@ -1146,6 +1152,7 @@ function App() {
   const [photoBusy, setPhotoBusy] = useState(''); // messaggio di avanzamento
   const [viewPhoto, setViewPhoto] = useState(null); // { id, by, at, full }
   const [album, setAlbum] = useState(null); // album di un campo chiuso
+  const [sepOpen, setSepOpen] = useState(false); // riga "Conto separato" aperta
   const [galleryView, setGalleryView] = useState('album'); // album | griglia
   const [albumPage, setAlbumPage] = useState(0);
   const albumRef = useRef(null);
@@ -3097,7 +3104,7 @@ function App() {
     k: 'calendario',
     icon: '📅',
     title: 'Calendario',
-    body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, e il collegamento al Menù del giorno. Scorri le settimane con le frecce: meteo e cucina si aggiornano sul giorno scelto.'
+    body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, le note libere del giorno (promemoria, turni, cose da ricordare — il menù invece ha la sua scheda) e il collegamento al Menù. Scorri le settimane con le frecce: meteo, note e cucina si aggiornano sul giorno scelto. In cima, la riga "Conto separato" si apre solo quando serve: dentro ci sono i giorni da spuntare per far cassa a parte.'
   }, {
     k: 'menu',
     icon: '🍝',
@@ -3280,14 +3287,19 @@ function App() {
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
   }, "Questo telefono non \xE8 ancora pronto per il campo."), ' ', "Al campo non c'\xE8 linea: tocca qui per vedere cosa manca, finch\xE9 sei collegato.")), renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between mb-2"
+    className: "bg-white rounded-lg border border-[#8F9E8B]/30 shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSepOpen(v => !v),
+    className: "w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-[#E2EAE4]/60"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] uppercase font-bold text-[#5C4A3C]"
+    className: "text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0"
   }, "Conto separato"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] text-gray-500"
-  }, sepDays.length === 0 ? 'nessun giorno' : `${sepDays.length} ${sepDays.length === 1 ? 'giorno' : 'giorni'} in totale`)), /*#__PURE__*/React.createElement("div", {
+    className: "ml-auto text-[9px] text-gray-500 truncate"
+  }, sepDays.length === 0 ? 'nessun giorno' : `${sepDays.length} ${sepDays.length === 1 ? 'giorno' : 'giorni'} in totale`), /*#__PURE__*/React.createElement("span", {
+    className: `text-[10px] text-[#5C4A3C] shrink-0 transition-transform ${sepOpen ? 'rotate-180' : ''}`
+  }, "\u25BE")), sepOpen && /*#__PURE__*/React.createElement("div", {
+    className: "px-3 pb-3"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-7 gap-1"
   }, weekDays.map(d => {
     const dateStr = toDateStr(d);
@@ -3312,7 +3324,7 @@ function App() {
     className: "text-[9px] text-gray-400 italic mt-2 leading-snug"
   }, "Spunta i giorni che fanno cassa a parte: cibo e bevande registrati sul", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, " conto separato"), " si dividono solo fra chi era presente ai pasti di quei giorni. Gli altri giorni restano nel conto comune. Logistica e attrezzatura restano sempre in comune.")), /*#__PURE__*/React.createElement("div", {
+  }, " conto separato"), " si dividono solo fra chi era presente ai pasti di quei giorni. Gli altri giorni restano nel conto comune. Logistica e attrezzatura restano sempre in comune."))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-dashed border-[#8F9E8B] pb-1"
@@ -3377,7 +3389,23 @@ function App() {
     }, " \xB7 "), dinner, " ", /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-normal text-gray-500"
     }, "a cena")));
-  })(), /*#__PURE__*/React.createElement("button", {
+  })(), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center justify-between mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] uppercase font-bold text-gray-500 tracking-wide"
+  }, "Note del giorno"), (getDayData(selectedDateStr).appunti || '').trim() && /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] text-[#2D392C]"
+  }, "\u2714 scritte")), /*#__PURE__*/React.createElement("textarea", {
+    value: getDayData(selectedDateStr).appunti || '',
+    onChange: e => updateDayData(selectedDateStr, 'appunti', e.target.value),
+    rows: 3,
+    placeholder: 'Legna da prendere al bosco\nTurno cucina: Bruno e Anna\nChiamare il rifugio',
+    className: "w-full p-3 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm leading-snug focus:outline-none focus:border-[#2D392C] resize-y"
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic mt-1"
+  }, "Promemoria del giorno, visibili a tutti. Il ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "men\xF9"), " ha la sua scheda: qui ci vanno le altre cose.")), /*#__PURE__*/React.createElement("button", {
     onClick: () => goTo('menu'),
     className: "w-full py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]"
   }, "\uD83C\uDF5D Men\xF9 del giorno", (getDayData(selectedDateStr).note || '').trim() ? ' · già scritto' : ' · da scrivere'))), activeTab === 'menu' && /*#__PURE__*/React.createElement("div", {

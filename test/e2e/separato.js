@@ -38,7 +38,9 @@ const L = { lunch: true, dinner: false };
 
   // --- 1. Calendario: c'è il riquadro con una checkbox per ogni giorno ---
   await menu('Calendario');
-  const box = p.locator('div', { hasText: 'Conto separato' }).last();
+  // La riga del conto separato ora sta chiusa: si apre a comando.
+  await p.locator('button', { hasText: 'Conto separato' }).first().click();
+  await p.waitForTimeout(300);
   const nCheck = await p.locator('input[type="checkbox"]').count();
   console.log('checkbox nella settimana visualizzata:', nCheck, '->', nCheck === 7 ? 'OK (una per giorno)' : 'PROBLEMA');
 

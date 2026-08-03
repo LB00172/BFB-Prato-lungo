@@ -78,6 +78,7 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `e2e/autochiede` | L'app chiede da sola la password quando serve al database |
 | `e2e/smoke` | L'app si apre e resta usabile anche senza rete |
 | `e2e/presenze` | Presenze, "tutti a pranzo/cena", copia da ieri |
+| `e2e/calendario` | Note libere del giorno (distinte dal menù: scriverne una non cancella l'altro) e riga "Conto separato" che si apre a comando |
 | `e2e/menuscheda`, `e2e/menugruppi`, `e2e/sezioni` | Menù, gruppi del menu a tendina, navigazione fra le aree |
 | `e2e/scontrino`, `e2e/galleria`, `e2e/grafica` | Foto scontrino (scatto e galleria), schede della cronologia |
 | `e2e/cercalista`, `e2e/maschera` | Ricerche e maschera manuale a scomparsa |
