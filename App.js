@@ -2172,6 +2172,9 @@ function App() {
   // si scaricano uno a uno. Da qui l'avanzamento e il tetto di dodici.
   const MAX_RICORDO = window.PdfRicordo && window.PdfRicordo.MAX_FOTO || 12;
 
+  // Sotto una polaroid ci sta il nome, non "Nome Cognome".
+  const soloNome = chi => String(chi || '').trim().split(/\s+/)[0] || 'anonimo';
+
   // Album: quattro foto per pagina, come nel PDF.
   const PER_PAGINA_ALBUM = window.PdfRicordo && window.PdfRicordo.PER_PAGINA || 4;
   const paginaAlbum = elenco => {
@@ -2229,7 +2232,8 @@ function App() {
         if (!full) continue;
         foto.push({
           dataUrl: full,
-          didascalia: [scelte[i].by, scelte[i].at ? new Date(scelte[i].at).toLocaleDateString('it-IT') : ''].filter(Boolean).join(' · ')
+          // Solo il nome, come sotto le polaroid dell'album.
+          didascalia: [scelte[i].by ? soloNome(scelte[i].by) : '', scelte[i].at ? new Date(scelte[i].at).toLocaleDateString('it-IT') : ''].filter(Boolean).join(' · ')
         });
       }
       if (foto.length === 0) {
@@ -4506,7 +4510,11 @@ function App() {
     loading: "lazy"
   }), /*#__PURE__*/React.createElement("span", {
     className: "didascalia"
-  }, p.by || 'anonimo', p.at ? ` · ${new Date(p.at).toLocaleDateString('it-IT')}` : ''))))))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "nome"
+  }, soloNome(p.by)), p.at ? /*#__PURE__*/React.createElement("span", {
+    className: "quando"
+  }, new Date(p.at).toLocaleDateString('it-IT')) : null))))))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-center gap-4 mt-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => sfoglia(-1),
@@ -4538,7 +4546,7 @@ function App() {
       className: `absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border-2 ${scelta >= 0 ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white/80 border-white'}`
     }, scelta >= 0 ? scelta + 1 : ''), p.by && /*#__PURE__*/React.createElement("span", {
       className: "absolute bottom-0 left-0 right-0 bg-black/55 text-white text-[8px] px-1 py-0.5 truncate text-left"
-    }, p.by));
+    }, soloNome(p.by)));
   })), picking && /*#__PURE__*/React.createElement("div", {
     className: "mt-3 pt-3 border-t border-[#8F9E8B]/30 space-y-2"
   }, /*#__PURE__*/React.createElement("p", {

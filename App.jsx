@@ -1786,6 +1786,9 @@ function App() {
   // si scaricano uno a uno. Da qui l'avanzamento e il tetto di dodici.
   const MAX_RICORDO = (window.PdfRicordo && window.PdfRicordo.MAX_FOTO) || 12;
 
+  // Sotto una polaroid ci sta il nome, non "Nome Cognome".
+  const soloNome = (chi) => (String(chi || '').trim().split(/\s+/)[0] || 'anonimo');
+
   // Album: quattro foto per pagina, come nel PDF.
   const PER_PAGINA_ALBUM = (window.PdfRicordo && window.PdfRicordo.PER_PAGINA) || 4;
   const paginaAlbum = (elenco) => {
@@ -1835,7 +1838,8 @@ function App() {
         if (!full) continue;
         foto.push({
           dataUrl: full,
-          didascalia: [scelte[i].by, scelte[i].at ? new Date(scelte[i].at).toLocaleDateString('it-IT') : '']
+          // Solo il nome, come sotto le polaroid dell'album.
+          didascalia: [scelte[i].by ? soloNome(scelte[i].by) : '', scelte[i].at ? new Date(scelte[i].at).toLocaleDateString('it-IT') : '']
             .filter(Boolean).join(' · '),
         });
       }
@@ -4105,9 +4109,11 @@ function App() {
                           {gruppo.map((p) => (
                             <button key={p.id} onClick={() => openPhoto(p)} className="polaroid" aria-label={`Foto di ${p.by || 'anonimo'}`}>
                               <img src={p.thumb} alt="" loading="lazy" />
+                              {/* Solo il nome: sotto una polaroid il cognome non
+                                  serve a nessuno e non ci sta. */}
                               <span className="didascalia">
-                                {p.by || 'anonimo'}
-                                {p.at ? ` · ${new Date(p.at).toLocaleDateString('it-IT')}` : ''}
+                                <span className="nome">{soloNome(p.by)}</span>
+                                {p.at ? <span className="quando">{new Date(p.at).toLocaleDateString('it-IT')}</span> : null}
                               </span>
                             </button>
                           ))}
@@ -4157,7 +4163,7 @@ function App() {
                         )}
                         {p.by && (
                           <span className="absolute bottom-0 left-0 right-0 bg-black/55 text-white text-[8px] px-1 py-0.5 truncate text-left">
-                            {p.by}
+                            {soloNome(p.by)}
                           </span>
                         )}
                       </button>

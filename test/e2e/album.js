@@ -79,7 +79,8 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
   const { browser, page: p, menu, errori } = await apri({ initScript: [cloudFinto, true] });
 
   await menu('Membri');
-  for (const n of ['Lorenzo', 'Bruno']) {
+  // Nome E cognome: sotto la polaroid deve restare solo il nome.
+  for (const n of ['Lorenzo Ballerini', 'Bruno']) {
     await p.fill('input[placeholder="Nome e cognome"]', n);
     await p.locator('button', { hasText: /^\+$/ }).first().click();
     await p.waitForTimeout(150);
@@ -93,13 +94,13 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
   await menu('Galleria');
   ok('la galleria compare nel menu e si apre', (await p.locator('h3', { hasText: 'Carica le tue foto' }).count()) > 0);
   ok('la tendina elenca i membri col loro conteggio',
-    (await p.locator('main select option').allInnerTexts()).some((t) => /Lorenzo \(0\/5\)/.test(t)));
+    (await p.locator('main select option').allInnerTexts()).some((t) => /Lorenzo Ballerini \(0\/5\)/.test(t)));
 
   const scegli = p.locator('main input[type="file"]');
   ok('senza aver scelto il nome non si possono caricare foto',
     (await p.locator('label:has-text("Scegli le foto")').getAttribute('class')).includes('pointer-events-none'));
 
-  await p.locator('main select').selectOption('Lorenzo');
+  await p.locator('main select').selectOption('Lorenzo Ballerini');
   await p.waitForTimeout(200);
   ok('scelto il nome, compare quante foto restano', /restano/i.test(await p.locator('main').innerText()));
 
@@ -110,6 +111,14 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
   ok('si apre in vista Album', (await p.locator('.album-pagina').count()) === 1);
   ok('le foto caricate compaiono come polaroid', (await p.locator('.polaroid').count()) === 2);
   ok('la polaroid porta il nome di chi l\'ha scattata', (await p.locator('.polaroid .didascalia').first().innerText()).includes('Lorenzo'));
+  ok('sotto la polaroid c\'è solo il nome, senza cognome',
+    (await p.locator('.polaroid .didascalia .nome').first().innerText()).trim() === 'Lorenzo');
+  ok('nome e data stanno su due righe', (await p.locator('.polaroid .didascalia .quando').count()) > 0);
+  const scorre = await p.evaluate(() => {
+    const s = document.querySelector('.album-sfoglio');
+    return { sw: s.scrollWidth, cw: s.clientWidth };
+  });
+  ok(`con una pagina sola l'album non scorre di lato (${scorre.sw} vs ${scorre.cw})`, scorre.sw <= scorre.cw + 1);
   ok('l\'indicatore di pagina parte da 1', /1 \/ 1/.test(await p.locator('main').innerText()));
 
   // --- Passaggio alla Griglia ---
@@ -267,6 +276,42 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
   await menu('Galleria');
   await p.waitForTimeout(600);
   ok('la galleria del campo nuovo riparte vuota', /Ancora nessuna foto/.test(await p.locator('main').innerText()));
+
+  // ---- Il nome più lungo del campo non deve uscire dalla cornice ----
+  // Il caso che si era rotto: didascalia su una riga sola con nome, cognome e
+  // data. Usciva dalla polaroid e, allargando il contenuto, faceva scorrere di
+  // lato l'intera pagina dell'album. Si prova a campo chiuso, con l'album
+  // vuoto, per non spostare i conteggi di prima.
+  await menu('Membri');
+  await p.fill('input[placeholder="Nome e cognome"]', 'Giovanbattistamariano Della Fontanella');
+  await p.locator('button', { hasText: /^\+$/ }).first().click();
+  await p.waitForTimeout(200);
+  await menu('Galleria');
+  await p.locator('main select').selectOption('Giovanbattistamariano Della Fontanella');
+  await p.waitForTimeout(200);
+  await p.locator('main input[type="file"]').setInputFiles([FOTO]);
+  await p.waitForTimeout(2000);
+  // La scelta delle foto di prima ci ha lasciati in Griglia: qui serve l'Album.
+  { const b = p.locator('button', { hasText: 'Album' }).first(); if (await b.count()) { await b.click(); await p.waitForTimeout(500); } }
+
+  const dentro = await p.evaluate(() => {
+    const pol = document.querySelector('.polaroid');
+    if (!pol) return null;
+    const d = pol.querySelector('.didascalia');
+    const a = pol.getBoundingClientRect(), b = d.getBoundingClientRect();
+    const s = document.querySelector('.album-sfoglio');
+    return {
+      dentro: b.left >= a.left - 0.5 && b.right <= a.right + 0.5,
+      nonScorre: s.scrollWidth <= s.clientWidth + 1,
+      pol: Math.round(a.width), testo: Math.round(b.width),
+      nome: pol.querySelector('.nome').textContent,
+    };
+  });
+  ok('la foto del nome lungo compare', !!dentro);
+  if (dentro) {
+    ok(`col nome più lungo la didascalia resta nella cornice — "${dentro.nome}" (${dentro.testo}px in ${dentro.pol}px)`, dentro.dentro);
+    ok('e la pagina dell\'album non scorre di lato', dentro.nonScorre);
+  }
 
   ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
   await fine(browser);

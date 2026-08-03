@@ -151,15 +151,30 @@
       object-fit: cover;
       background: #e6e9e4;
     }
+    /* Nome e data su due righe. Devono essere elementi di BLOCCO: da inline,
+       overflow e text-overflow non li trattengono e il nome lungo esce dalla
+       cornice — e allargando il contenuto fa pure scorrere la pagina di lato. */
     .polaroid .didascalia {
-      font-size: 9px;
-      line-height: 22px;
-      height: 22px;
+      display: block;
+      padding: 3px 3px 5px;
       text-align: center;
-      color: #3a3a38;
       overflow: hidden;
+    }
+    .polaroid .didascalia .nome {
+      display: block;
+      font-size: 9px;
+      line-height: 11px;
+      color: #3a3a38;
       white-space: nowrap;
+      overflow: hidden;
       text-overflow: ellipsis;
+    }
+    .polaroid .didascalia .quando {
+      display: block;
+      font-size: 7.5px;
+      line-height: 10px;
+      color: #7c7c77;
+      white-space: nowrap;
     }
     /* La polaroid resta di carta chiara anche col tema scuro: è una foto
        stampata, non un pannello dell'app. */
