@@ -16,7 +16,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
 | **Calendario** | Meteo previsto del giorno (Pereto, AQ), riepilogo cucina (quanti pasti preparare), note libere del giorno, giorni del conto separato (riga richiudibile) |
 | **Menù** | Cosa si mangia, giorno per giorno, su foglio a righe; condivide il giorno scelto con il Calendario |
 | **Membri** | Elenco partecipanti; i bambini mangiano gratis; la "i" accanto al nome apre PayPal e IBAN per farsi rimborsare |
-| **Presenze** | Chi c'è a pranzo/cena; "Tutti a pranzo/cena" e "Copia da ieri" stanno in una riga richiudibile ("Segna in blocco") e chiedono conferma |
+| **Presenze** | Chi c'è a pranzo/cena; "Tutti a pranzo/cena" e "Copia da ieri" stanno in una riga richiudibile ("Segna in blocco") e chiedono conferma; segnala le presenze rimaste senza padrone |
 | **Lista della Spesa** | Ogni acquisto: nome, acquirente, prezzo, tipologia, foto scontrino; ricerca e correzione delle voci registrate |
 | **Aggiunta Attrezzatura** | Attrezzatura da comprare con prezzo; se spuntata entra nelle spese |
 | **Spese Totali** | Totali · Quote · Saldi (chi paga chi + condividi resoconto) · Dati (backup) |
@@ -110,6 +110,15 @@ preparazione** e **offline al campo**, dove non c'è linea.
   Alla **chiusura del campo** le foto non si cancellano: vengono **timbrate**
   con l'archivio e restano consultabili da *Archivio → Album*, mentre la
   galleria del campo nuovo riparte vuota.
+- **Presenze senza padrone**: le presenze sono legate all'**id** del membro, non
+  al nome. Chi viene eliminato dai Membri e poi riaggiunto prende un id nuovo, e
+  i pasti segnati prima restano attaccati al vecchio: spariscono dall'elenco e
+  dai conti in silenzio, pur avendo la lista dei membri apparentemente giusta.
+  L'app se ne accorge e lo dice in **Presenze** (e con un avviso in Calendario),
+  con il nome di chi erano — quando un membro viene eliminato il suo nome resta
+  in un elenco a parte — e li fa **riassegnare** alla persona giusta con una
+  tendina, oppure buttare. Riassegnando, i pasti si **sommano** a quelli già
+  segnati: non si sovrascrive niente.
 - **Freno di sicurezza sulle cancellazioni**: una fusione può togliere voci solo
   se dall'altra parte c'è una cancellazione datata. È legittimo (qualcuno ha
   cancellato una spesa), ma è anche il modo in cui un ripristino, un'importazione

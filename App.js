@@ -37,6 +37,26 @@ const SYNC_META_KEY = 'cambusa_syncmeta';
 // delle voci: è quello che permette di annullarla con un tocco.
 const RESCUE_KEY = 'cambusa_rescue';
 
+// Nomi dei membri eliminati (id -> nome). Le presenze sono legate all'id, non
+// al nome: chi viene eliminato e riaggiunto prende un id nuovo e le sue vecchie
+// presenze restano orfane. Questo elenco serve a poterle chiamare per nome.
+const EX_MEMBERS_KEY = 'cambusa_exmembri';
+const ricordaExMembro = (id, nome) => {
+  if (!id || !nome) return;
+  try {
+    const m = JSON.parse(localStorage.getItem(EX_MEMBERS_KEY) || '{}');
+    m[id] = nome;
+    localStorage.setItem(EX_MEMBERS_KEY, JSON.stringify(m));
+  } catch (e) {/* spazio esaurito: si perde solo il nome */}
+};
+const exMembri = () => {
+  try {
+    return JSON.parse(localStorage.getItem(EX_MEMBERS_KEY) || '{}');
+  } catch (e) {
+    return {};
+  }
+};
+
 // Traduce i "percorsi" della sincronizzazione in italiano, per poter dire cosa
 // è sparito invece di mostrare sigle.
 // Un singolo percorso in italiano: serve alla diagnostica, per capire COSA è
@@ -1247,6 +1267,8 @@ function App() {
   const [diagTick, setDiagTick] = useState(0);
   // Presenze: le azioni "in blocco" stanno chiuse.
   const [azioniOpen, setAzioniOpen] = useState(false);
+  // A chi riassegnare le presenze rimaste senza padrone (id orfano -> id membro).
+  const [orfanoScelte, setOrfanoScelte] = useState({});
   // Impostazioni: le due sezioni che si toccano una volta sola stanno chiuse.
   const [bloccoOpen, setBloccoOpen] = useState(false);
   const [datiOpen, setDatiOpen] = useState(false);
@@ -1839,6 +1861,101 @@ function App() {
     });
   };
 
+  // ---------- Presenze rimaste senza padrone ----------
+  // Le presenze sono legate all'ID del membro, non al nome. Chi viene eliminato
+  // e riaggiunto prende un id nuovo: le sue vecchie presenze restano appese al
+  // vecchio, spariscono dall'elenco e dai conti senza che nessuno se ne accorga.
+  // È esattamente il modo in cui i pasti "svaniscono" pur avendo l'elenco
+  // membri giusto. Qui si trovano e si riattaccano alla persona giusta.
+  const presenzeOrfane = () => {
+    const vivi = new Set(members.map(m => m.id));
+    const ex = exMembri();
+    const per = new Map();
+    Object.keys(campData).forEach(d => {
+      const meals = campData[d] && campData[d].meals || {};
+      Object.keys(meals).forEach(id => {
+        if (vivi.has(id)) return;
+        const v = meals[id];
+        if (!v || !v.lunch && !v.dinner) return; // voce a zero: non è una presenza
+        const cur = per.get(id) || {
+          id,
+          nome: ex[id] || '',
+          pasti: 0,
+          giorni: []
+        };
+        cur.pasti += (v.lunch ? 1 : 0) + (v.dinner ? 1 : 0);
+        cur.giorni.push(d);
+        per.set(id, cur);
+      });
+    });
+    return [...per.values()].sort((a, b) => b.pasti - a.pasti);
+  };
+  const riassegnaOrfane = (orfano, nuovoId) => {
+    const dest = members.find(m => m.id === nuovoId);
+    if (!dest) {
+      window.alert('Scegli a chi assegnarle.');
+      return;
+    }
+    const chi = orfano.nome ? `di ${orfano.nome}` : 'senza padrone';
+    if (!window.confirm(`Assegnare a ${dest.name} le ${orfano.pasti} presenze ${chi}?\n\n` + `Riguardano ${orfano.giorni.length} ${orfano.giorni.length === 1 ? 'giorno' : 'giorni'}. ` + 'Se in quei giorni ha già dei pasti segnati, si sommano (non si perde niente).')) return;
+    setCampData(prev => {
+      const out = {
+        ...prev
+      };
+      Object.keys(out).forEach(d => {
+        const day = out[d];
+        if (!day || !day.meals || !day.meals[orfano.id]) return;
+        const meals = {
+          ...day.meals
+        };
+        const vecchio = meals[orfano.id] || {};
+        const attuale = meals[nuovoId] || {
+          lunch: false,
+          dinner: false
+        };
+        meals[nuovoId] = {
+          lunch: !!(attuale.lunch || vecchio.lunch),
+          dinner: !!(attuale.dinner || vecchio.dinner)
+        };
+        delete meals[orfano.id];
+        out[d] = {
+          ...day,
+          meals
+        };
+      });
+      return out;
+    });
+    setOrfanoScelte(prev => {
+      const n = {
+        ...prev
+      };
+      delete n[orfano.id];
+      return n;
+    });
+  };
+  const scartaOrfane = orfano => {
+    const chi = orfano.nome ? `di ${orfano.nome}` : 'senza padrone';
+    if (!window.confirm(`Buttare via le ${orfano.pasti} presenze ${chi}?\nNon si potranno recuperare.`)) return;
+    setCampData(prev => {
+      const out = {
+        ...prev
+      };
+      Object.keys(out).forEach(d => {
+        const day = out[d];
+        if (!day || !day.meals || !day.meals[orfano.id]) return;
+        const meals = {
+          ...day.meals
+        };
+        delete meals[orfano.id];
+        out[d] = {
+          ...day,
+          meals
+        };
+      });
+      return out;
+    });
+  };
+
   // Nome del giorno per i messaggi di conferma.
   const nomeGiorno = ds => parseDate(ds).toLocaleDateString('it-IT', {
     weekday: 'long',
@@ -1929,6 +2046,10 @@ function App() {
   const removeMember = id => {
     const m = members.find(x => x.id === id);
     if (m && !window.confirm(`Eliminare ${m.name} dai membri?\nLe sue presenze e i suoi pasti non conteranno più nei calcoli.`)) return;
+    // Si tiene il nome da parte: se poi qualcuno lo riaggiunge, l'app prende un
+    // id nuovo e le vecchie presenze restano appese a un id che non esiste più.
+    // Senza questo elenco non si saprebbe nemmeno DI CHI erano.
+    ricordaExMembro(id, m && m.name);
     setMembers(prev => prev.filter(x => x.id !== id));
   };
   const toggleChild = id => {
@@ -3315,7 +3436,7 @@ function App() {
     k: 'presenze',
     icon: '🍽️',
     title: 'Presenze',
-    body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta apri "Segna in blocco": ci sono "Tutti a pranzo", "Tutti a cena" e "Copia da ieri". Stanno chiusi e chiedono conferma, perché cambiano le presenze di tutti su tutti i telefoni in un colpo solo; il conteggio del giorno si legge sulla riga anche da chiusa. Durante il campo l\'app si apre già sulla data di oggi.'
+    body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta apri "Segna in blocco": ci sono "Tutti a pranzo", "Tutti a cena" e "Copia da ieri". Stanno chiusi e chiedono conferma, perché cambiano le presenze di tutti su tutti i telefoni in un colpo solo; il conteggio del giorno si legge sulla riga anche da chiusa. Se qualcuno viene eliminato dai Membri e poi riaggiunto, l\'app lo tratta come una persona nuova e i pasti segnati prima restano attaccati alla vecchia: in quel caso compare un avviso arancione che ti fa riassegnare quelle presenze alla persona giusta, invece di lasciarle sparire dai conti. Durante il campo l\'app si apre già sulla data di oggi.'
   }, {
     k: 'lista',
     icon: '🧾',
@@ -3502,7 +3623,21 @@ function App() {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Questo telefono non \xE8 ancora pronto per il campo."), ' ', "Al campo non c'\xE8 linea: tocca qui per vedere cosa manca, finch\xE9 sei collegato.")), renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
+  }, "Questo telefono non \xE8 ancora pronto per il campo."), ' ', "Al campo non c'\xE8 linea: tocca qui per vedere cosa manca, finch\xE9 sei collegato.")), (() => {
+    const orfane = presenzeOrfane();
+    if (orfane.length === 0) return null;
+    const totale = orfane.reduce((s, o) => s + o.pasti, 0);
+    return /*#__PURE__*/React.createElement("button", {
+      onClick: () => goTo('presenze'),
+      className: "w-full bg-[#D97706]/10 border border-[#D97706]/40 rounded-lg p-3 text-left flex items-start gap-2 hover:bg-[#D97706]/15"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-base leading-none mt-0.5"
+    }, "\uD83C\uDF7D\uFE0F"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] text-[#5C4A3C] leading-snug"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, totale, " presenze non contano nei conti."), ' ', "Sono di ", orfane.length === 1 ? 'una persona' : `${orfane.length} persone`, " eliminate e riaggiunte fra i Membri: tocca qui per riattaccarle a chi di dovere."));
+  })(), renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-lg border border-[#8F9E8B]/30 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setSepOpen(v => !v),
@@ -3810,7 +3945,56 @@ function App() {
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => navigateDate(1),
     className: "px-3 py-1 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
-  }, "\u2192")), /*#__PURE__*/React.createElement("div", {
+  }, "\u2192")), (() => {
+    const orfane = presenzeOrfane();
+    if (orfane.length === 0) return null;
+    const totale = orfane.reduce((s, o) => s + o.pasti, 0);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "bg-[#D97706]/10 border-2 border-[#D97706]/50 rounded-lg p-3 space-y-3"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-[11px] text-[#5C4A3C] leading-snug"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, "Ci sono ", totale, " presenze senza padrone."), " Succede quando una persona viene eliminata dai Membri e poi riaggiunta: per l'app \xE8 una persona nuova, e i pasti segnati prima restano attaccati alla vecchia \u2014 spariti dall'elenco e dai conti. Riattaccali alla persona giusta."), /*#__PURE__*/React.createElement("ul", {
+      className: "space-y-2"
+    }, orfane.map(o => /*#__PURE__*/React.createElement("li", {
+      key: o.id,
+      className: "bg-white/70 rounded border border-[#8F9E8B]/30 p-2.5 space-y-2"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-[11px] text-[#2D392C] leading-snug"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, o.nome || 'Persona non più in elenco'), ' — ', o.pasti, " ", o.pasti === 1 ? 'pasto' : 'pasti', " su ", o.giorni.length, " ", o.giorni.length === 1 ? 'giorno' : 'giorni', /*#__PURE__*/React.createElement("span", {
+      className: "block text-[9px] text-gray-500"
+    }, o.giorni.slice(0, 6).map(d => parseDate(d).toLocaleDateString('it-IT', {
+      day: 'numeric',
+      month: 'short'
+    })).join(' · '), o.giorni.length > 6 ? ' …' : '')), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement("select", {
+      value: orfanoScelte[o.id] || '',
+      onChange: e => setOrfanoScelte(prev => ({
+        ...prev,
+        [o.id]: e.target.value
+      })),
+      className: "flex-grow min-w-0 p-2 bg-white border border-[#8F9E8B]/40 rounded text-xs focus:outline-none focus:border-[#2D392C]"
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "\u2014 a chi sono? \u2014"), members.map(m => /*#__PURE__*/React.createElement("option", {
+      key: m.id,
+      value: m.id
+    }, m.name))), /*#__PURE__*/React.createElement("button", {
+      onClick: () => riassegnaOrfane(o, orfanoScelte[o.id]),
+      disabled: !orfanoScelte[o.id],
+      className: `shrink-0 px-3 py-2 rounded text-[10px] font-bold uppercase ${orfanoScelte[o.id] ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-400'}`
+    }, "Riassegna"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => scartaOrfane(o),
+      "aria-label": "Butta via queste presenze",
+      className: "shrink-0 px-2.5 py-2 rounded border border-red-700/40 text-red-700 text-[10px] font-bold uppercase"
+    }, "Butta"))))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-[#5C4A3C] italic"
+    }, "Aggiungi prima le persone nella scheda Membri."));
+  })(), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
@@ -4533,22 +4717,31 @@ function App() {
       className: "text-sm text-gray-400 italic"
     }, "Nessuna attrezzatura. Aggiungi la prima voce qui sopra.") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ul", {
       className: "space-y-2"
-    }, equipment.map(e => /*#__PURE__*/React.createElement("li", {
+    }, equipment.map(e =>
+    /*#__PURE__*/
+    // Nome sulla sua riga, prezzo e comandi sotto: in fila su una
+    // riga sola il titolo restava schiacciato in due centimetri e
+    // non si leggeva più.
+    React.createElement("li", {
       key: e.id,
-      className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
+      className: "bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start gap-3"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => toggleEquipBought(e.id),
       "aria-label": e.bought ? 'Segna da comprare' : 'Segna acquistato',
-      className: `w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold ${e.bought ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B]'}`
+      className: `w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold mt-0.5 ${e.bought ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B]'}`
     }, e.bought ? '✓' : ''), /*#__PURE__*/React.createElement("div", {
       className: "flex-grow min-w-0"
     }, /*#__PURE__*/React.createElement("div", {
-      className: `text-sm truncate ${e.bought ? 'line-through text-gray-400' : 'text-[#2D392C]'}`
+      className: `text-sm leading-snug break-words ${e.bought ? 'line-through text-gray-500' : 'text-[#2D392C]'}`
     }, e.text), e.buyer && /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] text-[#5C4A3C] font-bold truncate"
+      className: "text-[9px] text-[#5C4A3C] font-bold break-words"
     }, e.buyer)), /*#__PURE__*/React.createElement("span", {
       className: `font-rustic font-bold shrink-0 ${e.bought ? 'text-[#2D392C]' : 'text-gray-400'}`
-    }, money(posNum(e.price)), " \u20AC"), receipts[e.id] ? /*#__PURE__*/React.createElement("button", {
+    }, money(posNum(e.price)), " \u20AC")), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-end gap-2 mt-2 pt-2 border-t border-[#8F9E8B]/20"
+    }, receipts[e.id] ? /*#__PURE__*/React.createElement("button", {
       onClick: () => setViewReceipt(receipts[e.id]),
       "aria-label": "Vedi scontrino",
       className: "shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none"
@@ -4565,12 +4758,12 @@ function App() {
       onClick: () => openEditEquip(e),
       "aria-label": "Correggi",
       title: "Correggi questa voce",
-      className: "shrink-0 px-1 text-[#8F9E8B] hover:text-[#2D392C] text-sm leading-none"
+      className: "shrink-0 px-2 py-1 text-[#8F9E8B] hover:text-[#2D392C] text-sm leading-none"
     }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => removeEquip(e.id),
       "aria-label": "Rimuovi",
-      className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
-    }, "\xD7")))), /*#__PURE__*/React.createElement("div", {
+      className: "text-red-700 font-bold px-2 py-1 hover:text-red-900 shrink-0 leading-none"
+    }, "\xD7"))))), /*#__PURE__*/React.createElement("div", {
       className: "mt-3 pt-2 border-t border-[#8F9E8B]/30 space-y-1"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between text-[11px] text-gray-500"
