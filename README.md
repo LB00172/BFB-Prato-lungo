@@ -21,7 +21,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
 | **Aggiunta Attrezzatura** | Attrezzatura da comprare con prezzo; se spuntata entra nelle spese |
 | **Spese Totali** | Totali · Quote · Saldi (chi paga chi + condividi resoconto) · Dati (backup) |
 | **Dotazioni personali** | Dotazione base fissa + aggiunte per il campo |
-| **Galleria** | L'album del campo, da riempire al ritorno: foto a nome di un membro, con un tetto per persona |
+| **Galleria** | L'album del campo, da riempire al ritorno: foto a nome di un membro, con un tetto per persona, e "Foto ricordo" che ne fa un PDF |
 | **Impostazioni** | Pronto per il campo, tema chiaro/scuro/automatico, blocco con password, dati locali, versione |
 | **Archivio** | Campi chiusi: resoconto, dati scaricabili, eliminazione |
 | **Come funziona** | Guida interna all'app |
@@ -89,7 +89,14 @@ preparazione** e **offline al campo**, dove non c'è linea.
   scarica solo quando apri la foto. Cento foto = ~600 KB di miniature invece di
   16 MB: è ciò che rende l'album sfogliabile da telefono. Le miniature si
   ascoltano **solo mentre la Galleria è aperta**.
-  Il tetto di foto per persona (7 di serie, si cambia in Impostazioni) è un
+  **Foto ricordo**: dalla Galleria si scelgono fino a **12 foto** e l'app ne fa
+  un **PDF** con uno sfondo di montagna disegnato, quattro polaroid per pagina,
+  titolo e motto del campo. Da telefono si apre la condivisione (si manda nel
+  gruppo), altrimenti si scarica. Il generatore è `pdf-ricordo.js`, scritto a
+  mano: il PDF incorpora i JPEG **così come sono** (`DCTDecode`) e usa i font
+  standard, quindi non serve nessuna libreria — jsPDF avrebbe pesato ~350 KB nel
+  precache di ogni telefono per una funzione che si usa una volta l'anno.
+  Il tetto di foto per persona (3 di serie, si cambia in Impostazioni) è un
   **accordo di gruppo, non un lucchetto**: il nome si sceglie da una tendina e
   nessuno verifica chi sei. Serve a far scegliere le foto belle.
   Alla **chiusura del campo** le foto non si cancellano: vengono **timbrate**
@@ -178,6 +185,7 @@ risultano "protetti dalla password".
 | `firebase-config.js` | Configurazione: Firebase, campo, meteo, branding, feature flag |
 | `firebase-sync.js` | Sincronizzazione cloud (`window.CloudSync`), caricata solo online |
 | `sync-merge.js` | Fusione degli stati fra dispositivi (`window.SyncMerge`), usata dalla sincronizzazione |
+| `pdf-ricordo.js` | Generatore del PDF "foto ricordo" (`window.PdfRicordo`), senza librerie |
 | `firestore.rules` | Regole di sicurezza del database, da incollare nella console Firebase |
 | `build.js` | Compila `App.jsx` → `App.js` e aggiorna `CACHE_NAME` |
 | `test/` | Verifiche automatiche (`npm test`). Escluse dal deploy |

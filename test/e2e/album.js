@@ -164,6 +164,46 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
   ok('eliminando resta un posto libero', (await p.locator('main .grid button').count()) === 4);
   ok('la foto sparisce anche dal cloud', (await p.evaluate(() => window.__foto.size)) === 4);
 
+  // ---- Foto ricordo: scelta delle foto e PDF ----
+  await p.locator('button', { hasText: 'Foto ricordo' }).click();
+  await p.waitForTimeout(300);
+  ok('la modalità di scelta si apre', /Tocca le foto da mettere nel ricordo/.test(await p.locator('main').innerText()));
+  ok('senza scelte il tasto è spento', await p.locator('button', { hasText: /^Genera foto ricordo/ }).isDisabled());
+
+  const miniature = p.locator('main .grid button');
+  await miniature.nth(0).click();
+  await miniature.nth(1).click();
+  await p.waitForTimeout(300);
+  ok('le foto scelte vengono numerate', /Scelte 2 foto/.test(await p.locator('main').innerText()));
+
+  // Toccare di nuovo toglie la scelta.
+  await miniature.nth(1).click();
+  await p.waitForTimeout(250);
+  ok('si può togliere una foto dalla scelta', /Scelte 1 foto/.test(await p.locator('main').innerText()));
+  await miniature.nth(1).click();
+  await p.waitForTimeout(250);
+
+  const [scarico] = await Promise.all([
+    p.waitForEvent('download', { timeout: 25000 }).catch(() => null),
+    p.locator('button', { hasText: /^Genera foto ricordo/ }).click(),
+  ]);
+  await p.waitForTimeout(600);
+
+  ok('il PDF viene prodotto e scaricato: ' + (scarico ? scarico.suggestedFilename() : 'NO'),
+    !!scarico && /^foto-ricordo-\d{4}-\d{2}-\d{2}\.pdf$/.test(scarico.suggestedFilename()));
+  if (scarico) {
+    const fs = require('fs');
+    const dati = fs.readFileSync(await scarico.path());
+    const t = dati.toString('latin1');
+    ok(`il file è un PDF valido (${(dati.length / 1024).toFixed(0)} KB)`, t.startsWith('%PDF-') && t.trimEnd().endsWith('%%EOF'));
+    ok('contiene le due foto scelte, non tutte', (t.match(/\/Subtype \/Image/g) || []).length === 2);
+    ok('le foto sono incorporate come JPEG', t.includes('/Filter /DCTDecode'));
+    ok('porta il titolo del campo', t.includes('(PRATO LUNGO 2026) Tj'));
+    ok('porta il nome di chi ha scattato', /\(Lorenzo · /.test(t) || t.includes('(Lorenzo'));
+  }
+  ok('finita la stampa si esce dalla modalità di scelta',
+    (await p.locator('button', { hasText: 'Foto ricordo' }).count()) > 0);
+
   // ---- Chiusura del campo: le foto non si perdono, cambiano posto ----
   // Serve una spesa, altrimenti la chiusura si rifiuta di partire.
   await menu('Lista della Spesa');

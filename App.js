@@ -262,7 +262,7 @@ const BASE_GEAR = [{
 // lucchetto (il nome si sceglie da una tendina, nessuno verifica chi sei):
 // serve a far scegliere le foto belle invece di svuotare il rullino.
 const PHOTO_CAP_KEY = 'cambusa_photo_cap';
-const PHOTO_CAP_DEFAULT = 7;
+const PHOTO_CAP_DEFAULT = 3;
 
 // Comprime una foto (scontrino) ridimensionandola e convertendola in JPEG,
 // così da poterla salvare in localStorage senza esaurire lo spazio.
@@ -1146,6 +1146,9 @@ function App() {
   const [photoBusy, setPhotoBusy] = useState(''); // messaggio di avanzamento
   const [viewPhoto, setViewPhoto] = useState(null); // { id, by, at, full }
   const [album, setAlbum] = useState(null); // album di un campo chiuso
+  const [picking, setPicking] = useState(false); // modalità "scegli le foto"
+  const [picked, setPicked] = useState([]); // id scelti per il ricordo
+  const [pdfBusy, setPdfBusy] = useState(''); // avanzamento della stampa
   const [photoCap, setPhotoCap] = useState(() => {
     const v = parseInt(localStorage.getItem(PHOTO_CAP_KEY), 10);
     return Number.isFinite(v) && v > 0 ? v : PHOTO_CAP_DEFAULT;
@@ -2154,6 +2157,103 @@ function App() {
     } : cur);
   };
 
+  // ---------- Foto ricordo (PDF) ----------
+  // La griglia ha solo le miniature: per la stampa servono gli originali, che
+  // si scaricano uno a uno. Da qui l'avanzamento e il tetto di dodici.
+  const MAX_RICORDO = window.PdfRicordo && window.PdfRicordo.MAX_FOTO || 12;
+  const togglePicked = id => {
+    setPicked(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= MAX_RICORDO) {
+        window.alert(`Il ricordo tiene al massimo ${MAX_RICORDO} foto: oltre diventa un catalogo.\n\nTogline una per farne entrare un'altra.`);
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
+  const uscitaScelta = () => {
+    setPicking(false);
+    setPicked([]);
+  };
+  const generaRicordo = async elenco => {
+    const PDF = window.PdfRicordo;
+    if (!PDF) {
+      window.alert('Il generatore del ricordo non è disponibile.');
+      return;
+    }
+    const CS = window.CloudSync;
+    if (!CS || !CS.isConnected()) {
+      window.alert('Per creare il ricordo servono le foto originali, quindi la linea.');
+      return;
+    }
+    const scelte = elenco.filter(p => picked.includes(p.id));
+    if (scelte.length === 0) {
+      window.alert('Scegli almeno una foto.');
+      return;
+    }
+    try {
+      const foto = [];
+      for (let i = 0; i < scelte.length; i++) {
+        setPdfBusy(`Scarico ${i + 1} di ${scelte.length}…`);
+        const full = await CS.getPhotoFull(scelte[i].id);
+        if (!full) continue;
+        foto.push({
+          dataUrl: full,
+          didascalia: [scelte[i].by, scelte[i].at ? new Date(scelte[i].at).toLocaleDateString('it-IT') : ''].filter(Boolean).join(' · ')
+        });
+      }
+      if (foto.length === 0) {
+        window.alert('Non sono riuscito a scaricare le foto: riprova con una linea migliore.');
+        return;
+      }
+      setPdfBusy('Compongo la pagina…');
+      const r = campRange();
+      const bytes = PDF.crea({
+        titolo: BRAND.appTitle,
+        sottotitolo: r.from === r.to ? r.from : `${r.from} → ${r.to}`,
+        motto: BRAND.footerMotto,
+        foto
+      });
+      const nome = `foto-ricordo-${toDateStr(new Date())}.pdf`;
+      const blob = new Blob([bytes], {
+        type: 'application/pdf'
+      });
+      const file = new File([blob], nome, {
+        type: 'application/pdf'
+      });
+
+      // Da telefono la condivisione è più utile del download: si manda nel
+      // gruppo o si salva nei file con lo stesso gesto.
+      if (navigator.canShare && navigator.canShare({
+        files: [file]
+      })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: BRAND.appTitle
+          });
+          uscitaScelta();
+          return;
+        } catch (e) {
+          if (e && e.name === 'AbortError') return;
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nome;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      uscitaScelta();
+    } catch (e) {
+      window.alert('Non sono riuscito a creare il ricordo: ' + (e && e.message ? e.message : e));
+    } finally {
+      setPdfBusy('');
+    }
+  };
+
   // Album di un campo chiuso: si scarica quando lo chiedi, non all'avvio.
   const openAlbum = async a => {
     const CS = window.CloudSync;
@@ -3044,7 +3144,7 @@ function App() {
     k: 'galleria',
     icon: '📸',
     title: 'Galleria',
-    body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile.'
+    body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Il tasto "Foto ricordo" ti fa scegliere fino a dodici foto e ne fa un PDF con uno sfondo di montagna, quattro per pagina: da mandare nel gruppo o da stampare.'
   }, {
     k: 'gioco',
     icon: '🎮',
@@ -4316,9 +4416,14 @@ function App() {
     className: "font-bold"
   }, photoCap, " foto a testa"), " (si cambia in Impostazioni): serve a scegliere le belle, non a svuotare il rullino. \xC8 un accordo fra noi, non un lucchetto: il nome si sceglie dalla tendina. Le foto vengono rimpicciolite prima di partire."))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
-  }, "Album ", photos.length > 0 ? `(${photos.length})` : ''), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
+    className: "font-rustic text-lg text-[#2D392C]"
+  }, "Album ", photos.length > 0 ? `(${photos.length})` : ''), photos.length > 0 && cloud.connected && /*#__PURE__*/React.createElement("button", {
+    onClick: () => picking ? uscitaScelta() : setPicking(true),
+    className: `text-[10px] uppercase font-bold px-3 py-1.5 rounded border-2 shrink-0 ${picking ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white text-[#2D392C] border-[#8F9E8B]/50'}`
+  }, picking ? 'Annulla' : '🖼️ Foto ricordo')), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
   }, "Senza linea l'album non si pu\xF2 sfogliare.") : !photosReady ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
@@ -4326,19 +4431,36 @@ function App() {
     className: "text-sm text-gray-400 italic"
   }, "Ancora nessuna foto. Comincia tu.") : /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-1.5"
-  }, photos.map(p => /*#__PURE__*/React.createElement("button", {
-    key: p.id,
-    onClick: () => openPhoto(p),
-    className: "relative aspect-square overflow-hidden rounded border border-[#8F9E8B]/30 bg-[#F0F4F1]",
-    "aria-label": `Foto di ${p.by || 'anonimo'}`
-  }, /*#__PURE__*/React.createElement("img", {
-    src: p.thumb,
-    alt: "",
-    className: "w-full h-full object-cover",
-    loading: "lazy"
-  }), p.by && /*#__PURE__*/React.createElement("span", {
-    className: "absolute bottom-0 left-0 right-0 bg-black/55 text-white text-[8px] px-1 py-0.5 truncate text-left"
-  }, p.by)))), photos.length > 0 && /*#__PURE__*/React.createElement("p", {
+  }, photos.map(p => {
+    const scelta = picked.indexOf(p.id);
+    return /*#__PURE__*/React.createElement("button", {
+      key: p.id,
+      onClick: () => picking ? togglePicked(p.id) : openPhoto(p),
+      className: `relative aspect-square overflow-hidden rounded border bg-[#F0F4F1] ${scelta >= 0 ? 'border-[#2D392C] border-2' : 'border-[#8F9E8B]/30'}`,
+      "aria-label": picking ? `Scegli la foto di ${p.by || 'anonimo'}` : `Foto di ${p.by || 'anonimo'}`
+    }, /*#__PURE__*/React.createElement("img", {
+      src: p.thumb,
+      alt: "",
+      className: `w-full h-full object-cover ${picking && scelta < 0 ? 'opacity-45' : ''}`,
+      loading: "lazy"
+    }), picking && /*#__PURE__*/React.createElement("span", {
+      className: `absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border-2 ${scelta >= 0 ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white/80 border-white'}`
+    }, scelta >= 0 ? scelta + 1 : ''), p.by && /*#__PURE__*/React.createElement("span", {
+      className: "absolute bottom-0 left-0 right-0 bg-black/55 text-white text-[8px] px-1 py-0.5 truncate text-left"
+    }, p.by));
+  })), picking && /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 pt-3 border-t border-[#8F9E8B]/30 space-y-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-gray-600"
+  }, picked.length === 0 ? `Tocca le foto da mettere nel ricordo (fino a ${MAX_RICORDO}). L'ordine è quello con cui le scegli.` : /*#__PURE__*/React.createElement(React.Fragment, null, "Scelte ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, picked.length), " foto su ", MAX_RICORDO, " \xB7 ", Math.ceil(picked.length / 4), " ", Math.ceil(picked.length / 4) === 1 ? 'pagina' : 'pagine')), /*#__PURE__*/React.createElement("button", {
+    onClick: () => generaRicordo(photos),
+    disabled: picked.length === 0 || !!pdfBusy,
+    className: `w-full py-3 rounded font-bold uppercase text-sm tracking-wide ${picked.length > 0 && !pdfBusy ? 'bg-[#5C4A3C] text-white hover:bg-[#463628]' : 'bg-gray-200 text-gray-400'}`
+  }, pdfBusy || `Genera foto ricordo${picked.length ? ` (${picked.length})` : ''}`), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic leading-snug"
+  }, "Crea un PDF con le foto scelte su uno sfondo di montagna, quattro per pagina. Le foto vengono scaricate a piena qualit\xE0, quindi ci vuole qualche secondo.")), photos.length > 0 && !picking && /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-3"
   }, "Tocca una foto per vederla grande. Le foto restano nel campo: alla chiusura finiscono nell'archivio insieme ai conti."))), activeTab === 'archivio' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
@@ -4577,7 +4699,7 @@ function App() {
     className: "text-sm text-[#2D392C]"
   }, "Foto per persona"), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 shrink-0"
-  }, [5, 7, 10, 15].map(n => /*#__PURE__*/React.createElement("button", {
+  }, [3, 5, 7, 10].map(n => /*#__PURE__*/React.createElement("button", {
     key: n,
     onClick: () => {
       setPhotoCap(n);

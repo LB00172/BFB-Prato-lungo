@@ -1,4 +1,4 @@
-const CACHE_NAME = 'brigata-bandone-59dc270c06';
+const CACHE_NAME = 'brigata-bandone-c41e017a56';
 
 // Tutte le risorse sono locali (stesso dominio): il precache è affidabile.
 // Nessuna dipendenza da CDN esterni -> l'app funziona offline al 100%.
@@ -8,6 +8,7 @@ const ASSETS = [
   './App.js',
   './firebase-config.js',
   './sync-merge.js',
+  './pdf-ricordo.js',
   './firebase-sync.js',
   './manifest.json',
   './logo.png',

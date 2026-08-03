@@ -57,6 +57,7 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `unita/compilazione` | `App.jsx` compila; **`App.js` è allineato** (cioè non hai dimenticato `npm run build`); il `CACHE_NAME` c'è; ogni script di `index.html` sta nel precache |
 | `unita/fusione-motore` | I 32 casi del motore di fusione (`sync-merge.js`): voci nuove da due telefoni, cancellazioni, lapidi, convergenza |
 | `unita/arrotondamenti` | Quote sempre multiple di 0,10 €; riconciliazione dello scarto solo sopra i 50 cent |
+| `unita/pdf-ricordo` | Il PDF "foto ricordo": struttura del file, **ogni voce della tavola degli scarti punta al suo oggetto**, JPEG incorporati senza ricodifica, impaginazione, tetto di 12, accenti e ingressi rotti. Salva un esempio in `test/tmp/ricordo.pdf` |
 
 **Con l'app vera**
 
@@ -65,7 +66,7 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `e2e/audit` | **384 verifiche**: tutta la catena dal carico spese a "chi paga chi", su 20 scenari (bambini, conto separato, giorni vuoti, acquirenti fantasma, campo intero disordinato) |
 | `e2e/netting` | Chi ha anticipato paga la sua quota come gli altri; i passaggi di pareggio |
 | `e2e/pagamenti` | PayPal e IBAN per membro, controllo mod-97, comparsa nei Saldi, tasto copia |
-| `e2e/album` | Galleria: tetto per persona, miniatura più leggera dell'originale, **nessuna foto in localStorage**, chiusura del campo che timbra le foto invece di cancellarle |
+| `e2e/album` | Galleria: tetto per persona, miniatura più leggera dell'originale, **nessuna foto in localStorage**, scelta delle foto e PDF ricordo davvero scaricato, chiusura del campo che timbra le foto invece di cancellarle |
 | `e2e/separato` | Conto separato: giorni spuntati, pasti fuori dal divisore comune |
 | `e2e/dueflussi` | I due modi di registrare una spesa portano allo stesso conto |
 | `e2e/acquirente` | L'acquirente si sceglie dai membri, niente nomi scritti a mano |
