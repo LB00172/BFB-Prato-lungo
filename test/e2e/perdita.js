@@ -121,6 +121,15 @@ const presenti = (page) => page.evaluate(() => {
   const scorta = await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_rescue') || 'null'));
   ok('la copia di scorta è stata salvata prima di applicare', !!scorta && scorta.perse === spazzate);
 
+  // La diagnostica deve dire COSA riporterebbe indietro, non solo quante voci.
+  await menu('Impostazioni');
+  await p.waitForTimeout(400);
+  const box = await p.locator('main').innerText();
+  ok('il riquadro della copia di scorta spiega a cosa serve', /rete di sicurezza/i.test(box));
+  ok('e dice cosa tornerebbe indietro', /presenze/i.test(box) && /su tutti i telefoni/i.test(box));
+  await menu('Presenze');
+  await p.waitForTimeout(300);
+
   // --- L'annullamento riporta tutto, e lo ripubblica ---
   await p.locator('button', { hasText: 'Annulla la sincronizzazione' }).click();
   await p.waitForTimeout(800);

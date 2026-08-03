@@ -104,7 +104,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
   mano: il PDF incorpora i JPEG **così come sono** (`DCTDecode`) e usa i font
   standard, quindi non serve nessuna libreria — jsPDF avrebbe pesato ~350 KB nel
   precache di ogni telefono per una funzione che si usa una volta l'anno.
-  Il tetto di foto per persona (3 di serie, si cambia in Impostazioni) è un
+  Il tetto di foto per persona (4 di serie, si cambia in Impostazioni: 3/4/5/7) è un
   **accordo di gruppo, non un lucchetto**: il nome si sceglie da una tendina e
   nessuno verifica chi sei. Serve a far scegliere le foto belle.
   Alla **chiusura del campo** le foto non si cancellano: vengono **timbrate**

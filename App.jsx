@@ -288,7 +288,7 @@ const BASE_GEAR = [
 // lucchetto (il nome si sceglie da una tendina, nessuno verifica chi sei):
 // serve a far scegliere le foto belle invece di svuotare il rullino.
 const PHOTO_CAP_KEY = 'cambusa_photo_cap';
-const PHOTO_CAP_DEFAULT = 3;
+const PHOTO_CAP_DEFAULT = 4;
 
 // Comprime una foto (scontrino) ridimensionandola e convertendola in JPEG,
 // così da poterla salvare in localStorage senza esaurire lo spazio.
@@ -1054,6 +1054,8 @@ function App() {
   const [album, setAlbum] = useState(null);          // album di un campo chiuso
   // Ultima sincronizzazione che ha tolto delle voci: banner + annulla.
   const [lostSync, setLostSync] = useState(null);
+  // Ridisegna la diagnostica dopo che si butta la copia di scorta.
+  const [diagTick, setDiagTick] = useState(0);
   // Presenze: le azioni "in blocco" stanno chiuse.
   const [azioniOpen, setAzioniOpen] = useState(false);
   // Impostazioni: le due sezioni che si toccano una volta sola stanno chiuse.
@@ -1370,7 +1372,7 @@ function App() {
     const quando = new Date(r.at).toLocaleString('it-IT');
     if (!window.confirm(
       `Annullare la sincronizzazione del ${quando}?\n\n` +
-      `Torneranno ${r.perse} voci che erano sparite, e la copia di prima verrà ` +
+      `${r.perse === 1 ? 'Tornerà 1 voce che era sparita' : `Torneranno ${r.perse} voci che erano sparite`}, e la copia di prima verrà ` +
       'ripubblicata su TUTTI i dispositivi.\n\n' +
       'Le modifiche fatte dopo, da chiunque, restano.'
     )) return;
@@ -4669,7 +4671,7 @@ function App() {
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-[#2D392C]">Foto per persona</span>
                 <div className="flex items-center gap-2 shrink-0">
-                  {[3, 5, 7, 10].map((n) => (
+                  {[3, 4, 5, 7].map((n) => (
                     <button
                       key={n}
                       onClick={() => { setPhotoCap(n); localStorage.setItem(PHOTO_CAP_KEY, String(n)); }}
@@ -4697,6 +4699,9 @@ function App() {
                 const lapidi = Object.keys(m.del || {})
                   .map((p) => ({ p, at: m.del[p] }))
                   .sort((a, b) => b.at - a.at);
+                // diagTick serve solo a far ridisegnare questa scheda quando la
+                // copia di scorta viene buttata: senza, resterebbe a schermo.
+                void diagTick;
                 const scorta = load(RESCUE_KEY, null);
                 return (
                   <div className="space-y-3">
@@ -4708,11 +4713,24 @@ function App() {
                     {scorta && scorta.state && (
                       <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 space-y-2">
                         <p className="text-[10px] text-[#5C4A3C] leading-snug">
-                          C'è una copia di scorta di <span className="font-bold">{new Date(scorta.at).toLocaleString('it-IT')}</span>,
-                          salvata prima di una sincronizzazione che ha tolto <span className="font-bold">{scorta.perse}</span> voci.
+                          <span className="font-bold">Rete di sicurezza.</span> Il {new Date(scorta.at).toLocaleString('it-IT')} una
+                          sincronizzazione ha tolto {scorta.perse === 1 ? 'una voce' : `${scorta.perse} voci`} da questo telefono, e
+                          l'app ha messo da parte una copia di com'era prima.
+                        </p>
+                        <p className="text-[10px] text-[#5C4A3C] leading-snug">
+                          Annullando torna {scorta.perse === 1 ? 'quella voce' : 'quello che è sparito'}
+                          {scorta.paths && scorta.paths.length
+                            ? <> — <span className="font-bold">{descriviPerdite(scorta.paths, scorta.state)}</span></>
+                            : null}, su tutti i telefoni. Tutto il resto, comprese le modifiche fatte dopo, rimane.
                         </p>
                         <button onClick={annullaSync} className="w-full py-2 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide">
                           Annulla quella sincronizzazione
+                        </button>
+                        <button
+                          onClick={() => { if (window.confirm('Buttare la copia di scorta?\nDopo non si potrà più annullare quella sincronizzazione.')) { localStorage.removeItem(RESCUE_KEY); setLostSync(null); setDiagTick((t) => t + 1); } }}
+                          className="w-full py-1.5 text-[9px] uppercase font-bold text-gray-500"
+                        >
+                          Va bene così, butta la copia
                         </button>
                       </div>
                     )}
