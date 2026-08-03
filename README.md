@@ -22,7 +22,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
 | **Spese Totali** | Totali · Quote · Saldi (chi paga chi + condividi resoconto) · Dati (backup) |
 | **Dotazioni personali** | Dotazione base fissa + aggiunte per il campo |
 | **Galleria** | L'album del campo, da riempire al ritorno: si sfoglia come polaroid o si guarda a griglia; "Crea album ricordo" ne fa un PDF |
-| **Impostazioni** | Pronto per il campo, tema chiaro/scuro/automatico, blocco con password, dati locali, versione |
+| **Impostazioni** | Pronto per il campo, tema chiaro/scuro/automatico, galleria, diagnostica sincronizzazione; in fondo, richiudibili, blocco con password e dati locali |
 | **Archivio** | Campi chiusi: resoconto, dati scaricabili, eliminazione |
 | **Come funziona** | Guida interna all'app |
 

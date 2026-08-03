@@ -137,6 +137,30 @@ const presenti = (page) => page.evaluate(() => {
   ok('la diagnostica c\'è', /diagnostica sincronizzazione/i.test(diag));
   ok('conta le voci datate e le cancellazioni', /voci datate/i.test(diag) && /cancellazioni registrate/i.test(diag));
 
+  // --- Le due sezioni "da impostare una volta" stanno chiuse e in fondo ---
+  ok('"Blocca ora" non è in vista: la sezione è chiusa', (await p.locator('button', { hasText: 'Blocca ora' }).count()) === 0);
+  ok('"Cancella i dati" non è in vista: la sezione è chiusa', (await p.locator('button', { hasText: 'Cancella i dati' }).count()) === 0);
+  const ordine = await p.evaluate(() => {
+    const t = document.querySelector('main').innerText;
+    return {
+      diag: t.search(/diagnostica sincronizzazione/i),
+      blocco: t.search(/blocco con password/i),
+      dati: t.search(/dati su questo telefono/i),
+    };
+  });
+  ok('stanno in fondo, dopo la diagnostica', ordine.blocco > ordine.diag && ordine.dati > ordine.blocco);
+
+  await p.locator('button', { hasText: 'Blocco con password' }).first().click();
+  await p.waitForTimeout(300);
+  ok('aprendo la riga compare "Blocca ora"', (await p.locator('button', { hasText: 'Blocca ora' }).count()) > 0);
+  await p.locator('button', { hasText: 'Blocco con password' }).first().click();
+  await p.waitForTimeout(300);
+  ok('e si richiude', (await p.locator('button', { hasText: 'Blocca ora' }).count()) === 0);
+
+  await p.locator('button', { hasText: 'Dati su questo telefono' }).first().click();
+  await p.waitForTimeout(300);
+  ok('aprendo la riga dei dati compare "Esporta backup"', (await p.locator('button', { hasText: 'Esporta backup' }).count()) > 0);
+
   // --- "Copia da ieri" non deve cancellare le presenze degli altri ---
   // Caso vero: ieri c'era solo Anna, oggi qualcun altro ha segnato Lorenzo.
   // Chi preme "Copia da ieri" si aspetta di sovrascrivere, non di CANCELLARE

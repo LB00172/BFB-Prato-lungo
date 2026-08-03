@@ -1243,6 +1243,9 @@ function App() {
   const [album, setAlbum] = useState(null); // album di un campo chiuso
   // Ultima sincronizzazione che ha tolto delle voci: banner + annulla.
   const [lostSync, setLostSync] = useState(null);
+  // Impostazioni: le due sezioni che si toccano una volta sola stanno chiuse.
+  const [bloccoOpen, setBloccoOpen] = useState(false);
+  const [datiOpen, setDatiOpen] = useState(false);
   const [sepOpen, setSepOpen] = useState(false); // riga "Conto separato" aperta
   const [galleryView, setGalleryView] = useState('album'); // album | griglia
   const [albumPage, setAlbumPage] = useState(0);
@@ -4995,58 +4998,6 @@ function App() {
     className: "text-[10px] text-gray-500 leading-snug"
   }, "Quante foto pu\xF2 caricare ciascuno. \xC8 un accordo di gruppo che vale su questo telefono, non un controllo: serve a far scegliere le foto belle. Mettetevi d'accordo sullo stesso numero.")), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C]"
-  }, "Blocco con password"), /*#__PURE__*/React.createElement("span", {
-    className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
-  }, LOCK && LOCK.hash ? 'Attivo' : 'Non attivo')), LOCK && LOCK.hash ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-gray-500 leading-snug"
-  }, "All'apertura serve la password del campo. Tienila nel gruppo, non pubblicarla altrove. Serve a non lasciare spese, nomi e scontrini alla portata di chi capita sull'indirizzo: non \xE8 una cassaforte, perch\xE9 il controllo gira sul telefono."), (() => {
-    const lock = window.APP_LOCK || {};
-    if (!lock.dbEmail) return null;
-    const protetto = cloud.authMode === 'shared';
-    // Senza collegamento non si può sapere come si entrerà nel
-    // database: meglio dirlo, invece di allarmare chi è offline.
-    const ignoto = !protetto && !cloud.connected;
-    return /*#__PURE__*/React.createElement("div", {
-      className: `p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : ignoto ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/30' : 'bg-[#D97706]/10 border-[#D97706]/40'}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between gap-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] uppercase font-bold text-gray-500"
-    }, "Database"), /*#__PURE__*/React.createElement("span", {
-      className: `text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`
-    }, protetto ? '🔒 protetto dalla password' : ignoto ? '— non collegato' : '⚠ accesso aperto')), /*#__PURE__*/React.createElement("p", {
-      className: "text-[10px] text-gray-500 leading-snug mt-1"
-    }, protetto ? 'L\'app entra nel database con l\'utente del campo: senza password i dati non si leggono nemmeno da fuori.' : ignoto ? 'Senza linea non c\'è nulla da proteggere: si lavora in locale. Il controllo si aggiorna al prossimo collegamento.' : 'I dati nel cloud sono ancora raggiungibili senza password. Per chiuderli servono i passaggi nella console Firebase (utente condiviso + regole): finché non sono fatti, il blocco protegge solo la schermata.'));
-  })(), /*#__PURE__*/React.createElement("label", {
-    className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: askAlways,
-    onChange: toggleAskAlways,
-    className: "w-4 h-4 accent-[#2D392C] shrink-0"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] text-[#2D392C] leading-snug"
-  }, "Chiedi la password ", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "ogni volta"), " che apro l'app", /*#__PURE__*/React.createElement("span", {
-    className: "block text-[9px] text-gray-500"
-  }, "Senza la spunta il telefono resta sbloccato fino a \"Blocca ora\"."))), window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && /*#__PURE__*/React.createElement("div", {
-    className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, "La sincronizzazione sta usando l'accesso di ripiego. L'app chiede la password da sola quando serve: se non \xE8 successo, tocca", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, " Blocca ora"), " e rientra.")), /*#__PURE__*/React.createElement("button", {
-    onClick: lockNow,
-    className: "w-full py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]"
-  }, "\uD83D\uDD12 Blocca ora")) : /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-gray-500"
-  }, "Nessuna password impostata: l'app si apre a chiunque abbia l'indirizzo.")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
   }, "Diagnostica sincronizzazione"), (() => {
@@ -5104,16 +5055,89 @@ function App() {
       className: "text-[9px] text-gray-400 italic leading-snug"
     }, "Una cancellazione \xE8 normale quando qualcuno toglie davvero una voce. Se ne vedi tante tutte allo stesso minuto, \xE8 il segno di un ripristino, di un'importazione o di un \"Copia da ieri\": in quel caso la copia di scorta qui sopra rimette tutto a posto."));
   })()), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-  }, "Dati su questo telefono"), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
+    className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setBloccoOpen(v => !v),
+    className: "w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-[#E2EAE4]/60"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] uppercase font-bold text-gray-500"
-  }, "Sincronizzazione"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] font-bold text-[#2D392C]"
-  }, cloud.connected ? 'Connessa' : isOnline ? 'Non connessa' : 'Offline')), /*#__PURE__*/React.createElement("div", {
+    className: "font-rustic text-lg text-[#2D392C] shrink-0"
+  }, "Blocco con password"), /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto flex items-center gap-1.5 shrink-0"
+  }, (() => {
+    const lock = window.APP_LOCK || {};
+    if (!lock.dbEmail || !(LOCK && LOCK.hash)) return null;
+    const protetto = cloud.authMode === 'shared';
+    const ignoto = !protetto && !cloud.connected;
+    return /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px]",
+      title: protetto ? 'Database protetto' : ignoto ? 'Non collegato' : 'Database ad accesso aperto'
+    }, protetto ? '🔒' : ignoto ? '—' : '⚠');
+  })(), /*#__PURE__*/React.createElement("span", {
+    className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
+  }, LOCK && LOCK.hash ? 'Attivo' : 'Non attivo'), /*#__PURE__*/React.createElement("span", {
+    className: `text-[10px] text-[#5C4A3C] transition-transform ${bloccoOpen ? 'rotate-180' : ''}`
+  }, "\u25BE"))), bloccoOpen && /*#__PURE__*/React.createElement("div", {
+    className: "px-4 pb-4 space-y-3"
+  }, LOCK && LOCK.hash ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug"
+  }, "All'apertura serve la password del campo. Tienila nel gruppo, non pubblicarla altrove. Serve a non lasciare spese, nomi e scontrini alla portata di chi capita sull'indirizzo: non \xE8 una cassaforte, perch\xE9 il controllo gira sul telefono."), (() => {
+    const lock = window.APP_LOCK || {};
+    if (!lock.dbEmail) return null;
+    const protetto = cloud.authMode === 'shared';
+    // Senza collegamento non si può sapere come si entrerà nel
+    // database: meglio dirlo, invece di allarmare chi è offline.
+    const ignoto = !protetto && !cloud.connected;
+    return /*#__PURE__*/React.createElement("div", {
+      className: `p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : ignoto ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/30' : 'bg-[#D97706]/10 border-[#D97706]/40'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] uppercase font-bold text-gray-500"
+    }, "Database"), /*#__PURE__*/React.createElement("span", {
+      className: `text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`
+    }, protetto ? '🔒 protetto dalla password' : ignoto ? '— non collegato' : '⚠ accesso aperto')), /*#__PURE__*/React.createElement("p", {
+      className: "text-[10px] text-gray-500 leading-snug mt-1"
+    }, protetto ? 'L\'app entra nel database con l\'utente del campo: senza password i dati non si leggono nemmeno da fuori.' : ignoto ? 'Senza linea non c\'è nulla da proteggere: si lavora in locale. Il controllo si aggiorna al prossimo collegamento.' : 'I dati nel cloud sono ancora raggiungibili senza password. Per chiuderli servono i passaggi nella console Firebase (utente condiviso + regole): finché non sono fatti, il blocco protegge solo la schermata.'));
+  })(), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: askAlways,
+    onChange: toggleAskAlways,
+    className: "w-4 h-4 accent-[#2D392C] shrink-0"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] text-[#2D392C] leading-snug"
+  }, "Chiedi la password ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "ogni volta"), " che apro l'app", /*#__PURE__*/React.createElement("span", {
+    className: "block text-[9px] text-gray-500"
+  }, "Senza la spunta il telefono resta sbloccato fino a \"Blocca ora\"."))), window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[#5C4A3C] leading-snug"
+  }, "La sincronizzazione sta usando l'accesso di ripiego. L'app chiede la password da sola quando serve: se non \xE8 successo, tocca", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, " Blocca ora"), " e rientra.")), /*#__PURE__*/React.createElement("button", {
+    onClick: lockNow,
+    className: "w-full py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]"
+  }, "\uD83D\uDD12 Blocca ora")) : /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500"
+  }, "Nessuna password impostata: l'app si apre a chiunque abbia l'indirizzo."))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setDatiOpen(v => !v),
+    className: "w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-[#E2EAE4]/60"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic text-lg text-[#2D392C] shrink-0"
+  }, "Dati su questo telefono"), /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto flex items-center gap-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
+  }, cloud.connected ? 'Connessa' : isOnline ? 'Non connessa' : 'Offline'), /*#__PURE__*/React.createElement("span", {
+    className: `text-[10px] text-[#5C4A3C] transition-transform ${datiOpen ? 'rotate-180' : ''}`
+  }, "\u25BE"))), datiOpen && /*#__PURE__*/React.createElement("div", {
+    className: "px-4 pb-4 space-y-3"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: exportData,
@@ -5126,7 +5150,7 @@ function App() {
     className: "w-full py-2.5 bg-white border-2 border-red-700/40 text-red-700 rounded text-xs font-bold uppercase hover:bg-red-50"
   }, "Cancella i dati da questo telefono"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic leading-snug"
-  }, "Utile se presti o cambi telefono. Il cloud non viene toccato: con la linea i dati tornano da soli.")), /*#__PURE__*/React.createElement("div", {
+  }, "Utile se presti o cambi telefono. Il cloud non viene toccato: con la linea i dati tornano da soli."))), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-2"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1"

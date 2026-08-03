@@ -111,6 +111,9 @@ const { chromium } = require('playwright-core');
 
   // --- 8. "Chiedi ogni volta" + Blocca ora ---
   await menu('Impostazioni');
+  // "Blocco con password" ora è una riga richiudibile, chiusa di suo.
+  await p.locator('button', { hasText: 'Blocco con password' }).first().click();
+  await p.waitForTimeout(300);
   await p.locator('input[type="checkbox"]').first().check();
   await p.waitForTimeout(250);
   console.log('flag "chiedi ogni volta" salvato:', (await p.evaluate(() => localStorage.getItem('cambusa_lock_always'))) === '1' ? 'OK' : 'PROBLEMA');

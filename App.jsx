@@ -1054,6 +1054,9 @@ function App() {
   const [album, setAlbum] = useState(null);          // album di un campo chiuso
   // Ultima sincronizzazione che ha tolto delle voci: banner + annulla.
   const [lostSync, setLostSync] = useState(null);
+  // Impostazioni: le due sezioni che si toccano una volta sola stanno chiuse.
+  const [bloccoOpen, setBloccoOpen] = useState(false);
+  const [datiOpen, setDatiOpen] = useState(false);
   const [sepOpen, setSepOpen] = useState(false);     // riga "Conto separato" aperta
   const [galleryView, setGalleryView] = useState('album'); // album | griglia
   const [albumPage, setAlbumPage] = useState(0);
@@ -4639,75 +4642,6 @@ function App() {
               </p>
             </div>
 
-            {/* Blocco con password */}
-            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-              <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
-                <h3 className="font-rustic text-lg text-[#2D392C]">Blocco con password</h3>
-                <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
-                  {LOCK && LOCK.hash ? 'Attivo' : 'Non attivo'}
-                </span>
-              </div>
-              {LOCK && LOCK.hash ? (
-                <>
-                  <p className="text-[10px] text-gray-500 leading-snug">
-                    All'apertura serve la password del campo. Tienila nel gruppo, non pubblicarla altrove.
-                    Serve a non lasciare spese, nomi e scontrini alla portata di chi capita sull'indirizzo:
-                    non è una cassaforte, perché il controllo gira sul telefono.
-                  </p>
-                  {/* Stato reale della protezione del database: il blocco
-                      dell'app e la chiusura del cloud sono due cose diverse. */}
-                  {(() => {
-                    const lock = window.APP_LOCK || {};
-                    if (!lock.dbEmail) return null;
-                    const protetto = cloud.authMode === 'shared';
-                    // Senza collegamento non si può sapere come si entrerà nel
-                    // database: meglio dirlo, invece di allarmare chi è offline.
-                    const ignoto = !protetto && !cloud.connected;
-                    return (
-                      <div className={`p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : ignoto ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/30' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] uppercase font-bold text-gray-500">Database</span>
-                          <span className={`text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`}>
-                            {protetto ? '🔒 protetto dalla password' : ignoto ? '— non collegato' : '⚠ accesso aperto'}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-gray-500 leading-snug mt-1">
-                          {protetto
-                            ? 'L\'app entra nel database con l\'utente del campo: senza password i dati non si leggono nemmeno da fuori.'
-                            : ignoto
-                            ? 'Senza linea non c\'è nulla da proteggere: si lavora in locale. Il controllo si aggiorna al prossimo collegamento.'
-                            : 'I dati nel cloud sono ancora raggiungibili senza password. Per chiuderli servono i passaggi nella console Firebase (utente condiviso + regole): finché non sono fatti, il blocco protegge solo la schermata.'}
-                        </p>
-                      </div>
-                    );
-                  })()}
-                  <label className="flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer">
-                    <input type="checkbox" checked={askAlways} onChange={toggleAskAlways} className="w-4 h-4 accent-[#2D392C] shrink-0" />
-                    <span className="text-[11px] text-[#2D392C] leading-snug">
-                      Chiedi la password <span className="font-bold">ogni volta</span> che apro l'app
-                      <span className="block text-[9px] text-gray-500">Senza la spunta il telefono resta sbloccato fino a "Blocca ora".</span>
-                    </span>
-                  </label>
-                  {window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && (
-                    <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-                      <p className="text-[11px] text-[#5C4A3C] leading-snug">
-                        La sincronizzazione sta usando l'accesso di ripiego. L'app chiede la
-                        password da sola quando serve: se non è successo, tocca
-                        <span className="font-bold"> Blocca ora</span> e rientra.
-                      </p>
-                    </div>
-                  )}
-                  <button onClick={lockNow} className="w-full py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]">
-                    🔒 Blocca ora
-                  </button>
-                </>
-              ) : (
-                <p className="text-[10px] text-gray-500">
-                  Nessuna password impostata: l'app si apre a chiunque abbia l'indirizzo.
-                </p>
-              )}
-            </div>
-
             {/* Diagnostica della sincronizzazione: cosa è stato cancellato e
                 quando. Senza questa scheda, capire chi ha fatto sparire cosa
                 vuol dire leggere il database a mano. */}
@@ -4770,15 +4704,108 @@ function App() {
               })()}
             </div>
 
-            {/* Dati su questo telefono */}
-            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Dati su questo telefono</h3>
-              <div className="flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20">
-                <span className="text-[10px] uppercase font-bold text-gray-500">Sincronizzazione</span>
-                <span className="text-[11px] font-bold text-[#2D392C]">
-                  {cloud.connected ? 'Connessa' : isOnline ? 'Non connessa' : 'Offline'}
+            {/* Blocco con password — riga richiudibile: si imposta una volta e
+                non si tocca più, quindi sta chiusa e in fondo. */}
+            <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
+              <button
+                onClick={() => setBloccoOpen((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-[#E2EAE4]/60"
+              >
+                <span className="font-rustic text-lg text-[#2D392C] shrink-0">Blocco con password</span>
+                <span className="ml-auto flex items-center gap-1.5 shrink-0">
+                  {/* Stato del database anche da chiusa: è l'unica cosa che
+                      serve vedere a colpo d'occhio. */}
+                  {(() => {
+                    const lock = window.APP_LOCK || {};
+                    if (!lock.dbEmail || !(LOCK && LOCK.hash)) return null;
+                    const protetto = cloud.authMode === 'shared';
+                    const ignoto = !protetto && !cloud.connected;
+                    return <span className="text-[10px]" title={protetto ? 'Database protetto' : ignoto ? 'Non collegato' : 'Database ad accesso aperto'}>{protetto ? '🔒' : ignoto ? '—' : '⚠'}</span>;
+                  })()}
+                  <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
+                    {LOCK && LOCK.hash ? 'Attivo' : 'Non attivo'}
+                  </span>
+                  <span className={`text-[10px] text-[#5C4A3C] transition-transform ${bloccoOpen ? 'rotate-180' : ''}`}>▾</span>
                 </span>
-              </div>
+              </button>
+              {bloccoOpen && (<div className="px-4 pb-4 space-y-3">
+              {LOCK && LOCK.hash ? (
+                <>
+                  <p className="text-[10px] text-gray-500 leading-snug">
+                    All'apertura serve la password del campo. Tienila nel gruppo, non pubblicarla altrove.
+                    Serve a non lasciare spese, nomi e scontrini alla portata di chi capita sull'indirizzo:
+                    non è una cassaforte, perché il controllo gira sul telefono.
+                  </p>
+                  {/* Stato reale della protezione del database: il blocco
+                      dell'app e la chiusura del cloud sono due cose diverse. */}
+                  {(() => {
+                    const lock = window.APP_LOCK || {};
+                    if (!lock.dbEmail) return null;
+                    const protetto = cloud.authMode === 'shared';
+                    // Senza collegamento non si può sapere come si entrerà nel
+                    // database: meglio dirlo, invece di allarmare chi è offline.
+                    const ignoto = !protetto && !cloud.connected;
+                    return (
+                      <div className={`p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : ignoto ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/30' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] uppercase font-bold text-gray-500">Database</span>
+                          <span className={`text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`}>
+                            {protetto ? '🔒 protetto dalla password' : ignoto ? '— non collegato' : '⚠ accesso aperto'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 leading-snug mt-1">
+                          {protetto
+                            ? 'L\'app entra nel database con l\'utente del campo: senza password i dati non si leggono nemmeno da fuori.'
+                            : ignoto
+                            ? 'Senza linea non c\'è nulla da proteggere: si lavora in locale. Il controllo si aggiorna al prossimo collegamento.'
+                            : 'I dati nel cloud sono ancora raggiungibili senza password. Per chiuderli servono i passaggi nella console Firebase (utente condiviso + regole): finché non sono fatti, il blocco protegge solo la schermata.'}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                  <label className="flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer">
+                    <input type="checkbox" checked={askAlways} onChange={toggleAskAlways} className="w-4 h-4 accent-[#2D392C] shrink-0" />
+                    <span className="text-[11px] text-[#2D392C] leading-snug">
+                      Chiedi la password <span className="font-bold">ogni volta</span> che apro l'app
+                      <span className="block text-[9px] text-gray-500">Senza la spunta il telefono resta sbloccato fino a "Blocca ora".</span>
+                    </span>
+                  </label>
+                  {window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && (
+                    <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
+                      <p className="text-[11px] text-[#5C4A3C] leading-snug">
+                        La sincronizzazione sta usando l'accesso di ripiego. L'app chiede la
+                        password da sola quando serve: se non è successo, tocca
+                        <span className="font-bold"> Blocca ora</span> e rientra.
+                      </p>
+                    </div>
+                  )}
+                  <button onClick={lockNow} className="w-full py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]">
+                    🔒 Blocca ora
+                  </button>
+                </>
+              ) : (
+                <p className="text-[10px] text-gray-500">
+                  Nessuna password impostata: l'app si apre a chiunque abbia l'indirizzo.
+                </p>
+              )}
+              </div>)}
+            </div>
+
+            {/* Dati su questo telefono — riga richiudibile. */}
+            <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
+              <button
+                onClick={() => setDatiOpen((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-[#E2EAE4]/60"
+              >
+                <span className="font-rustic text-lg text-[#2D392C] shrink-0">Dati su questo telefono</span>
+                <span className="ml-auto flex items-center gap-2 shrink-0">
+                  <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
+                    {cloud.connected ? 'Connessa' : isOnline ? 'Non connessa' : 'Offline'}
+                  </span>
+                  <span className={`text-[10px] text-[#5C4A3C] transition-transform ${datiOpen ? 'rotate-180' : ''}`}>▾</span>
+                </span>
+              </button>
+              {datiOpen && (<div className="px-4 pb-4 space-y-3">
               <div className="flex gap-2">
                 <button onClick={exportData} className="flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Esporta backup</button>
                 <button onClick={() => goTo('spesa')} className="flex-1 py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-xs font-bold uppercase hover:bg-[#E2EAE4]">Gestione dati</button>
@@ -4789,6 +4816,7 @@ function App() {
               <p className="text-[9px] text-gray-400 italic leading-snug">
                 Utile se presti o cambi telefono. Il cloud non viene toccato: con la linea i dati tornano da soli.
               </p>
+              </div>)}
             </div>
 
             {/* Info */}

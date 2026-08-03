@@ -48,6 +48,8 @@ const { chromium } = require('playwright-core');
   // Blocca ora -> rientra
   await p.click('button[aria-label="Menu"]'); await p.waitForTimeout(300);
   await p.locator('nav button', { hasText: 'Impostazioni' }).first().click(); await p.waitForTimeout(300);
+  // "Blocco con password" ora è una riga richiudibile, chiusa di suo.
+  await p.locator('button', { hasText: 'Blocco con password' }).first().click(); await p.waitForTimeout(300);
   await p.locator('button', { hasText: 'Blocca ora' }).first().click();
   await p.waitForTimeout(600);
   await entra();
