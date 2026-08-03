@@ -111,6 +111,8 @@ const { chromium } = require('playwright-core');
     await p.waitForTimeout(150);
   }
   await menu('Presenze');
+  // "Segna in blocco" ora è una riga richiudibile: va aperta prima.
+  { const b = p.locator('button', { hasText: 'Segna in blocco' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(300); } }
   await p.locator('button', { hasText: 'Tutti a pranzo' }).first().click();
   await p.waitForTimeout(400);
   const giorno = await p.evaluate(() => {

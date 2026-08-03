@@ -13,6 +13,8 @@ const { chromium } = require('playwright-core');
   for (const n of ['Alice','Bruno','Carlo']) { await p.fill('input[placeholder="Nome e cognome"]', n); await p.click('button:has-text("+")'); await p.waitForTimeout(70); }
 
   await go('Presenze');
+  // "Segna in blocco" ora è una riga richiudibile: va aperta prima.
+  await p.locator('button:has-text("Segna in blocco")').click(); await p.waitForTimeout(300);
   // "Tutti a pranzo"
   await p.locator('button:has-text("Tutti a pranzo")').click(); await p.waitForTimeout(150);
   const lunchOn = await p.locator('li button.bg-\\[\\#2D392C\\]:has-text("Pranzo")').count();

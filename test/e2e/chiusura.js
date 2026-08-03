@@ -31,6 +31,8 @@ const { chromium } = require('playwright-core');
   const nMembri = await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_members') || '[]').length);
 
   await menu('Presenze');
+  // "Segna in blocco" ora è una riga richiudibile: va aperta prima.
+  { const b = p.locator('button', { hasText: 'Segna in blocco' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(300); } }
   const tutti = p.locator('button', { hasText: 'Tutti a pranzo' });
   if (await tutti.count()) { await tutti.first().click(); await p.waitForTimeout(200); }
   const cena = p.locator('button', { hasText: 'Tutti a cena' });

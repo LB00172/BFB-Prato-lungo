@@ -1054,6 +1054,8 @@ function App() {
   const [album, setAlbum] = useState(null);          // album di un campo chiuso
   // Ultima sincronizzazione che ha tolto delle voci: banner + annulla.
   const [lostSync, setLostSync] = useState(null);
+  // Presenze: le azioni "in blocco" stanno chiuse.
+  const [azioniOpen, setAzioniOpen] = useState(false);
   // Impostazioni: le due sezioni che si toccano una volta sola stanno chiuse.
   const [bloccoOpen, setBloccoOpen] = useState(false);
   const [datiOpen, setDatiOpen] = useState(false);
@@ -1517,8 +1519,24 @@ function App() {
     });
   };
 
+  // Nome del giorno per i messaggi di conferma.
+  const nomeGiorno = (ds) => parseDate(ds).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  // "Tutti a pranzo/cena" cambia le presenze di TUTTI in un colpo solo, e la
+  // modifica arriva su ogni telefono: prima di farlo si chiede.
+  const chiediSetAll = (mealType) => {
+    if (members.length === 0) return;
+    const pasto = mealType === 'lunch' ? 'pranzo' : 'cena';
+    const gia = members.every((m) => getMeal(selectedDateStr, m.id)[mealType]);
+    const testo = gia
+      ? `Togliere il ${pasto.toUpperCase()} a tutti e ${members.length} i membri di ${nomeGiorno(selectedDateStr)}?`
+      : `Segnare tutti e ${members.length} i membri a ${pasto.toUpperCase()} di ${nomeGiorno(selectedDateStr)}?`;
+    if (!window.confirm(`${testo}\n\nCambia le presenze di tutti, anche sugli altri telefoni.`)) return;
+    setAllMeals(selectedDateStr, mealType);
+  };
+
   // Copia le presenze (pranzo e cena) dal giorno precedente.
-  const copyFromPreviousDay = () => {
+  const chiediCopiaDaIeri = () => {
     const d = parseDate(selectedDateStr);
     d.setDate(d.getDate() - 1);
     const prevStr = toDateStr(d);
@@ -1527,9 +1545,18 @@ function App() {
       window.alert('Nessuna presenza registrata il giorno precedente.');
       return;
     }
-    const curMeals = (campData[selectedDateStr] && campData[selectedDateStr].meals) || {};
-    const hasAny = Object.values(curMeals).some((m) => m && (m.lunch || m.dinner));
-    if (hasAny && !window.confirm('Questo giorno ha già delle presenze: sostituirle con quelle di ieri?')) return;
+    const conta = (meals) => {
+      const v = Object.values(meals || {});
+      return { p: v.filter((x) => x && x.lunch).length, c: v.filter((x) => x && x.dinner).length };
+    };
+    const ieri = conta(prevMeals);
+    const oggi = conta((campData[selectedDateStr] && campData[selectedDateStr].meals) || {});
+    if (!window.confirm(
+      `Copiare le presenze di ${nomeGiorno(prevStr)} su ${nomeGiorno(selectedDateStr)}?\n\n` +
+      `Ieri: ${ieri.p} a pranzo, ${ieri.c} a cena.\n` +
+      `Oggi diventa uguale: quello che c'è adesso (${oggi.p} a pranzo, ${oggi.c} a cena) viene sostituito, ` +
+      'anche sugli altri telefoni.'
+    )) return;
     setCampData((prev) => {
       const day = { ...initialDayState(), ...(prev[selectedDateStr] || {}) };
       // SOVRASCRIVE le presenze di ieri su quelle di oggi, ma non CANCELLA le
@@ -2696,7 +2723,7 @@ function App() {
     { k: 'calendario', icon: '📅', title: 'Calendario', body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, le note libere del giorno (promemoria, turni, cose da ricordare — il menù invece ha la sua scheda) e il collegamento al Menù. Scorri le settimane con le frecce: meteo, note e cucina si aggiornano sul giorno scelto. In cima, la riga "Conto separato" si apre solo quando serve: dentro ci sono i giorni da spuntare per far cassa a parte.' },
     { k: 'menu', icon: '🍝', title: 'Menù', body: 'Scheda a parte per scrivere cosa si mangia, giorno per giorno. In alto c\'è la stessa striscia dei giorni del Calendario: il giorno scelto è lo stesso nelle due schede, quindi puoi passare dall\'una all\'altra senza ricercarlo. Sotto vedi quanti pasti preparare a pranzo e a cena, e il foglio a righe dove scrivere una pietanza per riga. In fondo l\'elenco dei giorni del campo con la prima riga del menù già scritto: si vede a colpo d\'occhio cosa manca. Tutto si sincronizza: chi cucina lo trova già pronto.' },
     { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e la tendina dell\'acquirente quando registri una spesa: i nomi non si scrivono a mano, si scelgono, così un refuso non può creare una persona fantasma nei saldi. La "i" accanto al nome apre PayPal e IBAN: chi li compila se li vede comparire nei Saldi, accanto al rimborso che deve ricevere, con il tasto per copiarli.' },
-    { k: 'presenze', icon: '🍽️', title: 'Presenze', body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta usa "Tutti a pranzo" o "Tutti a cena" e poi togli i pochi assenti, oppure "Copia da ieri". In alto trovi il conteggio del giorno. Durante il campo l\'app si apre già sulla data di oggi.' },
+    { k: 'presenze', icon: '🍽️', title: 'Presenze', body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta apri "Segna in blocco": ci sono "Tutti a pranzo", "Tutti a cena" e "Copia da ieri". Stanno chiusi e chiedono conferma, perché cambiano le presenze di tutti su tutti i telefoni in un colpo solo; il conteggio del giorno si legge sulla riga anche da chiusa. Durante il campo l\'app si apre già sulla data di oggi.' },
     { k: 'lista', icon: '🧾', title: 'Lista della Spesa', body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; il tasto "Segna come acquistata" apre una maschera che chiede prezzo, acquirente, tipologia e la foto dello scontrino, e sposta la voce in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.' },
     { k: 'attrezzatura', icon: '🪛', title: 'Attrezzatura', body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. Con l\'icona 📷 alleghi lo scontrino, anche in un secondo momento. In fondo vedi il totale previsto e quello effettivamente acquistato; se indichi l\'acquirente, gli verrà rimborsata.' },
     { k: 'spesa', icon: '💶', title: 'Spese Totali', body: 'Quattro sotto-sezioni. Totali: quanto si è speso per cibo, bevande, logistica e attrezzatura. Quote: quanto costa a testa. Saldi: chi deve dare o ricevere. Dati: backup e sincronizzazione. I totali non si scrivono a mano, nascono dalla Lista della Spesa e dall\'attrezzatura acquistata.' },
@@ -3210,18 +3237,35 @@ function App() {
                 <p className="text-sm text-gray-400 italic">Aggiungi prima i membri nella scheda "Membri".</p>
               ) : (
                 <>
-                {/* Azioni rapide */}
-                <div className="grid grid-cols-3 gap-2">
-                  <button onClick={() => setAllMeals(selectedDateStr, 'lunch')} className="py-2.5 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#1F271E]">Tutti a pranzo</button>
-                  <button onClick={() => setAllMeals(selectedDateStr, 'dinner')} className="py-2.5 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]">Tutti a cena</button>
-                  <button onClick={copyFromPreviousDay} className="py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]">Copia da ieri</button>
+                {/* Azioni rapide: cambiano le presenze di TUTTI in un colpo, e
+                    la modifica arriva su tutti i telefoni. Stanno chiuse e
+                    chiedono conferma: è il tipo di tasto che si preme per
+                    sbaglio scorrendo, e poi qualcuno resta senza pasti. */}
+                <div className="bg-[#F0F4F1]/60 rounded border border-[#8F9E8B]/30 overflow-hidden">
+                  <button
+                    onClick={() => setAzioniOpen((v) => !v)}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-[#E2EAE4]/70"
+                  >
+                    <span className="text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0">Segna in blocco</span>
+                    <span className="ml-auto text-[9px] text-gray-500 truncate">
+                      {members.filter((m) => getMeal(selectedDateStr, m.id).lunch).length} a pranzo · {members.filter((m) => getMeal(selectedDateStr, m.id).dinner).length} a cena
+                    </span>
+                    <span className={`text-[10px] text-[#5C4A3C] shrink-0 transition-transform ${azioniOpen ? 'rotate-180' : ''}`}>▾</span>
+                  </button>
+                  {azioniOpen && (
+                    <div className="px-3 pb-3 space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <button onClick={() => chiediSetAll('lunch')} className="py-2.5 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#1F271E]">Tutti a pranzo</button>
+                        <button onClick={() => chiediSetAll('dinner')} className="py-2.5 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]">Tutti a cena</button>
+                        <button onClick={chiediCopiaDaIeri} className="py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]">Copia da ieri</button>
+                      </div>
+                      <p className="text-[9px] text-gray-400 leading-snug">
+                        Segna tutti, poi togli i pochi assenti. Se sono già tutti segnati, il bottone li toglie tutti.
+                        Ognuno di questi tasti chiede conferma: cambia le presenze di tutti, su tutti i telefoni.
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-[9px] text-gray-400 -mt-1">
-                  Segna tutti, poi togli i pochi assenti. Se sono già tutti segnati, il bottone li toglie tutti.
-                  {' '}<span className="font-bold text-[#5C4A3C]">
-                    Oggi: {members.filter((m) => getMeal(selectedDateStr, m.id).lunch).length} a pranzo · {members.filter((m) => getMeal(selectedDateStr, m.id).dinner).length} a cena
-                  </span>
-                </p>
                 <ul className="space-y-2">
                   {members.map((m) => {
                     const meal = getMeal(selectedDateStr, m.id);

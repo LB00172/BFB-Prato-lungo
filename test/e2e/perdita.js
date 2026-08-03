@@ -57,10 +57,35 @@ const presenti = (page) => page.evaluate(() => {
     await p.waitForTimeout(120);
   }
   await menu('Presenze');
+
+  // --- Le azioni in blocco stanno chiuse e chiedono conferma ---
+  ok('"Tutti a pranzo" non è in vista: la riga è chiusa', (await p.locator('button', { hasText: 'Tutti a pranzo' }).count()) === 0);
+  ok('la riga mostra comunque il conteggio', /0 a pranzo · 0 a cena/.test(await p.locator('main').innerText()));
+  await p.locator('button', { hasText: 'Segna in blocco' }).first().click();
+  await p.waitForTimeout(300);
+  ok('aprendola compaiono i tre tasti',
+    (await p.locator('button', { hasText: 'Tutti a pranzo' }).count()) === 1 &&
+    (await p.locator('button', { hasText: 'Tutti a cena' }).count()) === 1 &&
+    (await p.locator('button', { hasText: 'Copia da ieri' }).count()) === 1);
+
+  // Annullare la conferma non deve cambiare niente.
+  p.removeAllListeners('dialog');
+  const chiesto = [];
+  p.on('dialog', async (d) => { chiesto.push(d.message()); await d.dismiss(); });
   await p.locator('button', { hasText: 'Tutti a pranzo' }).first().click();
-  await p.waitForTimeout(250);
+  await p.waitForTimeout(400);
+  ok('"Tutti a pranzo" chiede conferma', chiesto.length === 1 && /Segnare tutti e 3 i membri a PRANZO/.test(chiesto[0]));
+  ok('la conferma avvisa che cambia per tutti', /anche sugli altri telefoni/.test(chiesto[0] || ''));
+  ok('annullando non cambia niente', (await presenti(p)) === 0);
+
+  // Confermando, invece, procede.
+  p.removeAllListeners('dialog');
+  p.on('dialog', async (d) => { chiesto.push(d.message()); await d.accept(); });
+  await p.locator('button', { hasText: 'Tutti a pranzo' }).first().click();
+  await p.waitForTimeout(300);
   await p.locator('button', { hasText: 'Tutti a cena' }).first().click();
   await p.waitForTimeout(400);
+  ok('confermando le presenze vengono segnate', (await presenti(p)) === 3);
 
   const prima = await presenti(p);
   ok(`si parte con ${prima} presenze segnate`, prima === 3);

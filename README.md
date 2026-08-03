@@ -16,7 +16,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
 | **Calendario** | Meteo previsto del giorno (Pereto, AQ), riepilogo cucina (quanti pasti preparare), note libere del giorno, giorni del conto separato (riga richiudibile) |
 | **Menù** | Cosa si mangia, giorno per giorno, su foglio a righe; condivide il giorno scelto con il Calendario |
 | **Membri** | Elenco partecipanti; i bambini mangiano gratis; la "i" accanto al nome apre PayPal e IBAN per farsi rimborsare |
-| **Presenze** | Chi c'è a pranzo/cena, con "Tutti a pranzo/cena" e "Copia da ieri" |
+| **Presenze** | Chi c'è a pranzo/cena; "Tutti a pranzo/cena" e "Copia da ieri" stanno in una riga richiudibile ("Segna in blocco") e chiedono conferma |
 | **Lista della Spesa** | Ogni acquisto: nome, acquirente, prezzo, tipologia, foto scontrino; ricerca e correzione delle voci registrate |
 | **Aggiunta Attrezzatura** | Attrezzatura da comprare con prezzo; se spuntata entra nelle spese |
 | **Spese Totali** | Totali · Quote · Saldi (chi paga chi + condividi resoconto) · Dati (backup) |

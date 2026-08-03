@@ -67,6 +67,8 @@ const { chromium } = require('playwright-core');
 
   // --- Presenze + spesa anticipata da Lorenzo, così Bruno e Anna gli devono dare ---
   await menu('Presenze');
+  // "Segna in blocco" ora è una riga richiudibile: va aperta prima.
+  { const b = p.locator('button', { hasText: 'Segna in blocco' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(300); } }
   await p.locator('button', { hasText: 'Tutti a pranzo' }).first().click();
   await p.waitForTimeout(300);
 
