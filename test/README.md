@@ -65,6 +65,7 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `e2e/audit` | **384 verifiche**: tutta la catena dal carico spese a "chi paga chi", su 20 scenari (bambini, conto separato, giorni vuoti, acquirenti fantasma, campo intero disordinato) |
 | `e2e/netting` | Chi ha anticipato paga la sua quota come gli altri; i passaggi di pareggio |
 | `e2e/pagamenti` | PayPal e IBAN per membro, controllo mod-97, comparsa nei Saldi, tasto copia |
+| `e2e/album` | Galleria: tetto per persona, miniatura più leggera dell'originale, **nessuna foto in localStorage**, chiusura del campo che timbra le foto invece di cancellarle |
 | `e2e/separato` | Conto separato: giorni spuntati, pasti fuori dal divisore comune |
 | `e2e/dueflussi` | I due modi di registrare una spesa portano allo stesso conto |
 | `e2e/acquirente` | L'acquirente si sceglie dai membri, niente nomi scritti a mano |

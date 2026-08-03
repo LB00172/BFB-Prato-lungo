@@ -352,6 +352,115 @@
     } catch (e) { /* ignora */ }
   }
 
+  // --- Galleria del campo ---
+  // Due documenti per foto, di proposito:
+  //   camps/<code>/photos/<id>    = { thumb, by, at }   miniatura, ~15 KB
+  //   camps/<code>/photofull/<id> = { data }            foto intera, ~200 KB
+  // La griglia ascolta SOLO le miniature (100 foto = ~1,5 MB invece di 20 MB);
+  // la foto intera si scarica quando la si apre. Senza questa separazione la
+  // galleria sarebbe inguardabile da telefono.
+  //
+  // Le foto NON stanno in localStorage e NON entrano nella fusione degli
+  // stati: vivono solo nel cloud. Si caricano a casa, con la linea; al campo
+  // non servono.
+  async function putPhoto(id, thumb, full, by) {
+    if (!state.connected || !db || !fb) return false;
+    try {
+      // Prima la foto intera: se fallisce, non resta una miniatura orfana.
+      await fb.setDoc(fb.doc(db, 'camps', state.code, 'photofull', id), { data: full });
+      await fb.setDoc(fb.doc(db, 'camps', state.code, 'photos', id), {
+        thumb, by: String(by || '').slice(0, 40), at: Date.now(), updatedBy: deviceId,
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Ascolta le miniature del campo IN CORSO. Restituisce la funzione per
+  // smettere: la galleria si mette in ascolto quando la apri e smette quando
+  // la lasci. Le foto dei campi chiusi portano il timbro "archive" e restano
+  // fuori: si vedono solo dall'Archivio.
+  function watchPhotos(cb) {
+    if (!state.connected || !db || !fb) return () => {};
+    try {
+      return fb.onSnapshot(
+        fb.collection(db, 'camps', state.code, 'photos'),
+        (snap) => {
+          const out = [];
+          snap.forEach((d) => {
+            const v = d.data();
+            if (v && typeof v.thumb === 'string' && !v.archive) {
+              out.push({ id: d.id, thumb: v.thumb, by: v.by || '', at: v.at || 0 });
+            }
+          });
+          out.sort((a, b) => b.at - a.at);
+          cb(out);
+        },
+        () => { /* regole non aggiornate: il resto dell'app continua */ }
+      );
+    } catch (e) {
+      return () => {};
+    }
+  }
+
+  // Chiusura del campo: le foto non si cancellano, si timbrano. Restano
+  // consultabili dall'Archivio e la galleria del campo nuovo riparte vuota.
+  // Un timbro per foto e' molto meno lavoro che spostare 100 documenti.
+  async function archivePhotos(archiveId) {
+    if (!state.connected || !db || !fb) return 0;
+    try {
+      const snap = await fb.getDocs(fb.collection(db, 'camps', state.code, 'photos'));
+      const da = [];
+      snap.forEach((d) => { if (!d.data().archive) da.push(d.id); });
+      for (const id of da) {
+        await fb.setDoc(fb.doc(db, 'camps', state.code, 'photos', id), { archive: archiveId }, { merge: true });
+      }
+      return da.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  // Miniature di un campo chiuso (una lettura sola, niente ascolto continuo).
+  async function listPhotos(archiveId) {
+    if (!state.connected || !db || !fb) return [];
+    try {
+      const snap = await fb.getDocs(fb.collection(db, 'camps', state.code, 'photos'));
+      const out = [];
+      snap.forEach((d) => {
+        const v = d.data();
+        if (v && typeof v.thumb === 'string' && v.archive === archiveId) {
+          out.push({ id: d.id, thumb: v.thumb, by: v.by || '', at: v.at || 0 });
+        }
+      });
+      return out.sort((a, b) => b.at - a.at);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async function getPhotoFull(id) {
+    if (!state.connected || !db || !fb) return null;
+    try {
+      const s = await fb.getDoc(fb.doc(db, 'camps', state.code, 'photofull', id));
+      return s.exists() ? s.data().data : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function deletePhoto(id) {
+    if (!state.connected || !db || !fb) return false;
+    try {
+      await fb.deleteDoc(fb.doc(db, 'camps', state.code, 'photos', id));
+      await fb.deleteDoc(fb.doc(db, 'camps', state.code, 'photofull', id));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   async function deleteReceipt(purchaseId) {
     if (!state.connected || !db || !fb) return;
     try {
@@ -374,6 +483,12 @@
     pushState,
     putReceipt,
     deleteReceipt,
+    putPhoto,
+    watchPhotos,
+    listPhotos,
+    archivePhotos,
+    getPhotoFull,
+    deletePhoto,
     listSnapshots,
     getSnapshot,
     putWeather,

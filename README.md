@@ -21,6 +21,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
 | **Aggiunta Attrezzatura** | Attrezzatura da comprare con prezzo; se spuntata entra nelle spese |
 | **Spese Totali** | Totali · Quote · Saldi (chi paga chi + condividi resoconto) · Dati (backup) |
 | **Dotazioni personali** | Dotazione base fissa + aggiunte per il campo |
+| **Galleria** | L'album del campo, da riempire al ritorno: foto a nome di un membro, con un tetto per persona |
 | **Impostazioni** | Pronto per il campo, tema chiaro/scuro/automatico, blocco con password, dati locali, versione |
 | **Archivio** | Campi chiusi: resoconto, dati scaricabili, eliminazione |
 | **Come funziona** | Guida interna all'app |
@@ -79,6 +80,21 @@ preparazione** e **offline al campo**, dove non c'è linea.
   regola è identica sui due dispositivi, quindi la sincronizzazione converge
   senza rimbalzi. Senza questo, al campo (dove non c'è linea) il secondo
   telefono che si agganciava cancellava il lavoro del primo.
+- **Galleria**: è l'unica parte dell'app che **vive solo nel cloud** e ha
+  bisogno della linea, di proposito. Cento foto in `localStorage` (tetto ~5 MB)
+  romperebbero il salvataggio di *tutto*, presenze e spese comprese; e al campo
+  non c'è linea, quindi l'album si riempie al ritorno. Ogni foto sta in due
+  documenti: la **miniatura** (~6 KB, in `camps/<codice>/photos`) che riempie la
+  griglia, e l'**originale** (~160 KB, in `camps/<codice>/photofull`) che si
+  scarica solo quando apri la foto. Cento foto = ~600 KB di miniature invece di
+  16 MB: è ciò che rende l'album sfogliabile da telefono. Le miniature si
+  ascoltano **solo mentre la Galleria è aperta**.
+  Il tetto di foto per persona (7 di serie, si cambia in Impostazioni) è un
+  **accordo di gruppo, non un lucchetto**: il nome si sceglie da una tendina e
+  nessuno verifica chi sei. Serve a far scegliere le foto belle.
+  Alla **chiusura del campo** le foto non si cancellano: vengono **timbrate**
+  con l'archivio e restano consultabili da *Archivio → Album*, mentre la
+  galleria del campo nuovo riparte vuota.
 - **Snapshot giornaliero** automatico + "Ripristino di emergenza" nella scheda
   Dati. In più, backup manuale **Esporta/Importa** su file JSON.
 - **Chiusura del campo** (Spese Totali → Dati): archivia tutto (file scaricato
@@ -132,6 +148,9 @@ Altre accortezze utili, senza scrivere codice:
   condivisa.
 - Gli scontrini fotografati possono mostrare dati della carta: se si vedono,
   meglio inquadrare solo la parte degli importi.
+- Le foto della **Galleria** stanno nello stesso database: le vede chi ha la
+  password. Sono facce di persone, quindi vale la stessa cautela dei conti — la
+  password non esce dal gruppo.
 - La classifica del minigioco contiene i nomi dei giocatori: sta nello stesso
   database, quindi valgono le stesse considerazioni.
 

@@ -1,0 +1,205 @@
+// Galleria del campo: caricamento con il nome di un membro, tetto per persona,
+// visione a schermo pieno, eliminazione. Il cloud è finto e vive in memoria,
+// così la prova non tocca Firebase.
+const { apri, ok, fine } = require('../lib/app');
+
+// Finto CloudSync: tiene le foto in memoria e si comporta come quello vero.
+function cloudFinto(collegato) {
+  Object.defineProperty(window, 'CloudSync', {
+    configurable: true,
+    get() { return window.__cs; },
+    set(v) {
+      const foto = new Map();      // id -> { thumb, by, at }
+      const intere = new Map();    // id -> dataURL
+      let avvisa = null;
+      const spargi = () => {
+        if (!avvisa) return;
+        // Come il vero watchPhotos: le foto timbrate con un archivio non
+        // compaiono più nella galleria del campo in corso.
+        const out = [...foto.entries()]
+          .filter(([, m]) => !m.archive)
+          .map(([id, m]) => ({ id, ...m }))
+          .sort((a, b) => b.at - a.at);
+        avvisa(out);
+      };
+      window.__foto = foto;
+      window.__intere = intere;
+      window.__cs = Object.assign({}, v, {
+        isConfigured: () => true,
+        isConnected: () => collegato,
+        savedCode: () => 'TEST',
+        connect: (cfg, code, cb) => {
+          if (window.__status) window.__status({ connected: collegato, status: collegato ? 'connected' : 'idle', code });
+          return Promise.resolve();
+        },
+        onStatus: (cb) => { window.__status = cb; cb({ connected: collegato, status: collegato ? 'connected' : 'idle', code: 'TEST' }); },
+        onReceipts: () => {}, onWeather: () => {},
+        pushState: () => {}, putReceipt: () => {}, deleteReceipt: () => {},
+        putArchive: () => Promise.resolve(true), listArchives: () => Promise.resolve([]),
+        archivePhotos: (archiveId) => {
+          let n = 0;
+          foto.forEach((m, id) => { if (!m.archive) { foto.set(id, { ...m, archive: archiveId }); n++; } });
+          spargi();
+          return Promise.resolve(n);
+        },
+        listPhotos: (archiveId) => Promise.resolve(
+          [...foto.entries()].filter(([, m]) => m.archive === archiveId).map(([id, m]) => ({ id, ...m }))
+        ),
+        listSnapshots: () => Promise.resolve([]), listScores: () => Promise.resolve([]),
+        submitScore: () => Promise.resolve(),
+        // --- galleria ---
+        putPhoto: (id, thumb, full, by) => {
+          foto.set(id, { thumb, by, at: Date.now() });
+          intere.set(id, full);
+          spargi();
+          return Promise.resolve(true);
+        },
+        watchPhotos: (cb) => { avvisa = cb; spargi(); return () => { avvisa = null; }; },
+        getPhotoFull: (id) => Promise.resolve(intere.get(id) || null),
+        deletePhoto: (id) => { foto.delete(id); intere.delete(id); spargi(); return Promise.resolve(true); },
+      });
+    },
+  });
+}
+
+const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
+
+(async () => {
+  // ---- 1) Senza linea: la galleria lo dice, non finge ----
+  {
+    const { browser, page: p, menu } = await apri({ initScript: [cloudFinto, false] });
+    await menu('Galleria');
+    const testo = await p.locator('main').innerText();
+    ok('senza linea la galleria spiega che serve il collegamento', /ha bisogno della linea|vive nel cloud/i.test(testo));
+    ok('senza linea non compare la tendina dei nomi', (await p.locator('main select').count()) === 0);
+    await browser.close();
+  }
+
+  // ---- 2) Con la linea: caricamento, tetto, visione, eliminazione ----
+  const { browser, page: p, menu, errori } = await apri({ initScript: [cloudFinto, true] });
+
+  await menu('Membri');
+  for (const n of ['Lorenzo', 'Bruno']) {
+    await p.fill('input[placeholder="Nome e cognome"]', n);
+    await p.locator('button', { hasText: /^\+$/ }).first().click();
+    await p.waitForTimeout(150);
+  }
+
+  // Tetto basso, così la prova non deve caricare sette foto.
+  await menu('Impostazioni');
+  await p.locator('button', { hasText: /^5$/ }).first().click();
+  await p.waitForTimeout(200);
+
+  await menu('Galleria');
+  ok('la galleria compare nel menu e si apre', (await p.locator('h3', { hasText: 'Carica le tue foto' }).count()) > 0);
+  ok('la tendina elenca i membri col loro conteggio',
+    (await p.locator('main select option').allInnerTexts()).some((t) => /Lorenzo \(0\/5\)/.test(t)));
+
+  const scegli = p.locator('main input[type="file"]');
+  ok('senza aver scelto il nome non si possono caricare foto',
+    (await p.locator('label:has-text("Scegli le foto")').getAttribute('class')).includes('pointer-events-none'));
+
+  await p.locator('main select').selectOption('Lorenzo');
+  await p.waitForTimeout(200);
+  ok('scelto il nome, compare quante foto restano', /restano/i.test(await p.locator('main').innerText()));
+
+  await scegli.setInputFiles([FOTO, FOTO]);
+  await p.waitForTimeout(1500);
+  ok('le foto caricate compaiono nell\'album', (await p.locator('main .grid button').count()) === 2);
+  ok('la miniatura porta il nome di chi l\'ha scattata', (await p.locator('main .grid button').first().innerText()).includes('Lorenzo'));
+
+  const conservate = await p.evaluate(() => window.__foto.size);
+  ok('le foto sono finite nel cloud, non altrove', conservate === 2);
+
+  // Il punto tecnico che regge tutta la sezione: niente foto in localStorage.
+  const pesoLocale = await p.evaluate(() => {
+    let n = 0;
+    for (let i = 0; i < localStorage.length; i++) n += (localStorage.getItem(localStorage.key(i)) || '').length;
+    return n;
+  });
+  const chiaviConFoto = await p.evaluate(() => {
+    const out = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if ((localStorage.getItem(k) || '').includes('data:image')) out.push(k);
+    }
+    return out;
+  });
+  ok(`nessuna foto della galleria in localStorage (chiavi con immagini: ${chiaviConFoto.join(', ') || 'nessuna'})`, chiaviConFoto.length === 0);
+  ok(`localStorage resta leggero (${(pesoLocale / 1024).toFixed(1)} KB)`, pesoLocale < 200 * 1024);
+
+  // Miniatura piccola, originale grande: è ciò che rende sfogliabile l'album.
+  const misure = await p.evaluate(() => {
+    const id = [...window.__foto.keys()][0];
+    return { mini: window.__foto.get(id).thumb.length, intera: window.__intere.get(id).length };
+  });
+  ok(`la miniatura è più leggera dell'originale (${misure.mini} < ${misure.intera} byte)`, misure.mini < misure.intera);
+  ok(`l'originale sta sotto il limite di 1 MB per documento (${misure.intera} byte)`, misure.intera < 1000000);
+
+  // ---- Tetto per persona ----
+  await scegli.setInputFiles([FOTO, FOTO, FOTO, FOTO]);
+  await p.waitForTimeout(2500);
+  const dopoTetto = await p.locator('main .grid button').count();
+  ok(`oltre il tetto non si carica: 5 foto e non 6 (viste: ${dopoTetto})`, dopoTetto === 5);
+  ok('a tetto raggiunto lo dice chiaramente', /esaurito le sue 5 foto/i.test(await p.locator('main').innerText()));
+
+  // Un altro membro ha il suo conteggio, indipendente.
+  await p.locator('main select').selectOption('Bruno');
+  await p.waitForTimeout(200);
+  ok('il tetto è per persona, non per album', /restano/i.test(await p.locator('main').innerText()));
+
+  // ---- Visione a schermo pieno ----
+  await p.locator('main .grid button').first().click();
+  await p.waitForTimeout(600);
+  ok('la foto si apre a schermo pieno', (await p.locator('button', { hasText: 'Chiudi' }).count()) > 0);
+  const grande = await p.evaluate(() => {
+    const imgs = [...document.querySelectorAll('.fixed img')];
+    return imgs.length ? imgs[imgs.length - 1].src.length : 0;
+  });
+  ok(`aprendola scarica l'originale (${grande} byte)`, grande === misure.intera);
+
+  // ---- Eliminazione: libera un posto ----
+  await p.locator('button', { hasText: 'Elimina' }).first().click();
+  await p.waitForTimeout(600);
+  ok('eliminando resta un posto libero', (await p.locator('main .grid button').count()) === 4);
+  ok('la foto sparisce anche dal cloud', (await p.evaluate(() => window.__foto.size)) === 4);
+
+  // ---- Chiusura del campo: le foto non si perdono, cambiano posto ----
+  // Serve una spesa, altrimenti la chiusura si rifiuta di partire.
+  await menu('Lista della Spesa');
+  await p.locator('button', { hasText: 'Acquistato' }).first().click();
+  await p.waitForTimeout(300);
+  { const m = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await m.count()) { await m.first().click(); await p.waitForTimeout(350); } }
+  await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Pasta');
+  await p.locator('input[placeholder="0.00"]').first().fill('20');
+  await p.locator('button', { hasText: /Salva/ }).first().click();
+  await p.waitForTimeout(400);
+
+  await menu('Spese Totali');
+  await p.locator('button', { hasText: 'Dati' }).first().click();
+  await p.waitForTimeout(250);
+  await p.locator('button', { hasText: 'Chiudi il campo e archivia' }).first().click();
+  await p.waitForTimeout(300);
+  await p.fill('input[placeholder="Es. Prato Lungo 2026"]', 'Prova 2026');
+  await Promise.all([
+    p.waitForEvent('download', { timeout: 15000 }).catch(() => null),
+    p.locator('button', { hasText: 'Archivia e azzera' }).first().click(),
+  ]);
+  await p.waitForTimeout(1200);
+
+  const timbrate = await p.evaluate(() => [...window.__foto.values()].filter((m) => m.archive).length);
+  ok(`alla chiusura le foto vengono timbrate con l'archivio (${timbrate})`, timbrate === 4);
+  ok('nessuna foto cancellata dal cloud alla chiusura', (await p.evaluate(() => window.__foto.size)) === 4);
+
+  ok('l\'archivio dice quante foto contiene', /4 foto/.test(await p.locator('main').innerText()));
+  await p.locator('button', { hasText: /^Album$/ }).first().click();
+  await p.waitForTimeout(800);
+  ok('l\'album del campo chiuso si riapre dall\'Archivio', (await p.locator('main .grid button').count()) === 4);
+
+  await menu('Galleria');
+  await p.waitForTimeout(600);
+  ok('la galleria del campo nuovo riparte vuota', /Ancora nessuna foto/.test(await p.locator('main').innerText()));
+
+  ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
+  await fine(browser);
+})().catch((e) => { console.error('FATAL', e.message); process.exit(1); });

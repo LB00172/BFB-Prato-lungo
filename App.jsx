@@ -210,6 +210,12 @@ const BASE_GEAR = [
   { text: 'Luci LED' },
 ];
 
+// Galleria: quante foto può caricare ciascuno. È un accordo di gruppo, non un
+// lucchetto (il nome si sceglie da una tendina, nessuno verifica chi sei):
+// serve a far scegliere le foto belle invece di svuotare il rullino.
+const PHOTO_CAP_KEY = 'cambusa_photo_cap';
+const PHOTO_CAP_DEFAULT = 7;
+
 // Comprime una foto (scontrino) ridimensionandola e convertendola in JPEG,
 // così da poterla salvare in localStorage senza esaurire lo spazio.
 const compressImage = (file, maxDim = 1200, quality = 0.6) =>
@@ -962,6 +968,21 @@ function App() {
   const [closeName, setCloseName] = useState('');
   const [viewArchive, setViewArchive] = useState(null); // resoconto aperto
 
+  // ---------- Galleria del campo ----------
+  // Le foto NON stanno in localStorage (100 foto lo farebbero scoppiare, e con
+  // esso il salvataggio di presenze e spese) e NON entrano nella fusione degli
+  // stati: vivono solo nel cloud. Si caricano a casa, con la linea.
+  const [photos, setPhotos] = useState([]);          // miniature, dal cloud
+  const [photosReady, setPhotosReady] = useState(false);
+  const [photoWho, setPhotoWho] = useState('');      // a nome di chi si carica
+  const [photoBusy, setPhotoBusy] = useState('');    // messaggio di avanzamento
+  const [viewPhoto, setViewPhoto] = useState(null);  // { id, by, at, full }
+  const [album, setAlbum] = useState(null);          // album di un campo chiuso
+  const [photoCap, setPhotoCap] = useState(() => {
+    const v = parseInt(localStorage.getItem(PHOTO_CAP_KEY), 10);
+    return Number.isFinite(v) && v > 0 ? v : PHOTO_CAP_DEFAULT;
+  });
+
   // ---------- Mini gioco "Aiuta Bandy" ----------
   const [gamePlayer, setGamePlayer] = useState(() => localStorage.getItem('cambusa_player') || '');
   const [gameRunning, setGameRunning] = useState(false);
@@ -1682,6 +1703,95 @@ function App() {
     }
   };
 
+  // ---------- Galleria del campo ----------
+  // Ci si mette in ascolto delle miniature SOLO mentre la galleria è aperta:
+  // altrimenti ogni avvio dell'app scaricherebbe l'intero album.
+  useEffect(() => {
+    if (activeTab !== 'galleria') { setPhotosReady(false); return undefined; }
+    const CS = window.CloudSync;
+    if (!CS || !CS.watchPhotos || !CS.isConnected()) { setPhotosReady(false); return undefined; }
+    const stop = CS.watchPhotos((list) => { setPhotos(list); setPhotosReady(true); });
+    return () => { if (typeof stop === 'function') stop(); };
+  }, [activeTab, cloud.connected]);
+
+  const photosBy = (nome) => photos.filter((p) => p.by === nome).length;
+
+  const addPhotos = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length === 0) return;
+
+    const chi = photoWho.trim();
+    if (!chi) { window.alert('Scegli prima a nome di chi stai caricando le foto.'); return; }
+
+    const CS = window.CloudSync;
+    if (!CS || !CS.isConnected()) {
+      window.alert('La galleria ha bisogno della linea: le foto si caricano al ritorno a casa, non al campo.');
+      return;
+    }
+
+    const restanti = photoCap - photosBy(chi);
+    if (restanti <= 0) {
+      window.alert(`${chi} ha già caricato le sue ${photoCap} foto.\n\nPer farne entrare altre, cancellane qualcuna: si tocca la foto e poi "Elimina".`);
+      return;
+    }
+    const daCaricare = files.slice(0, restanti);
+    if (files.length > restanti) {
+      window.alert(`${chi} può caricare ancora ${restanti} ${restanti === 1 ? 'foto' : 'foto'}: ne carico ${restanti} di ${files.length}.`);
+    }
+
+    let fatte = 0;
+    for (let i = 0; i < daCaricare.length; i++) {
+      setPhotoBusy(`Carico ${i + 1} di ${daCaricare.length}…`);
+      try {
+        // Due versioni: la miniatura per la griglia, l'originale per la
+        // visione a schermo pieno. Entrambe devono stare sotto il limite di
+        // 1 MB per documento di Firestore.
+        const thumb = await compressImage(daCaricare[i], 320, 0.5);
+        let full = await compressImage(daCaricare[i], 1400, 0.7);
+        if (full.length > 900000) full = await compressImage(daCaricare[i], 1100, 0.55);
+        if (full.length > 900000) full = await compressImage(daCaricare[i], 900, 0.45);
+        const id = uid();
+        if (await CS.putPhoto(id, thumb, full, chi)) fatte++;
+      } catch (err) { /* foto illeggibile: si prosegue con le altre */ }
+    }
+    setPhotoBusy('');
+    if (fatte < daCaricare.length) {
+      window.alert(`Caricate ${fatte} foto su ${daCaricare.length}. Le altre non sono passate: controlla la linea e riprova.`);
+    }
+  };
+
+  const openPhoto = async (p) => {
+    setViewPhoto({ ...p, full: null });
+    const CS = window.CloudSync;
+    if (!CS || !CS.getPhotoFull) return;
+    const full = await CS.getPhotoFull(p.id);
+    // Se nel frattempo l'utente ha chiuso o cambiato foto, non sovrascrivere.
+    setViewPhoto((cur) => (cur && cur.id === p.id ? { ...cur, full } : cur));
+  };
+
+  // Album di un campo chiuso: si scarica quando lo chiedi, non all'avvio.
+  const openAlbum = async (a) => {
+    const CS = window.CloudSync;
+    if (!CS || !CS.listPhotos || !CS.isConnected()) {
+      window.alert('Per rivedere l\'album di un campo chiuso serve la linea.');
+      return;
+    }
+    setAlbum({ id: a.id, name: a.name, photos: [], loading: true });
+    const list = await CS.listPhotos(a.id);
+    setAlbum((cur) => (cur && cur.id === a.id ? { ...cur, photos: list, loading: false } : cur));
+  };
+
+  const removePhoto = async (p) => {
+    if (!window.confirm(`Eliminare questa foto di ${p.by || 'anonimo'}?\nLibera un posto per un'altra.`)) return;
+    const CS = window.CloudSync;
+    if (CS && CS.deletePhoto) await CS.deletePhoto(p.id);
+    setViewPhoto(null);
+    // Nella galleria del campo in corso ci pensa l'ascolto; nell'album di un
+    // campo chiuso, che è una lettura sola, va tolta a mano.
+    setAlbum((cur) => (cur ? { ...cur, photos: cur.photos.filter((x) => x.id !== p.id) } : cur));
+  };
+
   // ---------- Rimborsi saldati (barrati) ----------
   const toggleSettled = (key) => {
     setSettled((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
@@ -2080,7 +2190,8 @@ function App() {
       'e scaricato un file di salvataggio con foto degli scontrini comprese.\n\n' +
       'Poi membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e ' +
       'scontrini verranno AZZERATI su tutti i dispositivi, per ripartire con il ' +
-      'prossimo evento.' + warn;
+      'prossimo evento.\n\n' +
+      'Le foto della Galleria non si perdono: passano nell\'Archivio insieme ai conti.' + warn;
     if (!window.confirm(conferma)) return;
 
     const id = toDateStr(new Date()) + '-' + uid();
@@ -2105,21 +2216,27 @@ function App() {
       },
     };
 
-    // 1) Copia su file (l'unica che contiene anche le foto).
+    const CS = window.CloudSync;
+    const online = !!(CS && CS.isConnected && CS.isConnected());
+
+    // 1) Galleria: le foto non si buttano, si timbrano con questo archivio.
+    //    Restano consultabili dall'Archivio e il campo nuovo riparte vuoto.
+    if (online && CS.archivePhotos) meta.photos = await CS.archivePhotos(id);
+
+    // 2) Copia su file (l'unica che contiene anche le foto degli scontrini).
     downloadJson(`bandone-archivio-${toDateStr(new Date())}.json`, { version: 6, archive: meta, ...state, receipts });
 
-    // 2) Copia nel cloud, visibile anche dagli altri dispositivi.
-    const CS = window.CloudSync;
+    // 3) Copia nel cloud, visibile anche dagli altri dispositivi.
     let cloudOk = false;
-    if (CS && CS.isConnected && CS.isConnected()) {
+    if (online) {
       cloudOk = await CS.putArchive(id, meta, state);
       Object.keys(receipts).forEach((rid) => CS.deleteReceipt(rid));
     }
 
-    // 3) Copia locale (senza foto, per non riempire la memoria del telefono).
+    // 4) Copia locale (senza foto, per non riempire la memoria del telefono).
     setArchives((prev) => [{ ...meta, state, cloud: cloudOk }, ...prev]);
 
-    // 4) Azzeramento: i dati vuoti vengono sincronizzati e puliscono anche
+    // 5) Azzeramento: i dati vuoti vengono sincronizzati e puliscono anche
     //    gli altri telefoni (le cancellazioni sono datate, quindi non tornano).
     setMembers([]);
     setCampData({});
@@ -2285,6 +2402,7 @@ function App() {
     attrezzatura: 'Attrezzatura',
     regole: 'Regole',
     dotazioni: 'Dotazioni personali',
+    galleria: 'Galleria',
     archivio: 'Archivio',
     gioco: 'Aiuta Bandy',
     guida: 'Come funziona',
@@ -2295,7 +2413,7 @@ function App() {
   const TAB_ICONS = {
     calendario: '📅', menu: '🍝', presenze: '🍽️',
     lista: '🧾', attrezzatura: '🪛', spesa: '💶',
-    membri: '👥', regole: '📜', dotazioni: '🎒',
+    membri: '👥', regole: '📜', dotazioni: '🎒', galleria: '📸',
     gioco: '🎮', archivio: '🗄️', guida: '❓', impostazioni: '⚙️',
   };
 
@@ -2304,7 +2422,7 @@ function App() {
   const MENU_GROUPS = [
     { title: 'Pianificazione', items: ['calendario', 'menu', 'presenze'] },
     { title: 'Spese', items: ['lista', 'attrezzatura', 'spesa'] },
-    { title: 'Il gruppo', items: ['membri', 'regole', 'dotazioni'] },
+    { title: 'Il gruppo', items: ['membri', 'regole', 'dotazioni', 'galleria'] },
     { title: 'Altro', items: ['gioco', 'archivio', 'guida', 'impostazioni'] },
   ];
 
@@ -2349,6 +2467,7 @@ function App() {
     { k: 'backup', icon: '🛟', title: 'Backup e sicurezza', body: 'Ogni giorno viene salvata da sola una copia dei dati nel cloud: se qualcosa va storto, "Ripristino di emergenza" (in Spese Totali → Dati) permette di tornare a un giorno preciso. In più puoi esportare tutto su file con Esporta e ricaricarlo con Importa. Prima di eliminare qualcosa l\'app chiede sempre conferma.' },
     { k: 'sync', icon: '☁️', title: 'Sincronizzazione', body: 'La connessione al campo è automatica: quando c\'è linea i dati si allineano da soli fra i telefoni, in tempo reale, foto degli scontrini comprese. Senza linea si continua a lavorare normalmente e tutto viene inviato appena la rete torna. Se in due avete lavorato offline, al ritorno della linea le due versioni si uniscono voce per voce: nessuno cancella il lavoro dell\'altro. Il pallino in alto a destra indica se sei online o offline.' },
     { k: 'chiusura', icon: '🏁', title: 'Chiusura e Archivio', body: 'A conti fatti, in Spese Totali → Dati usa "Chiudi il campo": salva tutto (un file sul telefono e una copia nel cloud), lo mette in Archivio e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini su tutti i dispositivi. L\'app resta pronta per il campo dell\'anno dopo. In Archivio rivedi il resoconto di ogni campo chiuso e puoi riscaricarne i dati; il file scaricato alla chiusura è l\'unico che contiene anche le foto degli scontrini, quindi conservalo.' },
+    { k: 'galleria', icon: '📸', title: 'Galleria', body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile.' },
     { k: 'gioco', icon: '🎮', title: 'Aiuta Bandy', body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si va in città, la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).' },
     { k: 'impostazioni', icon: '⚙️', title: 'Impostazioni', body: 'Aspetto: tema chiaro, scuro o automatico (segue il telefono) — comodo la sera in tenda. Blocco con password: puoi chiedere la password a ogni apertura e bloccare l\'app subito con "Blocca ora". Dati su questo telefono: backup immediato e, se presti o cambi telefono, "Cancella i dati da questo telefono" — il cloud non viene toccato e con la linea i dati tornano da soli. In fondo trovi la versione installata.' },
     { k: 'pronto', icon: '🎒', title: 'Pronto per il campo', body: 'In Impostazioni, in cima, ci sono tre spie: app scaricata sul telefono, dati del campo ricevuti, accesso al database a posto. Devono essere tutte verdi PRIMA di partire, perché a Prato Lungo non c\'è linea e lassù non si sistemano. Finché qualcosa manca, in Calendario compare un avviso che porta lì. Sistemarlo è sempre la stessa cosa: apri l\'app con la linea attiva e aspetta qualche secondo.' },
@@ -3750,6 +3869,102 @@ function App() {
           </div>
         )}
 
+        {/* ---------- GALLERIA ---------- */}
+        {activeTab === 'galleria' && (
+          <div className="space-y-4">
+            {/* Caricamento */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Carica le tue foto</h3>
+
+              {!cloud.connected ? (
+                <p className="text-sm text-gray-500 leading-snug">
+                  La galleria vive nel cloud: serve la linea. È fatta apposta per il
+                  <span className="font-bold"> ritorno a casa</span> — al campo non c'è campo, e le foto
+                  occuperebbero lo spazio che serve a presenze e spese.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1">Chi le ha scattate</label>
+                    <select
+                      value={photoWho}
+                      onChange={(e) => setPhotoWho(e.target.value)}
+                      className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+                    >
+                      <option value="">— scegli il tuo nome —</option>
+                      {members.map((m) => (
+                        <option key={m.id} value={m.name}>
+                          {m.name} ({photosBy(m.name)}/{photoCap})
+                        </option>
+                      ))}
+                    </select>
+                    {members.length === 0 && (
+                      <p className="text-[9px] text-[#D97706] mt-1">Aggiungi prima le persone nella scheda Membri.</p>
+                    )}
+                  </div>
+
+                  {photoWho && (
+                    <p className="text-[11px] text-gray-600">
+                      {photosBy(photoWho) >= photoCap
+                        ? <span className="text-[#D97706] font-bold">{photoWho} ha esaurito le sue {photoCap} foto. Cancellane una per farne entrare un'altra.</span>
+                        : <>A {photoWho} restano <span className="font-bold">{photoCap - photosBy(photoWho)}</span> foto su {photoCap}.</>}
+                    </p>
+                  )}
+
+                  <label className={`block w-full py-3 rounded font-bold uppercase text-sm tracking-wide text-center cursor-pointer ${photoWho && photosBy(photoWho) < photoCap && !photoBusy ? 'bg-[#2D392C] text-white hover:bg-[#1F271E]' : 'bg-gray-200 text-gray-400 pointer-events-none'}`}>
+                    {photoBusy || '📸 Scegli le foto'}
+                    <input type="file" accept="image/*" multiple onChange={addPhotos} className="hidden" />
+                  </label>
+
+                  <p className="text-[9px] text-gray-400 italic leading-snug">
+                    Massimo <span className="font-bold">{photoCap} foto a testa</span> (si cambia in Impostazioni): serve a scegliere
+                    le belle, non a svuotare il rullino. È un accordo fra noi, non un lucchetto: il nome si sceglie dalla tendina.
+                    Le foto vengono rimpicciolite prima di partire.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Griglia */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">
+                Album {photos.length > 0 ? `(${photos.length})` : ''}
+              </h3>
+              {!cloud.connected ? (
+                <p className="text-sm text-gray-400 italic">Senza linea l'album non si può sfogliare.</p>
+              ) : !photosReady ? (
+                <p className="text-sm text-gray-400 italic">Carico l'album…</p>
+              ) : photos.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">Ancora nessuna foto. Comincia tu.</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {photos.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => openPhoto(p)}
+                      className="relative aspect-square overflow-hidden rounded border border-[#8F9E8B]/30 bg-[#F0F4F1]"
+                      aria-label={`Foto di ${p.by || 'anonimo'}`}
+                    >
+                      <img src={p.thumb} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      {p.by && (
+                        <span className="absolute bottom-0 left-0 right-0 bg-black/55 text-white text-[8px] px-1 py-0.5 truncate text-left">
+                          {p.by}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {photos.length > 0 && (
+                <p className="text-[9px] text-gray-400 italic mt-3">
+                  Tocca una foto per vederla grande. Le foto restano nel campo: alla chiusura finiscono
+                  nell'archivio insieme ai conti.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ---------- ARCHIVIO (campi chiusi) ---------- */}
         {activeTab === 'archivio' && (
           <div className="space-y-4">
@@ -3777,10 +3992,14 @@ function App() {
                         <span>{(a.totals && a.totals.members) || 0} membri</span>
                         <span>{(a.totals && a.totals.purchases) || 0} spese</span>
                         <span>{(a.totals && a.totals.meals) || 0} pasti</span>
+                        {a.photos > 0 && <span>{a.photos} foto</span>}
                         {!a.state && <span className="text-[#8F9E8B] italic">solo cloud</span>}
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => setViewArchive(a)} className="flex-1 py-2 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase hover:bg-[#1F271E]">Resoconto</button>
+                        {a.photos > 0 && (
+                          <button onClick={() => openAlbum(a)} className="flex-1 py-2 bg-[#8F9E8B] text-white rounded text-[10px] font-bold uppercase hover:brightness-95">Album</button>
+                        )}
                         <button onClick={() => downloadArchive(a)} className="flex-1 py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase hover:bg-[#463628]">Scarica</button>
                         <button onClick={() => removeArchive(a)} aria-label="Elimina archivio" className="px-3 py-2 bg-white border-2 border-red-700/30 text-red-700 rounded text-[10px] font-bold uppercase hover:bg-red-50">Elimina</button>
                       </div>
@@ -3789,6 +4008,37 @@ function App() {
                 </ul>
               )}
             </div>
+
+            {/* Album di un campo chiuso: le miniature si scaricano su richiesta. */}
+            {album && (
+              <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
+                <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3">
+                  <h3 className="font-rustic text-lg text-[#2D392C] truncate">Album · {album.name}</h3>
+                  <button onClick={() => setAlbum(null)} className="text-[10px] uppercase font-bold text-gray-500 shrink-0 px-2">Chiudi</button>
+                </div>
+                {album.loading ? (
+                  <p className="text-sm text-gray-400 italic">Carico l'album…</p>
+                ) : album.photos.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">Nessuna foto trovata: serve la linea per scaricarle.</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {album.photos.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => openPhoto(p)}
+                        className="relative aspect-square overflow-hidden rounded border border-[#8F9E8B]/30 bg-[#F0F4F1]"
+                        aria-label={`Foto di ${p.by || 'anonimo'}`}
+                      >
+                        <img src={p.thumb} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        {p.by && (
+                          <span className="absolute bottom-0 left-0 right-0 bg-black/55 text-white text-[8px] px-1 py-0.5 truncate text-left">{p.by}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <p className="text-[9px] text-gray-400 italic text-center px-4">
               Il file scaricato alla chiusura è l'unica copia che contiene anche le foto degli scontrini: conservalo.
             </p>
@@ -3964,6 +4214,29 @@ function App() {
                   ? `Segue le impostazioni del telefono: adesso è ${isDark ? 'scuro' : 'chiaro'}.`
                   : `Sempre ${theme === 'dark' ? 'scuro' : 'chiaro'}, indipendentemente dal telefono.`}
                 {' '}Comodo la sera in tenda: schermo scuro, meno luce in faccia a tutti.
+              </p>
+            </div>
+
+            {/* Galleria */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Galleria</h3>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-[#2D392C]">Foto per persona</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  {[5, 7, 10, 15].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => { setPhotoCap(n); localStorage.setItem(PHOTO_CAP_KEY, String(n)); }}
+                      className={`w-9 py-1.5 rounded text-xs font-bold border-b-2 ${photoCap === n ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300'}`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-500 leading-snug">
+                Quante foto può caricare ciascuno. È un accordo di gruppo che vale su questo telefono, non un
+                controllo: serve a far scegliere le foto belle. Mettetevi d'accordo sullo stesso numero.
               </p>
             </div>
 
@@ -4298,6 +4571,40 @@ function App() {
       )}
 
       {/* Visualizzatore scontrino a schermo intero (tocca per chiudere) */}
+      {/* Foto della galleria a schermo pieno: l'originale si scarica solo qui. */}
+      {viewPhoto && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4">
+          <div className="flex-grow flex items-center justify-center w-full min-h-0" onClick={() => setViewPhoto(null)}>
+            {viewPhoto.full
+              ? <img src={viewPhoto.full} alt={`Foto di ${viewPhoto.by || 'anonimo'}`} className="max-w-full max-h-full rounded shadow-2xl" />
+              : <div className="text-center">
+                  <img src={viewPhoto.thumb} alt="" className="max-w-full max-h-[60vh] rounded opacity-40 blur-sm" />
+                  <p className="mt-3 text-[11px] uppercase tracking-widest text-white/60">Scarico la foto…</p>
+                </div>}
+          </div>
+          <div className="shrink-0 w-full max-w-md flex items-center justify-between gap-3 pt-3">
+            <span className="text-[11px] text-white/70 truncate">
+              {viewPhoto.by || 'anonimo'}
+              {viewPhoto.at ? ` · ${new Date(viewPhoto.at).toLocaleDateString('it-IT')}` : ''}
+            </span>
+            <span className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => removePhoto(viewPhoto)}
+                className="text-[10px] uppercase font-bold px-3 py-2 rounded border border-[#D97706]/60 text-[#D97706]"
+              >
+                Elimina
+              </button>
+              <button
+                onClick={() => setViewPhoto(null)}
+                className="text-[10px] uppercase font-bold px-3 py-2 rounded bg-[#F0F4F1] text-[#2D392C]"
+              >
+                Chiudi
+              </button>
+            </span>
+          </div>
+        </div>
+      )}
+
       {viewReceipt && (
         <div
           onClick={() => setViewReceipt(null)}

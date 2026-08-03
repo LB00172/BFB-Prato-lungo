@@ -63,7 +63,8 @@ async function apri(opzioni) {
   });
   const page = await ctx.newPage();
   await page.addInitScript((h) => localStorage.setItem('cambusa_unlock', h), SBLOCCO);
-  if (o.initScript) await page.addInitScript(o.initScript);
+  // initScript: una funzione, oppure [funzione, argomento] se le serve un dato.
+  if (o.initScript) await page.addInitScript(...[].concat(o.initScript));
 
   const errori = [];
   page.on('pageerror', (e) => errori.push(e.message));

@@ -11,8 +11,8 @@
 // direttamente.
 //
 // La regola copre il documento del campo e tutte le sue sotto-collezioni:
-// scontrini, snapshot giornalieri, archivi dei campi chiusi, meteo condiviso e
-// classifica del minigioco.
+// scontrini, snapshot giornalieri, archivi dei campi chiusi, meteo condiviso,
+// classifica del minigioco e galleria (miniature + foto intere).
 //
 // PRIMA di pubblicare: controlla che l'app dica gia' "Database: protetto dalla
 // password" (Impostazioni -> Blocco con password). Se dice ancora "accesso
