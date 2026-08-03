@@ -26,6 +26,76 @@ const load = (key, fallback) => {
 
 // Cronologia delle modifiche per la fusione fra dispositivi (vedi sync-merge.js).
 const SYNC_META_KEY = 'cambusa_syncmeta';
+// Copia di scorta dello stato PRIMA dell'ultima sincronizzazione che ha tolto
+// delle voci: è quello che permette di annullarla con un tocco.
+const RESCUE_KEY = 'cambusa_rescue';
+
+// Traduce i "percorsi" della sincronizzazione in italiano, per poter dire cosa
+// è sparito invece di mostrare sigle.
+// Un singolo percorso in italiano: serve alla diagnostica, per capire COSA è
+// stato cancellato e QUANDO, invece di leggere sigle tipo "c|2026-08-13|meals|k3".
+const descriviPath = (p, stato) => {
+  const parti = String(p).split('|');
+  const nomeMembro = (id) => {
+    const m = (stato.members || []).find((x) => x.id === id);
+    return m ? m.name : 'una persona non più in elenco';
+  };
+  const giorno = (d) => {
+    try { return parseDate(d).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }); }
+    catch (e) { return d; }
+  };
+  const voce = (lista, id, etichetta) => {
+    const it = (stato[lista] || []).find((x) => x.id === id);
+    return `${etichetta}${it && it.name ? ` "${it.name}"` : ''}`;
+  };
+  switch (parti[0]) {
+    case 'c':
+      if (parti[2] === 'meals') return `presenza di ${nomeMembro(parti[3])} — ${giorno(parti[1])}`;
+      if (parti[3] === 'note') return `menù del ${giorno(parti[1])}`;
+      if (parti[3] === 'appunti') return `note del ${giorno(parti[1])}`;
+      return `${parti[3]} del ${giorno(parti[1])}`;
+    case 'm': return voce('members', parti[1], 'membro');
+    case 'p': return voce('purchases', parti[1], 'spesa');
+    case 't': return voce('toBuy', parti[1], 'voce da acquistare');
+    case 'e': return voce('equipment', parti[1], 'attrezzatura');
+    case 'g': return voce('gear', parti[1], 'dotazione');
+    case 's': return 'rimborso segnato come saldato';
+    case 'x': return `giorno del conto separato — ${giorno(parti[1])}`;
+    default: return p;
+  }
+};
+
+const descriviPerdite = (paths, stato) => {
+  const nome = (id) => {
+    const m = (stato.members || []).find((x) => x.id === id);
+    return m ? m.name : 'qualcuno';
+  };
+  const conta = { presenze: 0, membri: 0, spese: 0, lista: 0, attrezzatura: 0, dotazioni: 0, altro: 0 };
+  const giorni = new Set();
+  const chi = new Set();
+  paths.forEach((p) => {
+    const parti = p.split('|');
+    if (parti[0] === 'c' && parti[2] === 'meals') {
+      conta.presenze++; giorni.add(parti[1]); chi.add(nome(parti[3]));
+    } else if (parti[0] === 'm') conta.membri++;
+    else if (parti[0] === 'p') conta.spese++;
+    else if (parti[0] === 't') conta.lista++;
+    else if (parti[0] === 'e') conta.attrezzatura++;
+    else if (parti[0] === 'g') conta.dotazioni++;
+    else conta.altro++;
+  });
+  const pezzi = [];
+  if (conta.presenze) {
+    pezzi.push(`${conta.presenze} presenze (${giorni.size} ${giorni.size === 1 ? 'giorno' : 'giorni'}, ${[...chi].slice(0, 4).join(', ')}${chi.size > 4 ? '…' : ''})`);
+  }
+  if (conta.membri) pezzi.push(`${conta.membri} membri`);
+  if (conta.spese) pezzi.push(`${conta.spese} spese`);
+  if (conta.lista) pezzi.push(`${conta.lista} voci da acquistare`);
+  if (conta.attrezzatura) pezzi.push(`${conta.attrezzatura} attrezzature`);
+  if (conta.dotazioni) pezzi.push(`${conta.dotazioni} dotazioni`);
+  if (conta.altro) pezzi.push(`${conta.altro} altre voci`);
+  return pezzi.join(' · ');
+};
 
 // ============================================================================
 //  BLOCCO CON PASSWORD
@@ -982,6 +1052,8 @@ function App() {
   const [photoBusy, setPhotoBusy] = useState('');    // messaggio di avanzamento
   const [viewPhoto, setViewPhoto] = useState(null);  // { id, by, at, full }
   const [album, setAlbum] = useState(null);          // album di un campo chiuso
+  // Ultima sincronizzazione che ha tolto delle voci: banner + annulla.
+  const [lostSync, setLostSync] = useState(null);
   const [sepOpen, setSepOpen] = useState(false);     // riga "Conto separato" aperta
   const [galleryView, setGalleryView] = useState('album'); // album | griglia
   const [albumPage, setAlbumPage] = useState(0);
@@ -1250,6 +1322,23 @@ function App() {
     const remoteState = { ...remote };
     delete remoteState._meta;
     const res = SM.merge(local, metaRef.current, remoteState, rmeta);
+
+    // FRENO DI SICUREZZA. Una fusione può togliere voci solo se dall'altra
+    // parte c'è una cancellazione datata; è legittimo (qualcuno ha cancellato
+    // una spesa), ma è anche il modo in cui un ripristino, un'importazione o
+    // una spunta sbagliata cancellano il lavoro di tutti. Prima di applicarla
+    // si mette da parte una copia di scorta, e se le voci perse sono tante lo
+    // si dice, con un tasto per annullare.
+    const perse = Object.keys(SM.flatten(local)).filter((p) => !(p in res.meta.flat));
+    if (perse.length > 0) {
+      try {
+        localStorage.setItem(RESCUE_KEY, JSON.stringify({
+          at: Date.now(), perse: perse.length, paths: perse.slice(0, 200),
+          state: local, meta: metaRef.current,
+        }));
+      } catch (e) { /* spazio esaurito: si prosegue senza scorta */ }
+      if (perse.length >= 3) setLostSync({ n: perse.length, at: Date.now(), che: descriviPerdite(perse, local) });
+    }
     // Se il risultato è già identico a quello ricevuto non c'è niente da
     // rimandare indietro; altrimenti il push riporta all'altro ciò che gli manca.
     suppressPushRef.current = SM.sameAs(res.meta, remoteState, rmeta);
@@ -1263,6 +1352,35 @@ function App() {
     setSepDays(res.state.sepDays);
     saveMeta(res.meta);
     setTimeout(() => { suppressPushRef.current = false; }, 0);
+  };
+
+  // Annulla l'ultima sincronizzazione che ha tolto delle voci: rimette lo stato
+  // di prima e lo ripubblica. Le voci che tornano vengono ridatate ad ADESSO,
+  // quindi vincono sulle cancellazioni che le avevano tolte, su tutti i
+  // telefoni. È la via d'uscita quando un ripristino o un'importazione
+  // sbagliata cancella il lavoro di tutti.
+  const annullaSync = () => {
+    const r = load(RESCUE_KEY, null);
+    if (!r || !r.state) { window.alert('Non c\'è nessuna copia di scorta da ripristinare.'); return; }
+    const quando = new Date(r.at).toLocaleString('it-IT');
+    if (!window.confirm(
+      `Annullare la sincronizzazione del ${quando}?\n\n` +
+      `Torneranno ${r.perse} voci che erano sparite, e la copia di prima verrà ` +
+      'ripubblicata su TUTTI i dispositivi.\n\n' +
+      'Le modifiche fatte dopo, da chiunque, restano.'
+    )) return;
+    const s = r.state;
+    setMembers(Array.isArray(s.members) ? s.members : []);
+    setCampData(s.campData && typeof s.campData === 'object' ? s.campData : {});
+    setPurchases(Array.isArray(s.purchases) ? s.purchases : []);
+    setGear(Array.isArray(s.gear) ? s.gear : []);
+    setSettled(Array.isArray(s.settled) ? s.settled : []);
+    setEquipment(Array.isArray(s.equipment) ? s.equipment : []);
+    setToBuy(Array.isArray(s.toBuy) ? s.toBuy : []);
+    setSepDays(Array.isArray(s.sepDays) ? s.sepDays : []);
+    setLostSync(null);
+    localStorage.removeItem(RESCUE_KEY);
+    window.alert('Fatto: fra qualche secondo i dati tornano anche sugli altri telefoni.');
   };
 
   const connectCloud = async (code) => {
@@ -1411,7 +1529,16 @@ function App() {
     if (hasAny && !window.confirm('Questo giorno ha già delle presenze: sostituirle con quelle di ieri?')) return;
     setCampData((prev) => {
       const day = { ...initialDayState(), ...(prev[selectedDateStr] || {}) };
-      return { ...prev, [selectedDateStr]: { ...day, meals: JSON.parse(JSON.stringify(prevMeals)) } };
+      // SOVRASCRIVE le presenze di ieri su quelle di oggi, ma non CANCELLA le
+      // persone che ieri non c'erano: toglierle dall'elenco creerebbe delle
+      // lapidi, e quelle lapidi cancellerebbero le stesse presenze su TUTTI i
+      // telefoni, anche quelle appena segnate da qualcun altro. Chi ieri non
+      // c'era resta, azzerato: visivamente è la stessa cosa, ma non distrugge
+      // il lavoro degli altri.
+      const meals = {};
+      Object.keys(day.meals || {}).forEach((id) => { meals[id] = { lunch: false, dinner: false }; });
+      Object.keys(prevMeals).forEach((id) => { meals[id] = { ...prevMeals[id] }; });
+      return { ...prev, [selectedDateStr]: { ...day, meals } };
     });
   };
 
@@ -2666,6 +2793,31 @@ function App() {
             {' '}Una volta installata funziona anche senza linea.
           </p>
           <button onClick={dismissInstallHint} aria-label="Chiudi avviso" className="text-[#5C4A3C] font-bold px-1 shrink-0">&times;</button>
+        </div>
+      )}
+
+      {/* Una sincronizzazione ha appena tolto delle voci: si dice subito, in
+          qualsiasi scheda, e si può annullare finché la copia di scorta c'è. */}
+      {lostSync && (
+        <div className="bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3">
+          <div className="flex items-start gap-2">
+            <span className="text-base leading-none mt-0.5">⚠️</span>
+            <div className="min-w-0 flex-grow">
+              <p className="text-[11px] text-[#5C4A3C] leading-snug">
+                <span className="font-bold">L'ultima sincronizzazione ha tolto {lostSync.n} voci.</span>
+                {lostSync.che ? ` ${lostSync.che}.` : ''}
+                {' '}Se non è stato qualcuno di voi a cancellarle, annulla: torna tutto com'era, su tutti i telefoni.
+              </p>
+              <div className="flex gap-2 mt-2">
+                <button onClick={annullaSync} className="px-3 py-1.5 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide">
+                  Annulla la sincronizzazione
+                </button>
+                <button onClick={() => setLostSync(null)} className="px-3 py-1.5 bg-white border border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide">
+                  Va bene così
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -4554,6 +4706,68 @@ function App() {
                   Nessuna password impostata: l'app si apre a chiunque abbia l'indirizzo.
                 </p>
               )}
+            </div>
+
+            {/* Diagnostica della sincronizzazione: cosa è stato cancellato e
+                quando. Senza questa scheda, capire chi ha fatto sparire cosa
+                vuol dire leggere il database a mano. */}
+            <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Diagnostica sincronizzazione</h3>
+              {(() => {
+                const m = metaRef.current || { rev: {}, del: {} };
+                const st = syncStateRef.current;
+                const lapidi = Object.keys(m.del || {})
+                  .map((p) => ({ p, at: m.del[p] }))
+                  .sort((a, b) => b.at - a.at);
+                const scorta = load(RESCUE_KEY, null);
+                return (
+                  <div className="space-y-3">
+                    <div className="flex gap-4 text-[11px] text-gray-600">
+                      <span><span className="font-bold text-[#2D392C]">{Object.keys(m.rev || {}).length}</span> voci datate</span>
+                      <span><span className="font-bold text-[#2D392C]">{lapidi.length}</span> cancellazioni registrate</span>
+                    </div>
+
+                    {scorta && scorta.state && (
+                      <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 space-y-2">
+                        <p className="text-[10px] text-[#5C4A3C] leading-snug">
+                          C'è una copia di scorta di <span className="font-bold">{new Date(scorta.at).toLocaleString('it-IT')}</span>,
+                          salvata prima di una sincronizzazione che ha tolto <span className="font-bold">{scorta.perse}</span> voci.
+                        </p>
+                        <button onClick={annullaSync} className="w-full py-2 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide">
+                          Annulla quella sincronizzazione
+                        </button>
+                      </div>
+                    )}
+
+                    {lapidi.length === 0 ? (
+                      <p className="text-[11px] text-gray-400 italic">Nessuna cancellazione registrata su questo telefono.</p>
+                    ) : (
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Ultime cancellazioni</p>
+                        <ul className="space-y-1">
+                          {lapidi.slice(0, 12).map((l) => (
+                            <li key={l.p} className="flex items-start justify-between gap-2 text-[10px] bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20">
+                              <span className="text-[#2D392C] leading-snug">{descriviPath(l.p, st)}</span>
+                              <span className="text-gray-500 shrink-0">
+                                {new Date(l.at).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
+                                {' '}{new Date(l.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        {lapidi.length > 12 && (
+                          <p className="text-[9px] text-gray-400 italic mt-1">…e altre {lapidi.length - 12}.</p>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-[9px] text-gray-400 italic leading-snug">
+                      Una cancellazione è normale quando qualcuno toglie davvero una voce. Se ne vedi tante
+                      tutte allo stesso minuto, è il segno di un ripristino, di un'importazione o di un
+                      "Copia da ieri": in quel caso la copia di scorta qui sopra rimette tutto a posto.
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Dati su questo telefono */}

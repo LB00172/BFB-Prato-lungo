@@ -1,0 +1,184 @@
+// Perdita di dati in sincronizzazione: il freno, l'annullamento e la
+// diagnostica. Riproduce il caso vero — arriva dal cloud uno stato con
+// cancellazioni datate che spazzano via le presenze, mentre membri e spese
+// restano identici.
+const { apri, ok, fine } = require('../lib/app');
+
+function cloudFinto() {
+  Object.defineProperty(window, 'CloudSync', {
+    configurable: true,
+    get() { return window.__cs; },
+    set(v) {
+      window.__cs = Object.assign({}, v, {
+        isConfigured: () => true,
+        // Prima della connessione deve dire di NON essere connesso, altrimenti
+        // l'app salta l'aggancio automatico e non consegna mai la callback.
+        isConnected: () => !!window.__connesso,
+        savedCode: () => 'TEST',
+        connect: (cfg, code, cb) => {
+          window.__remoteCb = cb;
+          window.__connesso = true;
+          if (window.__status) window.__status({ connected: true, status: 'connected', code });
+          return Promise.resolve();
+        },
+        onStatus: (cb) => { window.__status = cb; cb({ connected: true, status: 'connected', code: 'TEST' }); },
+        onReceipts: () => {}, onWeather: () => {},
+        pushState: (obj) => { window.__pushed = obj; },
+        putReceipt: () => {}, deleteReceipt: () => {},
+        putArchive: () => Promise.resolve(true), listArchives: () => Promise.resolve([]),
+        listSnapshots: () => Promise.resolve([]), listScores: () => Promise.resolve([]),
+        submitScore: () => Promise.resolve(),
+        watchPhotos: () => () => {}, listPhotos: () => Promise.resolve([]),
+        archivePhotos: () => Promise.resolve(0), putPhoto: () => Promise.resolve(true),
+        getPhotoFull: () => Promise.resolve(null), deletePhoto: () => Promise.resolve(true),
+      });
+    },
+  });
+}
+
+const presenti = (page) => page.evaluate(() => {
+  const cd = JSON.parse(localStorage.getItem('cambusa_camp_data') || '{}');
+  let n = 0;
+  Object.keys(cd).forEach((g) => {
+    const meals = (cd[g] && cd[g].meals) || {};
+    Object.keys(meals).forEach((id) => { if (meals[id] && (meals[id].lunch || meals[id].dinner)) n++; });
+  });
+  return n;
+});
+
+(async () => {
+  const { browser, page: p, menu, errori } = await apri({ initScript: cloudFinto });
+
+  // --- Dati di partenza: tre membri, presenze su due giorni, una spesa ---
+  await menu('Membri');
+  for (const n of ['Lorenzo', 'Bruno', 'Anna']) {
+    await p.fill('input[placeholder="Nome e cognome"]', n);
+    await p.locator('button', { hasText: /^\+$/ }).first().click();
+    await p.waitForTimeout(120);
+  }
+  await menu('Presenze');
+  await p.locator('button', { hasText: 'Tutti a pranzo' }).first().click();
+  await p.waitForTimeout(250);
+  await p.locator('button', { hasText: 'Tutti a cena' }).first().click();
+  await p.waitForTimeout(400);
+
+  const prima = await presenti(p);
+  ok(`si parte con ${prima} presenze segnate`, prima === 3);
+
+  // --- Arriva dal cloud una cancellazione datata di TUTTE le presenze ---
+  // È quello che produce un ripristino, un'importazione o un "Copia da ieri":
+  // membri e spese restano identici, spariscono solo le presenze.
+  const spazzate = await p.evaluate(() => {
+    const cd = JSON.parse(localStorage.getItem('cambusa_camp_data') || '{}');
+    const membri = JSON.parse(localStorage.getItem('cambusa_members') || '[]');
+    const giorno = Object.keys(cd)[0];
+    const now = Date.now() + 60000;
+    const del = {};
+    Object.keys((cd[giorno] || {}).meals || {}).forEach((id) => { del['c|' + giorno + '|meals|' + id] = now; });
+    window.__remoteCb({
+      members: membri, campData: {}, purchases: [], toBuy: [], equipment: [], gear: [], settled: [], sepDays: [],
+      _meta: { v: 2, rev: {}, del },
+    });
+    return Object.keys(del).length;
+  });
+  await p.waitForTimeout(700);
+
+  const dopo = await presenti(p);
+  ok(`la cancellazione arriva davvero (${spazzate} presenze tolte, ne restano ${dopo})`, dopo === 0);
+  ok('i membri NON vengono toccati', (await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_members') || '[]').length)) === 3);
+
+  // --- Il freno: l'app lo dice, invece di lasciarlo scoprire ai conti ---
+  const avviso = await p.locator('body').innerText();
+  ok('compare l\'avviso della perdita', /ha tolto \d+ voci/i.test(avviso));
+  ok('l\'avviso dice cosa è sparito', /presenze/i.test(avviso));
+  ok('c\'è il tasto per annullare', (await p.locator('button', { hasText: 'Annulla la sincronizzazione' }).count()) > 0);
+
+  const scorta = await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_rescue') || 'null'));
+  ok('la copia di scorta è stata salvata prima di applicare', !!scorta && scorta.perse === spazzate);
+
+  // --- L'annullamento riporta tutto, e lo ripubblica ---
+  await p.locator('button', { hasText: 'Annulla la sincronizzazione' }).click();
+  await p.waitForTimeout(800);
+  const tornate = await presenti(p);
+  ok(`annullando tornano le presenze (${tornate})`, tornate === 3);
+  ok('l\'avviso sparisce', !/ha tolto \d+ voci/i.test(await p.locator('body').innerText()));
+
+  // Le voci tornate devono essere RIDATATE, altrimenti la cancellazione le
+  // rimangerebbe al prossimo giro.
+  const rimandato = await p.evaluate(() => {
+    const pu = window.__pushed;
+    if (!pu || !pu._meta) return null;
+    const chiavi = Object.keys(pu._meta.rev).filter((k) => k.indexOf('|meals|') > 0);
+    const lapidi = Object.keys(pu._meta.del).filter((k) => k.indexOf('|meals|') > 0);
+    return { ridatate: chiavi.length, lapidi: lapidi.length };
+  });
+  ok(`le presenze tornate sono ridatate (${rimandato && rimandato.ridatate})`, !!rimandato && rimandato.ridatate === 3);
+  ok('e le lapidi che le avevano tolte sono state rimosse', rimandato.lapidi === 0);
+
+  // Rimandando lo stesso stato remoto, le presenze NON devono risparire.
+  await p.evaluate(() => {
+    const cd = JSON.parse(localStorage.getItem('cambusa_camp_data') || '{}');
+    const giorno = Object.keys(cd)[0];
+    const membri = JSON.parse(localStorage.getItem('cambusa_members') || '[]');
+    const del = {};
+    Object.keys((cd[giorno] || {}).meals || {}).forEach((id) => { del['c|' + giorno + '|meals|' + id] = Date.now() - 5000; });
+    window.__remoteCb({
+      members: membri, campData: {}, purchases: [], toBuy: [], equipment: [], gear: [], settled: [], sepDays: [],
+      _meta: { v: 2, rev: {}, del },
+    });
+  });
+  await p.waitForTimeout(700);
+  ok('la vecchia cancellazione non se le riprende', (await presenti(p)) === 3);
+
+  // --- Diagnostica: dice cosa è stato cancellato e quando ---
+  await menu('Impostazioni');
+  await p.waitForTimeout(400);
+  const diag = await p.locator('main').innerText();
+  ok('la diagnostica c\'è', /diagnostica sincronizzazione/i.test(diag));
+  ok('conta le voci datate e le cancellazioni', /voci datate/i.test(diag) && /cancellazioni registrate/i.test(diag));
+
+  // --- "Copia da ieri" non deve cancellare le presenze degli altri ---
+  // Caso vero: ieri c'era solo Anna, oggi qualcun altro ha segnato Lorenzo.
+  // Chi preme "Copia da ieri" si aspetta di sovrascrivere, non di CANCELLARE
+  // Lorenzo su tutti i telefoni.
+  const giornoStriscia = async (i) => {
+    await menu('Calendario');
+    await p.locator('.grid.grid-cols-7 button').nth(i).click();
+    await p.waitForTimeout(250);
+    await menu('Presenze');
+    await p.waitForTimeout(250);
+  };
+  const segna = async (nome) => {
+    await p.locator('li', { hasText: nome }).locator('button', { hasText: 'Pranzo' }).first().click();
+    await p.waitForTimeout(250);
+  };
+
+  await giornoStriscia(4);
+  await segna('Anna');
+  await giornoStriscia(5);
+  await segna('Lorenzo');
+
+  const lapidiPrima = await p.evaluate(() => {
+    const m = JSON.parse(localStorage.getItem('cambusa_syncmeta') || '{}');
+    return Object.keys(m.del || {}).filter((k) => k.indexOf('|meals|') > 0).length;
+  });
+
+  await p.locator('button', { hasText: 'Copia da ieri' }).first().click();
+  await p.waitForTimeout(700);
+
+  const esito = await p.evaluate(() => {
+    const m = JSON.parse(localStorage.getItem('cambusa_syncmeta') || '{}');
+    const cd = JSON.parse(localStorage.getItem('cambusa_camp_data') || '{}');
+    const giorni = Object.keys(cd).sort();
+    const oggi = cd[giorni[giorni.length - 1]] || {};
+    return {
+      lapidi: Object.keys(m.del || {}).filter((k) => k.indexOf('|meals|') > 0).length,
+      voci: Object.keys(oggi.meals || {}).length,
+    };
+  });
+  ok(`"Copia da ieri" non cancella le presenze di nessuno (lapidi: ${lapidiPrima} → ${esito.lapidi})`, esito.lapidi === lapidiPrima);
+  ok(`chi ieri non c'era resta in elenco, azzerato (${esito.voci} voci)`, esito.voci >= 2);
+
+  ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
+  await fine(browser);
+})().catch((e) => { console.error('FATAL', e.message); process.exit(1); });

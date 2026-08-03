@@ -73,6 +73,7 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `e2e/correzioni` | Correzione di una spesa già salvata (la matita) |
 | `e2e/chiusura` | Chiusura del campo: archivio scaricato, liste azzerate, totali a zero |
 | `e2e/fusione` | La fusione dentro l'app: due telefoni offline, nessun dato perso |
+| `e2e/perdita` | **Perdita di dati**: cancellazioni datate in arrivo dal cloud, freno di sicurezza, copia di scorta, "Annulla la sincronizzazione" con ridatazione, diagnostica, e che "Copia da ieri" non cancelli le presenze di nessuno |
 | `e2e/riaggancio` | Ritorno della linea e riaggancio al cloud |
 | `e2e/login` | Blocco con password, tentativi sbagliati, "blocca ora" |
 | `e2e/autochiede` | L'app chiede da sola la password quando serve al database |

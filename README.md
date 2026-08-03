@@ -110,6 +110,25 @@ preparazione** e **offline al campo**, dove non c'è linea.
   Alla **chiusura del campo** le foto non si cancellano: vengono **timbrate**
   con l'archivio e restano consultabili da *Archivio → Album*, mentre la
   galleria del campo nuovo riparte vuota.
+- **Freno di sicurezza sulle cancellazioni**: una fusione può togliere voci solo
+  se dall'altra parte c'è una cancellazione datata. È legittimo (qualcuno ha
+  cancellato una spesa), ma è anche il modo in cui un ripristino, un'importazione
+  o un "Copia da ieri" cancellano il lavoro di tutti. Prima di applicare una
+  sincronizzazione che toglie voci, l'app mette da parte una **copia di scorta**
+  locale; se le voci perse sono almeno tre compare un avviso in cima con
+  **"Annulla la sincronizzazione"**, che rimette lo stato di prima e lo
+  ripubblica su tutti i dispositivi (le voci che tornano vengono ridatate, quindi
+  vincono sulle cancellazioni che le avevano tolte). La copia resta comunque
+  disponibile in *Impostazioni → Diagnostica sincronizzazione*.
+- **Diagnostica sincronizzazione** (Impostazioni): quante voci sono datate,
+  quante cancellazioni sono registrate e **le ultime dodici, tradotte in
+  italiano con data e ora** ("presenza di Bruno — mer 13 ago, cancellata il 3
+  ago alle 14:12"). Tante cancellazioni tutte allo stesso minuto sono la firma
+  di un ripristino, di un'importazione o di un "Copia da ieri".
+- **"Copia da ieri"** sovrascrive le presenze del giorno ma **non cancella** chi
+  ieri non c'era: lo lascia in elenco azzerato. Toglierlo genererebbe una lapide
+  che cancella quella presenza su *tutti* i telefoni, anche se qualcun altro
+  l'aveva appena segnata.
 - **Snapshot giornaliero** automatico + "Ripristino di emergenza" nella scheda
   Dati. In più, backup manuale **Esporta/Importa** su file JSON.
 - **Chiusura del campo** (Spese Totali → Dati): archivia tutto (file scaricato
