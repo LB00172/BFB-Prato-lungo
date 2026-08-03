@@ -161,6 +161,7 @@ risultano "protetti dalla password".
 | `sync-merge.js` | Fusione degli stati fra dispositivi (`window.SyncMerge`), usata dalla sincronizzazione |
 | `firestore.rules` | Regole di sicurezza del database, da incollare nella console Firebase |
 | `build.js` | Compila `App.jsx` → `App.js` e aggiorna `CACHE_NAME` |
+| `test/` | Verifiche automatiche (`npm test`). Escluse dal deploy |
 | `vendor/` | React, Tailwind e font self-hosted |
 
 ## Sviluppo
@@ -168,7 +169,13 @@ risultano "protetti dalla password".
 ```bash
 npm install      # una volta
 npm run build    # App.jsx -> App.js + nuovo CACHE_NAME
+npm test         # 28 prove automatiche (~6 min); "npm test unita" per le veloci
 ```
+
+Le verifiche stanno in **[`test/`](test/README.md)**: 384 controlli sui conti,
+32 sulla fusione fra dispositivi, più le prove che pilotano l'app vera in un
+browser. `npm test` fallisce con codice diverso da zero se qualcosa si rompe.
+Da lanciare **prima di ogni push** che tocchi i calcoli o la sincronizzazione.
 
 `build.js` calcola `CACHE_NAME` dall'hash dei file: ogni build con modifiche
 invalida la vecchia cache, e l'app installata **si aggiorna da sola** (ricarica
