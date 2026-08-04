@@ -16,10 +16,18 @@ function cloudFinto(opz) {
       window.__scritture = [];
       window.__falliscono = !!opz.falliscono;
       window.__vuoto = !!opz.vuoto;
+      window.__fotoRotte = !!opz.fotoRotte;
+      window.__codaFoto = [];
+      window.__fotoCaricate = [];
       // Come il modulo vero: "vuoto" cambia SOLO quando arriva una fotografia
       // dal cloud, non a ogni scrittura.
       window.__emit = (patch) => {
-        if (window.__status) window.__status(Object.assign({ connected: true, code: 'TEST', empty: window.__vuoto, pending: !!window.__inSospeso }, patch));
+        if (window.__status) {
+          window.__status(Object.assign({
+            connected: true, code: 'TEST', empty: window.__vuoto,
+            pending: !!window.__inSospeso, foto: window.__codaFoto.length,
+          }, patch));
+        }
       };
       window.__cs = Object.assign({}, v, {
         isConfigured: () => true,
@@ -45,9 +53,28 @@ function cloudFinto(opz) {
           window.__vuoto = false;   // ora nel cloud c'è qualcosa
           window.__emit({ status: 'connected' });
         },
-        riprova: () => { if (window.__inSospeso && !window.__falliscono) { window.__cs.pushState(window.__ultimo || {}, true); return true; } return false; },
+        riprova: () => {
+          // Prima le foto rimaste indietro, come fa quella vera.
+          if (window.__codaFoto.length && !window.__fotoRotte) {
+            window.__codaFoto.splice(0).forEach((v) => window.__fotoCaricate.push(v.id));
+            window.__emit({ status: 'connected' });
+          }
+          if (window.__inSospeso && !window.__falliscono) { window.__cs.pushState(window.__ultimo || {}, true); return true; }
+          return false;
+        },
         inSospeso: () => !!window.__inSospeso,
-        putReceipt: () => {}, deleteReceipt: () => {},
+        // Coda foto: si comporta come quella vera, e si puo' far fallire.
+        putReceipt: (id, dati) => {
+          if (window.__fotoRotte) {
+            if (!window.__codaFoto.some((x) => x.id === id)) window.__codaFoto.push({ id, dati });
+            window.__emit({ status: 'error', foto: window.__codaFoto.length });
+            return;
+          }
+          window.__fotoCaricate.push(id);
+          window.__emit({ status: 'connected', foto: window.__codaFoto.length });
+        },
+        fotoInCoda: () => window.__codaFoto.length,
+        deleteReceipt: () => {},
         putArchive: () => Promise.resolve(true), listArchives: () => Promise.resolve([]),
         listSnapshots: () => Promise.resolve([]), listScores: () => Promise.resolve([]),
         submitScore: () => Promise.resolve(),
@@ -127,6 +154,38 @@ const aggiungiMembro = async (p, nome) => {
   await aggiungiMembro(p, 'Anna');
   await p.waitForTimeout(600);
   ok('liberato lo spazio, l\'avviso sparisce', !/memoria di questo telefono è piena/i.test(await p.locator('body').innerText()));
+
+  // ---- 4) Foto e scontrini: se il caricamento non riesce, non si perdono ----
+  // Sono documenti a parte: non passano dalla fusione, quindi se il
+  // caricamento fallisce non c'è niente che rimedi. Devono finire in coda.
+  {
+    const { browser: b2, page: p2, menu: m2 } = await apri({ initScript: [cloudFinto, { fotoRotte: true }] });
+    // Una spesa registrata a mano, poi ci si allega lo scontrino.
+    await m2('Lista della Spesa');
+    await p2.locator('button', { hasText: 'Acquistato' }).first().click();
+    await p2.waitForTimeout(300);
+    { const b = p2.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await b.count()) { await b.first().click(); await p2.waitForTimeout(350); } }
+    await p2.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Pane');
+    await p2.locator('input[placeholder="0.00"]').first().fill('3');
+    await p2.locator('button', { hasText: /Salva/ }).first().click();
+    await p2.waitForTimeout(500);
+
+    const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
+    await p2.locator('li:has-text("Pane") input[type="file"]').first().setInputFiles(FOTO);
+    await p2.waitForTimeout(1800);
+
+    ok('la foto è comunque sul telefono', (await p2.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')).length)) === 1);
+    ok('e finisce in coda invece di sparire', (await p2.evaluate(() => window.__codaFoto.length)) === 1);
+    ok('l\'app dice che c\'è una foto da inviare', /foto da inviare/i.test(await p2.locator('header').innerText()));
+
+    // Torna a funzionare: la coda si svuota da sola.
+    await p2.evaluate(() => { window.__fotoRotte = false; window.__cs.riprova(); });
+    await p2.waitForTimeout(800);
+    ok('quando riprende, la foto parte', (await p2.evaluate(() => window.__fotoCaricate.length)) === 1);
+    ok('e la coda si svuota', (await p2.evaluate(() => window.__codaFoto.length)) === 0);
+    ok('la spia torna normale', !/da inviare/i.test(await p2.locator('header').innerText()));
+    await b2.close();
+  }
 
   ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
   await fine(browser);

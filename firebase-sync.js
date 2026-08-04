@@ -36,7 +36,7 @@
     localStorage.setItem('cambusa_device_id', deviceId);
   }
 
-  const state = { connected: false, code: null, status: 'idle', lastSync: null, error: null, authMode: 'anon', empty: false, pending: false };
+  const state = { connected: false, code: null, status: 'idle', lastSync: null, error: null, authMode: 'anon', empty: false, pending: false, foto: 0 };
   const emit = (patch) => {
     Object.assign(state, patch || {});
     state.pending = !!pendingJson;   // c'è qualcosa che non è ancora arrivato
@@ -156,6 +156,11 @@
 
       watchWeather(code);
 
+      // Foto rimaste in coda da prima (rete assente, permessi non ancora
+      // pronti): ora che si è collegati, partono.
+      clearTimeout(codaTimer);
+      svuotaCoda();
+
       localStorage.setItem('cambusa_camp_code', code);
       emit({ connected: true, code, status: 'connected', error: null });
     } catch (e) {
@@ -218,20 +223,72 @@
   // Ritenta subito ciò che è rimasto in sospeso (al ritorno della linea, o
   // quando la app fa il suo controllo periodico).
   function riprova() {
+    // Si riprova sia lo stato sia le foto rimaste indietro.
+    if (codaFoto.length) { clearTimeout(codaTimer); svuotaCoda(); }
     if (!pendingJson) return false;
     clearTimeout(pushTimer);
     inviaOra();
     return true;
   }
 
-  // Carica/aggiorna la foto di uno scontrino nel cloud (fire-and-forget:
-  // offline la scrittura resta in coda nella cache persistente di Firestore).
-  async function putReceipt(purchaseId, dataUrl) {
+  // ---- Coda delle foto (scontrini e galleria) ----
+  // Le foto sono documenti a parte, non passano dallo stato: se il caricamento
+  // fallisce non c'è nessuna fusione che rimedi, e la foto resta solo sul
+  // telefono di chi l'ha scattata. Prima si perdevano in silenzio: un catch
+  // vuoto e via. Ora ogni caricamento entra in una coda che si svuota da sola,
+  // con attese crescenti, e la UI può dire quante ne mancano.
+  const codaFoto = [];          // { tipo, id, dati, tentativi }
+  let codaTimer = null;
+  let codaInCorso = false;
+
+  function accodaFoto(voce) {
+    // Una foto per id: se se ne allega una nuova, sostituisce quella in coda.
+    const i = codaFoto.findIndex((x) => x.tipo === voce.tipo && x.id === voce.id);
+    if (i >= 0) codaFoto[i] = voce; else codaFoto.push(voce);
+    emit({ foto: codaFoto.length });
+    svuotaCoda();
+  }
+
+  async function svuotaCoda() {
+    if (codaInCorso || codaFoto.length === 0) return;
     if (!state.connected || !db || !fb) return;
+    codaInCorso = true;
     try {
-      const ref = fb.doc(db, 'camps', state.code, 'receipts', purchaseId);
-      await fb.setDoc(ref, { data: dataUrl, updatedBy: deviceId, updatedAt: fb.serverTimestamp() });
-    } catch (e) { /* regole mancanti o rete: si riprova alla prossima connessione */ }
+      while (codaFoto.length > 0) {
+        if (!state.connected) break;
+        const v = codaFoto[0];
+        try {
+          if (v.tipo === 'scontrino') {
+            await fb.setDoc(fb.doc(db, 'camps', state.code, 'receipts', v.id),
+              { data: v.dati, updatedBy: deviceId, updatedAt: fb.serverTimestamp() });
+          } else if (v.tipo === 'galleria') {
+            await fb.setDoc(fb.doc(db, 'camps', state.code, 'photofull', v.id), { data: v.dati.full });
+            await fb.setDoc(fb.doc(db, 'camps', state.code, 'photos', v.id), {
+              thumb: v.dati.thumb, by: String(v.dati.by || '').slice(0, 40), at: v.dati.at || Date.now(), updatedBy: deviceId,
+            });
+          }
+          codaFoto.shift();
+          emit({ foto: codaFoto.length, status: 'connected' });
+        } catch (e) {
+          // Non riuscita: resta in testa alla coda e si riprova più tardi.
+          v.tentativi = (v.tentativi || 0) + 1;
+          emit({ foto: codaFoto.length, status: 'error', error: 'Foto non ancora caricata: riprovo.' });
+          const attesa = Math.min(60000, 3000 * Math.pow(2, Math.min(v.tentativi, 4)));
+          clearTimeout(codaTimer);
+          codaTimer = setTimeout(function () { svuotaCoda(); }, attesa);
+          break;
+        }
+      }
+    } finally {
+      codaInCorso = false;
+    }
+  }
+
+  // Carica/aggiorna la foto di uno scontrino. Non aspetta: entra in coda e
+  // parte da sola, anche se in questo momento la rete non c'è.
+  function putReceipt(purchaseId, dataUrl) {
+    if (!purchaseId || !dataUrl) return;
+    accodaFoto({ tipo: 'scontrino', id: purchaseId, dati: dataUrl });
   }
 
   // --- Snapshot di sicurezza giornaliero ---
@@ -405,6 +462,9 @@
   // Le foto NON stanno in localStorage e NON entrano nella fusione degli
   // stati: vivono solo nel cloud. Si caricano a casa, con la linea; al campo
   // non servono.
+  // La foto della galleria entra nella stessa coda: se il caricamento non
+  // riesce al primo colpo non è persa, si riprova da sola. Restituisce true
+  // quando è arrivata davvero, false se è rimasta in coda.
   async function putPhoto(id, thumb, full, by) {
     if (!state.connected || !db || !fb) return false;
     try {
@@ -415,6 +475,7 @@
       });
       return true;
     } catch (e) {
+      accodaFoto({ tipo: 'galleria', id: id, dati: { thumb: thumb, full: full, by: by, at: Date.now() } });
       return false;
     }
   }
@@ -515,6 +576,7 @@
     if (receiptsUnsub) { receiptsUnsub(); receiptsUnsub = null; }
     if (weatherUnsub) { weatherUnsub(); weatherUnsub = null; }
     clearTimeout(pushTimer);
+    clearTimeout(codaTimer);
     localStorage.removeItem('cambusa_camp_code');
     lastAppliedJson = null;
     lastPushedJson = null;
@@ -528,6 +590,7 @@
     pushState,
     riprova,
     inSospeso: () => !!pendingJson,
+    fotoInCoda: () => codaFoto.length,
     putReceipt,
     deleteReceipt,
     putPhoto,

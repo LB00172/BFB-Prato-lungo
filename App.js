@@ -2588,8 +2588,9 @@ function App() {
       } catch (err) {/* foto illeggibile: si prosegue con le altre */}
     }
     setPhotoBusy('');
-    if (fatte < daCaricare.length) {
-      window.alert(`Caricate ${fatte} foto su ${daCaricare.length}. Le altre non sono passate: controlla la linea e riprova.`);
+    const rimaste = daCaricare.length - fatte;
+    if (rimaste > 0) {
+      window.alert(`${fatte} ${fatte === 1 ? 'foto caricata' : 'foto caricate'} su ${daCaricare.length}.\n\n` + `${rimaste === 1 ? 'Quella che manca è' : `Le altre ${rimaste} sono`} in coda: ` + 'partono da sole appena la linea regge. Puoi chiudere l\'app, ma non prima che la spia ' + 'in alto smetta di dire "da inviare".');
     }
   };
   const openPhoto = async p => {
@@ -3665,12 +3666,13 @@ function App() {
   }, BRAND.appTitle), /*#__PURE__*/React.createElement("p", {
     className: "text-xs uppercase tracking-wider text-[#8F9E8B]"
   }, tabs[activeTab]), (() => {
-    const sospeso = !!cloud.pending;
-    const testo = sospeso ? 'Da inviare' : isOnline ? 'Online' : 'Offline';
+    const foto = cloud.foto || 0;
+    const sospeso = !!cloud.pending || foto > 0;
+    const testo = sospeso ? foto > 0 ? `${foto} ${foto === 1 ? 'foto' : 'foto'} da inviare` : 'Da inviare' : isOnline ? 'Online' : 'Offline';
     const colore = sospeso ? 'text-[#F6C177]' : isOnline ? 'text-[#8F9E8B]' : 'text-[#D97706]';
     const pallino = sospeso ? 'bg-[#F6C177] animate-pulse' : isOnline ? 'bg-[#8F9E8B]' : 'bg-[#D97706]';
     return /*#__PURE__*/React.createElement("span", {
-      title: sospeso ? 'Alcune modifiche non sono ancora arrivate agli altri: riprovo da solo.' : testo,
+      title: sospeso ? 'Qualcosa non è ancora arrivato agli altri: riprovo da solo, non serve fare niente.' : testo,
       className: `absolute top-3 right-3 flex items-center gap-1 text-[9px] uppercase font-bold ${colore}`
     }, /*#__PURE__*/React.createElement("span", {
       className: `w-2 h-2 rounded-full ${pallino}`
@@ -5391,12 +5393,24 @@ function App() {
     return /*#__PURE__*/React.createElement("div", {
       className: "space-y-3"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-4 text-[11px] text-gray-600"
+      className: "flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-600"
     }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
       className: "font-bold text-[#2D392C]"
     }, Object.keys(m.rev || {}).length), " voci datate"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
       className: "font-bold text-[#2D392C]"
-    }, lapidi.length), " cancellazioni registrate")), scorta && scorta.state && /*#__PURE__*/React.createElement("div", {
+    }, lapidi.length), " cancellazioni registrate")), (cloud.pending || (cloud.foto || 0) > 0) && /*#__PURE__*/React.createElement("div", {
+      className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-[10px] text-[#5C4A3C] leading-snug"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, "Da inviare:"), cloud.pending ? ' le ultime modifiche' : '', cloud.pending && (cloud.foto || 0) > 0 ? ' e' : '', (cloud.foto || 0) > 0 ? ` ${cloud.foto} ${cloud.foto === 1 ? 'foto' : 'foto'}` : '', ".", ' ', "L'app riprova da sola, con attese sempre pi\xF9 lunghe. Tieni l'app aperta e la linea attiva finch\xE9 la spia in alto non torna verde."), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        const CS = window.CloudSync;
+        if (CS && CS.riprova) CS.riprova();
+      },
+      className: "w-full mt-2 py-2 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide"
+    }, "Riprova adesso")), scorta && scorta.state && /*#__PURE__*/React.createElement("div", {
       className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 space-y-2"
     }, /*#__PURE__*/React.createElement("p", {
       className: "text-[10px] text-[#5C4A3C] leading-snug"

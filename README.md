@@ -102,6 +102,13 @@ preparazione** e **offline al campo**, dove non c'è linea.
   in sospeso e si ritentano da soli con attese crescenti (2s, 4s, 8s… fino a un
   minuto), al ritorno della linea e a un controllo ogni due minuti. Finché
   qualcosa è in sospeso, la spia in alto a destra dice **"Da inviare"**.
+- **Foto e scontrini**: sono documenti a parte, non passano dalla fusione,
+  quindi se il caricamento fallisce non c'è niente che rimedi — la foto resta
+  sul telefono di chi l'ha scattata. Prima si perdevano in silenzio (un `catch`
+  vuoto). Ora ogni foto entra in una **coda** che si svuota da sola, con attese
+  crescenti, al ritorno della linea e al collegamento; la spia in alto dice
+  quante ne mancano ("2 foto da inviare") e in *Impostazioni → Diagnostica*
+  c'è "Riprova adesso".
 - **Documento troppo grande**: sopra i 900 KB (il limite di Firestore è 1 MiB)
   la scrittura verrebbe rifiutata e la sincronizzazione si fermerebbe senza
   dirlo. Ora si avvisa prima.
