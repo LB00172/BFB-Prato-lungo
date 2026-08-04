@@ -30,6 +30,39 @@ const SYNC_META_KEY = 'cambusa_syncmeta';
 // delle voci: è quello che permette di annullarla con un tocco.
 const RESCUE_KEY = 'cambusa_rescue';
 
+// ---------- Copie di sicurezza locali ----------
+// Gli snapshot giornalieri automatici stanno su Firestore, e il ripristino li
+// rilegge da lì: entrambe le cose vogliono la linea. Al campo non c'è, quindi
+// per tutti i giorni che contano non esisteva NESSUNA rete di recupero.
+// Queste copie stanno dentro il telefono e si fanno da sole, anche in
+// modalità aereo. Le foto restano fuori: hanno già il loro posto e
+// riempirebbero lo spazio.
+const SNAP_KEY = 'cambusa_snap_locali';
+const SNAP_GIORNI = 7;
+
+const snapLocaliLeggi = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(SNAP_KEY) || '{}');
+    return v && typeof v === 'object' ? v : {};
+  } catch (e) { return {}; }
+};
+
+// Una copia al giorno, la PRIMA: è quella scattata prima dei pasticci di
+// oggi, cioè esattamente quella a cui si vuole tornare.
+const snapLocaleSalva = (stato, giorno) => {
+  const tutte = snapLocaliLeggi();
+  if (tutte[giorno]) return false;
+  tutte[giorno] = JSON.stringify(stato);
+  // Si tengono gli ultimi giorni: oltre, è peso morto nella memoria.
+  Object.keys(tutte).sort().slice(0, Math.max(0, Object.keys(tutte).length - SNAP_GIORNI))
+    .forEach((k) => { delete tutte[k]; });
+  try { localStorage.setItem(SNAP_KEY, JSON.stringify(tutte)); return true; }
+  catch (e) { return false; }
+};
+
+// ---------- Backup su file: quando è stato fatto l'ultimo ----------
+const BACKUP_KEY = 'cambusa_backup_data';
+
 // ---------- Registro delle modifiche ----------
 // Ogni cambiamento (fatto qui o arrivato dal cloud) finisce in un diario
 // locale con data e ora. Non ci sono utenti tracciati, quindi si registra
@@ -1059,6 +1092,8 @@ function App() {
   const [pReceipt, setPReceipt] = useState(null); // foto scontrino in attesa di Salva
   const [viewReceipt, setViewReceipt] = useState(null); // foto aperta a schermo intero
   const [snapList, setSnapList] = useState(null); // elenco snapshot per il ripristino
+  // Giorno dell'ultimo backup su file (o del "ho già fatto"): serve al promemoria.
+  const [backupOggi, setBackupOggi] = useState(() => localStorage.getItem(BACKUP_KEY) || '');
   const [spesaSection, setSpesaSection] = useState('totali'); // sotto-sezione attiva in Spesa
   const [guideOpen, setGuideOpen] = useState('calendario'); // pill aperta nella guida
 
@@ -1579,6 +1614,11 @@ function App() {
   useEffect(() => {
     const SM = window.SyncMerge;
     const st = syncStateRef.current;
+
+    // Copia di sicurezza locale del giorno, prima di registrare la modifica:
+    // così contiene lo stato com'era all'inizio della giornata.
+    snapLocaleSalva(st, toDateStr(new Date()));
+
     if (SM && !suppressPushRef.current) {
       const prima = metaRef.current.flat || {};
       const nuovo = SM.bump(st, metaRef.current, Date.now());
@@ -1985,24 +2025,41 @@ function App() {
   };
 
   // ---------- Ripristino di emergenza (snapshot giornalieri) ----------
+  // Elenco dei salvataggi: PRIMA quelli dentro il telefono (ci sono sempre,
+  // anche al campo senza linea), poi quelli nel cloud se si è collegati.
   const openRestore = async () => {
+    const locali = Object.keys(snapLocaliLeggi()).sort().reverse().map((id) => ({ id, dove: 'locale' }));
     const CS = window.CloudSync;
-    if (!CS || !CS.isConnected || !CS.isConnected()) {
-      window.alert('Serve la connessione al cloud per il ripristino. Riprova quando c\'è linea.');
+    let cloudIds = [];
+    if (CS && CS.isConnected && CS.isConnected()) {
+      try { cloudIds = await CS.listSnapshots(); } catch (e) { cloudIds = []; }
+    }
+    const soloCloud = cloudIds.filter((id) => !locali.some((l) => l.id === id)).map((id) => ({ id, dove: 'cloud' }));
+    const tutte = locali.concat(soloCloud).sort((a, b) => b.id.localeCompare(a.id));
+    if (!tutte.length) {
+      window.alert('Nessun salvataggio disponibile. Se ne crea uno al giorno, dal primo utilizzo della giornata.');
       return;
     }
-    const ids = await CS.listSnapshots();
-    if (!ids.length) {
-      window.alert('Nessun salvataggio automatico disponibile (se ne crea uno al giorno).');
-      return;
-    }
-    setSnapList(ids);
+    setSnapList(tutte);
   };
 
-  const restoreSnapshot = async (id) => {
-    if (!window.confirm(`Ripristinare i dati salvati il ${id}?\nI dati attuali verranno sostituiti su TUTTI i dispositivi connessi.`)) return;
-    const CS = window.CloudSync;
-    const json = await CS.getSnapshot(id);
+  const restoreSnapshot = async (voce) => {
+    const id = typeof voce === 'string' ? voce : voce.id;
+    const dove = typeof voce === 'string' ? 'cloud' : voce.dove;
+    if (!window.confirm(
+      `Ripristinare i dati salvati il ${id}?\n\n` +
+      'I dati attuali verranno sostituiti su TUTTI i dispositivi connessi. ' +
+      'Quello che è stato fatto dopo quella data andrà perso.\n\n' +
+      'Se il problema è una sincronizzazione andata male, guarda prima ' +
+      'Impostazioni → Diagnostica: spesso basta "Annulla la sincronizzazione".'
+    )) return;
+    let json = null;
+    if (dove === 'locale') {
+      json = snapLocaliLeggi()[id] || null;
+    } else {
+      const CS = window.CloudSync;
+      if (CS && CS.isConnected && CS.isConnected()) json = await CS.getSnapshot(id);
+    }
     if (!json) { window.alert('Impossibile leggere questo salvataggio.'); return; }
     try {
       const d = JSON.parse(json);
@@ -2623,6 +2680,27 @@ function App() {
       version: 6, exportedAt: new Date().toISOString(),
       members, campData, purchases, gear, settled, equipment, toBuy, sepDays, receipts,
     });
+    // Serve al promemoria serale per sapere che oggi è già stato fatto.
+    try { localStorage.setItem(BACKUP_KEY, toDateStr(new Date())); } catch (e) { /* niente */ }
+    setBackupOggi(toDateStr(new Date()));
+  };
+
+  // ---------- Promemoria del backup serale ----------
+  // Le copie interne proteggono dagli errori dentro l'app; il file protegge da
+  // telefono perso, rotto o svuotato. Quello richiede un gesto umano — il
+  // browser non può scrivere un file senza conferma — quindi glielo si ricorda.
+  // Compare SOLO nei giorni del campo, di sera, e solo se oggi c'è stato
+  // davvero qualcosa da salvare: se non hai toccato niente non ha senso.
+  const promemoriaBackup = () => {
+    const oggi = toDateStr(new Date());
+    if (oggi < CAMP_START || oggi > CAMP_END) return null;   // solo durante il campo
+    if (new Date().getHours() < 20) return null;             // solo di sera
+    if (backupOggi === oggi) return null;                    // già fatto (o rimandato)
+    // "Qualcosa da salvare" = modifiche fatte OGGI su QUESTO telefono.
+    const inizio = parseDate(oggi).getTime();
+    const modifiche = logLeggi().filter((r) => r.o === 'io' && r.at >= inizio).length;
+    if (modifiche === 0) return null;
+    return modifiche;
   };
 
   const importData = (e) => {
@@ -3070,6 +3148,40 @@ function App() {
           <button onClick={dismissInstallHint} aria-label="Chiudi avviso" className="text-[#5C4A3C] font-bold px-1 shrink-0">&times;</button>
         </div>
       )}
+
+      {/* Promemoria del backup serale, nei giorni del campo. */}
+      {(() => {
+        const modifiche = promemoriaBackup();
+        if (!modifiche) return null;
+        return (
+          <div className="bg-[#5C4A3C]/12 border-y-2 border-[#5C4A3C]/40 px-4 py-3">
+            <div className="flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">🎒</span>
+              <div className="min-w-0 flex-grow">
+                <p className="text-[11px] text-[#5C4A3C] leading-snug">
+                  <span className="font-bold">Fine giornata.</span> Oggi hai fatto {modifiche} {modifiche === 1 ? 'modifica' : 'modifiche'}.
+                  Salva il file di backup: se il telefono si perde o si rompe, è l'unica copia che resta.
+                </p>
+                <div className="flex gap-2 mt-2">
+                  <button onClick={exportData} className="px-3 py-1.5 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide">
+                    Salva il backup
+                  </button>
+                  <button
+                    onClick={() => {
+                      const oggi = toDateStr(new Date());
+                      try { localStorage.setItem(BACKUP_KEY, oggi); } catch (e) { /* niente */ }
+                      setBackupOggi(oggi);
+                    }}
+                    className="px-3 py-1.5 bg-white border border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide"
+                  >
+                    Ho già fatto
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Memoria del telefono piena: la cronologia delle modifiche non si
           salva più, e alla riapertura questo telefono perderebbe i confronti
@@ -5510,14 +5622,20 @@ function App() {
         <div onClick={() => setSnapList(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl">
             <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">Ripristina un salvataggio</h3>
-            <p className="text-[10px] text-gray-500">Copie automatiche giornaliere. Scegli il giorno a cui tornare.</p>
-            {snapList.map((id) => (
+            <p className="text-[10px] text-gray-500">
+              Copie automatiche giornaliere: una al giorno, scattata al primo utilizzo.
+              Quelle <span className="font-bold">sul telefono</span> ci sono anche senza linea.
+            </p>
+            {snapList.map((s) => (
               <button
-                key={id}
-                onClick={() => restoreSnapshot(id)}
-                className="w-full py-2.5 bg-[#F0F4F1] border border-[#8F9E8B]/40 rounded text-sm font-bold text-[#2D392C] hover:bg-[#E2EAE4]"
+                key={s.dove + s.id}
+                onClick={() => restoreSnapshot(s)}
+                className="w-full py-2.5 px-3 bg-[#F0F4F1] border border-[#8F9E8B]/40 rounded text-sm font-bold text-[#2D392C] hover:bg-[#E2EAE4] flex items-center justify-between gap-2"
               >
-                {parseDate(id).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' })}
+                <span className="truncate">{parseDate(s.id).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' })}</span>
+                <span className="text-[8px] uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-white border border-[#8F9E8B]/40 text-gray-500">
+                  {s.dove === 'locale' ? 'sul telefono' : 'cloud'}
+                </span>
               </button>
             ))}
             <button onClick={() => setSnapList(null)} className="w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700">Annulla</button>

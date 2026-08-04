@@ -182,8 +182,21 @@ preparazione** e **offline al campo**, dove non c'è linea.
   ieri non c'era: lo lascia in elenco azzerato. Toglierlo genererebbe una lapide
   che cancella quella presenza su *tutti* i telefoni, anche se qualcun altro
   l'aveva appena segnata.
-- **Snapshot giornaliero** automatico + "Ripristino di emergenza" nella scheda
-  Dati. In più, backup manuale **Esporta/Importa** su file JSON.
+- **Copie di sicurezza, tre strati**:
+  1. **Sul telefono, automatiche**: una copia dello stato al giorno, scattata al
+     primo utilizzo (quindi contiene la situazione *prima* dei pasticci di
+     oggi), ultimi 7 giorni, senza foto. Si fanno **anche in modalità aereo**:
+     è ciò che rende il **"Ripristino di emergenza" utilizzabile al campo**.
+     Prima gli snapshot stavano solo su Firestore e il ripristino rispondeva
+     "serve la connessione": nei giorni che contano non esisteva alcuna rete.
+  2. **Nel cloud, automatiche**: snapshot giornaliero in
+     `camps/<codice>/snapshots/<data>`, ultimi 10 giorni, quando c'è linea.
+  3. **Su file, a mano**: *Esporta/Importa* JSON (foto comprese). È l'unica che
+     sopravvive a un telefono perso, rotto o svuotato, e richiede un gesto umano
+     perché il browser non può scrivere un file senza conferma. Per questo, nei
+     **giorni del campo**, dopo le 20 compare un promemoria — ma **solo se quel
+     giorno sono state fatte davvero delle modifiche su quel telefono**: se non
+     hai toccato niente, non c'è niente da salvare e non compare nulla.
 - **Chiusura del campo** (Spese Totali → Dati): archivia tutto (file scaricato
   con le foto + copia nel cloud in `camps/<codice>/archives/<id>`), poi azzera
   membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e
