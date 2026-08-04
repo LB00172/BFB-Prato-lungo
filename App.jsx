@@ -38,7 +38,14 @@ const RESCUE_KEY = 'cambusa_rescue';
 // modalità aereo. Le foto restano fuori: hanno già il loro posto e
 // riempirebbero lo spazio.
 const SNAP_KEY = 'cambusa_snap_locali';
-const SNAP_GIORNI = 7;
+const SNAP_QUANTE = 14;                  // 7 giorni × 2 fasce
+const SNAP_SPAZIO = 600 * 1024;          // tetto di memoria per l'insieme
+
+// Due fasce al giorno. L'app gira solo quando è aperta, quindi non può
+// "svegliarsi" a mezzanotte: la copia della fascia si fa al PRIMO utilizzo
+// dentro quella fascia. In pratica: una copia di come stavano le cose la
+// mattina, e una di come stavano a mezzogiorno.
+const snapFascia = (d) => `${toDateStr(d)}T${d.getHours() < 12 ? '00' : '12'}`;
 
 const snapLocaliLeggi = () => {
   try {
@@ -47,18 +54,41 @@ const snapLocaliLeggi = () => {
   } catch (e) { return {}; }
 };
 
-// Una copia al giorno, la PRIMA: è quella scattata prima dei pasticci di
-// oggi, cioè esattamente quella a cui si vuole tornare.
-const snapLocaleSalva = (stato, giorno) => {
-  const tutte = snapLocaliLeggi();
-  if (tutte[giorno]) return false;
-  tutte[giorno] = JSON.stringify(stato);
-  // Si tengono gli ultimi giorni: oltre, è peso morto nella memoria.
-  Object.keys(tutte).sort().slice(0, Math.max(0, Object.keys(tutte).length - SNAP_GIORNI))
-    .forEach((k) => { delete tutte[k]; });
-  try { localStorage.setItem(SNAP_KEY, JSON.stringify(tutte)); return true; }
-  catch (e) { return false; }
+// Le copie vecchie si buttano per numero E per spazio occupato: in un
+// telefono con poca memoria libera è più importante non riempire lo spazio
+// che tenere sette giorni di storia.
+const snapPota = (tutte) => {
+  let chiavi = Object.keys(tutte).sort();
+  while (chiavi.length > SNAP_QUANTE) { delete tutte[chiavi[0]]; chiavi = chiavi.slice(1); }
+  let peso = chiavi.reduce((s, k) => s + (tutte[k].dati || '').length, 0);
+  while (peso > SNAP_SPAZIO && chiavi.length > 2) {
+    peso -= (tutte[chiavi[0]].dati || '').length;
+    delete tutte[chiavi[0]];
+    chiavi = chiavi.slice(1);
+  }
+  return tutte;
 };
+
+const snapLocaleSalva = (stato, fascia, quando) => {
+  const tutte = snapLocaliLeggi();
+  if (tutte[fascia]) return false;
+  tutte[fascia] = { at: quando || Date.now(), dati: JSON.stringify(stato) };
+  snapPota(tutte);
+  // Se la memoria è piena si butta la copia più vecchia e si riprova: meglio
+  // perdere la storia lontana che restare senza la copia di adesso.
+  for (let tentativi = 0; tentativi < 4; tentativi++) {
+    try { localStorage.setItem(SNAP_KEY, JSON.stringify(tutte)); return true; }
+    catch (e) {
+      const chiavi = Object.keys(tutte).sort();
+      if (chiavi.length <= 1) return false;
+      delete tutte[chiavi[0]];
+    }
+  }
+  return false;
+};
+
+// Legge una copia, accettando anche il vecchio formato (solo testo).
+const snapLocaleDati = (v) => (v && typeof v === 'object' ? v.dati : v) || null;
 
 // ---------- Backup su file: quando è stato fatto l'ultimo ----------
 const BACKUP_KEY = 'cambusa_backup_data';
@@ -1272,6 +1302,8 @@ function App() {
   // voce). Al primo avvio i dati già presenti restano "senza data": qualsiasi
   // modifica altrui, essendo datata, ha la precedenza.
   const spazioPienoRef = useRef(false);
+  // Stato com'era prima dell'ultima modifica: serve alle copie di sicurezza.
+  const statoPrecedenteRef = useRef(null);
   const metaRef = useRef(null);
   if (metaRef.current === null) {
     const saved = load(SYNC_META_KEY, null);
@@ -1615,9 +1647,14 @@ function App() {
     const SM = window.SyncMerge;
     const st = syncStateRef.current;
 
-    // Copia di sicurezza locale del giorno, prima di registrare la modifica:
-    // così contiene lo stato com'era all'inizio della giornata.
-    snapLocaleSalva(st, toDateStr(new Date()));
+    // Copia di sicurezza locale della fascia (mattina/pomeriggio). Si salva lo
+    // stato PRECEDENTE, non quello appena modificato: la copia deve contenere
+    // com'erano le cose all'inizio della mezza giornata, cioè il punto a cui
+    // si vuole tornare. Salvando quello attuale ci finirebbe dentro anche la
+    // modifica che ha fatto scattare la copia.
+    const ora = new Date();
+    snapLocaleSalva(statoPrecedenteRef.current || st, snapFascia(ora), ora.getTime());
+    statoPrecedenteRef.current = st;
 
     if (SM && !suppressPushRef.current) {
       const prima = metaRef.current.flat || {};
@@ -2028,7 +2065,9 @@ function App() {
   // Elenco dei salvataggi: PRIMA quelli dentro il telefono (ci sono sempre,
   // anche al campo senza linea), poi quelli nel cloud se si è collegati.
   const openRestore = async () => {
-    const locali = Object.keys(snapLocaliLeggi()).sort().reverse().map((id) => ({ id, dove: 'locale' }));
+    const salvate = snapLocaliLeggi();
+    const locali = Object.keys(salvate).sort().reverse()
+      .map((id) => ({ id, dove: 'locale', at: (salvate[id] && salvate[id].at) || 0 }));
     const CS = window.CloudSync;
     let cloudIds = [];
     if (CS && CS.isConnected && CS.isConnected()) {
@@ -2046,8 +2085,9 @@ function App() {
   const restoreSnapshot = async (voce) => {
     const id = typeof voce === 'string' ? voce : voce.id;
     const dove = typeof voce === 'string' ? 'cloud' : voce.dove;
+    const quando = id.slice(11) === '00' ? ' (mattina)' : id.slice(11) === '12' ? ' (pomeriggio)' : '';
     if (!window.confirm(
-      `Ripristinare i dati salvati il ${id}?\n\n` +
+      `Ripristinare la copia del ${id.slice(0, 10)}${quando}?\n\n` +
       'I dati attuali verranno sostituiti su TUTTI i dispositivi connessi. ' +
       'Quello che è stato fatto dopo quella data andrà perso.\n\n' +
       'Se il problema è una sincronizzazione andata male, guarda prima ' +
@@ -2055,7 +2095,7 @@ function App() {
     )) return;
     let json = null;
     if (dove === 'locale') {
-      json = snapLocaliLeggi()[id] || null;
+      json = snapLocaleDati(snapLocaliLeggi()[id]);
     } else {
       const CS = window.CloudSync;
       if (CS && CS.isConnected && CS.isConnected()) json = await CS.getSnapshot(id);
@@ -5623,21 +5663,32 @@ function App() {
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl">
             <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">Ripristina un salvataggio</h3>
             <p className="text-[10px] text-gray-500">
-              Copie automatiche giornaliere: una al giorno, scattata al primo utilizzo.
+              Copie automatiche: due al giorno sul telefono (una dopo mezzanotte e una dopo
+              mezzogiorno, alla prima apertura), più una al giorno nel cloud.
               Quelle <span className="font-bold">sul telefono</span> ci sono anche senza linea.
             </p>
-            {snapList.map((s) => (
-              <button
-                key={s.dove + s.id}
-                onClick={() => restoreSnapshot(s)}
-                className="w-full py-2.5 px-3 bg-[#F0F4F1] border border-[#8F9E8B]/40 rounded text-sm font-bold text-[#2D392C] hover:bg-[#E2EAE4] flex items-center justify-between gap-2"
-              >
-                <span className="truncate">{parseDate(s.id).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' })}</span>
-                <span className="text-[8px] uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-white border border-[#8F9E8B]/40 text-gray-500">
-                  {s.dove === 'locale' ? 'sul telefono' : 'cloud'}
-                </span>
-              </button>
-            ))}
+            {snapList.map((s) => {
+              const giorno = parseDate(s.id.slice(0, 10)).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' });
+              const fascia = s.id.slice(11) === '00' ? 'mattina' : s.id.slice(11) === '12' ? 'pomeriggio' : '';
+              const ora = s.at ? new Date(s.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
+              return (
+                <button
+                  key={s.dove + s.id}
+                  onClick={() => restoreSnapshot(s)}
+                  className="w-full py-2 px-3 bg-[#F0F4F1] border border-[#8F9E8B]/40 rounded text-left text-[#2D392C] hover:bg-[#E2EAE4] flex items-center justify-between gap-2"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold truncate">{giorno}</span>
+                    <span className="block text-[9px] text-gray-500">
+                      {fascia ? `${fascia}${ora ? ` · copia delle ${ora}` : ''}` : 'copia del cloud'}
+                    </span>
+                  </span>
+                  <span className="text-[8px] uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-white border border-[#8F9E8B]/40 text-gray-500">
+                    {s.dove === 'locale' ? 'sul telefono' : 'cloud'}
+                  </span>
+                </button>
+              );
+            })}
             <button onClick={() => setSnapList(null)} className="w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700">Annulla</button>
           </div>
         </div>

@@ -183,12 +183,17 @@ preparazione** e **offline al campo**, dove non c'è linea.
   che cancella quella presenza su *tutti* i telefoni, anche se qualcun altro
   l'aveva appena segnata.
 - **Copie di sicurezza, tre strati**:
-  1. **Sul telefono, automatiche**: una copia dello stato al giorno, scattata al
-     primo utilizzo (quindi contiene la situazione *prima* dei pasticci di
-     oggi), ultimi 7 giorni, senza foto. Si fanno **anche in modalità aereo**:
-     è ciò che rende il **"Ripristino di emergenza" utilizzabile al campo**.
-     Prima gli snapshot stavano solo su Firestore e il ripristino rispondeva
-     "serve la connessione": nei giorni che contano non esisteva alcuna rete.
+  1. **Sul telefono, automatiche**: **due al giorno**, una dopo mezzanotte e una
+     dopo mezzogiorno. L'app gira solo quando è aperta, quindi la copia della
+     fascia si fa al **primo utilizzo dentro quella fascia**, e contiene lo
+     stato *precedente* alla modifica che l'ha fatta scattare: è esattamente il
+     punto a cui si vuole tornare. Si tengono le ultime 14 (7 giorni), con un
+     tetto di 600 KB complessivi — se la memoria è poca si butta la più vecchia
+     e si riprova, perché avere la copia di adesso conta più di avere la storia
+     lontana. Niente foto. Si fanno **anche in modalità aereo**: è ciò che rende
+     il **"Ripristino di emergenza" utilizzabile al campo**. Prima gli snapshot
+     stavano solo su Firestore e il ripristino rispondeva "serve la
+     connessione": nei giorni che contano non esisteva alcuna rete.
   2. **Nel cloud, automatiche**: snapshot giornaliero in
      `camps/<codice>/snapshots/<data>`, ultimi 10 giorni, quando c'è linea.
   3. **Su file, a mano**: *Esporta/Importa* JSON (foto comprese). È l'unica che
