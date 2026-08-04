@@ -21,10 +21,10 @@ class Dev {
   payload() {                         // ciò che viene spedito al cloud
     return Object.assign(clone(this.state), { _meta: { v: 2, rev: this.meta.rev, del: this.meta.del } });
   }
-  receive(payload) {                  // arriva lo stato dell'altro
+  receive(payload, now) {             // arriva lo stato dell'altro
     const remote = clone(payload);
     const rmeta = remote._meta; delete remote._meta;
-    const res = SM.merge(this.state, this.meta, remote, rmeta);
+    const res = SM.merge(this.state, this.meta, remote, rmeta, now);
     this.state = res.state;
     this.meta = res.meta;
     this.pushed = !SM.sameAs(res.meta, remote, rmeta);   // deve rimandare?
@@ -217,6 +217,108 @@ console.log('12) Lapidi: pulizia dopo 90 giorni');
   ok(Object.keys(A.meta.del).length === 1, 'lapide creata');
   A.edit((s) => { s.purchases.push({ id: 'p1', name: 'Y', price: 1 }); }, now);
   ok(Object.keys(A.meta.del).length === 0, 'lapide vecchia rimossa, ne restano ' + Object.keys(A.meta.del).length);
+}
+
+console.log('13) Telefono con l\'orologio INDIETRO: le sue modifiche valgono lo stesso');
+{
+  // A ha l'ora giusta, B è indietro di un mese. B vede la modifica di A e poi
+  // la corregge: la sua correzione DEVE vincere, anche se il suo orologio
+  // marcherebbe una data più vecchia.
+  const base = { members: [{ id: 'u1', name: 'Lorenzo' }], campData: {}, purchases: [{ id: 'p1', name: 'Pasta', price: 10 }], gear: [], settled: [], equipment: [], toBuy: [] };
+  const ora = Date.parse('2026-08-03T12:00:00Z');
+  const indietro = ora - 2 * 24 * 3600 * 1000;   // due giorni indietro
+
+  const A = new Dev('A', clone(base));
+  const B = new Dev('B', clone(base));
+
+  A.edit((s) => { s.purchases[0].price = 20; }, ora);
+  B.receive(A.payload(), indietro);
+  ok(B.state.purchases[0].price === 20, 'B riceve la modifica di A');
+
+  // B corregge col SUO orologio, indietro di un mese.
+  B.edit((s) => { s.purchases[0].price = 25; }, indietro);
+  ok(B.meta.hi > ora, 'B data la sua modifica dopo quella che ha visto (hi=' + B.meta.hi + ')');
+
+  A.receive(B.payload(), ora);
+  ok(A.state.purchases[0].price === 25, 'la correzione di B vince, malgrado l\'orologio indietro');
+}
+
+console.log('14) Telefono con l\'orologio AVANTI: non trascina l\'orologio degli altri');
+{
+  const base = { members: [], campData: {}, purchases: [{ id: 'p1', name: 'Pasta', price: 10 }], gear: [], settled: [], equipment: [], toBuy: [] };
+  const ora = Date.parse('2026-08-03T12:00:00Z');
+  const avanti = ora + 365 * 24 * 3600 * 1000;   // un anno nel futuro
+
+  const A = new Dev('A', clone(base));
+  const B = new Dev('B', clone(base));
+
+  B.edit((s) => { s.purchases[0].price = 99; }, avanti);
+  A.receive(B.payload(), ora);
+  ok(A.state.purchases[0].price === 99, 'la modifica arriva comunque: non si butta via niente');
+  ok(A.meta.hi < ora + 8 * 24 * 3600 * 1000, 'ma A non adotta un orologio assurdo (hi=' + A.meta.hi + ')');
+
+  // E soprattutto: A e B restano d'accordo. Un telefono con l'ora sbagliata
+  // può vincere un confronto, ma non deve spaccare la sincronizzazione.
+  A.edit((s) => { s.purchases[0].price = 12; }, ora + 60000);
+  B.receive(A.payload(), avanti);
+  A.receive(B.payload(), ora);
+  ok(A.state.purchases[0].price === B.state.purchases[0].price,
+    'i due telefoni restano d\'accordo (' + A.state.purchases[0].price + ' / ' + B.state.purchases[0].price + ')');
+  B.receive(A.payload(), avanti);
+  ok(A.state.purchases[0].price === B.state.purchases[0].price, 'e non si rimbalzano le versioni');
+}
+
+console.log('15) Chi torna online non riporta indietro i dati degli altri');
+{
+  // A resta offline tre giorni con dati vecchi; nel frattempo B lavora.
+  const base = {
+    members: [{ id: 'u1', name: 'Lorenzo' }], campData: {},
+    purchases: [{ id: 'p1', name: 'Pasta', price: 10 }],
+    gear: [], settled: [], equipment: [], toBuy: [],
+  };
+  const t0 = Date.parse('2026-08-03T12:00:00Z');
+  const A = new Dev('A', clone(base));
+  const B = new Dev('B', clone(base));
+
+  B.edit((s) => { s.purchases.push({ id: 'p2', name: 'Birra', price: 20 }); }, t0 + 1000);
+  B.edit((s) => { s.members.push({ id: 'u2', name: 'Bruno' }); }, t0 + 2000);
+
+  // A rientra: non ha toccato niente, ha solo dati vecchi.
+  A.receive(B.payload(), t0 + 5000);
+  ok(A.names('purchases').join() === 'Birra,Pasta', 'A riceve tutto il lavoro di B');
+  ok(A.pushed === false, 'e non rimanda indietro niente: non ha nulla da aggiungere');
+
+  // E se A avesse anche lavorato offline, le due cose si sommano.
+  const C = new Dev('C', clone(base));
+  C.edit((s) => { s.purchases.push({ id: 'p3', name: 'Carbone', price: 5 }); }, t0 + 500);
+  C.receive(B.payload(), t0 + 5000);
+  ok(C.names('purchases').join() === 'Birra,Carbone,Pasta', 'niente si perde da nessuna delle due parti');
+  ok(C.pushed === true, 'e C ripubblica l\'unione');
+}
+
+console.log('16) Telefono con l\'app VECCHIA (dati senza cronologia) non cancella nulla');
+{
+  // È il caso che aveva riportato indietro il campo: un telefono con una
+  // versione vecchia pubblica il suo stato senza date. Trattato come "voci di
+  // data ignota", non può vincere su niente e non può cancellare niente.
+  const t0 = Date.parse('2026-08-03T12:00:00Z');
+  const B = new Dev('B', {
+    members: [{ id: 'u1', name: 'Lorenzo' }], campData: {},
+    purchases: [{ id: 'p1', name: 'Pasta', price: 10 }],
+    gear: [], settled: [], equipment: [], toBuy: [],
+  });
+  B.edit((s) => { s.purchases.push({ id: 'p2', name: 'Birra', price: 20 }); }, t0);
+  B.edit((s) => { s.purchases[0].price = 15; }, t0 + 1000);
+
+  // Il vecchio manda solo la Pasta a 10, senza _meta.
+  const vecchio = {
+    members: [{ id: 'u1', name: 'Lorenzo' }], campData: {},
+    purchases: [{ id: 'p1', name: 'Pasta', price: 10 }],
+    gear: [], settled: [], equipment: [], toBuy: [],
+  };
+  const res = SM.merge(B.state, B.meta, vecchio, SM.emptyMeta(), t0 + 2000);
+  ok(res.state.purchases.length === 2, 'la Birra non sparisce');
+  ok(res.state.purchases.find((x) => x.id === 'p1').price === 15, 'il prezzo aggiornato non torna indietro');
 }
 
 console.log('\n' + checks + ' controlli — ' + (fails ? fails + ' PROBLEMI' : 'nessun problema'));

@@ -1,0 +1,155 @@
+// Registro delle modifiche + comportamento di chi lavora offline e torna
+// online. Il cloud è finto: si controlla cosa l'app spedisce e cosa fa con
+// quello che riceve.
+const { apri, ok, fine } = require('../lib/app');
+
+function cloudFinto() {
+  Object.defineProperty(window, 'CloudSync', {
+    configurable: true,
+    get() { return window.__cs; },
+    set(v) {
+      window.__pushes = [];
+      window.__cs = Object.assign({}, v, {
+        isConfigured: () => true,
+        isConnected: () => !!window.__connesso,
+        savedCode: () => 'TEST',
+        connect: (cfg, code, cb) => {
+          window.__remoteCb = cb;
+          window.__connesso = true;
+          if (window.__status) window.__status({ connected: true, status: 'connected', code });
+          return Promise.resolve();
+        },
+        onStatus: (cb) => { window.__status = cb; cb({ connected: true, status: 'connected', code: 'TEST' }); },
+        onReceipts: () => {}, onWeather: () => {},
+        pushState: (obj) => { window.__pushes.push(JSON.parse(JSON.stringify(obj))); },
+        putReceipt: () => {}, deleteReceipt: () => {},
+        putArchive: () => Promise.resolve(true), listArchives: () => Promise.resolve([]),
+        listSnapshots: () => Promise.resolve([]), listScores: () => Promise.resolve([]),
+        submitScore: () => Promise.resolve(),
+        watchPhotos: () => () => {}, listPhotos: () => Promise.resolve([]),
+        archivePhotos: () => Promise.resolve(0), putPhoto: () => Promise.resolve(true),
+        getPhotoFull: () => Promise.resolve(null), deletePhoto: () => Promise.resolve(true),
+      });
+    },
+  });
+}
+
+const registro = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('cambusa_registro') || '[]'));
+const spese = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('cambusa_purchases') || '[]').map((x) => x.name).sort());
+
+(async () => {
+  const { browser, page: p, menu, errori } = await apri({ initScript: cloudFinto });
+
+  // --- Qualche modifica locale ---
+  await menu('Membri');
+  for (const n of ['Lorenzo', 'Bruno']) {
+    await p.fill('input[placeholder="Nome e cognome"]', n);
+    await p.locator('button', { hasText: /^\+$/ }).first().click();
+    await p.waitForTimeout(150);
+  }
+
+  let reg = await registro(p);
+  ok(`le modifiche locali finiscono nel registro (${reg.length})`, reg.length >= 2);
+  ok('sono marcate come fatte qui', reg.every((r) => r.o === 'io'));
+  ok('hanno data e ora', reg.every((r) => typeof r.at === 'number' && r.at > 0));
+  ok('riguardano i membri', reg.some((r) => r.p.indexOf('m|') === 0));
+
+  // --- Una modifica in arrivo dal cloud ---
+  await p.evaluate(() => {
+    const membri = JSON.parse(localStorage.getItem('cambusa_members') || '[]');
+    window.__remoteCb({
+      members: membri, campData: {}, gear: [], settled: [], equipment: [], toBuy: [], sepDays: [],
+      purchases: [{ id: 'remota1', name: 'Birra', price: 20, type: 'bevande', buyer: 'Bruno', at: Date.now() }],
+      _meta: { v: 2, rev: { 'p|remota1': Date.now() }, del: {} },
+    });
+  });
+  await p.waitForTimeout(700);
+
+  reg = await registro(p);
+  ok('anche ciò che arriva dagli altri viene registrato', reg.some((r) => r.o === 'cloud'));
+  ok('la voce arrivata è la spesa remota', reg.some((r) => r.o === 'cloud' && r.p === 'p|remota1'));
+
+  // --- Il registro si vede in Impostazioni ---
+  await menu('Impostazioni');
+  await p.waitForTimeout(400);
+  ok('la riga "Registro modifiche" c\'è ed è chiusa', /registro modifiche/i.test(await p.locator('main').innerText()));
+  ok('il contenuto non è in vista finché non si apre', (await p.locator('button', { hasText: 'Svuota' }).count()) === 0);
+  await p.locator('button', { hasText: 'Registro modifiche' }).first().click();
+  await p.waitForTimeout(400);
+  const testo = await p.locator('main').innerText();
+  ok('aprendola compaiono le voci', /membri/i.test(testo) && /lista della spesa/i.test(testo));
+  ok('si distingue cosa è stato fatto qui e cosa è arrivato', /qui/i.test(testo) && /sync/i.test(testo));
+  ok('c\'è l\'orario', /\d{2}:\d{2}/.test(testo));
+
+  const [scarico] = await Promise.all([
+    p.waitForEvent('download', { timeout: 15000 }).catch(() => null),
+    p.locator('button', { hasText: 'Esporta il registro' }).click(),
+  ]);
+  ok('il registro si esporta come file: ' + (scarico ? scarico.suggestedFilename() : 'NO'),
+    !!scarico && /^registro-\d{4}-\d{2}-\d{2}\.txt$/.test(scarico.suggestedFilename()));
+
+  // --- Chi lavora offline e torna online ---
+  // Si stacca la linea, si lavora, poi arriva lo stato del cloud: il lavoro
+  // offline deve sopravvivere E vincere sulle versioni più vecchie.
+  await menu('Lista della Spesa');
+  await p.evaluate(() => { window.__connesso = false; if (window.__status) window.__status({ connected: false, status: 'idle', code: 'TEST' }); });
+  await p.waitForTimeout(300);
+
+  await p.locator('button', { hasText: 'Acquistato' }).first().click();
+  await p.waitForTimeout(300);
+  { const m = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await m.count()) { await m.first().click(); await p.waitForTimeout(350); } }
+  await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Carbone');
+  await p.locator('input[placeholder="0.00"]').first().fill('7');
+  await p.locator('button', { hasText: /Salva/ }).first().click();
+  await p.waitForTimeout(500);
+
+  ok('offline la spesa si registra lo stesso', (await spese(p)).indexOf('Carbone') >= 0);
+
+  // Torna la linea e arriva uno stato del cloud VECCHIO, che non conosce il
+  // Carbone e ha una versione superata della Birra.
+  await p.evaluate(() => {
+    window.__connesso = true;
+    if (window.__status) window.__status({ connected: true, status: 'connected', code: 'TEST' });
+    const membri = JSON.parse(localStorage.getItem('cambusa_members') || '[]');
+    window.__remoteCb({
+      members: membri, campData: {}, gear: [], settled: [], equipment: [], toBuy: [], sepDays: [],
+      purchases: [{ id: 'remota1', name: 'Birra', price: 20, type: 'bevande', buyer: 'Bruno', at: 1 }],
+      _meta: { v: 2, rev: { 'p|remota1': Date.now() - 3600000 }, del: {} },
+    });
+  });
+  await p.waitForTimeout(800);
+
+  const dopo = await spese(p);
+  ok(`il lavoro offline non viene cancellato (${dopo.join(', ')})`, dopo.indexOf('Carbone') >= 0 && dopo.indexOf('Birra') >= 0);
+
+  const ultimo = await p.evaluate(() => (window.__pushes || [])[window.__pushes.length - 1] || null);
+  ok('e viene ripubblicato agli altri', !!ultimo && (ultimo.purchases || []).some((x) => x.name === 'Carbone'));
+  ok('la cronologia spedita non contiene date a zero',
+    !!ultimo && Object.values(ultimo._meta.rev).every((v) => v > 0));
+
+  // --- Uno stato remoto identico non deve far rimbalzare niente ---
+  const primaPush = await p.evaluate(() => window.__pushes.length);
+  await p.evaluate(() => {
+    const u = window.__pushes[window.__pushes.length - 1];
+    window.__remoteCb(JSON.parse(JSON.stringify(u)));
+  });
+  await p.waitForTimeout(800);
+  const dopoPush = await p.evaluate(() => window.__pushes.length);
+  ok(`ricevere ciò che si è appena spedito non produce un altro invio (${primaPush} → ${dopoPush})`, dopoPush === primaPush);
+
+  // --- Un telefono con l'app VECCHIA non deve riportare indietro nulla ---
+  await p.evaluate(() => {
+    const membri = JSON.parse(localStorage.getItem('cambusa_members') || '[]');
+    // Nessun _meta: è quello che manda una versione precedente dell'app.
+    window.__remoteCb({
+      members: membri, campData: {}, gear: [], settled: [], equipment: [], toBuy: [], sepDays: [],
+      purchases: [{ id: 'remota1', name: 'Birra', price: 20, type: 'bevande', buyer: 'Bruno', at: 1 }],
+    });
+  });
+  await p.waitForTimeout(800);
+  const finale = await spese(p);
+  ok(`l'app vecchia non cancella il lavoro degli altri (${finale.join(', ')})`, finale.indexOf('Carbone') >= 0);
+
+  ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
+  await fine(browser);
+})().catch((e) => { console.error('FATAL', e.message); process.exit(1); });

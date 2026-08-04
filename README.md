@@ -80,6 +80,27 @@ preparazione** e **offline al campo**, dove non c'è linea.
   regola è identica sui due dispositivi, quindi la sincronizzazione converge
   senza rimbalzi. Senza questo, al campo (dove non c'è linea) il secondo
   telefono che si agganciava cancellava il lavoro del primo.
+- **Orologio logico**: le date verrebbero dall'orologio di ogni telefono, e un
+  telefono indietro perderebbe ogni confronto anche avendo ragione. Ogni
+  dispositivo tiene perciò `hi`, la data più alta che ha mai visto, e non marca
+  mai una modifica con una data inferiore: **una modifica fatta dopo aver visto
+  qualcosa batte sempre quel qualcosa**, che è la proprietà che serve davvero.
+  Le date oltre una settimana nel futuro non vengono adottate, così un telefono
+  con l'ora sbagliata non trascina in avanti l'orologio di tutti. Il freno vale
+  **solo** per l'orologio interno, mai per il confronto fra due voci: il
+  confronto dipende solo dai dati, altrimenti due telefoni con "adesso" diverso
+  deciderebbero in modo diverso e non convergerebbero più.
+- **Dati senza cronologia** (telefono fermo a una versione vecchia dell'app) non
+  vengono più presi per buoni: entrano nella fusione come voci "di data ignota",
+  quindi qualsiasi modifica datata ha la precedenza e nulla viene cancellato.
+  Prima qui si sovrascriveva tutto, e bastava un telefono rimasto indietro per
+  riportare l'intero campo a giorni prima.
+- **Registro delle modifiche** (Impostazioni, riga richiudibile): ogni
+  cambiamento con **data e ora**, la sezione a cui appartiene, la voce in
+  chiaro e se è stato fatto **qui** o è arrivato dalla **sincronizzazione**.
+  Raggruppato per giorno, esportabile come file di testo, tenuto sul telefono
+  (non si sincronizza) e limitato alle ultime 400 voci; battute ravvicinate
+  sulla stessa voce si uniscono in una riga sola.
 - **Galleria**: è l'unica parte dell'app che **vive solo nel cloud** e ha
   bisogno della linea, di proposito. Cento foto in `localStorage` (tetto ~5 MB)
   romperebbero il salvataggio di *tutto*, presenze e spese comprese; e al campo

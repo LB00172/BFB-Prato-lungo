@@ -37,6 +37,87 @@ const SYNC_META_KEY = 'cambusa_syncmeta';
 // delle voci: è quello che permette di annullarla con un tocco.
 const RESCUE_KEY = 'cambusa_rescue';
 
+// ---------- Registro delle modifiche ----------
+// Ogni cambiamento (fatto qui o arrivato dal cloud) finisce in un diario
+// locale con data e ora. Non ci sono utenti tracciati, quindi si registra
+// almeno DA DOVE arriva: "questo telefono" o "sincronizzazione". Serve a
+// rispondere alla domanda che ci siamo fatti dopo la perdita delle presenze:
+// chi ha cambiato cosa, e quando.
+const LOG_KEY = 'cambusa_registro';
+const LOG_MAX = 400; // oltre, si buttano le più vecchie
+const LOG_UNISCI = 60 * 1000; // stessa voce entro un minuto: si aggiorna
+
+const logLeggi = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+    return Array.isArray(v) ? v : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+// voci: [{ p: percorso, k: 'm' (modifica) | 'd' (cancellazione) }]
+const logScrivi = (voci, origine, now) => {
+  if (!voci || voci.length === 0) return;
+  const t = now || Date.now();
+  const reg = logLeggi();
+  voci.forEach(v => {
+    // Scrivere in una casella di testo produce una modifica per battuta:
+    // se la stessa voce è già stata registrata da poco, si aggiorna l'ora
+    // invece di riempire il registro di righe identiche.
+    const recente = reg.find(r => r.p === v.p && r.o === origine && r.k === v.k && t - r.at < LOG_UNISCI);
+    if (recente) {
+      recente.at = t;
+      return;
+    }
+    reg.unshift({
+      at: t,
+      p: v.p,
+      k: v.k,
+      o: origine
+    });
+  });
+  reg.sort((a, b) => b.at - a.at);
+  try {
+    localStorage.setItem(LOG_KEY, JSON.stringify(reg.slice(0, LOG_MAX)));
+  } catch (e) {/* spazio esaurito: il registro è la prima cosa sacrificabile */}
+};
+
+// Differenza fra due appiattimenti: cosa è nato/cambiato e cosa è sparito.
+const diffFlat = (prima, dopo) => {
+  const voci = [];
+  Object.keys(dopo).forEach(p => {
+    if (prima[p] !== dopo[p]) voci.push({
+      p,
+      k: 'm'
+    });
+  });
+  Object.keys(prima).forEach(p => {
+    if (!(p in dopo)) voci.push({
+      p,
+      k: 'd'
+    });
+  });
+  return voci;
+};
+
+// Sezione dell'app a cui appartiene un percorso: serve a raggruppare il
+// registro per area invece di mostrare una lista piatta di sigle.
+const SEZIONE_DI = {
+  m: 'Membri',
+  p: 'Lista della Spesa',
+  t: 'Da acquistare',
+  e: 'Attrezzatura',
+  g: 'Dotazioni',
+  s: 'Saldi',
+  x: 'Conto separato'
+};
+const sezioneDiPath = p => {
+  const parti = String(p).split('|');
+  if (parti[0] === 'c') return parti[2] === 'meals' ? 'Presenze' : parti[3] === 'note' ? 'Menù' : 'Calendario';
+  return SEZIONE_DI[parti[0]] || 'Altro';
+};
+
 // Nomi dei membri eliminati (id -> nome). Le presenze sono legate all'id, non
 // al nome: chi viene eliminato e riaggiunto prende un id nuovo e le sue vecchie
 // presenze restano orfane. Questo elenco serve a poterle chiamare per nome.
@@ -87,6 +168,7 @@ const descriviPath = (p, stato) => {
       if (parti[2] === 'meals') return `presenza di ${nomeMembro(parti[3])} — ${giorno(parti[1])}`;
       if (parti[3] === 'note') return `menù del ${giorno(parti[1])}`;
       if (parti[3] === 'appunti') return `note del ${giorno(parti[1])}`;
+      if (parti[3] === 'guestsNames') return `ospiti del ${giorno(parti[1])}`;
       return `${parti[3]} del ${giorno(parti[1])}`;
     case 'm':
       return voce('members', parti[1], 'membro');
@@ -1269,7 +1351,8 @@ function App() {
   const [azioniOpen, setAzioniOpen] = useState(false);
   // A chi riassegnare le presenze rimaste senza padrone (id orfano -> id membro).
   const [orfanoScelte, setOrfanoScelte] = useState({});
-  // Impostazioni: le due sezioni che si toccano una volta sola stanno chiuse.
+  // Impostazioni: le sezioni che si toccano una volta sola stanno chiuse.
+  const [logOpen, setLogOpen] = useState(false);
   const [bloccoOpen, setBloccoOpen] = useState(false);
   const [datiOpen, setDatiOpen] = useState(false);
   const [sepOpen, setSepOpen] = useState(false); // riga "Conto separato" aperta
@@ -1548,61 +1631,21 @@ function App() {
     const SM = window.SyncMerge;
     const rmeta = remote && remote._meta;
     const local = syncStateRef.current;
-
-    // Dispositivo con la versione vecchia (dati senza cronologia): si torna al
-    // comportamento di prima, cioè si prende quello che arriva.
-    if (!SM || !rmeta || rmeta.v !== SM.VERSION) {
-      suppressPushRef.current = true;
-      const next = {
-        ...local
-      };
-      if (Array.isArray(remote.members)) {
-        setMembers(remote.members);
-        next.members = remote.members;
-      }
-      if (remote.campData && typeof remote.campData === 'object') {
-        setCampData(remote.campData);
-        next.campData = remote.campData;
-      }
-      if (Array.isArray(remote.purchases)) {
-        setPurchases(remote.purchases);
-        next.purchases = remote.purchases;
-      }
-      if (Array.isArray(remote.gear)) {
-        setGear(remote.gear);
-        next.gear = remote.gear;
-      }
-      if (Array.isArray(remote.settled)) {
-        setSettled(remote.settled);
-        next.settled = remote.settled;
-      }
-      if (Array.isArray(remote.equipment)) {
-        setEquipment(remote.equipment);
-        next.equipment = remote.equipment;
-      }
-      if (Array.isArray(remote.toBuy)) {
-        setToBuy(remote.toBuy);
-        next.toBuy = remote.toBuy;
-      }
-      if (Array.isArray(remote.sepDays)) {
-        setSepDays(remote.sepDays);
-        next.sepDays = remote.sepDays;
-      }
-      if (SM) saveMeta({
-        flat: SM.flatten(next),
-        rev: metaRef.current.rev,
-        del: metaRef.current.del
-      });
-      setTimeout(() => {
-        suppressPushRef.current = false;
-      }, 0);
-      return;
-    }
+    if (!SM) return;
     const remoteState = {
       ...remote
     };
     delete remoteState._meta;
-    const res = SM.merge(local, metaRef.current, remoteState, rmeta);
+
+    // Dati senza cronologia (telefono fermo a una versione vecchia dell'app):
+    // NON si prendono per buoni. Entrano nella fusione come voci "di data
+    // ignota", quindi qualsiasi modifica datata — di chiunque — ha la
+    // precedenza, e le voci che quel telefono non ha non vengono cancellate
+    // (per cancellare serve una lapide, e lui non ne produce). Prima qui si
+    // sovrascriveva tutto: bastava un telefono rimasto indietro per riportare
+    // l'intero campo a giorni prima.
+    const metaRemota = rmeta && rmeta.v === SM.VERSION ? rmeta : SM.emptyMeta();
+    const res = SM.merge(local, metaRef.current, remoteState, metaRemota, Date.now());
 
     // FRENO DI SICUREZZA. Una fusione può togliere voci solo se dall'altra
     // parte c'è una cancellazione datata; è legittimo (qualcuno ha cancellato
@@ -1610,7 +1653,10 @@ function App() {
     // una spunta sbagliata cancellano il lavoro di tutti. Prima di applicarla
     // si mette da parte una copia di scorta, e se le voci perse sono tante lo
     // si dice, con un tasto per annullare.
-    const perse = Object.keys(SM.flatten(local)).filter(p => !(p in res.meta.flat));
+    // Registro: cosa è cambiato per effetto di questa sincronizzazione.
+    const primaFlat = SM.flatten(local);
+    logScrivi(diffFlat(primaFlat, res.meta.flat), 'cloud');
+    const perse = Object.keys(primaFlat).filter(p => !(p in res.meta.flat));
     if (perse.length > 0) {
       try {
         localStorage.setItem(RESCUE_KEY, JSON.stringify({
@@ -1642,6 +1688,25 @@ function App() {
     setTimeout(() => {
       suppressPushRef.current = false;
     }, 0);
+  };
+
+  // Il registro come file di testo: comodo da mandare quando si deve capire
+  // cosa è successo, senza doverlo leggere sullo schermo del telefono.
+  const esportaRegistro = () => {
+    const st = syncStateRef.current;
+    const righe = logLeggi().map(r => [new Date(r.at).toLocaleString('it-IT'), r.o === 'io' ? 'questo telefono' : 'sincronizzazione', r.k === 'd' ? 'cancellata' : 'modificata', sezioneDiPath(r.p), descriviPath(r.p, st), r.p].join('\t'));
+    const testo = `Registro modifiche — ${BRAND.appTitle}\nGenerato il ${new Date().toLocaleString('it-IT')}\n\n` + 'Data e ora\tOrigine\tAzione\tSezione\tVoce\tPercorso\n' + righe.join('\n') + '\n';
+    const blob = new Blob([testo], {
+      type: 'text/plain;charset=utf-8'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `registro-${toDateStr(new Date())}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
   // Annulla l'ultima sincronizzazione che ha tolto delle voci: rimette lo stato
@@ -1763,7 +1828,13 @@ function App() {
   useEffect(() => {
     const SM = window.SyncMerge;
     const st = syncStateRef.current;
-    if (SM && !suppressPushRef.current) saveMeta(SM.bump(st, metaRef.current, Date.now()));
+    if (SM && !suppressPushRef.current) {
+      const prima = metaRef.current.flat || {};
+      const nuovo = SM.bump(st, metaRef.current, Date.now());
+      // Registro: cosa ha cambiato QUESTO telefono.
+      logScrivi(diffFlat(prima, nuovo.flat), 'io');
+      saveMeta(nuovo);
+    }
     if (!cloudConnectedRef.current) return;
     if (suppressPushRef.current) return;
     const m = metaRef.current;
@@ -1788,7 +1859,6 @@ function App() {
     setCampData(prev => ({
       ...prev,
       [dateStr]: {
-        ...initialDayState(),
         ...(prev[dateStr] || {}),
         [field]: value
       }
@@ -1804,7 +1874,6 @@ function App() {
   const toggleMeal = (dateStr, memberId, mealType) => {
     setCampData(prev => {
       const day = {
-        ...initialDayState(),
         ...(prev[dateStr] || {})
       };
       const meals = {
@@ -1834,7 +1903,6 @@ function App() {
     if (members.length === 0) return;
     setCampData(prev => {
       const day = {
-        ...initialDayState(),
         ...(prev[dateStr] || {})
       };
       const meals = {
@@ -1996,7 +2064,6 @@ function App() {
     if (!window.confirm(`Copiare le presenze di ${nomeGiorno(prevStr)} su ${nomeGiorno(selectedDateStr)}?\n\n` + `Ieri: ${ieri.p} a pranzo, ${ieri.c} a cena.\n` + `Oggi diventa uguale: quello che c'è adesso (${oggi.p} a pranzo, ${oggi.c} a cena) viene sostituito, ` + 'anche sugli altri telefoni.')) return;
     setCampData(prev => {
       const day = {
-        ...initialDayState(),
         ...(prev[selectedDateStr] || {})
       };
       // SOVRASCRIVE le presenze di ieri su quelle di oggi, ma non CANCELLA le
@@ -3750,7 +3817,7 @@ function App() {
     value: getDayData(selectedDateStr).appunti || '',
     onChange: e => updateDayData(selectedDateStr, 'appunti', e.target.value),
     rows: 3,
-    placeholder: 'Legna da prendere al bosco\nTurno cucina: Bruno e Anna\nChiamare il rifugio',
+    placeholder: "Promemoria del giorno\u2026",
     className: "w-full p-3 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm leading-snug focus:outline-none focus:border-[#2D392C] resize-y"
   }), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-1"
@@ -3792,7 +3859,7 @@ function App() {
   })(), /*#__PURE__*/React.createElement("textarea", {
     value: getDayData(selectedDateStr).note,
     onChange: e => updateDayData(selectedDateStr, 'note', e.target.value),
-    placeholder: 'Pranzo: pasta al pomodoro\nInsalata\nCena: grigliata\nPatate al forno',
+    placeholder: "Cosa si mangia\u2026",
     className: "lined-paper w-full p-3 rounded-lg border border-[#8F9E8B]/30 focus:outline-none focus:border-[#2D392C] resize-y"
   }), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic"
@@ -5302,6 +5369,91 @@ function App() {
       className: "text-[9px] text-gray-400 italic leading-snug"
     }, "Una cancellazione \xE8 normale quando qualcuno toglie davvero una voce. Se ne vedi tante tutte allo stesso minuto, \xE8 il segno di un ripristino, di un'importazione o di un \"Copia da ieri\": in quel caso la copia di scorta qui sopra rimette tutto a posto."));
   })()), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setLogOpen(v => !v),
+    className: "w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-[#E2EAE4]/60"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic text-lg text-[#2D392C] shrink-0"
+  }, "Registro modifiche"), /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto flex items-center gap-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] uppercase font-bold px-2 py-1 rounded bg-gray-200 text-gray-500"
+  }, (() => {
+    void diagTick;
+    const n = logLeggi().length;
+    return n === 0 ? 'vuoto' : `${n} voci`;
+  })()), /*#__PURE__*/React.createElement("span", {
+    className: `text-[10px] text-[#5C4A3C] transition-transform ${logOpen ? 'rotate-180' : ''}`
+  }, "\u25BE"))), logOpen && /*#__PURE__*/React.createElement("div", {
+    className: "px-4 pb-4 space-y-3"
+  }, (() => {
+    void diagTick;
+    const reg = logLeggi();
+    const st = syncStateRef.current;
+    if (reg.length === 0) {
+      return /*#__PURE__*/React.createElement("p", {
+        className: "text-[11px] text-gray-400 italic"
+      }, "Ancora nessuna modifica registrata su questo telefono.");
+    }
+    // Raggruppate per giorno: leggere 400 righe di fila è inutile.
+    const perGiorno = [];
+    reg.forEach(r => {
+      const g = new Date(r.at).toLocaleDateString('it-IT', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
+      const ultimo = perGiorno[perGiorno.length - 1];
+      if (ultimo && ultimo.giorno === g) ultimo.voci.push(r);else perGiorno.push({
+        giorno: g,
+        voci: [r]
+      });
+    });
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+      className: "text-[10px] text-gray-500 leading-snug"
+    }, "Ogni modifica, fatta qui o arrivata dagli altri, con data e ora. Le pi\xF9 recenti in alto. Resta su questo telefono e non viene sincronizzata."), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-3 max-h-96 overflow-y-auto pr-1"
+    }, perGiorno.map(gruppo => /*#__PURE__*/React.createElement("div", {
+      key: gruppo.giorno
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1"
+    }, gruppo.giorno), /*#__PURE__*/React.createElement("ul", {
+      className: "space-y-1"
+    }, gruppo.voci.map((r, i) => /*#__PURE__*/React.createElement("li", {
+      key: r.p + r.at + i,
+      className: "flex items-start gap-2 text-[10px] bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-gray-500 shrink-0 w-10"
+    }, new Date(r.at).toLocaleTimeString('it-IT', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })), /*#__PURE__*/React.createElement("span", {
+      className: `shrink-0 w-3 text-center ${r.k === 'd' ? 'text-red-700' : 'text-[#2D392C]'}`,
+      title: r.k === 'd' ? 'cancellata' : 'modificata'
+    }, r.k === 'd' ? '−' : '+'), /*#__PURE__*/React.createElement("span", {
+      className: "min-w-0 flex-grow leading-snug"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold text-[#5C4A3C]"
+    }, sezioneDiPath(r.p)), /*#__PURE__*/React.createElement("span", {
+      className: "text-[#2D392C]"
+    }, " \xB7 ", descriviPath(r.p, st))), /*#__PURE__*/React.createElement("span", {
+      className: `shrink-0 text-[8px] uppercase font-bold px-1.5 py-0.5 rounded ${r.o === 'io' ? 'bg-[#2D392C]/10 text-[#2D392C]' : 'bg-[#5C4A3C]/10 text-[#5C4A3C]'}`
+    }, r.o === 'io' ? 'qui' : 'sync'))))))), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: esportaRegistro,
+      className: "flex-1 py-2 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase"
+    }, "Esporta il registro"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        if (window.confirm('Svuotare il registro delle modifiche?\nI dati non vengono toccati: si perde solo lo storico.')) {
+          localStorage.removeItem(LOG_KEY);
+          setDiagTick(t => t + 1);
+        }
+      },
+      className: "flex-1 py-2 bg-white border-2 border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase"
+    }, "Svuota")));
+  })())), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setBloccoOpen(v => !v),

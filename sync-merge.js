@@ -42,6 +42,29 @@
   // pezzo e la lapide diventa solo peso morto.
   var TOMB_TTL = 90 * 24 * 60 * 60 * 1000;
 
+  // ---- Orologio: il punto fragile di tutto il meccanismo -------------------
+  // Le date vengono dall'orologio di ogni telefono. Due difetti da chiudere:
+  //
+  // 1) un telefono INDIETRO marcherebbe le sue modifiche con date vecchie e
+  //    perderebbe sempre, anche quando ha ragione. Rimedio: ogni dispositivo
+  //    tiene "hi", la data più alta che ha mai visto (sua o altrui), e non
+  //    marca mai una modifica con una data inferiore. Così una modifica fatta
+  //    DOPO aver visto qualcosa batte sempre quel qualcosa: l'ordine segue le
+  //    cause, non l'ora del telefono.
+  // 2) un telefono AVANTI (data sbagliata di mesi) trascinerebbe in avanti
+  //    l'orologio di tutti gli altri, che adotterebbero la sua data. Rimedio:
+  //    non si adottano date oltre una settimana nel futuro.
+  //
+  // NOTA IMPORTANTE: il freno vale solo per l'orologio che ogni dispositivo si
+  // porta dietro, MAI per il confronto fra due voci. Il confronto deve
+  // dipendere solo dai dati, altrimenti due telefoni con "adesso" diverso
+  // deciderebbero in modo diverso e la sincronizzazione non convergerebbe più:
+  // si rimbalzerebbero le versioni all'infinito. Meglio un telefono con l'ora
+  // sbagliata che vince un confronto, che due telefoni che non si accordano.
+  var MAX_AVANTI = 7 * 24 * 60 * 60 * 1000;
+
+  function altezza(meta) { return (meta && meta.hi) || 0; }
+
   function isObj(v) { return v && typeof v === 'object' && !Array.isArray(v); }
   function arr(v) { return Array.isArray(v) ? v : []; }
 
@@ -90,25 +113,33 @@
     for (p in prev.rev) if (has(prev.rev, p)) rev[p] = prev.rev[p];
     for (p in prev.del) if (has(prev.del, p)) del[p] = prev.del[p];
 
+    // Data della modifica: mai inferiore a ciò che questo dispositivo ha già
+    // visto. Con l'orologio a posto è semplicemente "adesso".
+    var data = Math.max(now, altezza(prev) + 1);
+    var cambiato = false;
+
     for (p in flat) {
       if (!has(flat, p)) continue;
-      if (prev.flat[p] !== flat[p]) { rev[p] = now; delete del[p]; }
+      if (prev.flat[p] !== flat[p]) { rev[p] = data; delete del[p]; cambiato = true; }
     }
     for (p in prev.flat) {
       if (!has(prev.flat, p)) continue;
-      if (!has(flat, p)) { del[p] = now; delete rev[p]; }
+      if (!has(flat, p)) { del[p] = data; delete rev[p]; cambiato = true; }
     }
     // Le voci mai toccate da questo dispositivo restano senza data (0):
     // qualsiasi modifica altrui, essendo datata, avrà la precedenza.
     var cutoff = now - TOMB_TTL;
     for (p in del) if (has(del, p) && del[p] < cutoff) delete del[p];
 
-    return { flat: flat, rev: rev, del: del };
+    return {
+      flat: flat, rev: rev, del: del,
+      hi: cambiato ? Math.max(altezza(prev), data) : altezza(prev),
+    };
   }
 
   function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
 
-  function emptyMeta() { return { flat: {}, rev: {}, del: {} }; }
+  function emptyMeta() { return { flat: {}, rev: {}, del: {}, hi: 0 }; }
 
   // Scelta fra la versione locale e quella remota di una singola voce.
   // Deterministica: entrambi i dispositivi arrivano allo stesso risultato.
@@ -141,11 +172,23 @@
   // local/remote: { members, campData, purchases, gear, settled, equipment, toBuy }
   // lmeta/rmeta:  { rev, del }
   // Restituisce { state, meta } con meta.flat già allineato allo stato fuso.
-  function merge(local, lmeta, remote, rmeta) {
+  function merge(local, lmeta, remote, rmeta, now) {
     local = local || {};
     remote = remote || {};
     lmeta = lmeta || emptyMeta();
     rmeta = rmeta || emptyMeta();
+    // Nuova altezza dell'orologio logico: la data più alta vista da una delle
+    // due parti. Le date assurdamente nel futuro non si adottano — servirebbero
+    // solo a spostare in avanti anche il nostro orologio.
+    var hi = altezza(lmeta);
+    var limite = Math.max(now || Date.now(), hi) + MAX_AVANTI;
+    [lmeta.rev, lmeta.del, rmeta.rev, rmeta.del].forEach(function (m) {
+      if (!m) return;
+      Object.keys(m).forEach(function (k) {
+        var v = m[k];
+        if (typeof v === 'number' && v <= limite && v > hi) hi = v;
+      });
+    });
 
     var rev = {}, del = {};
     // Le lapidi si conservano (unione), servono a non far "resuscitare" le
@@ -176,7 +219,11 @@
         var res = pick(!!e.l, e.l, revOf(lmeta, path), !!e.r, e.r, revOf(rmeta, path), maxDel(path, lmeta, rmeta));
         if (!res) return;
         out.push(res.val);
-        rev[path] = res.rev;
+        // Le voci mai datate da nessuno non finiscono nella cronologia: uno
+        // zero occupa spazio, viaggia a ogni sincronizzazione e — non essendo
+        // presente nella mappa di chi ce l'ha mandata — fa sembrare diverso
+        // uno stato identico, costringendo a rimandarlo indietro ogni volta.
+        if (res.rev) rev[path] = res.rev;
         delete del[path];
       });
       state[key] = out;
@@ -199,7 +246,7 @@
         var res = pick(!!e.l, k, revOf(lmeta, path), !!e.r, k, revOf(rmeta, path), maxDel(path, lmeta, rmeta));
         if (!res) return;
         out.push(k);
-        rev[path] = res.rev;
+        if (res.rev) rev[path] = res.rev;
         delete del[path];
       });
       state[key] = out;
@@ -223,7 +270,7 @@
         var res = pick(has(L, field), L[field], revOf(lmeta, path), has(R, field), R[field], revOf(rmeta, path), maxDel(path, lmeta, rmeta));
         if (!res) return;
         day[field] = res.val;
-        rev[path] = res.rev;
+        if (res.rev) rev[path] = res.rev;
         delete del[path];
       });
       var ml = isObj(L.meals) ? L.meals : {};
@@ -235,7 +282,7 @@
         var res = pick(has(ml, mid), ml[mid], revOf(lmeta, path), has(mr, mid), mr[mid], revOf(rmeta, path), maxDel(path, lmeta, rmeta));
         if (!res) return;
         meals[mid] = res.val;
-        rev[path] = res.rev;
+        if (res.rev) rev[path] = res.rev;
         delete del[path];
       });
       if (Object.keys(meals).length > 0) day.meals = meals;
@@ -245,7 +292,7 @@
     });
     state.campData = camp;
 
-    return { state: state, meta: { flat: flatten(state), rev: rev, del: del } };
+    return { state: state, meta: { flat: flatten(state), rev: rev, del: del, hi: hi } };
   }
 
   function equalMap(a, b) {
