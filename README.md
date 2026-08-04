@@ -95,6 +95,22 @@ preparazione** e **offline al campo**, dove non c'è linea.
   quindi qualsiasi modifica datata ha la precedenza e nulla viene cancellato.
   Prima qui si sovrascriveva tutto, e bastava un telefono rimasto indietro per
   riportare l'intero campo a giorni prima.
+- **Scritture che non arrivano**: `lastPushedJson` si aggiorna **solo a
+  scrittura riuscita**. Prima veniva segnato prima di scrivere, quindi una
+  scrittura fallita (regole, quota, documento troppo grande) non veniva più
+  ritentata: quei dati restavano su un telefono solo, in silenzio. Ora restano
+  in sospeso e si ritentano da soli con attese crescenti (2s, 4s, 8s… fino a un
+  minuto), al ritorno della linea e a un controllo ogni due minuti. Finché
+  qualcosa è in sospeso, la spia in alto a destra dice **"Da inviare"**.
+- **Documento troppo grande**: sopra i 900 KB (il limite di Firestore è 1 MiB)
+  la scrittura verrebbe rifiutata e la sincronizzazione si fermerebbe senza
+  dirlo. Ora si avvisa prima.
+- **Campo vuoto nel cloud**: se nel cloud non c'è ancora niente, chi ha dati in
+  locale li pubblica. Senza, restavano fermi finché qualcuno non toccava
+  qualcosa.
+- **Memoria del telefono piena**: se la cronologia delle modifiche non si può
+  più salvare, alla riapertura le modifiche di quel telefono risulterebbero
+  "senza data" e perderebbero ogni confronto. Ora compare un avviso.
 - **Registro delle modifiche** (Impostazioni, riga richiudibile): ogni
   cambiamento con **data e ora**, la sezione a cui appartiene, la voce in
   chiaro e se è stato fatto **qui** o è arrivato dalla **sincronizzazione**.

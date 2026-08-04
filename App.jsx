@@ -1236,6 +1236,7 @@ function App() {
   // Cronologia delle modifiche (data di ultima modifica/cancellazione per ogni
   // voce). Al primo avvio i dati già presenti restano "senza data": qualsiasi
   // modifica altrui, essendo datata, ha la precedenza.
+  const spazioPienoRef = useRef(false);
   const metaRef = useRef(null);
   if (metaRef.current === null) {
     const saved = load(SYNC_META_KEY, null);
@@ -1244,9 +1245,18 @@ function App() {
       ? { flat: saved.flat || {}, rev: saved.rev, del: saved.del || {} }
       : { flat: SM ? SM.flatten(syncStateRef.current) : {}, rev: {}, del: {} };
   }
+  // Se il salvataggio della cronologia fallisce (memoria del telefono piena),
+  // alla riapertura le modifiche di questo telefono risulterebbero "senza
+  // data" e perderebbero ogni confronto. È un guasto silenzioso: va detto.
+  const [spazioPieno, setSpazioPieno] = useState(false);
   const saveMeta = (m) => {
     metaRef.current = m;
-    try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(m)); } catch (e) { /* spazio esaurito */ }
+    try {
+      localStorage.setItem(SYNC_META_KEY, JSON.stringify(m));
+      if (spazioPienoRef.current) { spazioPienoRef.current = false; setSpazioPieno(false); }
+    } catch (e) {
+      if (!spazioPienoRef.current) { spazioPienoRef.current = true; setSpazioPieno(true); }
+    }
   };
 
   // ---------- Persistenza ----------
@@ -1583,6 +1593,44 @@ function App() {
       window.CloudSync.pushState({ ...st, _meta: { v: SM ? SM.VERSION : 0, rev: m.rev, del: m.del } });
     }
   }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays]);
+
+  // ---------- Rete di sicurezza della sincronizzazione ----------
+  // Tre casi in cui i dati resterebbero fermi su un telefono senza che nessuno
+  // se ne accorga, chiusi qui:
+  //   1. nel cloud non c'è ancora niente per questo campo: chi ha dati locali
+  //      deve pubblicarli, altrimenti aspettano che qualcuno tocchi qualcosa;
+  //   2. una scrittura è fallita (regole, quota, rete a singhiozzo): va
+  //      ritentata da sola, non alla prossima modifica;
+  //   3. l'app è rimasta aperta a lungo: un controllo periodico verifica che
+  //      non ci sia rimasto niente in sospeso.
+  useEffect(() => {
+    const CS = window.CloudSync;
+    if (!CS || !cloud.connected) return undefined;
+
+    const pubblica = (forza) => {
+      const SM = window.SyncMerge;
+      const m = metaRef.current;
+      CS.pushState({ ...syncStateRef.current, _meta: { v: SM ? SM.VERSION : 0, rev: m.rev, del: m.del } }, forza);
+    };
+
+    // 1) Campo vuoto nel cloud: pubblica quello che abbiamo.
+    if (cloud.empty) {
+      const st = syncStateRef.current;
+      const qualcosa = (st.members || []).length || (st.purchases || []).length ||
+        (st.toBuy || []).length || (st.equipment || []).length || Object.keys(st.campData || {}).length;
+      if (qualcosa) pubblica(true);
+    }
+
+    // 2 e 3) Ritenta ciò che è rimasto in sospeso, subito e poi ogni due minuti.
+    if (CS.riprova) CS.riprova();
+    const t = window.setInterval(() => {
+      if (!CS.isConnected()) return;
+      if (CS.inSospeso && CS.inSospeso()) { CS.riprova(); return; }
+      pubblica(false);   // no-op se è già tutto allineato
+    }, 120000);
+    return () => window.clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloud.connected, cloud.empty]);
 
   // ---------- Dati per giorno ----------
   const getDayData = (dateStr) => ({ ...initialDayState(), ...(campData[dateStr] || {}) });
@@ -2934,13 +2982,24 @@ function App() {
         </button>
         <h1 className="font-rustic text-2xl tracking-wide">{BRAND.appTitle}</h1>
         <p className="text-xs uppercase tracking-wider text-[#8F9E8B]">{tabs[activeTab]}</p>
-        <span
-          title={isOnline ? 'Online' : 'Offline'}
-          className={`absolute top-3 right-3 flex items-center gap-1 text-[9px] uppercase font-bold ${isOnline ? 'text-[#8F9E8B]' : 'text-[#D97706]'}`}
-        >
-          <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-[#8F9E8B]' : 'bg-[#D97706]'}`}></span>
-          {isOnline ? 'Online' : 'Offline'}
-        </span>
+        {/* Spia in alto a destra. "Da inviare" è il caso importante: sei
+            online ma qualcosa non è ancora arrivato agli altri, e prima non
+            lo diceva nessuno. */}
+        {(() => {
+          const sospeso = !!cloud.pending;
+          const testo = sospeso ? 'Da inviare' : isOnline ? 'Online' : 'Offline';
+          const colore = sospeso ? 'text-[#F6C177]' : isOnline ? 'text-[#8F9E8B]' : 'text-[#D97706]';
+          const pallino = sospeso ? 'bg-[#F6C177] animate-pulse' : isOnline ? 'bg-[#8F9E8B]' : 'bg-[#D97706]';
+          return (
+            <span
+              title={sospeso ? 'Alcune modifiche non sono ancora arrivate agli altri: riprovo da solo.' : testo}
+              className={`absolute top-3 right-3 flex items-center gap-1 text-[9px] uppercase font-bold ${colore}`}
+            >
+              <span className={`w-2 h-2 rounded-full ${pallino}`}></span>
+              {testo}
+            </span>
+          );
+        })()}
       </header>
 
       {/* Menu laterale (drawer): scorre da sinistra sopra il contenuto */}
@@ -3000,6 +3059,20 @@ function App() {
             {' '}Una volta installata funziona anche senza linea.
           </p>
           <button onClick={dismissInstallHint} aria-label="Chiudi avviso" className="text-[#5C4A3C] font-bold px-1 shrink-0">&times;</button>
+        </div>
+      )}
+
+      {/* Memoria del telefono piena: la cronologia delle modifiche non si
+          salva più, e alla riapertura questo telefono perderebbe i confronti
+          con gli altri. È il tipo di guasto che non si vede: va detto. */}
+      {spazioPieno && (
+        <div className="bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3">
+          <p className="text-[11px] text-[#5C4A3C] leading-snug">
+            <span className="font-bold">La memoria di questo telefono è piena.</span> Le modifiche si vedono, ma la
+            loro cronologia non si salva: chiudendo e riaprendo l'app, i cambiamenti fatti qui potrebbero perdere
+            il confronto con quelli degli altri. Libera spazio sul telefono, oppure vai in
+            <span className="font-bold"> Impostazioni → Registro modifiche → Svuota</span>.
+          </p>
         </div>
       )}
 

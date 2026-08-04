@@ -73,6 +73,7 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `e2e/correzioni` | Correzione di una spesa già salvata (la matita) |
 | `e2e/chiusura` | Chiusura del campo: archivio scaricato, liste azzerate, totali a zero |
 | `e2e/fusione` | La fusione dentro l'app: due telefoni offline, nessun dato perso |
+| `e2e/tenuta` | I guasti silenziosi della sincronizzazione: scrittura fallita che dev'essere ritentata e segnalata ("Da inviare"), campo vuoto nel cloud che va ripopolato, memoria del telefono piena che va detta |
 | `e2e/registro` | Registro delle modifiche (locali e in arrivo, con data e ora, esportabile) e ciclo offline→online: il lavoro fatto senza linea sopravvive, viene ripubblicato, e ricevere ciò che si è appena spedito non produce un altro invio |
 | `e2e/perdita` | **Perdita di dati**: cancellazioni datate in arrivo dal cloud, freno di sicurezza, copia di scorta, "Annulla la sincronizzazione" con ridatazione, diagnostica, e che "Copia da ieri" non cancelli le presenze di nessuno |
 | `e2e/riaggancio` | Ritorno della linea e riaggancio al cloud |

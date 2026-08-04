@@ -25,7 +25,9 @@
   let onStatusCb = null;      // callback di stato per la UI
   let pushTimer = null;
   let lastAppliedJson = null; // ultimo stato ricevuto/applicato dal cloud
-  let lastPushedJson = null;  // ultimo stato inviato al cloud
+  let lastPushedJson = null;  // ultimo stato inviato al cloud CON SUCCESSO
+  let pendingJson = null;     // stato in attesa di essere scritto (o ritentato)
+  let tentativi = 0;          // invii falliti di fila: allunga l'attesa
   let authMode = 'anon';      // anon | shared | anon-fallback | anon-nopass
 
   let deviceId = localStorage.getItem('cambusa_device_id');
@@ -34,9 +36,10 @@
     localStorage.setItem('cambusa_device_id', deviceId);
   }
 
-  const state = { connected: false, code: null, status: 'idle', lastSync: null, error: null, authMode: 'anon' };
+  const state = { connected: false, code: null, status: 'idle', lastSync: null, error: null, authMode: 'anon', empty: false, pending: false };
   const emit = (patch) => {
     Object.assign(state, patch || {});
+    state.pending = !!pendingJson;   // c'è qualcosa che non è ancora arrivato
     if (onStatusCb) onStatusCb({ ...state });
   };
 
@@ -118,7 +121,10 @@
       unsub = fb.onSnapshot(
         ref,
         (snap) => {
-          emit({ connected: true, code, status: 'connected' });
+          // "vuoto" = nel cloud non c'è ancora niente per questo campo: chi ha
+          // dei dati in locale deve pubblicarli, altrimenti restano fermi lì
+          // finché qualcuno non tocca qualcosa.
+          emit({ connected: true, code, status: 'connected', empty: !snap.exists() });
           if (!snap.exists()) return;
           const d = snap.data();
           if (d.updatedBy === deviceId) { emit({ lastSync: Date.now() }); return; }
@@ -162,24 +168,60 @@
     }
   }
 
-  function pushState(obj) {
+  // Limite di Firestore: 1 MiB per documento. Sopra i 900 KB si avvisa, perche'
+  // oltre il limite la scrittura fallisce e la sincronizzazione si ferma senza
+  // che nessuno se ne accorga.
+  const MAX_DOC = 900 * 1024;
+
+  function pushState(obj, forza) {
     if (!state.connected || !db || !fb) return;
     const json = JSON.stringify(obj);
-    // Non reinviare cio' che abbiamo appena ricevuto o gia' inviato.
-    if (json === lastAppliedJson || json === lastPushedJson) return;
+    // Non reinviare cio' che abbiamo appena ricevuto o gia' inviato. Se pero'
+    // l'ultimo invio e' FALLITO (pendingJson pieno) si riprova comunque.
+    if (!forza && !pendingJson && (json === lastAppliedJson || json === lastPushedJson)) return;
+    pendingJson = json;
     clearTimeout(pushTimer);
-    pushTimer = setTimeout(async () => {
-      try {
-        emit({ status: 'saving' });
-        lastPushedJson = json;
-        const ref = fb.doc(db, 'camps', state.code);
-        await fb.setDoc(ref, { data: json, updatedBy: deviceId, updatedAt: fb.serverTimestamp() });
-        emit({ status: 'connected', lastSync: Date.now() });
-        maybeDailySnapshot(json);
-      } catch (e) {
-        emit({ status: 'error', error: e.message || String(e) });
+    pushTimer = setTimeout(function () { inviaOra(); }, 1500);
+  }
+
+  // Invio vero e proprio. "lastPushedJson" si aggiorna SOLO a scrittura
+  // riuscita: segnarlo prima significava che una scrittura fallita (regole,
+  // quota, documento troppo grande) non veniva piu' ritentata, e i dati di quel
+  // telefono restavano solo li' senza che niente lo dicesse.
+  async function inviaOra() {
+    if (!pendingJson || !state.connected || !db || !fb) return;
+    const json = pendingJson;
+    try {
+      emit({ status: 'saving' });
+      if (json.length > MAX_DOC) {
+        emit({ status: 'error', error: 'Dati troppo grandi per il cloud (' + Math.round(json.length / 1024) + ' KB): fai un backup e chiudi il campo.' });
+        return;
       }
-    }, 1500);
+      const ref = fb.doc(db, 'camps', state.code);
+      await fb.setDoc(ref, { data: json, updatedBy: deviceId, updatedAt: fb.serverTimestamp() });
+      // Riuscita: solo ora si puo' dire "questo l'ho gia' mandato".
+      lastPushedJson = json;
+      if (pendingJson === json) pendingJson = null;
+      tentativi = 0;
+      emit({ status: 'connected', lastSync: Date.now(), error: null });
+      maybeDailySnapshot(json);
+    } catch (e) {
+      // Resta in sospeso e si riprova, con attese crescenti.
+      tentativi++;
+      emit({ status: 'error', error: e.message || String(e) });
+      const attesa = Math.min(60000, 2000 * Math.pow(2, Math.min(tentativi, 5)));
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(function () { inviaOra(); }, attesa);
+    }
+  }
+
+  // Ritenta subito ciò che è rimasto in sospeso (al ritorno della linea, o
+  // quando la app fa il suo controllo periodico).
+  function riprova() {
+    if (!pendingJson) return false;
+    clearTimeout(pushTimer);
+    inviaOra();
+    return true;
   }
 
   // Carica/aggiorna la foto di uno scontrino nel cloud (fire-and-forget:
@@ -472,15 +514,20 @@
     if (unsub) { unsub(); unsub = null; }
     if (receiptsUnsub) { receiptsUnsub(); receiptsUnsub = null; }
     if (weatherUnsub) { weatherUnsub(); weatherUnsub = null; }
+    clearTimeout(pushTimer);
     localStorage.removeItem('cambusa_camp_code');
     lastAppliedJson = null;
     lastPushedJson = null;
+    pendingJson = null;
+    tentativi = 0;
     emit({ connected: false, code: null, status: 'idle', error: null });
   }
 
   window.CloudSync = {
     connect,
     pushState,
+    riprova,
+    inSospeso: () => !!pendingJson,
     putReceipt,
     deleteReceipt,
     putPhoto,

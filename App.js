@@ -1477,6 +1477,7 @@ function App() {
   // Cronologia delle modifiche (data di ultima modifica/cancellazione per ogni
   // voce). Al primo avvio i dati già presenti restano "senza data": qualsiasi
   // modifica altrui, essendo datata, ha la precedenza.
+  const spazioPienoRef = useRef(false);
   const metaRef = useRef(null);
   if (metaRef.current === null) {
     const saved = load(SYNC_META_KEY, null);
@@ -1491,11 +1492,24 @@ function App() {
       del: {}
     };
   }
+  // Se il salvataggio della cronologia fallisce (memoria del telefono piena),
+  // alla riapertura le modifiche di questo telefono risulterebbero "senza
+  // data" e perderebbero ogni confronto. È un guasto silenzioso: va detto.
+  const [spazioPieno, setSpazioPieno] = useState(false);
   const saveMeta = m => {
     metaRef.current = m;
     try {
       localStorage.setItem(SYNC_META_KEY, JSON.stringify(m));
-    } catch (e) {/* spazio esaurito */}
+      if (spazioPienoRef.current) {
+        spazioPienoRef.current = false;
+        setSpazioPieno(false);
+      }
+    } catch (e) {
+      if (!spazioPienoRef.current) {
+        spazioPienoRef.current = true;
+        setSpazioPieno(true);
+      }
+    }
   };
 
   // ---------- Persistenza ----------
@@ -1849,6 +1863,52 @@ function App() {
       });
     }
   }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays]);
+
+  // ---------- Rete di sicurezza della sincronizzazione ----------
+  // Tre casi in cui i dati resterebbero fermi su un telefono senza che nessuno
+  // se ne accorga, chiusi qui:
+  //   1. nel cloud non c'è ancora niente per questo campo: chi ha dati locali
+  //      deve pubblicarli, altrimenti aspettano che qualcuno tocchi qualcosa;
+  //   2. una scrittura è fallita (regole, quota, rete a singhiozzo): va
+  //      ritentata da sola, non alla prossima modifica;
+  //   3. l'app è rimasta aperta a lungo: un controllo periodico verifica che
+  //      non ci sia rimasto niente in sospeso.
+  useEffect(() => {
+    const CS = window.CloudSync;
+    if (!CS || !cloud.connected) return undefined;
+    const pubblica = forza => {
+      const SM = window.SyncMerge;
+      const m = metaRef.current;
+      CS.pushState({
+        ...syncStateRef.current,
+        _meta: {
+          v: SM ? SM.VERSION : 0,
+          rev: m.rev,
+          del: m.del
+        }
+      }, forza);
+    };
+
+    // 1) Campo vuoto nel cloud: pubblica quello che abbiamo.
+    if (cloud.empty) {
+      const st = syncStateRef.current;
+      const qualcosa = (st.members || []).length || (st.purchases || []).length || (st.toBuy || []).length || (st.equipment || []).length || Object.keys(st.campData || {}).length;
+      if (qualcosa) pubblica(true);
+    }
+
+    // 2 e 3) Ritenta ciò che è rimasto in sospeso, subito e poi ogni due minuti.
+    if (CS.riprova) CS.riprova();
+    const t = window.setInterval(() => {
+      if (!CS.isConnected()) return;
+      if (CS.inSospeso && CS.inSospeso()) {
+        CS.riprova();
+        return;
+      }
+      pubblica(false); // no-op se è già tutto allineato
+    }, 120000);
+    return () => window.clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloud.connected, cloud.empty]);
 
   // ---------- Dati per giorno ----------
   const getDayData = dateStr => ({
@@ -3604,12 +3664,18 @@ function App() {
     className: "font-rustic text-2xl tracking-wide"
   }, BRAND.appTitle), /*#__PURE__*/React.createElement("p", {
     className: "text-xs uppercase tracking-wider text-[#8F9E8B]"
-  }, tabs[activeTab]), /*#__PURE__*/React.createElement("span", {
-    title: isOnline ? 'Online' : 'Offline',
-    className: `absolute top-3 right-3 flex items-center gap-1 text-[9px] uppercase font-bold ${isOnline ? 'text-[#8F9E8B]' : 'text-[#D97706]'}`
-  }, /*#__PURE__*/React.createElement("span", {
-    className: `w-2 h-2 rounded-full ${isOnline ? 'bg-[#8F9E8B]' : 'bg-[#D97706]'}`
-  }), isOnline ? 'Online' : 'Offline')), /*#__PURE__*/React.createElement("div", {
+  }, tabs[activeTab]), (() => {
+    const sospeso = !!cloud.pending;
+    const testo = sospeso ? 'Da inviare' : isOnline ? 'Online' : 'Offline';
+    const colore = sospeso ? 'text-[#F6C177]' : isOnline ? 'text-[#8F9E8B]' : 'text-[#D97706]';
+    const pallino = sospeso ? 'bg-[#F6C177] animate-pulse' : isOnline ? 'bg-[#8F9E8B]' : 'bg-[#D97706]';
+    return /*#__PURE__*/React.createElement("span", {
+      title: sospeso ? 'Alcune modifiche non sono ancora arrivate agli altri: riprovo da solo.' : testo,
+      className: `absolute top-3 right-3 flex items-center gap-1 text-[9px] uppercase font-bold ${colore}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `w-2 h-2 rounded-full ${pallino}`
+    }), testo);
+  })()), /*#__PURE__*/React.createElement("div", {
     className: `fixed inset-0 z-40 ${menuOpen ? '' : 'pointer-events-none'}`
   }, /*#__PURE__*/React.createElement("div", {
     onClick: () => setMenuOpen(false),
@@ -3657,7 +3723,15 @@ function App() {
     onClick: dismissInstallHint,
     "aria-label": "Chiudi avviso",
     className: "text-[#5C4A3C] font-bold px-1 shrink-0"
-  }, "\xD7")), lostSync && /*#__PURE__*/React.createElement("div", {
+  }, "\xD7")), spazioPieno && /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[#5C4A3C] leading-snug"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "La memoria di questo telefono \xE8 piena."), " Le modifiche si vedono, ma la loro cronologia non si salva: chiudendo e riaprendo l'app, i cambiamenti fatti qui potrebbero perdere il confronto con quelli degli altri. Libera spazio sul telefono, oppure vai in", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, " Impostazioni \u2192 Registro modifiche \u2192 Svuota"), ".")), lostSync && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"
