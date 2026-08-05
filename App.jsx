@@ -488,6 +488,7 @@ const LIVELLI = [
   { nome: 'Prato Lungo', icona: '🌲' },
   { nome: 'Palmiro Togliatti', icona: '🏙️' },
   { nome: 'Rio de Janeiro', icona: '🏖️' },
+  { nome: 'Thailandia', icona: '🌃' },
 ];
 const livelloInfo = (n) => LIVELLI[Math.min(n, LIVELLI.length) - 1] || LIVELLI[0];
 
@@ -760,12 +761,170 @@ function drawBeach(ctx, w, h, cell) {
   drawFlag(ctx, lungomare + larg * 0.1, h * 0.06, fw * 0.62, fh * 0.62, px);
 }
 
+// Livello 4: la strada dei night club in Thailandia, di notte. Stessa
+// impaginazione a fasce verticali degli altri livelli — locali ai due lati,
+// asfalto in mezzo — ma al buio: l'asfalto è scuro, i locali sono insegne al
+// neon e la luce si riflette sulla strada bagnata.
+const TH = { rosso: '#D82B3C', blu: '#1B2C6B', bianco: '#F2F0EA' };
+const NEON = ['#FF3DA5', '#2BE5F0', '#FFD93B', '#5BFF9E', '#B14CFF'];
+
+// Bandiera thailandese: cinque bande orizzontali rosso-bianco-blu-bianco-rosso,
+// con quella blu doppia. È l'unica cosa che dice "Thailandia" a colpo d'occhio.
+function drawThaiFlag(ctx, x, y, w, h, px) {
+  const q = (v) => Math.round(v / px) * px;
+  const X = q(x), Y = q(y), W = q(w);
+  const u = Math.max(px, q(h / 6));            // banda unitaria: 1-1-2-1-1
+  ctx.fillStyle = '#7A6647';
+  ctx.fillRect(X - px, Y, px, u * 6 + px * 3); // asta
+  const bande = [[TH.rosso, 1], [TH.bianco, 1], [TH.blu, 2], [TH.bianco, 1], [TH.rosso, 1]];
+  let cy = Y;
+  bande.forEach(([col, n]) => {
+    ctx.fillStyle = col;
+    ctx.fillRect(X, cy, W, u * n);
+    cy += u * n;
+  });
+}
+
+function drawThai(ctx, w, h, cell) {
+  const rnd = seeded(59);
+  const px = Math.max(3, Math.round(cell / 5));
+  const q = (v) => Math.round(v / px) * px;
+  const bordo = q(cell * 1.9);                 // fascia dei locali, per lato
+
+  // --- Asfalto notturno: scuro ma non nero, altrimenti il corpo ci sparisce ---
+  for (let x = 0; x < w; x += px) {
+    for (let y = 0; y < h; y += px) {
+      const r = rnd();
+      ctx.fillStyle = r > 0.93 ? '#2E2739' : r > 0.85 ? '#1B1723' : '#241F2B';
+      ctx.fillRect(x, y, px, px);
+    }
+  }
+
+  // --- Mezzeria tratteggiata, sbiadita: di notte si vede poco ---
+  ctx.fillStyle = '#6B6350';
+  for (let y = 0; y < h; y += cell * 1.7) ctx.fillRect(q(w / 2) - px / 2, y, px, q(cell * 0.9));
+
+  // --- I locali ai due lati: facciata, porta buia, insegna al neon ---
+  // L'insegna sporge sulla strada, come le tabelle luminose vere: è quello che
+  // fa leggere "strada di locali" invece di "strada scura".
+  const locali = [];
+  [0, w - bordo].forEach((bx, lato) => {
+    ctx.fillStyle = '#544A63';
+    ctx.fillRect(bx, 0, bordo, h);
+    ctx.fillStyle = '#463D55';
+    for (let y = 0; y < h; y += px * 4) ctx.fillRect(bx, y, bordo, px);   // lastre
+    // cordolo verso la strada: separa il marciapiede dall'asfalto
+    ctx.fillStyle = '#6E melon';
+    ctx.fillStyle = '#75688A';
+    ctx.fillRect(lato === 0 ? bx + bordo - px : bx, 0, px, h);
+
+    let y = q(cell * 0.6);
+    let i = lato;
+    while (y < h - cell * 1.6) {
+      const alt = q(cell * (1.7 + rnd() * 0.9));
+      const col = NEON[i % NEON.length];
+      // facciata: ogni locale ha il suo tono, così si contano
+      ctx.fillStyle = i % 2 ? '#5E5270' : '#4C4260';
+      ctx.fillRect(bx, y, bordo, alt);
+      ctx.fillStyle = '#3B3349';                            // divisorio fra locali
+      ctx.fillRect(bx, y, bordo, px);
+      // ingresso: rettangolo nero con lo stipite acceso al neon
+      const pw = q(bordo * 0.66), ph = q(alt * 0.5);
+      const pxx = lato === 0 ? bx + bordo - pw - px : bx + px;
+      const py0 = q(y + alt * 0.25);
+      ctx.fillStyle = col;
+      ctx.fillRect(pxx - px, py0 - px, pw + px * 2, ph + px * 2);
+      ctx.fillStyle = '#0E0A14';
+      ctx.fillRect(pxx, py0, pw, ph);
+      // insegna che sporge sulla strada
+      const sw = q(cell * 1.15), sh = q(cell * 0.62);
+      const sx = lato === 0 ? bx + bordo : bx - sw;
+      const sy = q(y + alt * 0.3);
+      ctx.fillStyle = '#171320';
+      ctx.fillRect(sx, sy, sw, sh);
+      ctx.fillStyle = col;
+      ctx.fillRect(sx, sy, sw, px);
+      ctx.fillRect(sx, sy + sh - px, sw, px);
+      ctx.fillRect(sx, sy, px, sh);
+      ctx.fillRect(sx + sw - px, sy, px, sh);
+      // "scritta" al neon: due o tre trattini dentro l'insegna
+      ctx.fillStyle = col;
+      for (let k = sx + px * 2; k < sx + sw - px * 2; k += px * 3) ctx.fillRect(k, q(sy + sh / 2), px * 2, px);
+      locali.push({ x: sx + sw / 2, y: sy + sh / 2, col, lato });
+      y += alt + q(cell * 0.35);
+      i++;
+    }
+  });
+
+  // --- Aloni e riflessi sull'asfalto bagnato ---
+  // Prima gli aloni attorno alle insegne, poi le colate verticali di luce
+  // verso il centro strada: è quello che dà la notte piovosa.
+  locali.forEach((l) => {
+    const r = cell * 2.2;
+    for (let y = l.y - r; y < l.y + r; y += px) {
+      for (let x = l.x - r; x < l.x + r; x += px) {
+        const dx = x - l.x, dy = y - l.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d > r) continue;
+        const a = (1 - d / r) * 0.11;
+        ctx.fillStyle = l.col;
+        ctx.globalAlpha = a;
+        ctx.fillRect(q(x), q(y), px, px);
+      }
+    }
+    ctx.globalAlpha = 1;
+    // colata sull'asfalto verso il centro
+    const verso = l.lato === 0 ? 1 : -1;
+    for (let k = 0; k < cell * 3.2; k += px) {
+      ctx.globalAlpha = 0.10 * (1 - k / (cell * 3.2));
+      ctx.fillStyle = l.col;
+      const larg = q(cell * 0.5 + k * 0.25);
+      ctx.fillRect(q(l.x + verso * k), q(l.y - larg / 2), px, larg);
+    }
+    ctx.globalAlpha = 1;
+  });
+
+  // --- Due tuk-tuk fermi in mezzo alla strada, visti dall'alto ---
+  [[0.36, 0.24, '#FFD93B'], [0.62, 0.72, '#5BFF9E']].forEach((t) => {
+    const cx = q(w * t[0]), cy = q(h * t[1]);
+    const tw = q(cell * 0.95), th = q(cell * 1.5);
+    ctx.fillStyle = '#12101A';                                   // ombra
+    ctx.fillRect(cx - tw / 2 + px, cy - th / 2 + px, tw, th);
+    ctx.fillStyle = t[2];                                        // tettuccio
+    ctx.fillRect(cx - tw / 2, cy - th / 2, tw, th);
+    ctx.fillStyle = '#2B2536';                                   // apertura posteriore
+    ctx.fillRect(cx - tw / 2 + px, cy + th / 2 - px * 3, tw - px * 2, px * 2);
+    ctx.fillStyle = '#FFF3C4';                                   // faro
+    ctx.fillRect(cx - px, cy - th / 2 - px, px * 2, px);
+  });
+
+  // --- Bandiere thailandesi appese alle facciate ---
+  // Vanno per ultime e con un fondo scuro dietro: sopra un muro di insegne al
+  // neon, senza stacco, si perderebbero fra le altre strisce colorate — e sono
+  // l'unica cosa che dice "Thailandia" invece di "strada di locali".
+  const fw = q(bordo * 0.78), fh = q(cell * 1.15);
+  const appendi = (x, y) => {
+    ctx.fillStyle = '#0E0A14';
+    ctx.fillRect(q(x) - px * 2, q(y) - px * 2, fw + px * 4, fh + px * 4);
+    ctx.fillStyle = '#F2F0EA';
+    ctx.fillRect(q(x) - px, q(y) - px, fw + px * 2, fh + px * 2);
+    drawThaiFlag(ctx, x, y, fw, fh, px);
+  };
+  appendi(bordo * 0.12, cell * 0.9);
+  appendi(w - bordo * 0.9, h * 0.30);
+  appendi(bordo * 0.12, h * 0.62);
+  appendi(w - bordo * 0.9, h - cell * 2.4);
+}
+
 // Livello 2+: il corpo è un tubo cartoon a blocchi (stile fumetto, non
 // realistico) con la punta arrotondata e due lobi alla base.
 const SK = { skin: '#E4A882', shade: '#C98D68', light: '#F4CFAF', tip: '#E8A090', crease: '#A9714F' };
 // Livello 3: stessa forma, carnagione scura. Sulla sabbia chiara si stacca
 // meglio del livello 2, che sull'asfalto grigio funzionava al contrario.
 const SK3 = { skin: '#8D5A3B', shade: '#6B4229', light: '#B37B50', tip: '#96543C', crease: '#472A18' };
+// Livello 4: strada al buio. Serve una carnagione chiara con un filo di neon
+// addosso, altrimenti sull'asfalto notturno il corpo sparisce.
+const SK4 = { skin: '#D9A279', shade: '#9E6E4C', light: '#EDA6C4', tip: '#E9A9A0', crease: '#6B4530' };
 // Livello 1: la canna come cilindro continuo, con brace tonda e sfumata
 // e filtro in fondo (prima era una catena di quadretti staccati).
 const JO = { paper: '#F6EFDF', paper2: '#E9DFC7', seam: '#DCCFB2', filter: '#B98F5E', filter2: '#9C7345' };
@@ -943,6 +1102,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
     const bgForest = mkBg(drawForest);
     const bgStreet = mkBg(drawStreet);
     const bgBeach = mkBg(drawBeach);
+    const bgThai = mkBg(drawThai);
     bgRef.current = bgForest;
 
     const img = new Image();
@@ -988,7 +1148,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
       // Livello 2: la fila di figure stilizzate al posto della canna.
       if (st.level >= 2) {
         // dal fondo verso la testa, così la punta resta sopra
-        const pal = st.level >= 3 ? SK3 : SK;
+        const pal = st.level >= 4 ? SK4 : st.level >= 3 ? SK3 : SK;
         for (let i = st.snake.length - 1; i >= 0; i--) {
           drawBody(ctx, st.snake, i, cell, offX, offY, st.dir, pal);
         }
@@ -1029,7 +1189,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
                 // si riparte dalla lunghezza base, mantenendo posizione e direzione
                 st.snake = st.snake.slice(0, BASE_LEN);
                 st.queue = [];
-                bgRef.current = nextLevel >= 3 ? bgBeach : nextLevel >= 2 ? bgStreet : bgForest;
+                bgRef.current = nextLevel >= 4 ? bgThai : nextLevel >= 3 ? bgBeach : nextLevel >= 2 ? bgStreet : bgForest;
                 setLevel(nextLevel);
               }
               placeFood();
@@ -3830,7 +3990,7 @@ function App() {
     { k: 'sync', icon: '☁️', title: 'Sincronizzazione', body: 'La connessione al campo è automatica: quando c\'è linea i dati si allineano da soli fra i telefoni, in tempo reale, foto degli scontrini comprese. Senza linea si continua a lavorare normalmente e tutto viene inviato appena la rete torna. Se in due avete lavorato offline, al ritorno della linea le due versioni si uniscono voce per voce: nessuno cancella il lavoro dell\'altro. Il pallino in alto a destra indica se sei online o offline.' },
     { k: 'chiusura', icon: '🏁', title: 'Chiusura e Archivio', body: 'A conti fatti, in Spese Totali → Dati usa "Chiudi il campo": salva tutto (un file sul telefono e una copia nel cloud), lo mette in Archivio e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini su tutti i dispositivi. L\'app resta pronta per il campo dell\'anno dopo. In Archivio rivedi il resoconto di ogni campo chiuso e puoi riscaricarne i dati; il file scaricato alla chiusura è l\'unico che contiene anche le foto degli scontrini, quindi conservalo.' },
     { k: 'galleria', icon: '📸', title: 'Galleria', body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Si guarda in due modi: "Album" sfoglia le foto come polaroid appoggiate su un paesaggio di montagna, una spinta col dito per pagina; "Griglia" le mette tutte in fila, ed è la vista comoda per cercarne una. Il tasto "Crea album ricordo" ti fa scegliere fino a dodici foto e ne fa un PDF con lo stesso paesaggio, quattro per pagina: da mandare nel gruppo o da stampare.' },
-    { k: 'gioco', icon: '🎮', title: 'Aiuta Bandy', body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si parte da Prato Lungo, si passa per Palmiro Togliatti e si finisce a Rio de Janeiro. Ogni volta la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).' },
+    { k: 'gioco', icon: '🎮', title: 'Aiuta Bandy', body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si parte da Prato Lungo, si passa per Palmiro Togliatti e Rio de Janeiro, e si finisce in Thailandia. Ogni volta la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).' },
     { k: 'impostazioni', icon: '⚙️', title: 'Impostazioni', body: 'Aspetto: tema chiaro, scuro o automatico (segue il telefono) — comodo la sera in tenda. Blocco con password: puoi chiedere la password a ogni apertura e bloccare l\'app subito con "Blocca ora". Dati su questo telefono: backup immediato e, se presti o cambi telefono, "Cancella i dati da questo telefono" — il cloud non viene toccato e con la linea i dati tornano da soli. In fondo trovi la versione installata.' },
     { k: 'pronto', icon: '🎒', title: 'Pronto per il campo', body: 'In Impostazioni, in cima, ci sono tre spie: app scaricata sul telefono, dati del campo ricevuti, accesso al database a posto. Devono essere tutte verdi PRIMA di partire, perché a Prato Lungo non c\'è linea e lassù non si sistemano. Finché qualcosa manca, in Calendario compare un avviso che porta lì. Sistemarlo è sempre la stessa cosa: apri l\'app con la linea attiva e aspetta qualche secondo.' },
     { k: 'correggi', icon: '✏️', title: 'Correggere una spesa', body: 'Sbagliato un prezzo o l\'acquirente? Nella cronologia degli acquisti, e nell\'elenco dell\'attrezzatura, ogni riga ha una matita: apre la voce e permette di correggere nome, acquirente, prezzo, tipologia e conto, tenendo la foto dello scontrino attaccata. Non serve cancellare e rifare, che invece porterebbe via anche la foto. Se le voci sono tante, sopra la cronologia degli acquisti c\'e\' un campo di ricerca che filtra per nome, acquirente o tipologia e mostra il totale di quelle trovate; lo stesso campo c\'e\' anche sopra la lista di "Da acquistare", dove cerca per nome e quantita\'.' },

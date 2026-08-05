@@ -47,6 +47,13 @@ const spese = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('cam
     await p.locator('button', { hasText: /^\+$/ }).first().click();
     await p.waitForTimeout(150);
   }
+  // Il registro lo scrive un effetto di React: sotto carico può arrivare dopo.
+  // Si aspetta la condizione invece di sperare in un'attesa fissa, altrimenti
+  // la prova cade a caso quando la macchina è occupata.
+  await p.waitForFunction(
+    () => JSON.parse(localStorage.getItem('cambusa_registro') || '[]').length >= 2,
+    null, { timeout: 8000 },
+  );
 
   let reg = await registro(p);
   ok(`le modifiche locali finiscono nel registro (${reg.length})`, reg.length >= 2);
@@ -63,7 +70,10 @@ const spese = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('cam
       _meta: { v: 2, rev: { 'p|remota1': Date.now() }, del: {} },
     });
   });
-  await p.waitForTimeout(700);
+  await p.waitForFunction(
+    () => JSON.parse(localStorage.getItem('cambusa_registro') || '[]').some((r) => r.o === 'cloud'),
+    null, { timeout: 8000 },
+  ).catch(() => {});
 
   reg = await registro(p);
   ok('anche ciò che arriva dagli altri viene registrato', reg.some((r) => r.o === 'cloud'));

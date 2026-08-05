@@ -1,6 +1,6 @@
-// I tre livelli di "Aiuta Bandy": bosco, città, spiaggia di Rio.
+// I quattro livelli di "Aiuta Bandy": bosco, città, spiaggia di Rio, notte thailandese.
 // Il gioco tiene lo stato su canvas.__game, quindi si può portare avanti di
-// livello senza dover davvero raccogliere quarantacinque Bandy.
+// livello senza dover davvero raccogliere sessanta Bandy.
 const path = require('path');
 const { apri, ok, fine } = require('../lib/app');
 
@@ -104,13 +104,74 @@ const tinte = (p) => p.evaluate(() => {
 
   await p.locator('canvas').screenshot({ path: path.join(__dirname, '..', 'tmp', 'livello3-gioco.png') });
 
+  // --- Livello 4: la notte thailandese ---
+  await vaiAlLivello(p, 4);
+  ok('il cartello annuncia la Thailandia', /thailandia/i.test(await p.locator('body').innerText()));
+
+  const notte = await p.evaluate(() => {
+    const c = document.querySelector('canvas');
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let luce = 0, n = 0, neon = 0, rossoTh = 0, bluTh = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      luce += (r + g + b) / 3; n++;
+      // neon: molto saturo e molto chiaro
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      if (max > 190 && max - min > 110) neon++;
+      if (Math.abs(r - 216) < 30 && Math.abs(g - 43) < 40 && Math.abs(b - 60) < 40) rossoTh++;
+      if (Math.abs(r - 27) < 30 && Math.abs(g - 44) < 30 && Math.abs(b - 107) < 35) bluTh++;
+    }
+    return { luce: luce / n, neon, rossoTh, bluTh };
+  });
+  ok(`livello 4: è notte, la strada è scura (luminosità media ${Math.round(notte.luce)}/255)`, notte.luce < 110);
+  ok(`ci sono le insegne al neon (${notte.neon} pixel accesi)`, notte.neon > 1500);
+  ok(`c'è il rosso della bandiera thailandese (${notte.rossoTh} pixel)`, notte.rossoTh > 200);
+  ok(`e il blu (${notte.bluTh} pixel)`, notte.bluTh > 200);
+
+  // Le insegne stanno ai due lati, sopra i locali: se fossero sparse in mezzo
+  // alla strada non si leggerebbe "corridoio di locali".
+  const lati = await p.evaluate(() => {
+    const c = document.querySelector('canvas');
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let bordi = 0, centro = 0;
+    for (let y = 0; y < c.height; y += 3) {
+      for (let x = 0; x < c.width; x += 3) {
+        const i = (y * c.width + x) * 4;
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        if (max > 190 && max - min > 110) {
+          if (x < c.width * 0.3 || x > c.width * 0.7) bordi++; else centro++;
+        }
+      }
+    }
+    return { bordi, centro };
+  });
+  ok(`le insegne stanno ai lati, non in mezzo alla strada (${lati.bordi} contro ${lati.centro})`,
+    lati.bordi > lati.centro * 3);
+
+  // Il corpo dev'essere leggibile sull'asfalto scuro: al livello 3 è marrone
+  // scuro su sabbia chiara, qui serve il contrario.
+  const contrasto = await p.evaluate(() => {
+    const c = document.querySelector('canvas');
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let pelle = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      if (r > 190 && g > 140 && g < 200 && b > 100 && b < 175 && r > b + 40) pelle++;
+    }
+    return pelle;
+  });
+  ok(`il corpo si vede sull'asfalto scuro (${contrasto} pixel di pelle chiara)`, contrasto > 300);
+
+  await p.locator('canvas').screenshot({ path: path.join(__dirname, '..', 'tmp', 'livello4-gioco.png') });
+
   // Il cartello dura meno di due secondi: passato quello, il nome del livello
   // deve restare leggibile nella riga del punteggio, altrimenti chi gioca non
   // sa più dov'è.
   await p.waitForTimeout(2000);
   const dopoCartello = await p.locator('body').innerText();
   ok('sparito il cartello, il nome resta nella riga del punteggio',
-    /rio de janeiro/i.test(dopoCartello) && !/livello 3/i.test(dopoCartello));
+    /thailandia/i.test(dopoCartello) && !/livello 4/i.test(dopoCartello));
 
   ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
   await fine(browser);
