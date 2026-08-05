@@ -206,6 +206,28 @@ preparazione** e **offline al campo**, dove non c'è linea.
   Alla **chiusura del campo** le foto non si cancellano: vengono **timbrate**
   con l'archivio e restano consultabili da *Archivio → Album*, mentre la
   galleria del campo nuovo riparte vuota.
+- **Presenze bloccate** (Presenze, in modalità tecnica): chiuso un giorno, i
+  suoi pasti non si toccano più — né dai tasti (che si spengono per tutti) né
+  da una sincronizzazione. Il blocco si porta dietro una **copia dei pasti**:
+  è un solo valore con una sua data, quindi si fonde come qualsiasi altra voce
+  e tutti i telefoni arrivano allo stesso risultato. Se un aggiornamento in
+  arrivo tocca i pasti di un giorno chiuso, l'app li **rimette com'erano e
+  ripubblica la correzione**, così il blocco vale ovunque e non solo sul
+  telefono che l'ha messo. Sbloccando si torna ai pasti congelati, non a quelli
+  arrivati nel frattempo. Le riparazioni d'identità (doppioni, presenze senza
+  padrone) restano valide anche sui giorni chiusi: cambiano *a chi* è attaccata
+  una presenza, non *chi* ha mangiato.
+- **Soldi che non entrano in nessuna quota**: se una cassa ha dentro dei soldi
+  ma nessun pasto su cui dividerli — spese segnate "conto separato" senza
+  nessun giorno separato spuntato, oppure acquisti registrati prima che
+  qualcuno segni le presenze — la sua quota a pasto viene zero e quei soldi
+  restano fuori da tutte le quote. Finivano dentro lo *scarto*, e la
+  riconciliazione (nata per limare qualche centesimo) se li spalmava addosso a
+  chi capitava, 10 cent alla volta: **100 € di conto separato diventavano 50 €
+  a testa** per due persone che non c'entravano niente, sotto l'etichetta
+  "arrotondamento". Ora la riconciliazione lavora solo sul ripartibile, e il
+  buco viene detto con la cifra e il motivo — in *Quote*, nei *Saldi* ("i
+  rimborsi non quadrano") e nel resoconto che si manda nel gruppo.
 - **Stessa persona inserita due volte**: non è un difetto della fusione, è la
   fusione che funziona e produce un risultato sbagliato. Due telefoni senza
   linea che aggiungono "Anna Rossi" creano due membri con **id diversi**, ed

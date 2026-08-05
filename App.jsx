@@ -1609,7 +1609,10 @@ function App() {
     // rimandare indietro; altrimenti il push riporta all'altro ciò che gli manca.
     suppressPushRef.current = SM.sameAs(res.meta, remoteState, rmeta);
     setMembers(res.state.members);
-    setCampData(res.state.campData);
+    // Un giorno bloccato non cambia per nessun motivo: se l'aggiornamento in
+    // arrivo ha toccato i suoi pasti, si rimettono com'erano. La correzione
+    // viene poi ripubblicata, così il blocco vale su tutti i telefoni.
+    setCampData(applicaBlocchi(res.state.campData));
     setPurchases(res.state.purchases);
     setGear(res.state.gear);
     setSettled(res.state.settled);
@@ -1799,9 +1802,19 @@ function App() {
     // ultimi byte liberi e far fallire il salvataggio della cronologia: alla
     // riapertura questo telefono ripartiva "senza date" e la prima
     // sincronizzazione gli portava via le voci cancellate dagli altri.
-    if (SM && !suppressPushRef.current) {
+    // La datazione si fa SEMPRE, anche subito dopo una fusione. Prima si
+    // saltava quando la fusione aveva appena scritto la cronologia, e c'era un
+    // buco: se una spunta finiva nello stesso giro di disegno di un
+    // aggiornamento in arrivo — cosa che con quindici persone online capita —
+    // quella spunta restava SENZA DATA, e la prima volta che qualcun altro
+    // toccava la stessa presenza spariva senza lasciare traccia.
+    // Farla sempre non costa nulla: se non è cambiato niente rispetto a quanto
+    // la fusione ha appena salvato, bump non trova differenze e non tocca nulla.
+    let mioCambiamento = false;
+    if (SM) {
       const prima = metaRef.current.flat || {};
       const nuovo = SM.bump(st, metaRef.current, Date.now());
+      mioCambiamento = !SM.equalMap(prima, nuovo.flat);
       // Registro: cosa ha cambiato QUESTO telefono.
       logScrivi(diffFlat(prima, nuovo.flat), 'io');
       saveMeta(nuovo);
@@ -1817,7 +1830,10 @@ function App() {
     statoPrecedenteRef.current = st;
 
     if (!cloudConnectedRef.current) return;
-    if (suppressPushRef.current) return;
+    // Si tace solo se questo giro non ha aggiunto niente di nostro: quello che
+    // è appena arrivato dal cloud non va rimandato indietro. Ma se in mezzo
+    // c'era anche una nostra modifica, quella deve partire.
+    if (suppressPushRef.current && !mioCambiamento) return;
     const m = metaRef.current;
     if (window.CloudSync) {
       window.CloudSync.pushState({ ...st, _meta: { v: SM ? SM.VERSION : 0, rev: m.rev, del: m.del, hi: m.hi || 0 } });
@@ -1872,12 +1888,80 @@ function App() {
     }));
   };
 
+  // ---------- Presenze bloccate ----------
+  // Quando un giorno è chiuso, le sue presenze non si toccano più: né col dito
+  // né da una sincronizzazione. Il blocco si porta dietro una COPIA dei pasti
+  // (`bloccato.meals`) e quella copia è l'unica verità: è un solo valore, con
+  // una sua data, quindi si fonde come qualsiasi altra voce e tutti i telefoni
+  // arrivano allo stesso risultato. Se un aggiornamento in arrivo cambia i
+  // pasti di un giorno bloccato, l'app li rimette com'erano e ripubblica la
+  // correzione, così il blocco vale davvero ovunque e non solo qui.
+  const giornoBloccato = (dateStr) => {
+    const b = (campData[dateStr] || {}).bloccato;
+    return b && typeof b === 'object' ? b : null;
+  };
+
+  // Rimette a posto i pasti dei giorni bloccati. Restituisce lo stesso oggetto
+  // se non c'era niente da correggere, così non si scatenano giri a vuoto.
+  const applicaBlocchi = (cd) => {
+    let toccato = false;
+    const out = {};
+    Object.keys(cd || {}).forEach((d) => {
+      const day = cd[d];
+      out[d] = day;
+      const b = day && day.bloccato;
+      if (!b || typeof b !== 'object' || !b.meals) return;
+      if (JSON.stringify(day.meals || {}) === JSON.stringify(b.meals)) return;
+      out[d] = { ...day, meals: { ...b.meals } };
+      toccato = true;
+    });
+    return toccato ? out : cd;
+  };
+
+  // Applica una nuova mappa di pasti tenendo allineata la copia bloccata:
+  // le riparazioni d'identità (doppioni, presenze orfane) devono valere anche
+  // sui giorni chiusi, altrimenti quelle presenze sparirebbero dai conti.
+  const conBlocco = (day, meals) => (day.bloccato && typeof day.bloccato === 'object'
+    ? { ...day, meals, bloccato: { ...day.bloccato, meals } }
+    : { ...day, meals });
+
+  const bloccaGiorno = (dateStr) => {
+    const meals = (campData[dateStr] || {}).meals || {};
+    const n = Object.values(meals).filter((v) => v && (v.lunch || v.dinner)).length;
+    if (!window.confirm(
+      `Bloccare le presenze di ${nomeGiorno(dateStr)}?\n\n` +
+      `Restano congelate così come sono adesso (${n} ${n === 1 ? 'persona' : 'persone'} con almeno un pasto). ` +
+      'Da quel momento non si toccano più: né dai tasti, né da quello che arriva dagli altri telefoni.\n\n' +
+      'Si può sbloccare da qui, in modalità tecnica.'
+    )) return;
+    setCampData((prev) => {
+      const day = { ...(prev[dateStr] || {}) };
+      const copia = { ...(day.meals || {}) };
+      return { ...prev, [dateStr]: { ...day, meals: copia, bloccato: { at: Date.now(), meals: copia } } };
+    });
+  };
+
+  const sbloccaGiorno = (dateStr) => {
+    if (!window.confirm(
+      `Sbloccare le presenze di ${nomeGiorno(dateStr)}?\n\n` +
+      'Tornano modificabili da tutti, e riprendono a sincronizzarsi.'
+    )) return;
+    setCampData((prev) => {
+      const day = { ...(prev[dateStr] || {}) };
+      const b = day.bloccato;
+      if (b && typeof b === 'object' && b.meals) day.meals = { ...b.meals };
+      delete day.bloccato;
+      return { ...prev, [dateStr]: day };
+    });
+  };
+
   const getMeal = (dateStr, memberId) => {
     const day = campData[dateStr];
     return (day && day.meals && day.meals[memberId]) || { lunch: false, dinner: false };
   };
 
   const toggleMeal = (dateStr, memberId, mealType) => {
+    if (giornoBloccato(dateStr)) return;
     setCampData((prev) => {
       const day = { ...(prev[dateStr] || {}) };
       const meals = { ...(day.meals || {}) };
@@ -1891,6 +1975,7 @@ function App() {
   // tutti segnati, li toglie tutti; altrimenti li segna tutti.
   const setAllMeals = (dateStr, mealType) => {
     if (members.length === 0) return;
+    if (giornoBloccato(dateStr)) return;
     setCampData((prev) => {
       const day = { ...(prev[dateStr] || {}) };
       const meals = { ...(day.meals || {}) };
@@ -1947,7 +2032,10 @@ function App() {
         const attuale = meals[nuovoId] || { lunch: false, dinner: false };
         meals[nuovoId] = { lunch: !!(attuale.lunch || vecchio.lunch), dinner: !!(attuale.dinner || vecchio.dinner) };
         delete meals[orfano.id];
-        out[d] = { ...day, meals };
+        // Anche sui giorni bloccati: rimettere una presenza sulla persona
+        // giusta non cambia CHI ha mangiato, e se la si saltasse quella
+        // presenza sparirebbe dai conti.
+        out[d] = conBlocco(day, meals);
       });
       return out;
     });
@@ -2029,7 +2117,7 @@ function App() {
           delete meals[m.id];
         });
         meals[tengo.id] = { lunch, dinner };
-        out[d] = { ...day, meals };
+        out[d] = conBlocco(day, meals);
       });
       return out;
     });
@@ -2082,7 +2170,7 @@ function App() {
         if (!day || !day.meals || !day.meals[orfano.id]) return;
         const meals = { ...day.meals };
         delete meals[orfano.id];
-        out[d] = { ...day, meals };
+        out[d] = conBlocco(day, meals);
       });
       return out;
     });
@@ -2106,6 +2194,10 @@ function App() {
 
   // Copia le presenze (pranzo e cena) dal giorno precedente.
   const chiediCopiaDaIeri = () => {
+    if (giornoBloccato(selectedDateStr)) {
+      window.alert(`Le presenze di ${nomeGiorno(selectedDateStr)} sono bloccate: prima vanno sbloccate.`);
+      return;
+    }
     const d = parseDate(selectedDateStr);
     d.setDate(d.getDate() - 1);
     const prevStr = toDateStr(d);
@@ -2425,6 +2517,14 @@ function App() {
     if (t.unattributed > 0.005) {
       lines.push('');
       lines.push(`⚠️ ${money(t.unattributed)} € di spese comuni senza acquirente.`);
+    }
+    // Un resoconto che non quadra non va mandato nel gruppo senza dirlo: chi
+    // lo legge farebbe i bonifici sbagliati.
+    if (t.nonRipartito > 0.005) {
+      lines.push('');
+      lines.push(`⚠️ CONTI NON COMPLETI: ${money(t.nonRipartito)} € non sono nelle quote di nessuno.`);
+      t.buchi.forEach((b) => lines.push(`   • ${money(b.quanto)} € — ${b.perche}`));
+      lines.push('   Chi ha anticipato quella cifra resta scoperto: da sistemare prima di pagare.');
     }
     return lines.join('\n');
   };
@@ -2871,7 +2971,38 @@ function App() {
       b.payCents = b.isChild ? 0 : round10(Math.round(b.owed * 100));
     });
 
-    const targetCents = Math.round(overallTotal * 100);
+    // --- Soldi senza divisore: un BUCO, non un arrotondamento ---
+    // Se una cassa ha dei soldi dentro ma nessun pasto (o nessun presente) su
+    // cui dividerli, la sua quota a pasto viene zero e quei soldi non entrano
+    // in nessuna quota. Finivano dentro lo scarto, e la riconciliazione — nata
+    // per limare qualche centesimo — se li spalmava addosso a chi capitava, 10
+    // cent alla volta: cento euro di "conto separato" senza giorni separati
+    // spuntati diventavano cinquanta euro a testa per due persone che non
+    // c'entravano niente, sotto l'etichetta "arrotondamento".
+    // Ora si tengono fuori dal conto e si dicono.
+    const buchi = [];
+    if (foodDrinksCommon > 0.005 && adultMealsCommon === 0) {
+      buchi.push({ quanto: foodDrinksCommon, perche: 'cibo e bevande del conto comune, ma nessun pasto segnato nei giorni comuni' });
+    }
+    if (foodDrinksSep > 0.005 && adultMealsSep === 0) {
+      buchi.push({
+        quanto: foodDrinksSep,
+        perche: sepDays.length === 0
+          ? 'spese segnate "conto separato", ma in Calendario nessun giorno è spuntato come separato'
+          : 'spese segnate "conto separato", ma nei giorni separati non c\'è nessuna presenza',
+      });
+    }
+    if (logisticsPurchases > 0.005 && attendingAdults.size === 0) {
+      buchi.push({ quanto: logisticsPurchases, perche: 'spese di logistica, ma nessun adulto ha presenze segnate' });
+    }
+    if (equipBought > 0.005 && equipDivisorSet.size === 0) {
+      buchi.push({ quanto: equipBought, perche: 'attrezzatura acquistata, ma nessun adulto ha presenze segnate' });
+    }
+    const nonRipartito = buchi.reduce((s, b) => s + b.quanto, 0);
+
+    // Si riconcilia solo ciò che è davvero ripartibile: così lo scarto torna a
+    // essere quello che deve essere — pochi centesimi di arrotondamento.
+    const targetCents = Math.round((overallTotal - nonRipartito) * 100);
     let residual = targetCents - breakdown.reduce((s, b) => s + b.payCents, 0);
 
     if (Math.abs(residual) >= 50) {
@@ -2895,7 +3026,9 @@ function App() {
 
     breakdown.forEach((b) => { b.pay = b.payCents / 100; });
     const collected = breakdown.reduce((s, b) => s + b.payCents, 0) / 100;
-    const roundingDiff = collected - overallTotal;
+    // Lo scarto ora è solo arrotondamento: il buco viaggia da solo, con il suo
+    // nome, invece di nascondersi qui dentro.
+    const roundingDiff = collected - (overallTotal - nonRipartito);
 
     // Anticipi per acquirente: quanto ha speso ciascuno (per i rimborsi).
     const buyerMap = {};
@@ -2977,7 +3110,8 @@ function App() {
       foodDrinksCommon, foodDrinksSep, costPerMealSep,
       sepPeopleCount: sepPeople.size, sepDaysCount: sepDays.length,
       attendingAdultsCount: attendingAdults.size, breakdown,
-      collected, roundingDiff, byBuyer, settlement, unattributed, unknownBuyers, transfers,
+      collected, roundingDiff, nonRipartito, buchi,
+      byBuyer, settlement, unattributed, unknownBuyers, transfers,
     };
   };
 
@@ -4055,9 +4189,28 @@ function App() {
             })()}
 
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">
-                Presenze del {parseDate(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
+              <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2">
+                <span className="min-w-0 truncate">
+                  Presenze del {parseDate(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
+                </span>
+                {giornoBloccato(selectedDateStr) && (
+                  <span className="ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white">🔒 Bloccate</span>
+                )}
               </h3>
+
+              {/* Giorno chiuso: le presenze sono congelate. Lo si dice a tutti
+                  — chi non è in modalità tecnica deve capire perché i tasti non
+                  rispondono — ma solo chi tiene i conti può aprire e chiudere. */}
+              {giornoBloccato(selectedDateStr) && (
+                <div className="bg-[#5C4A3C]/10 border border-[#5C4A3C]/40 rounded p-2.5">
+                  <p className="text-[10px] text-[#5C4A3C] leading-snug">
+                    <span className="font-bold">Presenze chiuse.</span> Sono state bloccate il{' '}
+                    {new Date(giornoBloccato(selectedDateStr).at).toLocaleString('it-IT')} e non cambiano più:
+                    né dai tasti, né da quello che arriva dagli altri telefoni. Se un telefono prova a
+                    modificarle, l'app le rimette com'erano.
+                  </p>
+                </div>
+              )}
 
               {members.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">Aggiungi prima i membri nella scheda "Membri".</p>
@@ -4067,7 +4220,7 @@ function App() {
                     la modifica arriva su tutti i telefoni. Stanno chiuse e
                     chiedono conferma: è il tipo di tasto che si preme per
                     sbaglio scorrendo, e poi qualcuno resta senza pasti. */}
-                <div className="bg-[#F0F4F1]/60 rounded border border-[#8F9E8B]/30 overflow-hidden">
+                <div className={`bg-[#F0F4F1]/60 rounded border border-[#8F9E8B]/30 overflow-hidden ${giornoBloccato(selectedDateStr) ? 'opacity-50 pointer-events-none' : ''}`}>
                   <button
                     onClick={() => setAzioniOpen((v) => !v)}
                     className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-[#E2EAE4]/70"
@@ -4095,6 +4248,7 @@ function App() {
                 <ul className="space-y-2">
                   {members.map((m) => {
                     const meal = getMeal(selectedDateStr, m.id);
+                    const chiuso = !!giornoBloccato(selectedDateStr);
                     return (
                       <li key={m.id} className="flex items-center justify-between gap-2 bg-[#F0F4F1]/60 p-2 rounded border border-[#8F9E8B]/20">
                         <span className="text-sm font-bold text-[#2D392C] truncate flex items-center gap-1">
@@ -4104,13 +4258,15 @@ function App() {
                         <div className="flex gap-1.5 shrink-0">
                           <button
                             onClick={() => toggleMeal(selectedDateStr, m.id, 'lunch')}
-                            className={`text-[10px] uppercase font-bold px-2.5 py-1.5 rounded border ${meal.lunch ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white text-gray-400 border-gray-300'}`}
+                            disabled={chiuso}
+                            className={`text-[10px] uppercase font-bold px-2.5 py-1.5 rounded border ${meal.lunch ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white text-gray-400 border-gray-300'} ${chiuso ? 'opacity-60 cursor-not-allowed' : ''}`}
                           >
                             Pranzo
                           </button>
                           <button
                             onClick={() => toggleMeal(selectedDateStr, m.id, 'dinner')}
-                            className={`text-[10px] uppercase font-bold px-2.5 py-1.5 rounded border ${meal.dinner ? 'bg-[#5C4A3C] text-white border-[#5C4A3C]' : 'bg-white text-gray-400 border-gray-300'}`}
+                            disabled={chiuso}
+                            className={`text-[10px] uppercase font-bold px-2.5 py-1.5 rounded border ${meal.dinner ? 'bg-[#5C4A3C] text-white border-[#5C4A3C]' : 'bg-white text-gray-400 border-gray-300'} ${chiuso ? 'opacity-60 cursor-not-allowed' : ''}`}
                           >
                             Cena
                           </button>
@@ -4120,6 +4276,27 @@ function App() {
                   })}
                 </ul>
                 </>
+              )}
+
+              {/* Chiudere un giorno è la garanzia definitiva contro le presenze
+                  che cambiano da sole: è una decisione di chi tiene i conti,
+                  quindi sta in modalità tecnica. */}
+              {admin && members.length > 0 && (
+                giornoBloccato(selectedDateStr) ? (
+                  <button
+                    onClick={() => sbloccaGiorno(selectedDateStr)}
+                    className="w-full py-2.5 bg-white border-2 border-[#5C4A3C]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]"
+                  >
+                    🔓 Sblocca le presenze di questo giorno
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => bloccaGiorno(selectedDateStr)}
+                    className="w-full py-2.5 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
+                  >
+                    🔒 Blocca le presenze di questo giorno
+                  </button>
+                )
               )}
             </div>
 
@@ -4288,10 +4465,33 @@ function App() {
                     <span className="text-[11px] uppercase font-bold text-gray-500">Totale raccolto</span>
                     <span className="font-rustic font-bold text-[#2D392C]">{money(totals.collected)} €</span>
                   </div>
+                  {/* Soldi che nessuno sta pagando. Prima finivano dentro lo
+                      scarto e la riconciliazione se li spalmava addosso a chi
+                      capitava, sotto l'etichetta "arrotondamento". */}
+                  {totals.nonRipartito > 0.005 && (
+                    <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mt-2">
+                      <p className="text-[10px] text-[#5C4A3C] leading-snug">
+                        <span className="font-bold">{money(totals.nonRipartito)} € non sono nelle quote di nessuno.</span>{' '}
+                        Il totale dice {money(totals.overallTotal)} €, ma se ne raccolgono {money(totals.collected)} €:
+                        chi ha anticipato quei soldi non li riavrebbe indietro.
+                      </p>
+                      <ul className="mt-1.5 space-y-1">
+                        {totals.buchi.map((b) => (
+                          <li key={b.perche} className="text-[10px] text-[#5C4A3C] leading-snug">
+                            <span className="font-bold">{money(b.quanto)} €</span> — {b.perche}.
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-[9px] text-gray-500 italic mt-1.5 leading-snug">
+                        Si sistema segnando le presenze mancanti, spuntando i giorni del conto separato in
+                        Calendario, oppure rimettendo quelle spese sul conto comune (la matita nel Taccuino).
+                      </p>
+                    </div>
+                  )}
                   <p className="text-[9px] text-gray-400 italic mt-2">
                     Quote arrotondate a 0,10 € (niente monetine da 1/2/5 cent).
                     {Math.abs(totals.roundingDiff) >= 0.005
-                      ? ` Scarto rispetto al totale: ${totals.roundingDiff > 0 ? '+' : ''}${money(totals.roundingDiff)} € (sotto 0,50 €, non riconciliato).`
+                      ? ` Scarto rispetto al ripartibile: ${totals.roundingDiff > 0 ? '+' : ''}${money(totals.roundingDiff)} € (sotto 0,50 €, non riconciliato).`
                       : ' Nessuno scarto.'}
                   </p>
                 </div>
@@ -4413,6 +4613,18 @@ function App() {
                 <p className="text-[9px] text-[#D97706] italic mt-2">
                   Attenzione: {money(totals.unattributed)} € di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti.
                 </p>
+              )}
+              {/* Se dei soldi non sono in nessuna quota, i rimborsi NON possono
+                  quadrare: chi ha anticipato resta scoperto. Va detto qui, dove
+                  si guarda chi paga chi, non solo nella scheda delle quote. */}
+              {totals.nonRipartito > 0.005 && (
+                <div className="mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
+                  <p className="text-[11px] text-[#5C4A3C] leading-snug">
+                    <span className="font-bold">I rimborsi non quadrano: {money(totals.nonRipartito)} € non sono nelle quote di nessuno.</span>{' '}
+                    Chi ha anticipato quella cifra resterebbe scoperto. Guarda l'avviso in
+                    <span className="font-bold"> Quote</span>: dice quali spese sono e come sistemarle.
+                  </p>
+                </div>
               )}
               {totals.unknownBuyers.length > 0 && (
                 <div className="mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">

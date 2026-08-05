@@ -86,6 +86,9 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `e2e/autochiede` | L'app chiede da sola la password quando serve al database |
 | `e2e/smoke` | L'app si apre e resta usabile anche senza rete |
 | `e2e/presenze` | Presenze, "tutti a pranzo/cena", copia da ieri |
+| `e2e/blocco` | Presenze bloccate: i tasti si spengono davvero (e forzarli non serve), "Tutti a pranzo" non passa, un aggiornamento **datato adesso** non scalfisce il giorno chiuso e la correzione viene **ripubblicata**; sbloccando tornano i pasti congelati, non quelli arrivati nel frattempo; senza modalità tecnica il tasto non c'è |
+| `e2e/buchi` | Soldi che non entrano in nessuna quota: 100 € di "conto separato" senza giorni separati **non** vengono spalmati sulle quote come se fossero arrotondamento, il buco si vede con cifra e motivo in Quote, nei Saldi e nel resoconto, e spuntando il giorno separato si chiude |
+| `e2e/corsa` | Una spunta e un aggiornamento in arrivo nello stesso giro di disegno: la spunta dev'essere datata, spedita, e sopravvivere a un aggiornamento più vecchio che la contraddice |
 | `e2e/doppioni` | Stessa persona aggiunta da due telefoni offline: la fusione tiene **entrambe** (sono voci nuove legittime), l'app lo segnala spiegando che sbaglia la quota di tutti, e unendo le due schede **somma** le presenze e non perde l'IBAN compilato solo su una. Per le spese doppie invece segnala e basta: di mezzo ci sono i soldi |
 | `e2e/orfane` | Membro eliminato e riaggiunto: le sue presenze restano appese al vecchio id. L'app le trova, le chiama per nome, le riassegna sommandole a quelle già segnate, o le butta |
 | `e2e/calendario` | Note libere del giorno (distinte dal menù: scriverne una non cancella l'altro) e riga "Conto separato" che si apre a comando |
