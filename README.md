@@ -99,6 +99,28 @@ preparazione** e **offline al campo**, dove non c'è linea.
   quindi qualsiasi modifica datata ha la precedenza e nulla viene cancellato.
   Prima qui si sovrascriveva tutto, e bastava un telefono rimasto indietro per
   riportare l'intero campo a giorni prima.
+- **Niente sovrascritture alla cieca**: la fusione girava solo in *lettura*. In
+  scrittura si faceva `setDoc` e basta — e siccome Firestore **mette in coda le
+  scritture fatte offline e le rigioca al ritorno della linea**, un telefono
+  rientrato dal campo dopo giorni senza rete riscriveva il documento con il
+  proprio stato, **cancellando dal cloud il lavoro di chi era rientrato prima**;
+  e non poteva accorgersene, perché le proprie scritture le ignora. Il lavoro
+  tornava solo se l'altro riapriva l'app. Ora si scrive dentro una
+  **transazione**: si legge cosa c'è, e se contiene qualcosa che questo telefono
+  non ha mai visto la scrittura **si annulla**, si aspetta di riceverlo, lo si
+  fonde e si rimanda l'unione. La regola sta in una funzione sola
+  (`sovrascrivibile`), provata a parte. Effetto collaterale voluto: la
+  transazione va sempre al server, quindi **niente scritture in coda** — finché
+  non c'è linea resta tutto "da inviare", che è la verità.
+- **Sostituzioni in blocco** (Ripristino di emergenza, Importa backup): non
+  aggiungono, **rimpiazzano**, e ciò che sparisce viene cancellato su tutti i
+  telefoni. Prima la conferma diceva solo "i dati attuali verranno sostituiti":
+  chi apriva per sbaglio un backup di tre giorni prima azzerava il campo per
+  tutti senza sapere né la data del file né quanto stava buttando. Ora la
+  conferma dice **la data del backup, cosa contiene e quante voci spariranno da
+  TUTTI i telefoni**, in italiano ("28 presenze, 4 membri"); un file che non è
+  un backup viene rifiutato; e la **copia di scorta si salva anche su chi fa
+  l'operazione**, che prima era l'unico senza via d'uscita.
 - **Scritture che non arrivano**: `lastPushedJson` si aggiorna **solo a
   scrittura riuscita**. Prima veniva segnato prima di scrivere, quindi una
   scrittura fallita (regole, quota, documento troppo grande) non veniva più
@@ -113,6 +135,12 @@ preparazione** e **offline al campo**, dove non c'è linea.
   crescenti, al ritorno della linea e al collegamento; la spia in alto dice
   quante ne mancano ("2 foto da inviare") e in *Impostazioni → Diagnostica*
   c'è "Riprova adesso".
+  Attenzione a una differenza: gli **scontrini** hanno una copia in
+  `localStorage`, quindi al collegamento successivo quelli mancanti nel cloud si
+  ripubblicano da soli. Le **foto della galleria** no — sono troppo grandi per
+  stare sul telefono — quindi la loro coda vive solo finché l'app è aperta: se si
+  chiude, quelle non ancora partite vanno riscelte. La Galleria lo dice mentre
+  succede ("3 foto ancora da caricare: tieni l'app aperta").
 - **Documento troppo grande**: sopra i 900 KB (il limite di Firestore è 1 MiB)
   la scrittura verrebbe rifiutata e la sincronizzazione si fermerebbe senza
   dirlo. Ora si avvisa prima.

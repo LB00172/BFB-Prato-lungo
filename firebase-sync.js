@@ -189,13 +189,62 @@
     pushTimer = setTimeout(function () { inviaOra(); }, 1500);
   }
 
-  // Invio vero e proprio. "lastPushedJson" si aggiorna SOLO a scrittura
-  // riuscita: segnarlo prima significava che una scrittura fallita (regole,
-  // quota, documento troppo grande) non veniva piu' ritentata, e i dati di quel
-  // telefono restavano solo li' senza che niente lo dicesse.
+  // Una promessa che non puo' restare appesa per sempre: senza, un invio che
+  // non torna piu' (rete a singhiozzo) bloccherebbe tutti quelli successivi.
+  function conScadenza(promessa, ms) {
+    let t;
+    const scadenza = new Promise(function (_, rifiuta) {
+      t = setTimeout(function () {
+        const e = new Error('tempo scaduto');
+        e.name = 'Scaduto';
+        rifiuta(e);
+      }, ms);
+    });
+    return Promise.race([promessa, scadenza]).finally(function () { clearTimeout(t); });
+  }
+
+  // Invio vero e proprio. Due cose importanti.
+  //
+  // 1) NON si sovrascrive alla cieca. Prima si legge cosa c'e' nel cloud dentro
+  //    una transazione: se contiene qualcosa che questo telefono non ha ancora
+  //    visto, la scrittura si annulla e si aspetta di riceverlo, fonderlo e
+  //    rimandare l'unione. Prima si scriveva e basta, e siccome Firestore mette
+  //    in coda le scritture fatte offline e le rigioca tutte al ritorno della
+  //    linea, un telefono che aveva lavorato tre giorni senza rete cancellava
+  //    dal cloud il lavoro di chi era rientrato prima di lui — e non poteva
+  //    accorgersene, perche' le proprie scritture le ignora. Il lavoro tornava
+  //    solo se l'altro riapriva l'app. La transazione va sempre al server,
+  //    quindi niente scritture in coda: finche' non c'e' linea resta tutto
+  //    "da inviare", che e' la verita'.
+  //
+  // 2) "lastPushedJson" si aggiorna SOLO a scrittura riuscita: segnarlo prima
+  //    significava che una scrittura fallita (regole, quota, documento troppo
+  //    grande) non veniva piu' ritentata, e i dati di quel telefono restavano
+  //    solo li' senza che niente lo dicesse.
+  let invioInCorso = false;
+
+  // La regola, isolata perche' e' l'unica cosa che sta fra il lavoro di tutti e
+  // una sovrascrittura. Si puo' scrivere sopra il documento trovato SOLO se
+  // quello che c'e' e' roba che questo telefono conosce gia':
+  //   - non c'e' niente (campo nuovo);
+  //   - e' illeggibile (non e' uno stato: non c'e' niente da salvare);
+  //   - l'abbiamo scritto noi;
+  //   - l'abbiamo gia' ricevuto e fuso, oppure e' esattamente cio' che abbiamo
+  //     appena spedito.
+  // In tutti gli altri casi c'e' del lavoro altrui che non abbiamo ancora
+  // visto: scriverlo sopra vorrebbe dire cancellarlo.
+  function sovrascrivibile(cur, visto, spedito, mioId) {
+    if (!cur) return true;
+    if (typeof cur.data !== 'string') return true;
+    if (cur.updatedBy === mioId) return true;
+    return cur.data === visto || cur.data === spedito;
+  }
+
   async function inviaOra() {
+    if (invioInCorso) return;
     if (!pendingJson || !state.connected || !db || !fb) return;
     const json = pendingJson;
+    invioInCorso = true;
     try {
       emit({ status: 'saving' });
       if (json.length > MAX_DOC) {
@@ -203,7 +252,26 @@
         return;
       }
       const ref = fb.doc(db, 'camps', state.code);
-      await fb.setDoc(ref, { data: json, updatedBy: deviceId, updatedAt: fb.serverTimestamp() });
+      // Rete di sicurezza: se questa versione dell'SDK non avesse le
+      // transazioni, meglio la vecchia scrittura diretta che nessuna scrittura.
+      if (typeof fb.runTransaction !== 'function') {
+        await conScadenza(fb.setDoc(ref, { data: json, updatedBy: deviceId, updatedAt: fb.serverTimestamp() }), 25000);
+        lastPushedJson = json;
+        if (pendingJson === json) pendingJson = null;
+        tentativi = 0;
+        emit({ status: 'connected', lastSync: Date.now(), error: null });
+        maybeDailySnapshot(json);
+        return;
+      }
+      await conScadenza(fb.runTransaction(db, async function (tx) {
+        const snap = await tx.get(ref);
+        if (!sovrascrivibile(snap.exists() ? snap.data() : null, lastAppliedJson, lastPushedJson, deviceId)) {
+          const e = new Error('nel cloud c\'e\' del lavoro non ancora fuso');
+          e.name = 'DaFondere';
+          throw e;
+        }
+        tx.set(ref, { data: json, updatedBy: deviceId, updatedAt: fb.serverTimestamp() });
+      }), 25000);
       // Riuscita: solo ora si puo' dire "questo l'ho gia' mandato".
       lastPushedJson = json;
       if (pendingJson === json) pendingJson = null;
@@ -211,13 +279,35 @@
       emit({ status: 'connected', lastSync: Date.now(), error: null });
       maybeDailySnapshot(json);
     } catch (e) {
+      if (e && e.name === 'DaFondere') {
+        // Non e' un guasto: sta arrivando roba nuova. Il listener la consegna,
+        // la app la fonde e rimanda l'unione; se per qualche motivo non
+        // arrivasse, fra poco si riprova comunque.
+        emit({ status: 'connected', error: null });
+        clearTimeout(pushTimer);
+        pushTimer = setTimeout(function () { inviaOra(); }, 3000);
+        return;
+      }
       // Resta in sospeso e si riprova, con attese crescenti.
       tentativi++;
-      emit({ status: 'error', error: e.message || String(e) });
+      emit({ status: 'error', error: messaggioInvio(e) });
       const attesa = Math.min(60000, 2000 * Math.pow(2, Math.min(tentativi, 5)));
       clearTimeout(pushTimer);
       pushTimer = setTimeout(function () { inviaOra(); }, attesa);
+    } finally {
+      invioInCorso = false;
     }
+  }
+
+  // Senza linea la transazione non parte: e' la normalita' al campo, non un
+  // guasto, e va detto in italiano invece di mostrare il messaggio dell'SDK.
+  function messaggioInvio(e) {
+    const codice = (e && e.code) || '';
+    if (e && e.name === 'Scaduto') return 'La linea non regge: riprovo da solo.';
+    if (/unavailable|failed-precondition|deadline/.test(codice) || !navigator.onLine) {
+      return 'Senza linea: le modifiche restano qui e partono da sole appena torna il segnale.';
+    }
+    return (e && e.message) || String(e);
   }
 
   // Ritenta subito ciò che è rimasto in sospeso (al ritorno della linea, o
@@ -582,6 +672,7 @@
     lastPushedJson = null;
     pendingJson = null;
     tentativi = 0;
+    invioInCorso = false;
     emit({ connected: false, code: null, status: 'idle', error: null });
   }
 
@@ -589,6 +680,9 @@
     connect,
     pushState,
     riprova,
+    // Esposta per le prove: e' la regola che impedisce di sovrascrivere il
+    // lavoro che non abbiamo ancora visto.
+    sovrascrivibile,
     inSospeso: () => !!pendingJson,
     fotoInCoda: () => codaFoto.length,
     putReceipt,

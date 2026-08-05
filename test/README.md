@@ -57,6 +57,7 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `unita/compilazione` | `App.jsx` compila; **`App.js` è allineato** (cioè non hai dimenticato `npm run build`); il `CACHE_NAME` c'è; ogni script di `index.html` sta nel precache |
 | `unita/fusione-motore` | I 54 casi del motore di fusione (`sync-merge.js`): voci nuove da due telefoni, cancellazioni, lapidi, convergenza, **orologi sbagliati** (telefono indietro che deve comunque vincere anche **dopo aver chiuso e riaperto l'app**, telefono avanti che non deve trascinare gli altri né spaccare l'accordo), app vecchia che non deve cancellare nulla, e **quando** è stata fatta una cancellazione — un membro tolto vale sette percorsi, non sette danni |
 | `unita/arrotondamenti` | Quote sempre multiple di 0,10 €; riconciliazione dello scarto solo sopra i 50 cent |
+| `unita/sovrascrittura-regola` | La regola che sta fra il lavoro di tutti e una sovrascrittura (`sovrascrivibile` in `firebase-sync.js`): quando si può scrivere sopra il documento del cloud e quando no, compresa la sequenza completa del rientro dal campo — rifiuto, fusione, scrittura dell'unione |
 | `unita/pdf-ricordo` | Il PDF "foto ricordo": struttura del file, **ogni voce della tavola degli scarti punta al suo oggetto**, JPEG incorporati senza ricodifica, impaginazione, tetto di 12, accenti e ingressi rotti. Salva un esempio in `test/tmp/ricordo.pdf` |
 
 **Con l'app vera**
@@ -78,6 +79,8 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `e2e/registro` | Registro delle modifiche (locali e in arrivo, con data e ora, esportabile) e ciclo offline→online: il lavoro fatto senza linea sopravvive, viene ripubblicato, e ricevere ciò che si è appena spedito non produce un altro invio |
 | `e2e/perdita` | **Perdita di dati**: cancellazioni datate in arrivo dal cloud, freno di sicurezza, copia di scorta, "Annulla la sincronizzazione" con ridatazione, diagnostica, che "Copia da ieri" non cancelli le presenze di nessuno, e il **recupero del ritardo**: un telefono rimasto indietro che viene a sapere di cancellazioni di giorni prima non deve gridare al disastro, ma deve comunque poterle annullare |
 | `e2e/admin` | Modalità tecnica: l'utente normale non vede diagnostica, registro né allarmi (ma la copia di scorta si salva lo stesso, in silenzio); la password sbagliata non apre niente, quella giusta accende tutto, la scelta sopravvive alla riapertura e si può spegnere. Le altre prove aprono l'app **già in modalità tecnica** (`apri({ admin: false })` per l'utente normale) |
+| `e2e/sovrascrittura` | Un altro telefono ha pubblicato del lavoro che questo non ha mai visto: la scrittura viene **annullata**, il lavoro altrui viene ricevuto e fuso, e nel cloud finisce l'**unione**. Quando invece non ci sono novità, la scrittura passa al primo colpo |
+| `e2e/sostituzioni` | Ripristino e importazione: la conferma dice **la data del backup, cosa contiene e quante voci spariranno da tutti i telefoni**; un file che non è un backup viene rifiutato; la copia di scorta si salva anche su chi fa l'operazione, e l'annullamento funziona davvero |
 | `e2e/riaggancio` | Ritorno della linea e riaggancio al cloud |
 | `e2e/login` | Blocco con password, tentativi sbagliati, "blocca ora" |
 | `e2e/autochiede` | L'app chiede da sola la password quando serve al database |

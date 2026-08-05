@@ -1916,6 +1916,44 @@ function App() {
     }, 0);
   };
 
+  // ---------- Sostituzioni in blocco (ripristino, importazione) ----------
+  // Un ripristino e un'importazione non "aggiungono": rimpiazzano lo stato, e
+  // tutto ciò che c'era e non c'è più diventa una cancellazione datata che
+  // parte verso TUTTI i telefoni. È l'operazione più pericolosa dell'app, e
+  // finora chi la faceva era l'unico a non avere una via d'uscita: la copia di
+  // scorta si salvava solo su chi RICEVEVA il disastro.
+  // Qui si conta il danno PRIMA di chiedere conferma, e si mette da parte la
+  // copia di scorta anche su questo telefono.
+  const perditeSeApplico = nuovo => {
+    const SM = window.SyncMerge;
+    if (!SM) return [];
+    const prima = SM.flatten(syncStateRef.current);
+    const dopo = SM.flatten(nuovo);
+    return Object.keys(prima).filter(p => !(p in dopo));
+  };
+  const scortaPrimaDi = perse => {
+    if (!perse.length) return;
+    try {
+      localStorage.setItem(RESCUE_KEY, JSON.stringify({
+        at: Date.now(),
+        perse: perse.length,
+        paths: perse.slice(0, 200),
+        quando: Date.now(),
+        state: syncStateRef.current,
+        meta: metaRef.current
+      }));
+    } catch (e) {/* spazio esaurito: si prosegue senza scorta */}
+    setLostSync(null);
+    setDiagTick(t => t + 1);
+  };
+
+  // Frase da mettere nella conferma: dice cosa sparirà, in italiano.
+  const avvisoPerdite = perse => {
+    if (!perse.length) return 'Non sparisce nessuna voce: il ripristino aggiunge soltanto.';
+    const che = descriviPerdite(perse, syncStateRef.current);
+    return `ATTENZIONE: spariranno ${perse.length} voci da TUTTI i telefoni` + (che ? `\n(${che})` : '') + '\n\nSi potrà annullare da Impostazioni → Diagnostica.';
+  };
+
   // Il registro come file di testo: comodo da mandare quando si deve capire
   // cosa è successo, senza doverlo leggere sullo schermo del telefono.
   const esportaRegistro = () => {
@@ -2670,7 +2708,9 @@ function App() {
     const id = typeof voce === 'string' ? voce : voce.id;
     const dove = typeof voce === 'string' ? 'cloud' : voce.dove;
     const quando = id.slice(11) === '00' ? ' (mattina)' : id.slice(11) === '12' ? ' (pomeriggio)' : '';
-    if (!window.confirm(`Ripristinare la copia del ${id.slice(0, 10)}${quando}?\n\n` + 'I dati attuali verranno sostituiti su TUTTI i dispositivi connessi. ' + 'Quello che è stato fatto dopo quella data andrà perso.\n\n' + 'Se il problema è una sincronizzazione andata male, guarda prima ' + 'Impostazioni → Diagnostica: spesso basta "Annulla la sincronizzazione".')) return;
+
+    // Prima si legge la copia, poi si dice cosa costa: chiedere "sei sicuro?"
+    // senza sapere quante voci spariranno è chiedere di firmare in bianco.
     let json = null;
     if (dove === 'locale') {
       json = snapLocaleDati(snapLocaliLeggi()[id]);
@@ -2682,8 +2722,21 @@ function App() {
       window.alert('Impossibile leggere questo salvataggio.');
       return;
     }
+    let d;
     try {
-      const d = JSON.parse(json);
+      d = JSON.parse(json);
+    } catch (e) {
+      window.alert('Salvataggio non valido.');
+      return;
+    }
+    if (!d || typeof d !== 'object') {
+      window.alert('Salvataggio non valido.');
+      return;
+    }
+    const perse = perditeSeApplico(d);
+    if (!window.confirm(`Ripristinare la copia del ${id.slice(0, 10)}${quando}?\n\n` + `${avvisoPerdite(perse)}\n\n` + 'Se il problema è una sincronizzazione andata male, guarda prima ' + 'Impostazioni → Diagnostica: spesso basta "Annulla la sincronizzazione".')) return;
+    try {
+      scortaPrimaDi(perse);
       // Set "normali" (non via applyRemote): così il push parte e propaga
       // il ripristino a tutti i dispositivi.
       setMembers(Array.isArray(d.members) ? d.members : []);
@@ -3458,8 +3511,22 @@ function App() {
     reader.onload = () => {
       try {
         const d = JSON.parse(reader.result);
-        if (!window.confirm('Importare questo backup? I dati attuali verranno sostituiti.')) return;
-        if (Array.isArray(d.members)) setMembers(d.members);
+        if (!d || typeof d !== 'object' || !Array.isArray(d.members)) {
+          window.alert('File non valido: non è un backup dell\'app.');
+          return;
+        }
+        // Importare un backup non aggiunge: SOSTITUISCE, e le voci che spariscono
+        // vengono cancellate su tutti i telefoni. Prima la conferma diceva solo
+        // "i dati attuali verranno sostituiti": chi apriva per sbaglio un file di
+        // tre giorni prima azzerava il campo per tutti senza sapere né la data del
+        // file né quanto stava buttando via.
+        const quando = d.exportedAt ? new Date(d.exportedAt) : null;
+        const eta = quando && !isNaN(quando.getTime()) ? `Backup del ${quando.toLocaleString('it-IT')}` : 'Backup senza data';
+        const dentro = `Contiene ${(d.members || []).length} membri, ${(d.purchases || []).length} spese, ` + `${Object.keys(d.campData || {}).length} giorni.`;
+        const perse = perditeSeApplico(d);
+        if (!window.confirm(`${eta}.\n${dentro}\n\n${avvisoPerdite(perse)}\n\nImportare?`)) return;
+        scortaPrimaDi(perse);
+        setMembers(d.members);
         if (d.campData && typeof d.campData === 'object') setCampData(d.campData);
         if (Array.isArray(d.purchases)) setPurchases(d.purchases);
         if (Array.isArray(d.gear)) setGear(d.gear);
@@ -5337,7 +5404,13 @@ function App() {
     multiple: true,
     onChange: addPhotos,
     className: "hidden"
-  })), /*#__PURE__*/React.createElement("p", {
+  })), (cloud.foto || 0) > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-[#5C4A3C] leading-snug"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, cloud.foto, " ", cloud.foto === 1 ? 'foto ancora da caricare' : 'foto ancora da caricare', "."), ' ', "Tieni l'app aperta finch\xE9 non sono partite: se la chiudi adesso, quelle vanno riscelte.")), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic leading-snug"
   }, "Massimo ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
