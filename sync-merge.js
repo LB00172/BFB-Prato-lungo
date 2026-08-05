@@ -30,6 +30,11 @@
     ['t', 'toBuy'],
     ['e', 'equipment'],
     ['g', 'gear'],
+    // Blocchi: voci che congelano una parte dei dati (per ora la chiusura dei
+    // conti). Sono un elenco come gli altri, quindi si fondono con le stesse
+    // regole senza bisogno di casi speciali: chi chiude per ultimo vince, e
+    // tutti i telefoni arrivano allo stesso risultato.
+    ['z', 'blocchi'],
   ];
 
   // Insiemi di chiavi (niente id: la chiave e' il valore stesso).

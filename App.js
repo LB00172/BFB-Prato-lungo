@@ -1406,6 +1406,12 @@ function App() {
   // bevande marcati "separato" si dividono solo sui pasti di questi giorni;
   // gli altri giorni restano nel conto comune. Vuoto = tutto in comune.
   const [sepDays, setSepDays] = useState(() => load('cambusa_sepdays', []));
+  // Blocchi: voci che congelano una parte dei dati. Per ora una sola, "conti",
+  // che chiude la contabilità a fine campo. Si sincronizza come le altre liste.
+  const [blocchi, setBlocchi] = useState(() => load('cambusa_blocchi', []));
+  // Modifiche arrivate dagli altri DOPO la chiusura dei conti e respinte: non
+  // si buttano in silenzio, si mettono da parte e si dicono.
+  const [respinte, setRespinte] = useState([]);
   const [newBuyName, setNewBuyName] = useState('');
   const [newBuyQty, setNewBuyQty] = useState('');
   const [buying, setBuying] = useState(null); // voce in fase di registrazione acquisto
@@ -1607,7 +1613,8 @@ function App() {
     settled,
     equipment,
     toBuy,
-    sepDays
+    sepDays,
+    blocchi
   };
 
   // Cronologia delle modifiche (data di ultima modifica/cancellazione per ogni
@@ -1718,6 +1725,7 @@ function App() {
   useEffect(() => salvaLocale('cambusa_equipment', equipment), [equipment]);
   useEffect(() => salvaLocale('cambusa_tobuy', toBuy), [toBuy]);
   useEffect(() => salvaLocale('cambusa_sepdays', sepDays), [sepDays]);
+  useEffect(() => salvaLocale('cambusa_blocchi', blocchi), [blocchi]);
   useEffect(() => salvaLocale('cambusa_weather', weather), [weather]);
   useEffect(() => {
     try {
@@ -1902,17 +1910,21 @@ function App() {
     // Se il risultato è già identico a quello ricevuto non c'è niente da
     // rimandare indietro; altrimenti il push riporta all'altro ciò che gli manca.
     suppressPushRef.current = SM.sameAs(res.meta, remoteState, rmeta);
+    // I blocchi vincono su quello che arriva. Un giorno chiuso rimette i suoi
+    // pasti com'erano; a conti chiusi, spese e attrezzatura tornano a com'erano
+    // alla chiusura. Le correzioni vengono poi ripubblicate, così i blocchi
+    // valgono su tutti i telefoni e non solo su questo.
+    const conBlocchi = applicaBloccoConti(res.state);
+    if (conBlocchi.respinte.length) setRespinte(prev => [...conBlocchi.respinte, ...prev].slice(0, 40));
     setMembers(res.state.members);
-    // Un giorno bloccato non cambia per nessun motivo: se l'aggiornamento in
-    // arrivo ha toccato i suoi pasti, si rimettono com'erano. La correzione
-    // viene poi ripubblicata, così il blocco vale su tutti i telefoni.
     setCampData(applicaBlocchi(res.state.campData));
-    setPurchases(res.state.purchases);
+    setPurchases(conBlocchi.stato.purchases);
     setGear(res.state.gear);
     setSettled(res.state.settled);
-    setEquipment(res.state.equipment);
+    setEquipment(conBlocchi.stato.equipment);
     setToBuy(res.state.toBuy);
     setSepDays(res.state.sepDays);
+    setBlocchi(res.state.blocchi);
     saveMeta(res.meta);
     setTimeout(() => {
       suppressPushRef.current = false;
@@ -1998,6 +2010,7 @@ function App() {
     setEquipment(Array.isArray(s.equipment) ? s.equipment : []);
     setToBuy(Array.isArray(s.toBuy) ? s.toBuy : []);
     setSepDays(Array.isArray(s.sepDays) ? s.sepDays : []);
+    setBlocchi(Array.isArray(s.blocchi) ? s.blocchi : []);
     setLostSync(null);
     localStorage.removeItem(RESCUE_KEY);
     window.alert('Fatto: fra qualche secondo i dati tornano anche sugli altri telefoni.');
@@ -2145,7 +2158,7 @@ function App() {
         }
       });
     }
-  }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays]);
+  }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays, blocchi]);
 
   // ---------- Rete di sicurezza della sincronizzazione ----------
   // Tre casi in cui i dati resterebbero fermi su un telefono senza che nessuno
@@ -2298,6 +2311,132 @@ function App() {
         [dateStr]: day
       };
     });
+  };
+
+  // ---------- Conti chiusi ----------
+  // Il gemello del blocco delle presenze, ma per i soldi — e serve DOPO il
+  // campo, quando la gente comincia a pagarsi.
+  // Il problema: i passaggi di pareggio sono segnati come saldati con una
+  // chiave che contiene l'importo (`Anna→Bruno@4530`). Basta che qualcuno
+  // aggiunga uno scontrino dimenticato o corregga un prezzo, e TUTTI gli
+  // importi si ricalcolano: le chiavi non combaciano più, e i bonifici già
+  // fatti spariscono dall'elenco come se non fossero mai avvenuti. Chi aveva
+  // pagato risulta di nuovo debitore, con cifre diverse.
+  // Chiudendo i conti, spese e attrezzatura si congelano: quello che arriva
+  // dopo viene respinto e messo da parte, invece di rimescolare i pagamenti.
+  const bloccoConti = () => (blocchi || []).find(b => b && b.id === 'conti') || null;
+  const chiudiConti = () => {
+    const giorniAperti = Object.keys(campData).filter(d => {
+      const meals = (campData[d] || {}).meals || {};
+      return Object.values(meals).some(v => v && (v.lunch || v.dinner)) && !(campData[d] || {}).bloccato;
+    });
+    if (!window.confirm('Chiudere i conti del campo?\n\n' + `Spese e attrezzatura si congelano (${purchases.length} spese, ${money(totals.overallTotal)} €), ` + `e le presenze dei giorni ancora aperti vengono bloccate (${giorniAperti.length}).\n\n` + 'Da quel momento gli importi di "chi paga chi" non cambiano più, così i rimborsi già ' + 'segnati come saldati restano validi. Quello che arriva dopo dagli altri telefoni viene ' + 'messo da parte e te lo si dice.\n\n' + 'Si può riaprire da qui, in modalità tecnica.')) return;
+    const adesso = Date.now();
+    // Prima i giorni: le quote dipendono dalle presenze quanto dalle spese.
+    if (giorniAperti.length) {
+      setCampData(prev => {
+        const out = {
+          ...prev
+        };
+        giorniAperti.forEach(d => {
+          const day = {
+            ...(out[d] || {})
+          };
+          const copia = {
+            ...(day.meals || {})
+          };
+          out[d] = {
+            ...day,
+            meals: copia,
+            bloccato: {
+              at: adesso,
+              meals: copia
+            }
+          };
+        });
+        return out;
+      });
+    }
+    setBlocchi(prev => [...prev.filter(b => !b || b.id !== 'conti'), {
+      id: 'conti',
+      at: adesso,
+      purchases: purchases.map(x => ({
+        ...x
+      })),
+      equipment: equipment.map(x => ({
+        ...x
+      }))
+    }]);
+    setRespinte([]);
+  };
+  const riapriConti = () => {
+    if (!window.confirm('Riaprire i conti?\n\n' + 'Spese e attrezzatura tornano modificabili, e gli importi di "chi paga chi" ' + 'si ricalcolano: i rimborsi già segnati come saldati potrebbero non combaciare più.\n\n' + 'Le presenze restano bloccate: si sbloccano una per una dalla scheda Presenze.')) return;
+    setBlocchi(prev => prev.filter(b => !b || b.id !== 'conti'));
+    setRespinte([]);
+  };
+
+  // Rimette spese e attrezzatura come stavano alla chiusura, e riporta cosa è
+  // stato respinto. Le foto degli scontrini non si toccano: quelle possono
+  // sempre arrivare.
+  const applicaBloccoConti = stato => {
+    const b = (stato.blocchi || []).find(x => x && x.id === 'conti');
+    if (!b || !Array.isArray(b.purchases)) return {
+      stato,
+      respinte: []
+    };
+    const fuori = [];
+    const confronta = (attuali, congelate, che) => {
+      const per = new Map(congelate.map(x => [String(x.id), x]));
+      (attuali || []).forEach(x => {
+        if (!x || x.id == null) return;
+        const vecchia = per.get(String(x.id));
+        if (!vecchia) fuori.push({
+          che,
+          azione: 'aggiunta',
+          nome: x.name || x.text || '—',
+          quanto: posNum(x.price)
+        });else if (JSON.stringify(vecchia) !== JSON.stringify(x)) fuori.push({
+          che,
+          azione: 'modificata',
+          nome: x.name || x.text || '—',
+          quanto: posNum(x.price)
+        });
+      });
+      const ora = new Set((attuali || []).map(x => String(x && x.id)));
+      congelate.forEach(x => {
+        if (!ora.has(String(x.id))) fuori.push({
+          che,
+          azione: 'cancellata',
+          nome: x.name || x.text || '—',
+          quanto: posNum(x.price)
+        });
+      });
+    };
+    confronta(stato.purchases, b.purchases, 'spesa');
+    confronta(stato.equipment, b.equipment || [], 'attrezzatura');
+    if (fuori.length === 0) return {
+      stato,
+      respinte: []
+    };
+    return {
+      stato: {
+        ...stato,
+        purchases: b.purchases.map(x => ({
+          ...x
+        })),
+        equipment: (b.equipment || []).map(x => ({
+          ...x
+        }))
+      },
+      respinte: fuori
+    };
+  };
+
+  // Guardia per i tasti: dice di no e spiega perché.
+  const contiChiusi = azione => {
+    if (!bloccoConti()) return false;
+    window.alert(`I conti del campo sono chiusi: ${azione} non è possibile.\n\n` + 'Serve per non far cambiare gli importi dei rimborsi già in corso. ' + 'Per modificare, riapri i conti da Spese Totali → Dati (modalità tecnica).');
+    return true;
   };
   const getMeal = (dateStr, memberId) => {
     const day = campData[dateStr];
@@ -2757,6 +2896,7 @@ function App() {
   // Conferma acquisto: la voce esce dalla lista ed entra nella cronologia
   // mantenendo lo stesso id (così la foto scontrino resta collegata).
   const confirmBuy = () => {
+    if (contiChiusi('registrare un acquisto')) return;
     if (!buying) return;
     const price = posNum(buying.price);
     if (price <= 0) {
@@ -2782,6 +2922,7 @@ function App() {
 
   // ---------- Taccuino delle spese ----------
   const addPurchase = () => {
+    if (contiChiusi('aggiungere una spesa')) return;
     const name = pName.trim();
     const price = posNum(pPrice);
     if (!name || price <= 0) {
@@ -2841,6 +2982,7 @@ function App() {
   });
   const saveEdit = () => {
     if (!editing) return;
+    if (contiChiusi('modificare una voce')) return;
     const name = (editing.name || '').trim();
     const price = posNum(editing.price);
     if (!name) {
@@ -2876,6 +3018,7 @@ function App() {
     setEditing(null);
   };
   const removePurchase = id => {
+    if (contiChiusi('cancellare una spesa')) return;
     const p = purchases.find(x => x.id === id);
     if (p && !window.confirm(`Eliminare l'acquisto "${p.name}" (${money(posNum(p.price))} €)?\nVerrà tolto dai totali${receipts[id] ? ' insieme alla foto dello scontrino' : ''}.`)) return;
     setPurchases(prev => prev.filter(x => x.id !== id));
@@ -2977,6 +3120,7 @@ function App() {
       setEquipment(Array.isArray(d.equipment) ? d.equipment : []);
       setToBuy(Array.isArray(d.toBuy) ? d.toBuy : []);
       setSepDays(Array.isArray(d.sepDays) ? d.sepDays : []);
+      setBlocchi(Array.isArray(d.blocchi) ? d.blocchi : []);
       setSnapList(null);
       window.alert('Dati ripristinati: tra qualche secondo saranno su tutti i dispositivi.');
     } catch (e) {
@@ -3316,6 +3460,7 @@ function App() {
   const addEquip = () => {
     const text = newEquipText.trim();
     if (!text) return;
+    if (contiChiusi('aggiungere attrezzatura')) return;
     setEquipment(prev => [...prev, {
       id: uid(),
       text,
@@ -3328,6 +3473,7 @@ function App() {
     setNewEquipBuyer('');
   };
   const toggleEquipBought = id => {
+    if (contiChiusi('cambiare l\'attrezzatura acquistata')) return;
     setEquipment(prev => prev.map(e => e.id === id ? {
       ...e,
       bought: !e.bought
@@ -3336,6 +3482,7 @@ function App() {
   const removeEquip = id => {
     const e = equipment.find(x => x.id === id);
     if (e && !window.confirm(`Eliminare "${e.text}" dall'attrezzatura?`)) return;
+    if (contiChiusi('cancellare attrezzatura')) return;
     setEquipment(prev => prev.filter(x => x.id !== id));
     setReceipts(prev => {
       if (!prev[id]) return prev;
@@ -3759,6 +3906,7 @@ function App() {
       equipment,
       toBuy,
       sepDays,
+      blocchi,
       receipts
     });
     // Serve al promemoria serale per sapere che oggi è già stato fatto.
@@ -3815,6 +3963,7 @@ function App() {
         if (Array.isArray(d.equipment)) setEquipment(d.equipment);
         if (Array.isArray(d.toBuy)) setToBuy(d.toBuy);
         if (Array.isArray(d.sepDays)) setSepDays(d.sepDays);
+        if (Array.isArray(d.blocchi)) setBlocchi(d.blocchi);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
@@ -3929,6 +4078,7 @@ function App() {
     setSepDays([]);
     setGear([]);
     setSettled([]);
+    setBlocchi([]);
     setReceipts({});
     setBuying(null);
     setSelectedDateStr(defaultDateStr());
@@ -4389,7 +4539,26 @@ function App() {
     className: "font-bold"
   }, "La memoria di questo telefono \xE8 piena."), " L'app continua a funzionare, ma libera un po' di spazio appena puoi (bastano poche foto o un'app in meno), cos\xEC ogni modifica resta al sicuro.", admin && /*#__PURE__*/React.createElement(React.Fragment, null, " In dettaglio: la cronologia delle modifiche non si salva pi\xF9, e alla riapertura questo telefono perderebbe i confronti con gli altri. Si libera qualcosa anche da", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, " Impostazioni \u2192 Registro modifiche \u2192 Svuota"), "."))), admin && lostSync && /*#__PURE__*/React.createElement("div", {
+  }, " Impostazioni \u2192 Registro modifiche \u2192 Svuota"), "."))), respinte.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-base leading-none mt-0.5"
+  }, "\uD83D\uDD12"), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-grow"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[#5C4A3C] leading-snug"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "I conti sono chiusi: ", respinte.length, " ", respinte.length === 1 ? 'modifica è stata respinta' : 'modifiche sono state respinte', "."), ' ', respinte.slice(0, 3).map((r, i) => /*#__PURE__*/React.createElement("span", {
+    key: r.che + r.nome + i
+  }, i > 0 ? ' · ' : '', r.che, " \"", r.nome, "\" ", r.azione, " (", money(r.quanto), " \u20AC)")), respinte.length > 3 ? ` …e altre ${respinte.length - 3}` : '', ".", ' ', "Se vanno accettate, riapri i conti da ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Spese Totali \u2192 Dati"), " e rifalle."), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setRespinte([]),
+    className: "mt-2 px-3 py-1.5 bg-white border border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide"
+  }, "Ho capito")))), admin && lostSync && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"
@@ -5180,7 +5349,27 @@ function App() {
     className: "text-[9px] text-gray-400 italic text-center"
   }, "Genera un messaggio pronto con totale e \"chi paga chi\" da mandare nel gruppo.")), spesaSection === 'dati' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, admin && /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", null, "Chiusura dei conti"), bloccoConti() && /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white"
+  }, "\uD83D\uDD12 Chiusi")), bloccoConti() ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug"
+  }, "Conti chiusi il ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, new Date(bloccoConti().at).toLocaleString('it-IT')), ". Spese e attrezzatura sono congelate: gli importi di \"chi paga chi\" non cambiano pi\xF9, quindi i rimborsi gi\xE0 segnati come saldati restano validi. Quello che arriva dagli altri telefoni viene messo da parte e segnalato qui sopra."), /*#__PURE__*/React.createElement("button", {
+    onClick: riapriConti,
+    className: "w-full py-2.5 bg-white border-2 border-[#5C4A3C]/50 text-[#5C4A3C] rounded text-xs font-bold uppercase hover:bg-[#E2EAE4]"
+  }, "\uD83D\uDD13 Riapri i conti")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug"
+  }, "Da fare ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "quando i conti sono definitivi e la gente comincia a pagarsi"), ". I passaggi di pareggio sono segnati come saldati con una chiave che contiene l'importo: basta una spesa aggiunta dopo perch\xE9 tutti gli importi si ricalcolino e i bonifici gi\xE0 fatti spariscano dall'elenco. Chiudendo, spese e attrezzatura si congelano e le presenze ancora aperte si bloccano."), /*#__PURE__*/React.createElement("button", {
+    onClick: chiudiConti,
+    className: "w-full py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]"
+  }, "\uD83D\uDD12 Chiudi i conti"))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"

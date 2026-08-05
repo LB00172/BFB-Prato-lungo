@@ -217,6 +217,18 @@ preparazione** e **offline al campo**, dove non c'è linea.
   arrivati nel frattempo. Le riparazioni d'identità (doppioni, presenze senza
   padrone) restano valide anche sui giorni chiusi: cambiano *a chi* è attaccata
   una presenza, non *chi* ha mangiato.
+- **Chiusura dei conti** (Spese Totali → Dati, in modalità tecnica): da fare
+  **quando i conti sono definitivi e la gente comincia a pagarsi**. I passaggi
+  di pareggio sono segnati come saldati con una chiave che contiene l'importo
+  (`Anna→Bruno@4530`): basta uno scontrino dimenticato aggiunto dopo perché
+  **tutti** gli importi si ricalcolino, le chiavi non combacino più e i bonifici
+  già fatti spariscano dall'elenco — chi aveva pagato torna debitore, con cifre
+  diverse. Chiudendo, spese e attrezzatura si congelano (portandosi dietro una
+  copia, come il blocco delle presenze) e i giorni ancora aperti si bloccano.
+  Quello che arriva dopo dagli altri telefoni **non entra e non viene buttato in
+  silenzio**: l'app lo respinge, ripubblica la correzione e lo dice con nome e
+  cifra ("Birra dimenticata, 25 €"), così chi l'aveva registrata sa che non è
+  entrata. Si riapre da qui.
 - **Soldi che non entrano in nessuna quota**: se una cassa ha dentro dei soldi
   ma nessun pasto su cui dividerli — spese segnate "conto separato" senza
   nessun giorno separato spuntato, oppure acquisti registrati prima che

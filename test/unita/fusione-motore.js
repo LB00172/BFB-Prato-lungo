@@ -389,5 +389,37 @@ console.log('18) Distinguere una cancellazione di ADESSO da una di giorni fa');
     'e portano tutte la stessa data: è un gesto solo, di tre giorni fa');
 }
 
+console.log('19) I blocchi viaggiano come tutto il resto');
+{
+  // La chiusura dei conti è una voce dell'elenco "blocchi": si fonde con le
+  // stesse regole di membri e spese, senza casi speciali. Deve arrivare a
+  // tutti, vincere per data, e non essere cancellata da un telefono che non
+  // sa nemmeno che esista.
+  const t0 = Date.parse('2026-08-17T12:00:00Z');
+  const base = { members: [], campData: {}, purchases: [{ id: 'p1', name: 'Pasta', price: 10 }], gear: [], settled: [], equipment: [], toBuy: [], blocchi: [] };
+
+  const A = new Dev('A', clone(base));
+  A.edit((s) => { s.blocchi.push({ id: 'conti', at: t0, purchases: [{ id: 'p1', name: 'Pasta', price: 10 }] }); }, t0);
+
+  const B = new Dev('B', clone(base));
+  B.receive(A.payload(), t0 + 1000);
+  ok((B.state.blocchi || []).length === 1, 'la chiusura dei conti arriva anche all\'altro telefono');
+  ok(B.state.blocchi[0].purchases.length === 1, 'e si porta dietro la copia congelata delle spese');
+
+  // Un telefono con l'app vecchia (nessun "blocchi") non deve toglierla.
+  const vecchio = clone(base);
+  delete vecchio.blocchi;
+  const res = SM.merge(B.state, B.meta, vecchio, SM.emptyMeta(), t0 + 2000);
+  ok((res.state.blocchi || []).length === 1, 'un telefono che non conosce i blocchi non li cancella');
+
+  // Riaprire i conti è una cancellazione datata: vince sull\'apertura vecchia.
+  const C = new Dev('C', clone(B.state), JSON.parse(JSON.stringify(B.meta)));
+  C.edit((s) => { s.blocchi = []; }, t0 + 5000);
+  const D = new Dev('D', clone(B.state), JSON.parse(JSON.stringify(B.meta)));
+  D.receive(C.payload(), t0 + 6000);
+  ok((D.state.blocchi || []).length === 0, 'la riapertura dei conti si propaga');
+  ok(D.pushed === false, 'e i due telefoni si accordano senza rimbalzi');
+}
+
 console.log('\n' + checks + ' controlli — ' + (fails ? fails + ' PROBLEMI' : 'nessun problema'));
 process.exit(fails ? 1 : 0);
