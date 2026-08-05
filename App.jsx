@@ -151,7 +151,7 @@ const diffFlat = (prima, dopo) => {
 
 // Sezione dell'app a cui appartiene un percorso: serve a raggruppare il
 // registro per area invece di mostrare una lista piatta di sigle.
-const SEZIONE_DI = { m: 'Membri', p: 'Lista della Spesa', t: 'Da acquistare', e: 'Attrezzatura', g: 'Dotazioni', s: 'Saldi', x: 'Conto separato' };
+const SEZIONE_DI = { m: 'Membri', p: 'Lista della Spesa', t: 'Da acquistare', e: 'Attrezzatura', g: 'Dotazioni', s: 'Saldi', x: 'Conto separato', f: 'Giorni gratis' };
 const sezioneDiPath = (p) => {
   const parti = String(p).split('|');
   if (parti[0] === 'c') return parti[2] === 'meals' ? 'Presenze' : (parti[3] === 'note' ? 'Menù' : 'Calendario');
@@ -207,6 +207,7 @@ const descriviPath = (p, stato) => {
     case 'g': return voce('gear', parti[1], 'dotazione');
     case 's': return 'rimborso segnato come saldato';
     case 'x': return `giorno del conto separato — ${giorno(parti[1])}`;
+    case 'f': return `giorno gratis — ${giorno(parti[1])}`;
     default: return p;
   }
 };
@@ -1533,6 +1534,11 @@ function App() {
   // bevande marcati "separato" si dividono solo sui pasti di questi giorni;
   // gli altri giorni restano nel conto comune. Vuoto = tutto in comune.
   const [sepDays, setSepDays] = useState(() => load('cambusa_sepdays', []));
+  // Giorni gratis: le presenze restano (la cucina deve sapere per quanti
+  // cucinare) ma non entrano in NESSUN conto — né nel divisore dei pasti né
+  // fra i presenti per logistica e attrezzatura. Serve per la sera che offre
+  // qualcuno o per la cena fuori pagata a parte.
+  const [freeDays, setFreeDays] = useState(() => load('cambusa_freedays', []));
   // Blocchi: voci che congelano una parte dei dati. Per ora una sola, "conti",
   // che chiude la contabilità a fine campo. Si sincronizza come le altre liste.
   const [blocchi, setBlocchi] = useState(() => load('cambusa_blocchi', []));
@@ -1711,7 +1717,7 @@ function App() {
   // Stato sincronizzato sempre aggiornato: serve alla fusione, che deve
   // partire dai dati di ADESSO e non da quelli di quando ci si è connessi.
   const syncStateRef = useRef(null);
-  syncStateRef.current = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays, blocchi };
+  syncStateRef.current = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi };
 
   // Cronologia delle modifiche (data di ultima modifica/cancellazione per ogni
   // voce). Al primo avvio i dati già presenti restano "senza data": qualsiasi
@@ -1793,6 +1799,7 @@ function App() {
   useEffect(() => salvaLocale('cambusa_equipment', equipment), [equipment]);
   useEffect(() => salvaLocale('cambusa_tobuy', toBuy), [toBuy]);
   useEffect(() => salvaLocale('cambusa_sepdays', sepDays), [sepDays]);
+  useEffect(() => salvaLocale('cambusa_freedays', freeDays), [freeDays]);
   useEffect(() => salvaLocale('cambusa_blocchi', blocchi), [blocchi]);
   useEffect(() => salvaLocale('cambusa_weather', weather), [weather]);
   useEffect(() => {
@@ -1985,6 +1992,7 @@ function App() {
     setEquipment(conBlocchi.stato.equipment);
     setToBuy(res.state.toBuy);
     setSepDays(res.state.sepDays);
+    setFreeDays(res.state.freeDays);
     setBlocchi(res.state.blocchi);
     saveMeta(res.meta);
     setTimeout(() => { suppressPushRef.current = false; }, 0);
@@ -2076,6 +2084,7 @@ function App() {
     setEquipment(Array.isArray(s.equipment) ? s.equipment : []);
     setToBuy(Array.isArray(s.toBuy) ? s.toBuy : []);
     setSepDays(Array.isArray(s.sepDays) ? s.sepDays : []);
+    setFreeDays(Array.isArray(s.freeDays) ? s.freeDays : []);
     setBlocchi(Array.isArray(s.blocchi) ? s.blocchi : []);
     setLostSync(null);
     localStorage.removeItem(RESCUE_KEY);
@@ -2206,7 +2215,7 @@ function App() {
     if (window.CloudSync) {
       window.CloudSync.pushState({ ...st, _meta: { v: SM ? SM.VERSION : 0, rev: m.rev, del: m.del, hi: m.hi || 0 } });
     }
-  }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays, blocchi]);
+  }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi]);
 
   // ---------- Rete di sicurezza della sincronizzazione ----------
   // Tre casi in cui i dati resterebbero fermi su un telefono senza che nessuno
@@ -2292,6 +2301,28 @@ function App() {
   const conBlocco = (day, meals) => (day.bloccato && typeof day.bloccato === 'object'
     ? { ...day, meals, bloccato: { ...day.bloccato, meals } }
     : { ...day, meals });
+
+  const giornoGratis = (dateStr) => (freeDays || []).includes(dateStr);
+
+  const chiediGiornoGratis = (dateStr) => {
+    const gia = giornoGratis(dateStr);
+    const meals = (campData[dateStr] || {}).meals || {};
+    const quanti = Object.values(meals).filter((v) => v && (v.lunch || v.dinner)).length;
+    if (gia) {
+      if (!window.confirm(
+        `Rimettere ${nomeGiorno(dateStr)} nei conti?\n\n` +
+        'I pasti di quel giorno tornano a contare nelle quote di tutti.'
+      )) return;
+    } else if (!window.confirm(
+      `Rendere ${nomeGiorno(dateStr)} gratis per tutti?\n\n` +
+      `I pasti di quel giorno (${quanti} ${quanti === 1 ? 'persona' : 'persone'}) restano segnati per la cucina, ` +
+      'ma escono da TUTTI i conti: nessuno li paga, e chi è venuto solo quel giorno non deve niente.\n\n' +
+      'Attenzione: la spesa già registrata non sparisce. Se hai comprato del cibo per quel giorno, ' +
+      'quel costo si divide sugli altri giorni e le quote degli altri salgono. Serve quando quel ' +
+      'giorno lo ha offerto qualcuno o si è mangiato fuori a spese proprie.'
+    )) return;
+    setFreeDays((prev) => (gia ? prev.filter((d) => d !== dateStr) : [...prev, dateStr].sort()));
+  };
 
   const bloccaGiorno = (dateStr) => {
     const meals = (campData[dateStr] || {}).meals || {};
@@ -2954,6 +2985,7 @@ function App() {
       setEquipment(Array.isArray(d.equipment) ? d.equipment : []);
       setToBuy(Array.isArray(d.toBuy) ? d.toBuy : []);
       setSepDays(Array.isArray(d.sepDays) ? d.sepDays : []);
+      setFreeDays(Array.isArray(d.freeDays) ? d.freeDays : []);
       setBlocchi(Array.isArray(d.blocchi) ? d.blocchi : []);
       setSnapList(null);
       window.alert('Dati ripristinati: tra qualche secondo saranno su tutti i dispositivi.');
@@ -2984,6 +3016,9 @@ function App() {
         const stato = s.net > 0.005 ? `riceve ${money(s.net)} €` : s.net < -0.005 ? `deve dare ${money(-s.net)} €` : 'in pari';
         lines.push(`• ${s.name}: ${stato} (anticipato ${money(s.paid)} €, quota ${money(s.owed)} €)`);
       });
+    }
+    if (t.freeDaysCount > 0) {
+      lines.push(`   🎁 ${t.freeDaysCount} ${t.freeDaysCount === 1 ? 'giorno gratis' : 'giorni gratis'}: ${t.mealsFree} pasti fuori dai conti`);
     }
     if (t.unattributed > 0.005) {
       lines.push('');
@@ -3371,14 +3406,24 @@ function App() {
     // "separato" si divide SOLO sui pasti di quei giorni, e quei pasti escono
     // dal divisore comune (altrimenti chi c'era pagherebbe due volte).
     const sepSet = new Set(sepDays);
+    // --- Giorni gratis ---
+    // Un giorno gratis è INVISIBILE alla contabilità: i suoi pasti non entrano
+    // in nessun divisore e non rendono nessuno "presente". Chi c'è stato solo
+    // quel giorno paga zero — che è il senso di "gratis per tutti". Le presenze
+    // restano scritte, perché servono alla cucina e al riepilogo del giorno.
+    const freeSet = new Set(freeDays);
     const isSepPurchase = (p) => p.account === 'sep' && p.type !== 'logistica';
     const foodDrinksSep = purchases.reduce(
       (s, p) => (isSepPurchase(p) ? s + posNum(p.price) : s), 0);
     const foodDrinksCommon = totalFoodDrinks - foodDrinksSep;
 
     // Pasti per membro, distinti fra giorni comuni e giorni del conto separato.
+    // "gratis" tiene il conto dei pasti dei giorni esclusi: non si pagano, ma
+    // vanno mostrati, altrimenti uno vede "2 pasti" sulla scheda e "6" nel
+    // calendario e pensa a un errore.
     const mealsByMember = {};
-    members.forEach((m) => (mealsByMember[m.id] = { common: 0, sep: 0, total: 0 }));
+    members.forEach((m) => (mealsByMember[m.id] = { common: 0, sep: 0, total: 0, gratis: 0 }));
+    let mealsFree = 0;
 
     let adultMealsTotal = 0;
     let adultMealsSep = 0;
@@ -3390,6 +3435,7 @@ function App() {
       const day = campData[dateStr];
       const meals = (day && day.meals) || {};
       const inSep = sepSet.has(dateStr);
+      const gratis = freeSet.has(dateStr);
       members.forEach((m) => {
         const mm = meals[m.id];
         if (!mm) return;
@@ -3398,6 +3444,9 @@ function App() {
         const rec = mealsByMember[m.id];
         if (!rec) return;
         rec.total += count;
+        // Giorno gratis: si conta e ci si ferma. Niente divisori, niente
+        // presenza: quel giorno non esiste per i conti.
+        if (gratis) { rec.gratis += count; if (!m.isChild) mealsFree += count; return; }
         if (inSep) rec.sep += count; else rec.common += count;
         if (!m.isChild) {
           adultMealsTotal += count;
@@ -3426,14 +3475,22 @@ function App() {
 
     // Quota dovuta da ciascun membro (valore esatto).
     const breakdown = members.map((m) => {
-      const rec = mealsByMember[m.id] || { common: 0, sep: 0, total: 0 };
+      const rec = mealsByMember[m.id] || { common: 0, sep: 0, total: 0, gratis: 0 };
       const mealCount = rec.total;
       const foodShare = m.isChild ? 0 : rec.common * costPerMeal + rec.sep * costPerMealSep;
-      const present = !m.isChild && mealCount > 0;
+      // "Presente" ai fini dei conti è chi ha almeno un pasto che si paga: si
+      // usa lo STESSO insieme con cui si è calcolata la quota, altrimenti la
+      // somma delle quote non torna col totale. In particolare chi è venuto
+      // solo in un giorno gratis non deve la quota di logistica: quel giorno
+      // per lui non è costato niente, ed è il senso di "gratis per tutti".
+      const present = attendingAdults.has(m.id);
       const logShare =
         (present ? logisticsPerAdult : 0) +
         (present && equipDivisorSet.has(m.id) ? equipPerAdult : 0);
-      return { ...m, mealCount, mealsCommon: rec.common, mealsSep: rec.sep, foodShare, logShare, owed: foodShare + logShare };
+      return {
+        ...m, mealCount, mealsCommon: rec.common, mealsSep: rec.sep, mealsGratis: rec.gratis,
+        foodShare, logShare, owed: foodShare + logShare,
+      };
     });
 
     // --- Arrotondamento "cassa-friendly" ---
@@ -3583,6 +3640,7 @@ function App() {
       adultMealsTotal, adultMealsCommon, adultMealsSep,
       foodDrinksCommon, foodDrinksSep, costPerMealSep,
       sepPeopleCount: sepPeople.size, sepDaysCount: sepDays.length,
+      freeDaysCount: freeDays.length, mealsFree,
       attendingAdultsCount: attendingAdults.size, breakdown,
       collected, roundingDiff, nonRipartito, buchi,
       byBuyer, settlement, unattributed, unknownBuyers, transfers,
@@ -3605,7 +3663,7 @@ function App() {
   const exportData = () => {
     downloadJson(`bandone-backup-${toDateStr(new Date())}.json`, {
       version: 6, exportedAt: new Date().toISOString(),
-      members, campData, purchases, gear, settled, equipment, toBuy, sepDays, blocchi, receipts,
+      members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi, receipts,
     });
     // Serve al promemoria serale per sapere che oggi è già stato fatto.
     try { localStorage.setItem(BACKUP_KEY, toDateStr(new Date())); } catch (e) { /* niente */ }
@@ -3663,6 +3721,7 @@ function App() {
         if (Array.isArray(d.equipment)) setEquipment(d.equipment);
         if (Array.isArray(d.toBuy)) setToBuy(d.toBuy);
         if (Array.isArray(d.sepDays)) setSepDays(d.sepDays);
+        if (Array.isArray(d.freeDays)) setFreeDays(d.freeDays);
         if (Array.isArray(d.blocchi)) setBlocchi(d.blocchi);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
@@ -3716,7 +3775,7 @@ function App() {
     if (!window.confirm(conferma)) return;
 
     const id = toDateStr(new Date()) + '-' + uid();
-    const state = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays };
+    const state = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays };
     const meta = {
       id,
       name,
@@ -3765,6 +3824,7 @@ function App() {
     setToBuy([]);
     setEquipment([]);
     setSepDays([]);
+    setFreeDays([]);
     setGear([]);
     setSettled([]);
     setBlocchi([]);
@@ -4703,6 +4763,32 @@ function App() {
                 )}
               </h3>
 
+              {/* Giorno gratis: non entra in nessun conto. Lo vedono tutti —
+                  chi guarda le quote deve capire perché quel giorno non pesa —
+                  ma lo decide chi tiene i conti. */}
+              {giornoGratis(selectedDateStr) && (
+                <div className="bg-[#2D392C]/10 border border-[#2D392C]/35 rounded p-2.5">
+                  <p className="text-[10px] text-[#2D392C] leading-snug">
+                    <span className="font-bold">🎁 Giorno gratis.</span> Le presenze restano segnate per la cucina,
+                    ma non entrano in nessun conto: nessuno paga i pasti di oggi, e chi è venuto solo oggi
+                    non deve niente.
+                  </p>
+                </div>
+              )}
+              {admin && members.length > 0 && (
+                <button
+                  onClick={() => chiediGiornoGratis(selectedDateStr)}
+                  disabled={!!giornoBloccato(selectedDateStr)}
+                  className={`w-full py-2 rounded text-[10px] font-bold uppercase tracking-wide border-2 ${
+                    giornoGratis(selectedDateStr)
+                      ? 'bg-[#2D392C] text-white border-[#2D392C]'
+                      : 'bg-white text-[#2D392C] border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'
+                  } ${giornoBloccato(selectedDateStr) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {giornoGratis(selectedDateStr) ? '🎁 Giorno gratis — rimettilo nei conti' : '🎁 Rendi questo giorno gratis'}
+                </button>
+              )}
+
               {/* Giorno chiuso: le presenze sono congelate. Lo si dice a tutti
                   — chi non è in modalità tecnica deve capire perché i tasti non
                   rispondono — ma solo chi tiene i conti può aprire e chiudere. */}
@@ -4957,6 +5043,7 @@ function App() {
                           <span className="text-[10px] text-gray-500">
                             {b.mealCount} {b.mealCount === 1 ? 'pasto' : 'pasti'}
                             {b.mealsSep > 0 ? ` (${b.mealsCommon} comuni + ${b.mealsSep} separati)` : ''}
+                            {b.mealsGratis > 0 ? ` · ${b.mealsGratis} gratis` : ''}
                             {b.isChild ? ' · bambino' : ''}
                           </span>
                         </div>
@@ -4992,6 +5079,14 @@ function App() {
                         Calendario, oppure rimettendo quelle spese sul conto comune (la matita nel Taccuino).
                       </p>
                     </div>
+                  )}
+                  {totals.freeDaysCount > 0 && (
+                    <p className="text-[10px] text-[#2D392C] leading-snug mt-2 bg-[#2D392C]/8 border border-[#2D392C]/25 rounded p-2.5">
+                      🎁 <span className="font-bold">{totals.freeDaysCount} {totals.freeDaysCount === 1 ? 'giorno gratis' : 'giorni gratis'}</span>:
+                      {' '}{totals.mealsFree} {totals.mealsFree === 1 ? 'pasto è escluso' : 'pasti sono esclusi'} dai conti.
+                      Restano segnati nel calendario per la cucina, ma nessuno li paga — per questo i pasti
+                      contati qui sotto possono essere meno di quelli che vedi in Presenze.
+                    </p>
                   )}
                   <p className="text-[9px] text-gray-400 italic mt-2">
                     Quote arrotondate a 0,10 € (niente monetine da 1/2/5 cent).

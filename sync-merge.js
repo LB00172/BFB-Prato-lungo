@@ -41,6 +41,7 @@
   var SETS = [
     ['s', 'settled'],   // rimborsi segnati come saldati
     ['x', 'sepDays'],   // giorni assegnati al conto separato
+    ['f', 'freeDays'],  // giorni gratis: non entrano in nessun conto
   ];
 
   // Le lapidi si tengono 90 giorni: oltre, la voce è cancellata ovunque da un

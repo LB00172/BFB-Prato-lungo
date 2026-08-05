@@ -39,6 +39,15 @@ preparazione** e **offline al campo**, dove non c'è linea.
   spuntati, e quei pasti **escono dal divisore comune**, così chi c'era non paga
   due volte. Logistica e attrezzatura restano sempre comuni. Senza giorni
   spuntati il comportamento è identico a prima.
+- **Giorno gratis** (Presenze, in modalità tecnica): un giorno può essere
+  escluso da **tutti** i conti — la sera che offre qualcuno, la cena fuori
+  pagata a parte. Le presenze restano segnate, perché servono alla cucina e al
+  riepilogo del giorno, ma quei pasti non entrano in nessun divisore e non
+  rendono nessuno "presente": chi è venuto **solo** in un giorno gratis paga
+  zero, quota di logistica compresa. La conferma avverte di ciò che non è
+  ovvio: la spesa già registrata non sparisce, quindi se per quel giorno era
+  stato comprato del cibo quel costo si divide sugli altri giorni e le quote
+  degli altri salgono.
 - Le quote sono arrotondate a **0,10 €** (niente monetine da 1/2/5 cent); lo
   scarto viene riconciliato solo se ≥ 0,50 €.
 - **Saldi**: per ogni persona `anticipato − dovuto` → "riceve" o "dà", più le
