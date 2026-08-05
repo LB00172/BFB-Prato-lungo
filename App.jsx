@@ -481,6 +481,16 @@ const LEVEL_SPEEDUP = 1.5; // di quanto accelera a ogni livello
 const MIN_STEP = 45;     // limite di velocità: sotto diventa ingiocabile
 const GAME_ROWS = 19;
 
+// I livelli hanno un nome, non un numero: si parte dal campo, si passa per la
+// borgata e si finisce a Rio. Oltre il terzo si resta a Rio e cambia solo la
+// velocità, quindi il nome resta quello con un'aggiunta.
+const LIVELLI = [
+  { nome: 'Prato Lungo', icona: '🌲' },
+  { nome: 'Palmiro Togliatti', icona: '🏙️' },
+  { nome: 'Rio de Janeiro', icona: '🏖️' },
+];
+const livelloInfo = (n) => LIVELLI[Math.min(n, LIVELLI.length) - 1] || LIVELLI[0];
+
 // Rumore deterministico: lo sfondo è sempre lo stesso ad ogni partita.
 const seeded = (n) => { let s = n * 9301 + 49297; return () => ((s = (s * 9301 + 49297) % 233280) / 233280); };
 
@@ -1108,11 +1118,13 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
       className="fixed inset-0 z-50 bg-[#1F271E] flex flex-col gap-2 p-2"
       style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
     >
-      <div className="flex items-center justify-between bg-white/95 px-3 py-2 rounded-lg shrink-0">
-        <span className="text-xs uppercase font-bold text-gray-500 truncate">{playerName}</span>
-        <span className="font-rustic text-lg text-[#2D392C]">{score} 🌿</span>
-        <span className="text-[10px] text-gray-400">
-          liv. {level}{level >= 2 ? ' 🏙️' : ''} · -{Math.max(0, level * 15 - score)} · rec {bestLocal}
+      {/* "Palmiro Togliatti" è lungo: su un telefono stretto questa riga
+          deve accorciare il nome, non spingere fuori il punteggio. */}
+      <div className="flex items-center justify-between gap-2 bg-white/95 px-3 py-2 rounded-lg shrink-0">
+        <span className="text-xs uppercase font-bold text-gray-500 truncate max-w-[24%]">{playerName}</span>
+        <span className="font-rustic text-lg text-[#2D392C] shrink-0">{score} 🌿</span>
+        <span className="text-[10px] text-gray-400 min-w-0 truncate text-right">
+          {livelloInfo(level).icona} {livelloInfo(level).nome} · -{Math.max(0, level * 15 - score)} · rec {bestLocal}
         </span>
       </div>
 
@@ -1127,10 +1139,13 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
         {levelUp && !over && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="bg-black/70 px-5 py-3 rounded-lg text-center">
-              <div className="font-rustic text-2xl text-[#D97706]">LIVELLO {level}</div>
-              <div className="text-[10px] uppercase tracking-widest text-[#F0F4F1]">
-                {level === 2 ? 'In città!' : level === 3 ? 'Rio de Janeiro!' : 'Ancora più veloce!'}
+              <div className="text-[10px] uppercase tracking-widest text-[#8F9E8B]">Livello {level}</div>
+              <div className="font-rustic text-2xl text-[#D97706] leading-tight">
+                {livelloInfo(level).icona} {livelloInfo(level).nome}
               </div>
+              {level > LIVELLI.length && (
+                <div className="text-[10px] uppercase tracking-widest text-[#F0F4F1]">Ancora più veloce!</div>
+              )}
             </div>
           </div>
         )}
@@ -3815,7 +3830,7 @@ function App() {
     { k: 'sync', icon: '☁️', title: 'Sincronizzazione', body: 'La connessione al campo è automatica: quando c\'è linea i dati si allineano da soli fra i telefoni, in tempo reale, foto degli scontrini comprese. Senza linea si continua a lavorare normalmente e tutto viene inviato appena la rete torna. Se in due avete lavorato offline, al ritorno della linea le due versioni si uniscono voce per voce: nessuno cancella il lavoro dell\'altro. Il pallino in alto a destra indica se sei online o offline.' },
     { k: 'chiusura', icon: '🏁', title: 'Chiusura e Archivio', body: 'A conti fatti, in Spese Totali → Dati usa "Chiudi il campo": salva tutto (un file sul telefono e una copia nel cloud), lo mette in Archivio e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini su tutti i dispositivi. L\'app resta pronta per il campo dell\'anno dopo. In Archivio rivedi il resoconto di ogni campo chiuso e puoi riscaricarne i dati; il file scaricato alla chiusura è l\'unico che contiene anche le foto degli scontrini, quindi conservalo.' },
     { k: 'galleria', icon: '📸', title: 'Galleria', body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Si guarda in due modi: "Album" sfoglia le foto come polaroid appoggiate su un paesaggio di montagna, una spinta col dito per pagina; "Griglia" le mette tutte in fila, ed è la vista comoda per cercarne una. Il tasto "Crea album ricordo" ti fa scegliere fino a dodici foto e ne fa un PDF con lo stesso paesaggio, quattro per pagina: da mandare nel gruppo o da stampare.' },
-    { k: 'gioco', icon: '🎮', title: 'Aiuta Bandy', body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: dal bosco si va in città, e poi sulla spiaggia di Rio. Ogni volta la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).' },
+    { k: 'gioco', icon: '🎮', title: 'Aiuta Bandy', body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si parte da Prato Lungo, si passa per Palmiro Togliatti e si finisce a Rio de Janeiro. Ogni volta la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).' },
     { k: 'impostazioni', icon: '⚙️', title: 'Impostazioni', body: 'Aspetto: tema chiaro, scuro o automatico (segue il telefono) — comodo la sera in tenda. Blocco con password: puoi chiedere la password a ogni apertura e bloccare l\'app subito con "Blocca ora". Dati su questo telefono: backup immediato e, se presti o cambi telefono, "Cancella i dati da questo telefono" — il cloud non viene toccato e con la linea i dati tornano da soli. In fondo trovi la versione installata.' },
     { k: 'pronto', icon: '🎒', title: 'Pronto per il campo', body: 'In Impostazioni, in cima, ci sono tre spie: app scaricata sul telefono, dati del campo ricevuti, accesso al database a posto. Devono essere tutte verdi PRIMA di partire, perché a Prato Lungo non c\'è linea e lassù non si sistemano. Finché qualcosa manca, in Calendario compare un avviso che porta lì. Sistemarlo è sempre la stessa cosa: apri l\'app con la linea attiva e aspetta qualche secondo.' },
     { k: 'correggi', icon: '✏️', title: 'Correggere una spesa', body: 'Sbagliato un prezzo o l\'acquirente? Nella cronologia degli acquisti, e nell\'elenco dell\'attrezzatura, ogni riga ha una matita: apre la voce e permette di correggere nome, acquirente, prezzo, tipologia e conto, tenendo la foto dello scontrino attaccata. Non serve cancellare e rifare, che invece porterebbe via anche la foto. Se le voci sono tante, sopra la cronologia degli acquisti c\'e\' un campo di ricerca che filtra per nome, acquirente o tipologia e mostra il totale di quelle trovate; lo stesso campo c\'e\' anche sopra la lista di "Da acquistare", dove cerca per nome e quantita\'.' },

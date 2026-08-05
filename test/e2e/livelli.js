@@ -51,6 +51,7 @@ const tinte = (p) => p.evaluate(() => {
   ok('il gioco parte', (await p.locator('canvas').count()) > 0);
 
   // --- Livello 1: bosco ---
+  ok('il livello 1 si chiama Prato Lungo', /prato lungo/i.test(await p.locator('body').innerText()));
   const l1 = await tinte(p);
   ok(`livello 1: domina il verde del bosco (${Math.round(l1.verde * 100)}%)`, l1.verde > 0.22);
 
@@ -58,7 +59,7 @@ const tinte = (p) => p.evaluate(() => {
   await vaiAlLivello(p, 2);
   const l2 = await tinte(p);
   ok('livello 2: il verde sparisce, si va sull\'asfalto', l2.verde < l1.verde / 2);
-  ok('il cartello annuncia la città', /in città/i.test(await p.locator('body').innerText()));
+  ok('il cartello dà il nome al livello', /palmiro togliatti/i.test(await p.locator('body').innerText()));
 
   // --- Livello 3: la spiaggia di Rio ---
   await vaiAlLivello(p, 3);
@@ -102,6 +103,14 @@ const tinte = (p) => p.evaluate(() => {
   ok(`e il giallo del rombo (${bandiere.giallo} pixel)`, bandiere.giallo > 150);
 
   await p.locator('canvas').screenshot({ path: path.join(__dirname, '..', 'tmp', 'livello3-gioco.png') });
+
+  // Il cartello dura meno di due secondi: passato quello, il nome del livello
+  // deve restare leggibile nella riga del punteggio, altrimenti chi gioca non
+  // sa più dov'è.
+  await p.waitForTimeout(2000);
+  const dopoCartello = await p.locator('body').innerText();
+  ok('sparito il cartello, il nome resta nella riga del punteggio',
+    /rio de janeiro/i.test(dopoCartello) && !/livello 3/i.test(dopoCartello));
 
   ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
   await fine(browser);

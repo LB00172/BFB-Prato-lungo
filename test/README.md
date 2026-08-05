@@ -98,7 +98,7 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `e2e/cercalista`, `e2e/maschera` | Ricerche e maschera manuale a scomparsa |
 | `e2e/regole` | Le regole del campo, **verbatim** |
 | `e2e/dotazioni`, `e2e/gioco` | Dotazioni personali; minigioco |
-| `e2e/livelli` | I tre livelli di "Aiuta Bandy": il bosco verde, la città che perde il verde, e la **spiaggia di Rio** — la sabbia deve dominare il campo da gioco, il mare deve stare in una fascia a sinistra (non a macchie sparse) e il verde e il giallo delle bandiere brasiliane devono esserci davvero. Salva una schermata in `test/tmp/livello3-gioco.png` |
+| `e2e/livelli` | I tre livelli di "Aiuta Bandy" — **Prato Lungo**, **Palmiro Togliatti**, **Rio de Janeiro** — controllati guardando i pixel: il bosco verde, la città che perde il verde, e la spiaggia — la sabbia deve dominare il campo da gioco, il mare deve stare in una fascia a sinistra (non a macchie sparse) e il verde e il giallo delle bandiere brasiliane devono esserci davvero. Ogni livello dev'essere chiamato per nome, e il nome deve restare nella riga del punteggio anche dopo che il cartello è sparito. Salva una schermata in `test/tmp/livello3-gioco.png` |
 
 ## La rete funziona davvero?
 

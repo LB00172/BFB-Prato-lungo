@@ -588,6 +588,21 @@ const LEVEL_SPEEDUP = 1.5; // di quanto accelera a ogni livello
 const MIN_STEP = 45; // limite di velocità: sotto diventa ingiocabile
 const GAME_ROWS = 19;
 
+// I livelli hanno un nome, non un numero: si parte dal campo, si passa per la
+// borgata e si finisce a Rio. Oltre il terzo si resta a Rio e cambia solo la
+// velocità, quindi il nome resta quello con un'aggiunta.
+const LIVELLI = [{
+  nome: 'Prato Lungo',
+  icona: '🌲'
+}, {
+  nome: 'Palmiro Togliatti',
+  icona: '🏙️'
+}, {
+  nome: 'Rio de Janeiro',
+  icona: '🏖️'
+}];
+const livelloInfo = n => LIVELLI[Math.min(n, LIVELLI.length) - 1] || LIVELLI[0];
+
 // Rumore deterministico: lo sfondo è sempre lo stesso ad ogni partita.
 const seeded = n => {
   let s = n * 9301 + 49297;
@@ -1336,14 +1351,14 @@ function BandyGame({
       paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between bg-white/95 px-3 py-2 rounded-lg shrink-0"
+    className: "flex items-center justify-between gap-2 bg-white/95 px-3 py-2 rounded-lg shrink-0"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs uppercase font-bold text-gray-500 truncate"
+    className: "text-xs uppercase font-bold text-gray-500 truncate max-w-[24%]"
   }, playerName), /*#__PURE__*/React.createElement("span", {
-    className: "font-rustic text-lg text-[#2D392C]"
+    className: "font-rustic text-lg text-[#2D392C] shrink-0"
   }, score, " \uD83C\uDF3F"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] text-gray-400"
-  }, "liv. ", level, level >= 2 ? ' 🏙️' : '', " \xB7 -", Math.max(0, level * 15 - score), " \xB7 rec ", bestLocal)), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-gray-400 min-w-0 truncate text-right"
+  }, livelloInfo(level).icona, " ", livelloInfo(level).nome, " \xB7 -", Math.max(0, level * 15 - score), " \xB7 rec ", bestLocal)), /*#__PURE__*/React.createElement("div", {
     className: "relative flex-1 min-h-0 flex items-center justify-center"
   }, /*#__PURE__*/React.createElement("canvas", {
     ref: canvasRef,
@@ -1361,10 +1376,12 @@ function BandyGame({
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-black/70 px-5 py-3 rounded-lg text-center"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-rustic text-2xl text-[#D97706]"
-  }, "LIVELLO ", level), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] uppercase tracking-widest text-[#8F9E8B]"
+  }, "Livello ", level), /*#__PURE__*/React.createElement("div", {
+    className: "font-rustic text-2xl text-[#D97706] leading-tight"
+  }, livelloInfo(level).icona, " ", livelloInfo(level).nome), level > LIVELLI.length && /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] uppercase tracking-widest text-[#F0F4F1]"
-  }, level === 2 ? 'In città!' : level === 3 ? 'Rio de Janeiro!' : 'Ancora più veloce!'))), (over || paused) && /*#__PURE__*/React.createElement("div", {
+  }, "Ancora pi\xF9 veloce!"))), (over || paused) && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 bg-black/70 rounded-lg flex flex-col items-center justify-center text-center p-4"
   }, over ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-2xl text-[#F0F4F1]"
@@ -4600,7 +4617,7 @@ function App() {
     k: 'gioco',
     icon: '🎮',
     title: 'Aiuta Bandy',
-    body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: dal bosco si va in città, e poi sulla spiaggia di Rio. Ogni volta la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).'
+    body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si parte da Prato Lungo, si passa per Palmiro Togliatti e si finisce a Rio de Janeiro. Ogni volta la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).'
   }, {
     k: 'impostazioni',
     icon: '⚙️',
