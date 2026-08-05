@@ -575,9 +575,187 @@ function drawStreet(ctx, w, h, cell) {
   });
 }
 
+// Livello 3: la spiaggia di Rio vista dall'alto. Fasce verticali come il
+// livello 2 — mare, risacca, sabbia bagnata, sabbia asciutta, lungomare —
+// così il campo da gioco resta leggibile: la sabbia chiara al centro è dove
+// si gioca davvero, e il corpo scuro del livello 3 ci si stacca sopra.
+const BR = { verde: '#1E9C4A', giallo: '#F5D311', blu: '#17297A', bianco: '#F4F2EA' };
+
+// Bandiera brasiliana in miniatura, a blocchi: campo verde, rombo giallo,
+// cerchio blu. Serve a dire "Rio" senza scriverlo.
+function drawFlag(ctx, x, y, w, h, px) {
+  const q = (v) => Math.round(v / px) * px;
+  const X = q(x), Y = q(y), W = q(w), H = q(h);
+  // asta
+  ctx.fillStyle = '#6B5636';
+  ctx.fillRect(X - px, Y, px, H + px * 3);
+  ctx.fillStyle = BR.verde;
+  ctx.fillRect(X, Y, W, H);
+  // rombo giallo
+  const cx = X + W / 2, cy = Y + H / 2, rw = W * 0.38, rh = H * 0.38;
+  ctx.fillStyle = BR.giallo;
+  for (let py = Y; py < Y + H; py += px) {
+    for (let pxx = X; pxx < X + W; pxx += px) {
+      const dx = Math.abs(pxx + px / 2 - cx) / rw;
+      const dy = Math.abs(py + px / 2 - cy) / rh;
+      if (dx + dy <= 1) ctx.fillRect(pxx, py, px, px);
+    }
+  }
+  // cerchio blu
+  const r = Math.min(rw, rh) * 0.62;
+  ctx.fillStyle = BR.blu;
+  for (let py = Y; py < Y + H; py += px) {
+    for (let pxx = X; pxx < X + W; pxx += px) {
+      const dx = pxx + px / 2 - cx, dy = py + px / 2 - cy;
+      if (dx * dx + dy * dy <= r * r) ctx.fillRect(pxx, py, px, px);
+    }
+  }
+  // la fascia bianca dell'"Ordem e Progresso": una riga sola, basta a leggerla
+  ctx.fillStyle = BR.bianco;
+  ctx.fillRect(q(cx - r * 0.8), q(cy - px / 2), q(r * 1.6), px);
+}
+
+function drawBeach(ctx, w, h, cell) {
+  const rnd = seeded(41);
+  const px = Math.max(3, Math.round(cell / 5));
+  const q = (v) => Math.round(v / px) * px;
+
+  // Le fasce sono strette ai bordi e larghe al centro: la sabbia asciutta è il
+  // campo da gioco vero, e deve tenersi la parte grossa. Mare e lungomare
+  // servono a dire dove siamo, non a rubare spazio.
+  const mare = q(w * 0.17);        // acqua
+  const risacca = q(w * 0.21);     // schiuma
+  const bagnata = q(w * 0.27);     // sabbia bagnata
+  const lungomare = q(w * 0.88);   // inizio del calçadão
+
+  // --- Mare: l'acqua è fatta di onde lunghe che corrono verso riva, non di
+  // rumore. Ogni colonna prende il tono dalla distanza dalla riva più una
+  // sinusoide lungo y: si legge come mare mosso invece che come disturbo. ---
+  const toni = ['#12557E', '#175F91', '#1B6D9E', '#2280B4', '#2E93C4', '#43A6CE'];
+  for (let x = 0; x < mare; x += px) {
+    const t = x / mare;
+    for (let y = 0; y < h; y += px) {
+      const onda = Math.sin(y / (cell * 1.9) + t * 5.2) * 0.5 + 0.5;
+      const k = Math.min(toni.length - 1, Math.floor(t * 3.4 + onda * 2.2));
+      ctx.fillStyle = toni[k];
+      ctx.fillRect(x, y, px, px);
+    }
+  }
+  // creste di schiuma: tre linee spesse che seguono l'onda
+  for (let k = 0; k < 3; k++) {
+    const base = q(mare * (0.28 + k * 0.24));
+    for (let y = 0; y < h; y += px) {
+      const off = q(Math.sin(y / (cell * 1.9) + k * 1.1) * cell * 0.3);
+      ctx.fillStyle = '#9FDCEC';
+      ctx.fillRect(base + off, y, px, px);
+      ctx.fillStyle = '#D6F0F7';
+      ctx.fillRect(base + off, y, px, Math.max(1, Math.round(px / 2)));
+    }
+  }
+
+  // --- Risacca: schiuma bianca, bordo frastagliato ---
+  for (let y = 0; y < h; y += px) {
+    const off = q(Math.sin(y / (cell * 1.1)) * cell * 0.18);
+    for (let x = mare; x < risacca; x += px) {
+      ctx.fillStyle = rnd() > 0.3 ? BR.bianco : '#D9EDF3';
+      ctx.fillRect(x + off, y, px, px);
+    }
+  }
+
+  // --- Sabbia bagnata: la striscia scura appena lasciata dall\'onda ---
+  for (let x = risacca; x < bagnata; x += px) {
+    for (let y = 0; y < h; y += px) {
+      ctx.fillStyle = rnd() > 0.8 ? '#B99A6B' : '#C6A878';
+      ctx.fillRect(x, y, px, px);
+    }
+  }
+
+  // --- Sabbia asciutta: chiara e poco rumorosa, ci si deve giocare sopra ---
+  for (let x = bagnata; x < lungomare; x += px) {
+    for (let y = 0; y < h; y += px) {
+      const r = rnd();
+      ctx.fillStyle = r > 0.96 ? '#F2E0BC' : r > 0.9 ? '#E3C998' : '#EAD3A6';
+      ctx.fillRect(x, y, px, px);
+    }
+  }
+
+  // --- Lungomare di Copacabana: il mosaico a onde bianco e nero ---
+  ctx.fillStyle = BR.bianco;
+  ctx.fillRect(lungomare, 0, w - lungomare, h);
+  ctx.fillStyle = '#2A2A2E';
+  const larg = w - lungomare;
+  for (let y = 0; y < h; y += px) {
+    const s = Math.sin(y / (cell * 1.1));
+    ctx.fillRect(q(lungomare + larg * 0.28 + s * larg * 0.2), y, px * 2, px);
+    ctx.fillRect(q(lungomare + larg * 0.74 - s * larg * 0.2), y, px * 2, px);
+  }
+  ctx.fillStyle = '#9A8A6E';                      // cordolo
+  ctx.fillRect(lungomare - px, 0, px, h);
+
+  // --- Ombrelloni: pochi e grandi, altrimenti sembrano girandole ---
+  const tinte = [['#E23B2E', '#F4F2EA'], ['#F5D311', '#1E9C4A'], ['#1B7FC4', '#F4F2EA']];
+  const posti = [[0.62, 0.09], [0.30, 0.30], [0.10, 0.56], [0.80, 0.71], [0.52, 0.91]];
+  posti.forEach((pp, idx) => {
+    const cx = q(bagnata + (lungomare - bagnata) * pp[0]);
+    const cy = q(h * pp[1]);
+    const r = cell * 1.05;
+    const [a, b] = tinte[idx % tinte.length];
+    // ombra portata
+    ctx.fillStyle = 'rgba(150,120,80,0.28)';
+    for (let y = cy - r; y < cy + r; y += px) {
+      for (let x = cx - r; x < cx + r; x += px) {
+        const dx = x - cx, dy = y - cy;
+        if (dx * dx + dy * dy <= r * r) ctx.fillRect(q(x) + px * 1.5, q(y) + px * 1.5, px, px);
+      }
+    }
+    // sei spicchi: a questa dimensione si leggono come un ombrellone
+    for (let y = cy - r; y < cy + r; y += px) {
+      for (let x = cx - r; x < cx + r; x += px) {
+        const dx = x - cx, dy = y - cy;
+        if (dx * dx + dy * dy > r * r) continue;
+        const ang = Math.atan2(dy, dx) + Math.PI;
+        ctx.fillStyle = Math.floor(ang / (Math.PI / 3)) % 2 ? a : b;
+        ctx.fillRect(q(x), q(y), px, px);
+      }
+    }
+    // bordo e puntale
+    ctx.fillStyle = 'rgba(90,70,40,0.35)';
+    for (let t = 0; t < Math.PI * 2; t += 0.12) ctx.fillRect(q(cx + Math.cos(t) * r), q(cy + Math.sin(t) * r), px, px);
+    ctx.fillStyle = '#5B4A32';
+    ctx.fillRect(q(cx) - px, q(cy) - px, px * 2, px * 2);
+  });
+
+  // --- Teli stesi: rettangoli con la frangia, per non lasciare la sabbia vuota ---
+  [[0.14, 0.20, '#E23B2E'], [0.56, 0.58, '#1B7FC4'], [0.84, 0.90, '#F5D311']]
+    .forEach((t) => {
+      const x = q(bagnata + (lungomare - bagnata) * t[0]);
+      const y = q(h * t[1]);
+      const tw = q(cell * 1.5), th = q(cell * 1.0);
+      ctx.fillStyle = 'rgba(150,120,80,0.25)';
+      ctx.fillRect(x + px, y + px, tw, th);
+      ctx.fillStyle = t[2];
+      ctx.fillRect(x, y, tw, th);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';       // righe del telo
+      for (let k = y + px; k < y + th; k += px * 3) ctx.fillRect(x, k, tw, px);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';             // frangia ai due lati corti
+      ctx.fillRect(x, y, tw, px);
+      ctx.fillRect(x, y + th - px, tw, px);
+    });
+
+  // --- Bandiere: due piantate nella sabbia, una sul lungomare ---
+  const fw = cell * 2.1, fh = cell * 1.4;
+  drawFlag(ctx, bagnata + cell * 0.5, cell * 0.5, fw, fh, px);
+  drawFlag(ctx, bagnata + (lungomare - bagnata) * 0.62, h * 0.42, fw, fh, px);
+  drawFlag(ctx, bagnata + cell * 0.5, h - cell * 3.1, fw, fh, px);
+  drawFlag(ctx, lungomare + larg * 0.1, h * 0.06, fw * 0.62, fh * 0.62, px);
+}
+
 // Livello 2+: il corpo è un tubo cartoon a blocchi (stile fumetto, non
 // realistico) con la punta arrotondata e due lobi alla base.
 const SK = { skin: '#E4A882', shade: '#C98D68', light: '#F4CFAF', tip: '#E8A090', crease: '#A9714F' };
+// Livello 3: stessa forma, carnagione scura. Sulla sabbia chiara si stacca
+// meglio del livello 2, che sull'asfalto grigio funzionava al contrario.
+const SK3 = { skin: '#8D5A3B', shade: '#6B4229', light: '#B37B50', tip: '#96543C', crease: '#472A18' };
 // Livello 1: la canna come cilindro continuo, con brace tonda e sfumata
 // e filtro in fondo (prima era una catena di quadretti staccati).
 const JO = { paper: '#F6EFDF', paper2: '#E9DFC7', seam: '#DCCFB2', filter: '#B98F5E', filter2: '#9C7345' };
@@ -649,7 +827,8 @@ function drawJoint(ctx, snake, i, cell, offX, offY, dir) {
   }
 }
 
-function drawBody(ctx, snake, i, cell, offX, offY, dir) {
+function drawBody(ctx, snake, i, cell, offX, offY, dir, pal) {
+  const SKIN = pal || SK;
   const seg = snake[i];
   const x = offX + seg.x * cell, y = offY + seg.y * cell;
   const u = cell / 10;
@@ -672,15 +851,15 @@ function drawBody(ctx, snake, i, cell, offX, offY, dir) {
     // Punta a mezza sfera orientata nel senso di marcia
     const d = dir && (dir.x || dir.y) ? dir : { x: 0, y: -1 };
     const th = Math.atan2(d.y, d.x);
-    ctx.fillStyle = SK.skin;
+    ctx.fillStyle = SKIN.skin;
     ctx.fillRect(cx - T / 2, cy - T / 2, T, T);
     bandTo(snake[1]);
-    ctx.fillStyle = SK.tip;
+    ctx.fillStyle = SKIN.tip;
     ctx.beginPath();
     ctx.arc(cx, cy, T / 2, th - Math.PI / 2, th + Math.PI / 2);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = SK.light;
+    ctx.fillStyle = SKIN.light;
     ctx.beginPath();
     ctx.arc(cx + Math.cos(th - 0.7) * T * 0.22, cy + Math.sin(th - 0.7) * T * 0.22, T * 0.12, 0, Math.PI * 2);
     ctx.fill();
@@ -689,33 +868,33 @@ function drawBody(ctx, snake, i, cell, offX, offY, dir) {
 
   if (i === total - 1 && total > 2) {
     // Base: due lobi ben visibili
-    ctx.fillStyle = SK.skin;
+    ctx.fillStyle = SKIN.skin;
     ctx.fillRect(cx - T / 2, cy - T / 2, T, T);
     bandTo(snake[i - 1]);
     const prev = snake[i - 1];
     const vertical = prev.x === seg.x;      // lobi affiancati rispetto all'asse
     const r = cell * 0.34, off = cell * 0.33;
     const lobe = (a, b) => { ctx.beginPath(); ctx.arc(a, b, r, 0, Math.PI * 2); ctx.fill(); };
-    ctx.fillStyle = SK.shade;
+    ctx.fillStyle = SKIN.shade;
     if (vertical) { lobe(cx - off, cy + u * 0.8); lobe(cx + off, cy + u * 0.8); }
     else { lobe(cx + u * 0.8, cy - off); lobe(cx + u * 0.8, cy + off); }
     // piega centrale: fa leggere due lobi distinti invece di un ovale unico
-    ctx.fillStyle = SK.crease;
+    ctx.fillStyle = SKIN.crease;
     if (vertical) ctx.fillRect(cx - u * 0.25, cy - u * 0.6, u * 0.5, r * 1.5);
     else ctx.fillRect(cx - u * 0.6, cy - u * 0.25, r * 1.5, u * 0.5);
-    ctx.fillStyle = SK.skin;                 // raccordo sopra i lobi
+    ctx.fillStyle = SKIN.skin;                 // raccordo sopra i lobi
     ctx.fillRect(cx - T / 2, cy - T / 2, T, T);
     return;
   }
 
   // Fusto: spessore identico per ogni segmento
-  ctx.fillStyle = SK.skin;
+  ctx.fillStyle = SKIN.skin;
   ctx.fillRect(cx - T / 2, cy - T / 2, T, T);
   bandTo(snake[i - 1]);
   bandTo(snake[i + 1]);
   // luce lungo l'asse del tubo
   const horiz = (snake[i - 1] && snake[i - 1].y === seg.y) || (snake[i + 1] && snake[i + 1].y === seg.y);
-  ctx.fillStyle = SK.light;
+  ctx.fillStyle = SKIN.light;
   if (horiz) ctx.fillRect(x, cy - T * 0.34, cell, u * 1.2);
   else ctx.fillRect(cx - T * 0.34, y, u * 1.2, cell);
 }
@@ -753,6 +932,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
     };
     const bgForest = mkBg(drawForest);
     const bgStreet = mkBg(drawStreet);
+    const bgBeach = mkBg(drawBeach);
     bgRef.current = bgForest;
 
     const img = new Image();
@@ -798,8 +978,9 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
       // Livello 2: la fila di figure stilizzate al posto della canna.
       if (st.level >= 2) {
         // dal fondo verso la testa, così la punta resta sopra
+        const pal = st.level >= 3 ? SK3 : SK;
         for (let i = st.snake.length - 1; i >= 0; i--) {
-          drawBody(ctx, st.snake, i, cell, offX, offY, st.dir);
+          drawBody(ctx, st.snake, i, cell, offX, offY, st.dir, pal);
         }
         return;
       }
@@ -838,7 +1019,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
                 // si riparte dalla lunghezza base, mantenendo posizione e direzione
                 st.snake = st.snake.slice(0, BASE_LEN);
                 st.queue = [];
-                bgRef.current = nextLevel >= 2 ? bgStreet : bgForest;
+                bgRef.current = nextLevel >= 3 ? bgBeach : nextLevel >= 2 ? bgStreet : bgForest;
                 setLevel(nextLevel);
               }
               placeFood();
@@ -948,7 +1129,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
             <div className="bg-black/70 px-5 py-3 rounded-lg text-center">
               <div className="font-rustic text-2xl text-[#D97706]">LIVELLO {level}</div>
               <div className="text-[10px] uppercase tracking-widest text-[#F0F4F1]">
-                {level === 2 ? 'In città!' : 'Ancora più veloce!'}
+                {level === 2 ? 'In città!' : level === 3 ? 'Rio de Janeiro!' : 'Ancora più veloce!'}
               </div>
             </div>
           </div>
@@ -3634,7 +3815,7 @@ function App() {
     { k: 'sync', icon: '☁️', title: 'Sincronizzazione', body: 'La connessione al campo è automatica: quando c\'è linea i dati si allineano da soli fra i telefoni, in tempo reale, foto degli scontrini comprese. Senza linea si continua a lavorare normalmente e tutto viene inviato appena la rete torna. Se in due avete lavorato offline, al ritorno della linea le due versioni si uniscono voce per voce: nessuno cancella il lavoro dell\'altro. Il pallino in alto a destra indica se sei online o offline.' },
     { k: 'chiusura', icon: '🏁', title: 'Chiusura e Archivio', body: 'A conti fatti, in Spese Totali → Dati usa "Chiudi il campo": salva tutto (un file sul telefono e una copia nel cloud), lo mette in Archivio e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini su tutti i dispositivi. L\'app resta pronta per il campo dell\'anno dopo. In Archivio rivedi il resoconto di ogni campo chiuso e puoi riscaricarne i dati; il file scaricato alla chiusura è l\'unico che contiene anche le foto degli scontrini, quindi conservalo.' },
     { k: 'galleria', icon: '📸', title: 'Galleria', body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Si guarda in due modi: "Album" sfoglia le foto come polaroid appoggiate su un paesaggio di montagna, una spinta col dito per pagina; "Griglia" le mette tutte in fila, ed è la vista comoda per cercarne una. Il tasto "Crea album ricordo" ti fa scegliere fino a dodici foto e ne fa un PDF con lo stesso paesaggio, quattro per pagina: da mandare nel gruppo o da stampare.' },
-    { k: 'gioco', icon: '🎮', title: 'Aiuta Bandy', body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si va in città, la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).' },
+    { k: 'gioco', icon: '🎮', title: 'Aiuta Bandy', body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: dal bosco si va in città, e poi sulla spiaggia di Rio. Ogni volta la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).' },
     { k: 'impostazioni', icon: '⚙️', title: 'Impostazioni', body: 'Aspetto: tema chiaro, scuro o automatico (segue il telefono) — comodo la sera in tenda. Blocco con password: puoi chiedere la password a ogni apertura e bloccare l\'app subito con "Blocca ora". Dati su questo telefono: backup immediato e, se presti o cambi telefono, "Cancella i dati da questo telefono" — il cloud non viene toccato e con la linea i dati tornano da soli. In fondo trovi la versione installata.' },
     { k: 'pronto', icon: '🎒', title: 'Pronto per il campo', body: 'In Impostazioni, in cima, ci sono tre spie: app scaricata sul telefono, dati del campo ricevuti, accesso al database a posto. Devono essere tutte verdi PRIMA di partire, perché a Prato Lungo non c\'è linea e lassù non si sistemano. Finché qualcosa manca, in Calendario compare un avviso che porta lì. Sistemarlo è sempre la stessa cosa: apri l\'app con la linea attiva e aspetta qualche secondo.' },
     { k: 'correggi', icon: '✏️', title: 'Correggere una spesa', body: 'Sbagliato un prezzo o l\'acquirente? Nella cronologia degli acquisti, e nell\'elenco dell\'attrezzatura, ogni riga ha una matita: apre la voce e permette di correggere nome, acquirente, prezzo, tipologia e conto, tenendo la foto dello scontrino attaccata. Non serve cancellare e rifare, che invece porterebbe via anche la foto. Se le voci sono tante, sopra la cronologia degli acquisti c\'e\' un campo di ricerca che filtra per nome, acquirente o tipologia e mostra il totale di quelle trovate; lo stesso campo c\'e\' anche sopra la lista di "Da acquistare", dove cerca per nome e quantita\'.' },
