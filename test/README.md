@@ -86,6 +86,7 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `e2e/autochiede` | L'app chiede da sola la password quando serve al database |
 | `e2e/smoke` | L'app si apre e resta usabile anche senza rete |
 | `e2e/presenze` | Presenze, "tutti a pranzo/cena", copia da ieri |
+| `e2e/doppioni` | Stessa persona aggiunta da due telefoni offline: la fusione tiene **entrambe** (sono voci nuove legittime), l'app lo segnala spiegando che sbaglia la quota di tutti, e unendo le due schede **somma** le presenze e non perde l'IBAN compilato solo su una. Per le spese doppie invece segnala e basta: di mezzo ci sono i soldi |
 | `e2e/orfane` | Membro eliminato e riaggiunto: le sue presenze restano appese al vecchio id. L'app le trova, le chiama per nome, le riassegna sommandole a quelle già segnate, o le butta |
 | `e2e/calendario` | Note libere del giorno (distinte dal menù: scriverne una non cancella l'altro) e riga "Conto separato" che si apre a comando |
 | `e2e/menuscheda`, `e2e/menugruppi`, `e2e/sezioni` | Menù, gruppi del menu a tendina, navigazione fra le aree |

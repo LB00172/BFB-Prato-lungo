@@ -280,12 +280,17 @@
       maybeDailySnapshot(json);
     } catch (e) {
       if (e && e.name === 'DaFondere') {
-        // Non e' un guasto: sta arrivando roba nuova. Il listener la consegna,
-        // la app la fonde e rimanda l'unione; se per qualche motivo non
-        // arrivasse, fra poco si riprova comunque.
+        // Non e' un guasto: nel cloud c'e' del lavoro nuovo. Cio' che avevamo
+        // in canna e' ANTECEDENTE alla fusione, quindi NON va ritentato tale e
+        // quale: rimanderebbe indietro il lavoro appena arrivato, e sugli altri
+        // telefoni farebbe pure scattare l'allarme delle voci cancellate. Si
+        // butta. Il listener consegna il dato nuovo, la app lo fonde e
+        // ripubblica l'unione — e se non avesse nulla da aggiungere, non c'era
+        // niente da mandare.
+        // Il confronto serve alla corsa: se nel frattempo la app ha gia'
+        // spedito qualcosa di piu' recente, quello si tiene.
+        if (pendingJson === json) pendingJson = null;
         emit({ status: 'connected', error: null });
-        clearTimeout(pushTimer);
-        pushTimer = setTimeout(function () { inviaOra(); }, 3000);
         return;
       }
       // Resta in sospeso e si riprova, con attese crescenti.

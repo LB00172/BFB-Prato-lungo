@@ -206,6 +206,22 @@ preparazione** e **offline al campo**, dove non c'è linea.
   Alla **chiusura del campo** le foto non si cancellano: vengono **timbrate**
   con l'archivio e restano consultabili da *Archivio → Album*, mentre la
   galleria del campo nuovo riparte vuota.
+- **Stessa persona inserita due volte**: non è un difetto della fusione, è la
+  fusione che funziona e produce un risultato sbagliato. Due telefoni senza
+  linea che aggiungono "Anna Rossi" creano due membri con **id diversi**, ed
+  entrambi sono voci nuove legittime: nessuna regola può scartarne una, e il
+  controllo che c'è all'inserimento non può vederlo perché in quel momento
+  l'elenco dell'altro non è ancora arrivato. Il danno non è estetico: Anna
+  entra **due volte nel divisore delle quote**, quindi sbagliano i conti di
+  tutti, e le sue presenze si dividono fra i due id. L'app se ne accorge, lo
+  dice in **Membri** spiegando il danno vero, e le **unisce**: resta la scheda
+  con più presenze, i pasti delle due si **sommano** (chi aveva segnato il
+  pranzo su una e la cena sull'altra se li ritrova entrambi) e i campi
+  compilati solo su una — PayPal, IBAN — non si perdono.
+- **Stessa spesa registrata due volte**: stessa causa, ma di mezzo ci sono i
+  soldi — il totale si gonfia e la quota di tutti sale. Qui l'app **non tocca
+  niente da sola**: segnala le spese con lo stesso nome e lo stesso prezzo (e
+  chi le ha messe), e lascia decidere a una persona quale buttare.
 - **Presenze senza padrone**: le presenze sono legate all'**id** del membro, non
   al nome. Chi viene eliminato dai Membri e poi riaggiunto prende un id nuovo, e
   i pasti segnati prima restano attaccati al vecchio: spariscono dall'elenco e

@@ -1954,6 +1954,124 @@ function App() {
     setOrfanoScelte((prev) => { const n = { ...prev }; delete n[orfano.id]; return n; });
   };
 
+  // ---------- Stessa persona inserita due volte ----------
+  // Non è un difetto della fusione: è la fusione che funziona e produce un
+  // risultato sbagliato. Due telefoni offline che aggiungono "Anna Rossi"
+  // creano due membri con id diversi, ed entrambi sono voci nuove legittime:
+  // nessuna regola può scartarne una. Il controllo che c'è all'inserimento non
+  // può vederlo, perché in quel momento l'elenco dell'altro non è ancora
+  // arrivato.
+  // Il danno non è estetico: Anna entra DUE VOLTE nel divisore delle quote,
+  // quindi sbagliano i conti di tutti, e le sue presenze si dividono fra i due
+  // id. Va trovato e unito.
+  const nomeChiave = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+  const membriDoppi = () => {
+    const per = new Map();
+    members.forEach((m) => {
+      const k = nomeChiave(m.name);
+      if (!k) return;
+      per.set(k, (per.get(k) || []).concat([m]));
+    });
+    return [...per.values()].filter((g) => g.length > 1);
+  };
+
+  // Pasti segnati per un id, su tutti i giorni: serve a decidere quale delle
+  // due schede tenere (si tiene quella con più roba attaccata).
+  const pastiDi = (id) => {
+    let n = 0;
+    Object.keys(campData).forEach((d) => {
+      const v = ((campData[d] || {}).meals || {})[id];
+      if (v) n += (v.lunch ? 1 : 0) + (v.dinner ? 1 : 0);
+    });
+    return n;
+  };
+
+  const unisciDoppi = (gruppo) => {
+    // Si tiene la scheda con più presenze; a parità, quella che ha i dati di
+    // pagamento; a parità ancora, la prima.
+    const ordinati = [...gruppo].sort((a, b) => {
+      const d = pastiDi(b.id) - pastiDi(a.id);
+      if (d) return d;
+      const pa = (a.paypal || a.iban) ? 1 : 0;
+      const pb = (b.paypal || b.iban) ? 1 : 0;
+      return pb - pa;
+    });
+    const tengo = ordinati[0];
+    const butto = ordinati.slice(1);
+    const pasti = butto.reduce((s, m) => s + pastiDi(m.id), 0);
+    if (!window.confirm(
+      `"${tengo.name}" è in elenco ${gruppo.length} volte.\n\n` +
+      'Succede quando due telefoni senza linea aggiungono la stessa persona: ' +
+      'per i conti diventano due persone diverse, e la quota sbaglia per tutti.\n\n' +
+      `Unendole resta una scheda sola${pasti ? `, e le ${pasti} presenze segnate sull'altra si sommano a queste` : ''}. ` +
+      'Non si perde niente.'
+    )) return;
+
+    // Le presenze delle schede scartate si SOMMANO a quelle della tenuta: chi
+    // ha segnato il pranzo su una e la cena sull'altra deve ritrovarsi con
+    // entrambi.
+    setCampData((prev) => {
+      const out = { ...prev };
+      Object.keys(out).forEach((d) => {
+        const day = out[d];
+        if (!day || !day.meals) return;
+        if (!butto.some((m) => day.meals[m.id])) return;
+        const meals = { ...day.meals };
+        const base = meals[tengo.id] || { lunch: false, dinner: false };
+        let lunch = !!base.lunch;
+        let dinner = !!base.dinner;
+        butto.forEach((m) => {
+          const v = meals[m.id];
+          if (!v) return;
+          lunch = lunch || !!v.lunch;
+          dinner = dinner || !!v.dinner;
+          delete meals[m.id];
+        });
+        meals[tengo.id] = { lunch, dinner };
+        out[d] = { ...day, meals };
+      });
+      return out;
+    });
+
+    // I campi compilati su una scheda e non sull'altra non vanno persi.
+    setMembers((prev) => {
+      const scartati = new Set(butto.map((m) => m.id));
+      return prev
+        .map((m) => {
+          if (m.id !== tengo.id) return m;
+          const unito = { ...m };
+          butto.forEach((b) => {
+            if (!unito.paypal && b.paypal) unito.paypal = b.paypal;
+            if (!unito.iban && b.iban) unito.iban = b.iban;
+            if (b.isChild) unito.isChild = true;
+          });
+          return unito;
+        })
+        .filter((m) => !scartati.has(m.id));
+    });
+
+    // Se qualche presenza dovesse restare appesa a un id scartato, l'elenco
+    // degli ex serve a poterla chiamare per nome.
+    butto.forEach((m) => ricordaExMembro(m.id, m.name));
+  };
+
+  // ---------- Stessa spesa registrata due volte ----------
+  // Anche questa la fusione non può prevenirla: due persone che registrano lo
+  // stesso carrello creano due voci nuove, entrambe legittime. Qui però ci
+  // sono di mezzo i soldi — il totale si gonfia e le quote di tutti salgono —
+  // quindi si segnala e basta: quale delle due buttare lo decide una persona,
+  // non l'app. Sospette: stesso nome e stesso prezzo.
+  const spesePotenzialmenteDoppie = () => {
+    const per = new Map();
+    purchases.forEach((p) => {
+      const k = nomeChiave(p.name) + '@' + Math.round(posNum(p.price) * 100);
+      if (!nomeChiave(p.name)) return;
+      per.set(k, (per.get(k) || []).concat([p]));
+    });
+    return [...per.values()].filter((g) => g.length > 1);
+  };
+
   const scartaOrfane = (orfano) => {
     const chi = orfano.nome ? `di ${orfano.nome}` : 'senza padrone';
     if (!window.confirm(`Buttare via le ${orfano.pasti} presenze ${chi}?\nNon si potranno recuperare.`)) return;
@@ -3722,6 +3840,30 @@ function App() {
         {/* ---------- MEMBRI ---------- */}
         {activeTab === 'membri' && (
           <div className="space-y-4">
+            {/* Stessa persona in elenco due volte: succede quando due telefoni
+                senza linea la aggiungono tutti e due. Non è un errore di
+                sincronizzazione — sono due voci nuove legittime — ma nei conti
+                diventa due persone, e la quota sbaglia per TUTTI. */}
+            {membriDoppi().map((g) => (
+              <div key={g[0].id} className="bg-[#D97706]/10 border-2 border-[#D97706]/40 rounded-lg p-3 space-y-2">
+                <p className="text-[11px] text-[#5C4A3C] leading-snug">
+                  <span className="font-bold">"{g[0].name}" è in elenco {g.length} volte.</span>{' '}
+                  Capita quando due telefoni senza linea aggiungono la stessa persona. Così nei conti
+                  vale {g.length} persone: <span className="font-bold">la quota di tutti sbaglia</span>.
+                </p>
+                <button
+                  onClick={() => unisciDoppi(g)}
+                  className="w-full py-2 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide"
+                >
+                  Unisci in una sola scheda
+                </button>
+                <p className="text-[9px] text-gray-500 italic leading-snug">
+                  Le presenze segnate sulle due schede si sommano: non si perde niente. Se invece sono
+                  davvero due persone diverse, aggiungi un cognome o un soprannome a una delle due.
+                </p>
+              </div>
+            ))}
+
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Aggiungi Membro</h3>
               <div className="flex gap-2">
@@ -4650,6 +4792,24 @@ function App() {
                   )}
                 </div>
               )}
+
+              {/* Stessa spesa registrata da due persone: il totale si gonfia e
+                  la quota di tutti sale. Non si tocca niente da soli — di
+                  mezzo ci sono i soldi — ma si dice dov'è, con la matita e la
+                  × già a portata di mano qui sotto. */}
+              {spesePotenzialmenteDoppie().map((g) => (
+                <div key={g[0].id} className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mb-3">
+                  <p className="text-[10px] text-[#5C4A3C] leading-snug">
+                    <span className="font-bold">"{g[0].name}" da {money(posNum(g[0].price))} € è registrata {g.length} volte</span>
+                    {g.some((x) => (x.buyer || '') !== (g[0].buyer || ''))
+                      ? <> (da {[...new Set(g.map((x) => x.buyer || '—'))].join(' e ')})</>
+                      : null}.
+                    {' '}Se è la stessa spesa messa da due persone, il totale è gonfiato e la quota di tutti sale:
+                    cancellane una qui sotto con la <span className="font-bold">×</span>. Se sono due spese davvero
+                    diverse, lascia stare — o cambia un nome per non ricascarci.
+                  </p>
+                </div>
+              ))}
 
               {purchases.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">Nessun acquisto registrato. Compila il form qui sopra e premi Salva.</p>
