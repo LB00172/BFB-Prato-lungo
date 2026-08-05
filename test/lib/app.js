@@ -62,7 +62,13 @@ async function apri(opzioni) {
     permissions: o.permissions || [],
   });
   const page = await ctx.newPage();
-  await page.addInitScript((h) => localStorage.setItem('cambusa_unlock', h), SBLOCCO);
+  // Sbloccata e — salvo richiesta contraria — in modalità tecnica: quasi tutte
+  // le prove guardano diagnostica, registro e avvisi, che un utente normale
+  // non vede. Con { admin: false } si prova l'app come la vede lui.
+  await page.addInitScript((o) => {
+    localStorage.setItem('cambusa_unlock', o.h);
+    if (o.admin) localStorage.setItem('cambusa_admin', '1');
+  }, { h: SBLOCCO, admin: o.admin !== false });
   // initScript: una funzione, oppure [funzione, argomento] se le serve un dato.
   if (o.initScript) await page.addInitScript(...[].concat(o.initScript));
 

@@ -131,7 +131,18 @@ preparazione** e **offline al campo**, dove non c'è linea.
   (schermata bianca) impedendo perfino l'invio agli altri. Resta l'avviso in
   cima, e in *Diagnostica* compare "questo telefono non ha ancora la cronologia
   delle modifiche" quando i dati ci sono ma nessuno è datato.
-- **Registro delle modifiche** (Impostazioni, riga richiudibile): ogni
+- **Modalità tecnica**: la diagnostica, il registro, gli avvisi sulle voci
+  cancellate e il promemoria del backup parlano di lapidi e cronologie — roba
+  che serve a chi tiene i conti e **mette ansia a tutti gli altri**. Si accende
+  per telefono da *Impostazioni → Modalità tecnica* con una **password
+  dedicata** (impronta PBKDF2 in `window.APP_ADMIN`, come il blocco: la
+  password in chiaro non sta nel repo), e resta accesa finché non la si spegne.
+  Sugli altri telefoni l'app lavora uguale — copia di scorta compresa, che si
+  salva **in silenzio anche per loro** — ma non mostra nulla di tecnico; l'unico
+  avviso che resta per tutti è quello della memoria piena, in versione breve,
+  perché liberare spazio può farlo solo il proprietario del telefono.
+- **Registro delle modifiche** (Impostazioni, riga richiudibile, solo in
+  modalità tecnica): ogni
   cambiamento con **data e ora**, la sezione a cui appartiene, la voce in
   chiaro e se è stato fatto **qui** o è arrivato dalla **sincronizzazione**.
   Raggruppato per giorno, esportabile come file di testo, tenuto sul telefono
@@ -182,7 +193,9 @@ preparazione** e **offline al campo**, dove non c'è linea.
   o un "Copia da ieri" cancellano il lavoro di tutti. Prima di applicare una
   sincronizzazione che toglie voci, l'app mette da parte una **copia di scorta**
   locale; se le voci perse sono almeno tre **ed è appena successo** compare un
-  avviso in cima con **"Annulla la sincronizzazione"**, che rimette lo stato di
+  avviso in cima (solo in modalità tecnica: la decisione di annullare spetta a
+  chi tiene i conti, quindici tasti "Annulla" in giro sono più pericolosi del
+  problema) con **"Annulla la sincronizzazione"**, che rimette lo stato di
   prima e lo ripubblica su tutti i dispositivi (le voci che tornano vengono
   ridatate, quindi vincono sulle cancellazioni che le avevano tolte). La copia
   resta comunque disponibile in *Impostazioni → Diagnostica sincronizzazione*.
@@ -197,7 +210,8 @@ preparazione** e **offline al campo**, dove non c'è linea.
   l'avviso dice **l'ora in cui sono state fatte**; le più vecchie finiscono
   soltanto nel registro e in Diagnostica, che spiega che il telefono era
   indietro.
-- **Diagnostica sincronizzazione** (Impostazioni): quante voci sono datate,
+- **Diagnostica sincronizzazione** (Impostazioni, solo in modalità tecnica):
+  quante voci sono datate,
   quante cancellazioni sono registrate e **le ultime dodici, tradotte in
   italiano con data e ora** ("presenza di Bruno — mer 13 ago, cancellata il 3
   ago alle 14:12"). Tante cancellazioni tutte allo stesso minuto sono la firma
@@ -223,9 +237,11 @@ preparazione** e **offline al campo**, dove non c'è linea.
   3. **Su file, a mano**: *Esporta/Importa* JSON (foto comprese). È l'unica che
      sopravvive a un telefono perso, rotto o svuotato, e richiede un gesto umano
      perché il browser non può scrivere un file senza conferma. Per questo, nei
-     **giorni del campo**, dopo le 20 compare un promemoria — ma **solo se quel
-     giorno sono state fatte davvero delle modifiche su quel telefono**: se non
-     hai toccato niente, non c'è niente da salvare e non compare nulla.
+     **giorni del campo**, dopo le 20 compare un promemoria — ma **solo sul
+     telefono in modalità tecnica** (è un compito di chi tiene i conti, non
+     un'ansia da distribuire) e **solo se quel giorno sono state fatte davvero
+     delle modifiche su quel telefono**: se non hai toccato niente, non c'è
+     niente da salvare e non compare nulla.
 - **Chiusura del campo** (Spese Totali → Dati): archivia tutto (file scaricato
   con le foto + copia nel cloud in `camps/<codice>/archives/<id>`), poi azzera
   membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e
@@ -240,6 +256,7 @@ preparazione** e **offline al campo**, dove non c'è linea.
 |---|---|---|
 | Aprire l'app | **Blocco con password** (`window.APP_LOCK` in `firebase-config.js`) | Impronta PBKDF2-SHA256, 200.000 giri, con sale: nel codice **non** c'è la password in chiaro. Attesa progressiva dopo 5 tentativi sbagliati. Gira sul telefono, quindi è una barriera, non una cassaforte |
 | Dati sul telefono | `localStorage` del browser + blocco dell'app | Chi ha il telefono sbloccato e sa aprire gli strumenti da sviluppatore li legge: la difesa vera è il codice di sblocco del telefono |
+| Modalità tecnica | **Password dedicata** (`window.APP_ADMIN`, stessa PBKDF2 del blocco) | Nasconde diagnostica e avvisi tecnici agli utenti normali. È un sipario, non una serratura: decide chi vede gli strumenti, non chi tocca i dati |
 | **Dati nel cloud** | **Regole di Firestore** + utente condiviso | L'app entra nel database con un **utente unico e invisibile** (`APP_LOCK.dbEmail`), usando la password digitata al blocco. Finché quell'utente non esiste in Firebase, l'app ricade sull'accesso anonimo di prima ⚠️ |
 
 **Utente condiviso: come attivarlo** (10 minuti nella console Firebase). Il

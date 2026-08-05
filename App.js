@@ -317,25 +317,34 @@ const descriviPerdite = (paths, stato) => {
 // password in chiaro non viene mai salvata da nessuna parte.
 const LOCK = typeof window !== 'undefined' && window.APP_LOCK || null;
 const UNLOCK_KEY = 'cambusa_unlock';
+// Modalità tecnica: la diagnostica, il registro e gli avvisi della
+// sincronizzazione parlano di lapidi, cronologie e voci perse — roba che serve
+// a chi tiene i conti e mette ansia a tutti gli altri. Si accende per telefono,
+// con una password sua (impronta in firebase-config.js, window.APP_ADMIN).
+const ADMIN_KEY = 'cambusa_admin';
 const LOCK_ALWAYS_KEY = 'cambusa_lock_always';
 const FAIL_KEY = 'cambusa_lock_fail';
 const UNTIL_KEY = 'cambusa_lock_until';
 const toHex = buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 const fromHex = s => new Uint8Array((String(s).match(/.{2}/g) || []).map(h => parseInt(h, 16)));
 
-// Ritorna l'impronta della password, o null se il browser non offre le
-// funzioni crittografiche (servono https oppure localhost).
-async function derivePassword(pwd) {
+// Ritorna l'impronta di una password secondo una configurazione {salt, iter},
+// o null se il browser non offre le funzioni crittografiche (servono https
+// oppure localhost). Usata sia dal blocco sia dalla modalità tecnica.
+async function improntaPassword(pwd, cfg) {
   const subtle = window.crypto && window.crypto.subtle;
-  if (!subtle || !LOCK) return null;
+  if (!subtle || !cfg || !cfg.salt) return null;
   const base = await subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveBits']);
   const bits = await subtle.deriveBits({
     name: 'PBKDF2',
-    salt: fromHex(LOCK.salt),
-    iterations: LOCK.iter || 200000,
+    salt: fromHex(cfg.salt),
+    iterations: cfg.iter || 200000,
     hash: 'SHA-256'
   }, base, 256);
   return toHex(bits);
+}
+async function derivePassword(pwd) {
+  return LOCK ? improntaPassword(pwd, LOCK) : null;
 }
 
 // Password digitata in questa sessione: serve per entrare nel database con
@@ -1441,6 +1450,47 @@ function App() {
   const [logOpen, setLogOpen] = useState(false);
   const [bloccoOpen, setBloccoOpen] = useState(false);
   const [datiOpen, setDatiOpen] = useState(false);
+  // Modalità tecnica: attiva o no su QUESTO telefono. La scelta resta salvata,
+  // così chi tiene i conti la accende una volta sola.
+  const [admin, setAdmin] = useState(() => {
+    try {
+      return localStorage.getItem(ADMIN_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  });
+  const [tecnicaOpen, setTecnicaOpen] = useState(false);
+  const [adminPwd, setAdminPwd] = useState('');
+  const [adminErr, setAdminErr] = useState('');
+
+  // window.APP_ADMIN si legge al momento del controllo, non all'avvio: così
+  // una configurazione mancante si può aggiungere senza rompere niente.
+  const entraAdmin = async () => {
+    const cfg = window.APP_ADMIN;
+    if (!cfg || !cfg.hash) {
+      setAdminErr('Modalità tecnica non configurata su questa installazione.');
+      return;
+    }
+    const im = await improntaPassword(adminPwd, cfg);
+    if (im && im === cfg.hash) {
+      try {
+        localStorage.setItem(ADMIN_KEY, '1');
+      } catch (e) {/* resta accesa solo finché l'app è aperta */}
+      setAdmin(true);
+      setAdminPwd('');
+      setAdminErr('');
+    } else {
+      setAdminErr(im ? 'Password sbagliata.' : 'Serve https (o localhost) per verificare la password.');
+    }
+  };
+  const esciAdmin = () => {
+    try {
+      localStorage.removeItem(ADMIN_KEY);
+    } catch (e) {/* niente */}
+    setAdmin(false);
+    setAdminPwd('');
+    setAdminErr('');
+  };
   const [sepOpen, setSepOpen] = useState(false); // riga "Conto separato" aperta
   const [galleryView, setGalleryView] = useState('album'); // album | griglia
   const [albumPage, setAlbumPage] = useState(0);
@@ -3953,6 +4003,7 @@ function App() {
     "aria-label": "Chiudi avviso",
     className: "text-[#5C4A3C] font-bold px-1 shrink-0"
   }, "\xD7")), (() => {
+    if (!admin) return null;
     const modifiche = promemoriaBackup();
     if (!modifiche) return null;
     return /*#__PURE__*/React.createElement("div", {
@@ -3988,9 +4039,9 @@ function App() {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "La memoria di questo telefono \xE8 piena."), " Le modifiche si vedono, ma la loro cronologia non si salva: chiudendo e riaprendo l'app, i cambiamenti fatti qui potrebbero perdere il confronto con quelli degli altri. Libera spazio sul telefono, oppure vai in", /*#__PURE__*/React.createElement("span", {
+  }, "La memoria di questo telefono \xE8 piena."), " L'app continua a funzionare, ma libera un po' di spazio appena puoi (bastano poche foto o un'app in meno), cos\xEC ogni modifica resta al sicuro.", admin && /*#__PURE__*/React.createElement(React.Fragment, null, " In dettaglio: la cronologia delle modifiche non si salva pi\xF9, e alla riapertura questo telefono perderebbe i confronti con gli altri. Si libera qualcosa anche da", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, " Impostazioni \u2192 Registro modifiche \u2192 Svuota"), ".")), lostSync && /*#__PURE__*/React.createElement("div", {
+  }, " Impostazioni \u2192 Registro modifiche \u2192 Svuota"), "."))), admin && lostSync && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"
@@ -5634,7 +5685,7 @@ function App() {
     className: `w-9 py-1.5 rounded text-xs font-bold border-b-2 ${photoCap === n ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300'}`
   }, n)))), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 leading-snug"
-  }, "Quante foto pu\xF2 caricare ciascuno. \xC8 un accordo di gruppo che vale su questo telefono, non un controllo: serve a far scegliere le foto belle. Mettetevi d'accordo sullo stesso numero.")), /*#__PURE__*/React.createElement("div", {
+  }, "Quante foto pu\xF2 caricare ciascuno. \xC8 un accordo di gruppo che vale su questo telefono, non un controllo: serve a far scegliere le foto belle. Mettetevi d'accordo sullo stesso numero.")), admin && /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
@@ -5726,7 +5777,7 @@ function App() {
     }, "\u2026e altre ", lapidi.length - 12, ".")), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-gray-400 italic leading-snug"
     }, "Una cancellazione \xE8 normale quando qualcuno toglie davvero una voce. Se ne vedi tante tutte allo stesso minuto, \xE8 il segno di un ripristino, di un'importazione o di un \"Copia da ieri\": in quel caso la copia di scorta qui sopra rimette tutto a posto."));
-  })()), /*#__PURE__*/React.createElement("div", {
+  })()), admin && /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setLogOpen(v => !v),
@@ -5908,6 +5959,49 @@ function App() {
   }, "Cancella i dati da questo telefono"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic leading-snug"
   }, "Utile se presti o cambi telefono. Il cloud non viene toccato: con la linea i dati tornano da soli."))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTecnicaOpen(v => !v),
+    className: "w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-[#E2EAE4]/60"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic text-lg text-[#2D392C] shrink-0"
+  }, "Modalit\xE0 tecnica"), /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto flex items-center gap-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${admin ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
+  }, admin ? 'Attiva' : 'Spenta'), /*#__PURE__*/React.createElement("span", {
+    className: `text-[10px] text-[#5C4A3C] transition-transform ${tecnicaOpen ? 'rotate-180' : ''}`
+  }, "\u25BE"))), tecnicaOpen && /*#__PURE__*/React.createElement("div", {
+    className: "px-4 pb-4 space-y-3"
+  }, admin ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug"
+  }, "Su questo telefono si vedono la ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Diagnostica sincronizzazione"), ", il", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, " Registro modifiche"), ", gli avvisi sulle voci cancellate e il promemoria serale del backup. Sono strumenti per chi tiene i conti: sugli altri telefoni non compare niente di tutto questo."), /*#__PURE__*/React.createElement("button", {
+    onClick: esciAdmin,
+    className: "w-full py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-xs font-bold uppercase hover:bg-[#E2EAE4]"
+  }, "Spegni la modalit\xE0 tecnica")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug"
+  }, "Per chi tiene i conti del campo: mostra la diagnostica della sincronizzazione, il registro delle modifiche e gli avvisi tecnici, solo su questo telefono. Ha una password dedicata, diversa da quella del campo."), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "password",
+    value: adminPwd,
+    onChange: e => {
+      setAdminPwd(e.target.value);
+      setAdminErr('');
+    },
+    onKeyDown: e => e.key === 'Enter' && entraAdmin(),
+    placeholder: "Password tecnica",
+    className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: entraAdmin,
+    className: "shrink-0 px-4 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]"
+  }, "Attiva")), adminErr && /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] font-bold text-red-700"
+  }, adminErr)))), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-2"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1"

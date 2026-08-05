@@ -53,6 +53,21 @@ window.APP_LOCK = {
   dbEmail: "campo@brigatabandone.it",
 };
 
+// ============================================================================
+//  MODALITÀ TECNICA
+// ============================================================================
+// Impronta della password che accende la "Modalità tecnica" in Impostazioni:
+// diagnostica della sincronizzazione, registro delle modifiche, avvisi sulle
+// voci cancellate e promemoria del backup si vedono SOLO sui telefoni dove è
+// stata attivata. Gli altri usano l'app senza messaggi tecnici.
+// Come per il blocco: qui c'è solo l'impronta, non la password. Per cambiarla
+// si usa lo stesso comando del blocco qui sopra.
+window.APP_ADMIN = {
+  salt: "dbe546cd0f8b3613730c140ea9ea1ee0",
+  hash: "a82b547461e3a4b1417f812370676773afe79ecba283eb5f86dc6c32e3372c98",
+  iter: 200000,
+};
+
 // Località del campo per il meteo (Open-Meteo, gratuito, senza chiave).
 window.CAMP_LOCATION = { lat: 42.059, lon: 13.1, label: "Pereto (AQ)" };
 
