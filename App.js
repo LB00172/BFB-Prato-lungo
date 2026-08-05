@@ -614,43 +614,165 @@ const seeded = n => {
   let s = n * 9301 + 49297;
   return () => (s = (s * 9301 + 49297) % 233280) / 233280;
 };
+
+// Grana del disegno: quanto è grande un "pixel" dell'arte rispetto a una
+// casella. Stava a cell/5 e con la tela a 360 px veniva una scacchiera da 72
+// quadretti in larghezza: troppo grossa per far leggere un bosco. Ora la tela
+// è a 720 (stesso rapporto, il doppio dei pixel veri, quindi nitida sui
+// telefoni che hanno lo schermo denso) e la grana è più fine: 120 quadretti in
+// larghezza, che è ancora pixel art ma ha lo spazio per l'ombra di un albero.
+const GRANA = 8;
+const pxArte = cell => Math.max(2, Math.round(cell / GRANA));
 function drawForest(ctx, w, h, cell) {
   const rnd = seeded(7);
-  ctx.fillStyle = '#24371F';
+  const px = pxArte(cell);
+  const q = v => Math.round(v / px) * px;
+
+  // Disco a blocchi con una funzione di tinta: serve a chiome e cespugli.
+  // Prende la distanza dal centro (0 al centro, 1 al bordo) e la direzione
+  // della luce, così la chioma ha un volume invece di essere un disco piatto.
+  const disco = (cx, cy, r, tinta) => {
+    for (let y = cy - r; y <= cy + r; y += px) {
+      for (let x = cx - r; x <= cx + r; x += px) {
+        const dx = x + px / 2 - cx,
+          dy = y + px / 2 - cy;
+        const d = Math.sqrt(dx * dx + dy * dy) / r;
+        if (d > 1) continue;
+        const col = tinta(d, dx / r, dy / r);
+        if (!col) continue;
+        ctx.fillStyle = col;
+        ctx.fillRect(q(x), q(y), px, px);
+      }
+    }
+  };
+
+  // --- 1) Terreno: non un verde solo, ma sottobosco a chiazze con la terra
+  // che si intravede. È quello che toglie l'effetto "moquette verde". ---
+  const suolo = ['#233420', '#1D2B1A', '#2A3E24', '#20321D'];
+  ctx.fillStyle = suolo[0];
   ctx.fillRect(0, 0, w, h);
-  // sottobosco a chiazze
-  const px = Math.max(3, Math.round(cell / 5));
   for (let y = 0; y < h; y += px) {
     for (let x = 0; x < w; x += px) {
       const r = rnd();
-      if (r > 0.86) {
-        ctx.fillStyle = '#2E4527';
-        ctx.fillRect(x, y, px, px);
-      } else if (r > 0.8) {
-        ctx.fillStyle = '#1D2C19';
-        ctx.fillRect(x, y, px, px);
-      }
+      ctx.fillStyle = r > 0.88 ? suolo[2] : r > 0.72 ? suolo[1] : r > 0.62 ? suolo[3] : suolo[0];
+      ctx.fillRect(x, y, px, px);
     }
   }
-  // chiome degli alberi viste dall'alto
-  const canopies = 16;
-  for (let i = 0; i < canopies; i++) {
-    const cx = rnd() * w,
-      cy = rnd() * h,
-      rad = cell * (0.7 + rnd() * 0.9);
-    const tone = ['#3E6B33', '#356029', '#477A38'][Math.floor(rnd() * 3)];
-    for (let y = cy - rad; y < cy + rad; y += px) {
-      for (let x = cx - rad; x < cx + rad; x += px) {
-        const dx = x - cx,
-          dy = y - cy;
-        if (dx * dx + dy * dy > rad * rad) continue;
-        ctx.fillStyle = (dx + dy) % (px * 4) === 0 ? '#2B4C22' : tone;
-        ctx.fillRect(Math.round(x / px) * px, Math.round(y / px) * px, px, px);
-      }
-    }
-    // tronco
+  // chiazze di terra battuta, dove il bosco si dirada
+  for (let i = 0; i < 9; i++) {
+    const cx = q(rnd() * w),
+      cy = q(rnd() * h),
+      r = cell * (0.5 + rnd() * 0.9);
+    disco(cx, cy, r, d => {
+      if (d > 0.75 && rnd() > 0.45) return null; // bordo sfrangiato
+      return d > 0.5 ? '#26301C' : '#2D3720';
+    });
+  }
+
+  // --- 2) Ciuffi d'erba e felci: tratti corti e chiari sparsi ---
+  for (let i = 0; i < 260; i++) {
+    const x = q(rnd() * w),
+      y = q(rnd() * h);
+    const alto = rnd() > 0.6;
+    ctx.fillStyle = rnd() > 0.5 ? '#3E6B33' : '#356029';
+    ctx.fillRect(x, y, px, alto ? px * 3 : px * 2);
+    if (rnd() > 0.7) ctx.fillRect(x + px, y + px, px, px * 2);
+  }
+
+  // --- 3) Sassi: piccoli gruppi grigio-verdi, con la loro ombra ---
+  for (let i = 0; i < 8; i++) {
+    const cx = q(rnd() * w),
+      cy = q(rnd() * h),
+      r = px * (1.2 + rnd() * 1.4);
+    disco(cx + px, cy + px, r, () => 'rgba(10,18,10,0.45)');
+    disco(cx, cy, r, (d, ux, uy) => ux + uy < -0.3 ? '#5E6356' : d > 0.7 ? '#3C4137' : '#4B5045');
+  }
+
+  // --- 4) Tronchi caduti: danno scala e dicono "bosco" più di mille foglie ---
+  for (let i = 0; i < 3; i++) {
+    const x = q(rnd() * (w - cell * 4)),
+      y = q(cell + rnd() * (h - cell * 3));
+    const lung = q(cell * (2.2 + rnd() * 1.8)),
+      spess = q(px * 3);
+    ctx.fillStyle = 'rgba(10,18,10,0.4)';
+    ctx.fillRect(x + px, y + px * 2, lung, spess);
     ctx.fillStyle = '#4A3526';
-    ctx.fillRect(Math.round(cx / px) * px, Math.round(cy / px) * px, px, px);
+    ctx.fillRect(x, y, lung, spess);
+    ctx.fillStyle = '#5C4433'; // lato illuminato
+    ctx.fillRect(x, y, lung, px);
+    ctx.fillStyle = '#33241A'; // nodi e crepe, irregolari
+    for (let k = x + px; k < x + lung - px; k += px) {
+      if (rnd() > 0.72) ctx.fillRect(k, y + px * (1 + Math.floor(rnd() * 2)), px, px);
+    }
+  }
+
+  // --- 5) Gli alberi ---
+  // Tre misure, chiome con volume (bordo scuro, cuore chiaro, luce in alto a
+  // sinistra), ombra portata in basso a destra e qualche ciuffo più scuro
+  // dentro. Prima erano dischi piatti a scacchi: da lì l'aria da moquette.
+  const specie = [{
+    bordo: '#16280F',
+    scuro: '#1F3A18',
+    medio: '#2C5122',
+    chiaro: '#3B6B2E',
+    luce: '#4F8A3C'
+  }, {
+    bordo: '#152412',
+    scuro: '#1D3520',
+    medio: '#28492B',
+    chiaro: '#356139',
+    luce: '#457A49'
+  }, {
+    bordo: '#1B2A0E',
+    scuro: '#264014',
+    medio: '#365A1D',
+    chiaro: '#487628',
+    luce: '#5E9636'
+  }];
+  const alberi = [];
+  const mettiAlbero = (cx, cy, r) => {
+    const sp = specie[Math.floor(rnd() * specie.length)];
+    // ombra portata: è quello che stacca la chioma dal terreno
+    disco(cx + r * 0.16, cy + r * 0.2, r * 0.98, d => d > 0.9 ? null : 'rgba(8,16,8,0.42)');
+    // chioma
+    disco(cx, cy, r, (d, ux, uy) => {
+      if (d > 0.94 && rnd() > 0.5) return null; // bordo frastagliato
+      const luceQui = (-ux - uy) * 0.5; // luce da in alto a sinistra
+      const t = d - luceQui * 0.35;
+      if (t > 0.86) return sp.bordo;
+      if (t > 0.6) return sp.scuro;
+      if (t > 0.32) return sp.medio;
+      if (t > 0.05) return sp.chiaro;
+      return sp.luce;
+    });
+    // ciuffi di fogliame più scuro, per non farla sembrare una palla liscia
+    const ciuffi = 3 + Math.floor(rnd() * 4);
+    for (let k = 0; k < ciuffi; k++) {
+      const a = rnd() * Math.PI * 2,
+        dist = r * (0.25 + rnd() * 0.5);
+      disco(q(cx + Math.cos(a) * dist), q(cy + Math.sin(a) * dist), r * (0.16 + rnd() * 0.13), d => d > 0.8 ? null : d > 0.45 ? sp.medio : sp.chiaro);
+    }
+    alberi.push({
+      cx,
+      cy,
+      r
+    });
+  };
+
+  // Prima i grandi, poi i medi, poi i cespugli: si sovrappongono e il bosco
+  // sembra fitto invece che a pois.
+  for (let i = 0; i < 9; i++) mettiAlbero(q(rnd() * w), q(rnd() * h), cell * (1.15 + rnd() * 0.55));
+  for (let i = 0; i < 14; i++) mettiAlbero(q(rnd() * w), q(rnd() * h), cell * (0.7 + rnd() * 0.35));
+  for (let i = 0; i < 14; i++) {
+    const cx = q(rnd() * w),
+      cy = q(rnd() * h),
+      r = cell * (0.3 + rnd() * 0.22);
+    disco(cx + r * 0.2, cy + r * 0.25, r, d => d > 0.9 ? null : 'rgba(8,16,8,0.35)');
+    disco(cx, cy, r, (d, ux, uy) => {
+      if (d > 0.9 && rnd() > 0.4) return null;
+      const t = d - (-ux - uy) * 0.2;
+      return t > 0.75 ? '#1E3618' : t > 0.4 ? '#2B4C22' : '#3A6630';
+    });
   }
 }
 
@@ -658,7 +780,7 @@ function drawForest(ctx, w, h, cell) {
 // e ai bordi si intravedono i portoni dei palazzi.
 function drawStreet(ctx, w, h, cell) {
   const rnd = seeded(23);
-  const px = Math.max(3, Math.round(cell / 5));
+  const px = pxArte(cell);
   const edge = cell * 1.1; // fascia dei palazzi a destra e sinistra
 
   // asfalto
@@ -773,7 +895,7 @@ function drawFlag(ctx, x, y, w, h, px) {
 }
 function drawBeach(ctx, w, h, cell) {
   const rnd = seeded(41);
-  const px = Math.max(3, Math.round(cell / 5));
+  const px = pxArte(cell);
   const q = v => Math.round(v / px) * px;
 
   // Le fasce sono strette ai bordi e larghe al centro: la sabbia asciutta è il
@@ -940,7 +1062,7 @@ function drawThaiFlag(ctx, x, y, w, h, px) {
 }
 function drawThai(ctx, w, h, cell) {
   const rnd = seeded(59);
-  const px = Math.max(3, Math.round(cell / 5));
+  const px = pxArte(cell);
   const q = v => Math.round(v / px) * px;
   const bordo = q(cell * 1.9); // fascia dei locali, per lato
 
@@ -1001,9 +1123,16 @@ function drawThai(ctx, w, h, cell) {
       ctx.fillRect(sx, sy + sh - px, sw, px);
       ctx.fillRect(sx, sy, px, sh);
       ctx.fillRect(sx + sw - px, sy, px, sh);
-      // "scritta" al neon: due o tre trattini dentro l'insegna
+      // "scritta" al neon: due righe di lettere finte. Con la grana grossa di
+      // prima era un trattino solo; ora ci stanno e l'insegna si legge come
+      // un'insegna invece che come un rettangolo colorato.
       ctx.fillStyle = col;
-      for (let k = sx + px * 2; k < sx + sw - px * 2; k += px * 3) ctx.fillRect(k, q(sy + sh / 2), px * 2, px);
+      [q(sy + sh * 0.32), q(sy + sh * 0.6)].forEach((ry, riga) => {
+        for (let k = sx + px * 2; k < sx + sw - px * 2; k += px * 3) {
+          if (riga === 1 && rnd() > 0.75) continue; // seconda riga più corta
+          ctx.fillRect(k, ry, px * 2, px);
+        }
+      });
       locali.push({
         x: sx + sw / 2,
         y: sy + sh / 2,
@@ -1044,20 +1173,100 @@ function drawThai(ctx, w, h, cell) {
     ctx.globalAlpha = 1;
   });
 
+  // --- Pozzanghere: asfalto bagnato che rimanda il neon ---
+  // Restano scure e poco contrastate: sono atmosfera, non devono disturbare
+  // la lettura del corpo che ci passa sopra.
+  [[0.30, 0.42, NEON[0]], [0.70, 0.18, NEON[1]], [0.58, 0.86, NEON[3]]].forEach(pz => {
+    const cx = q(w * pz[0]),
+      cy = q(h * pz[1]);
+    const rx = cell * 1.5,
+      ry = cell * 0.75;
+    for (let y = cy - ry; y < cy + ry; y += px) {
+      for (let x = cx - rx; x < cx + rx; x += px) {
+        const dx = (x - cx) / rx,
+          dy = (y - cy) / ry;
+        if (dx * dx + dy * dy > 1) continue;
+        ctx.fillStyle = '#1A1622';
+        ctx.fillRect(q(x), q(y), px, px);
+      }
+    }
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = pz[2];
+    for (let y = cy - ry; y < cy + ry; y += px * 2) {
+      const largh = q(rx * Math.sqrt(Math.max(0, 1 - ((y - cy) / ry) ** 2)) * 0.7);
+      ctx.fillRect(q(cx - largh / 2), q(y), largh, px);
+    }
+    ctx.globalAlpha = 1;
+  });
+
+  // --- Palme lungo il bordo strada, viste dall'alto ---
+  // Un tronco e le foglie che partono a raggiera: dall'alto una palma è
+  // questo, ed è il secondo segnale (dopo le bandiere) che dice dove siamo.
+  const palma = (cx, cy) => {
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    for (let k = 0; k < 9; k++) {
+      const a = k / 9 * Math.PI * 2 + 0.3;
+      for (let t = px; t < cell * 1.25; t += px) {
+        ctx.fillRect(q(cx + Math.cos(a) * t + px), q(cy + Math.sin(a) * t + px), px, px);
+      }
+    }
+    for (let k = 0; k < 9; k++) {
+      const a = k / 9 * Math.PI * 2 + 0.3;
+      const lung = cell * (0.95 + k % 3 * 0.18);
+      for (let t = px; t < lung; t += px) {
+        const largo = t < lung * 0.5 ? px * 3 : t < lung * 0.8 ? px * 2 : px;
+        ctx.fillStyle = t < lung * 0.45 ? '#2F6B34' : '#23522A';
+        ctx.fillRect(q(cx + Math.cos(a) * t), q(cy + Math.sin(a) * t), largo, largo);
+      }
+    }
+    ctx.fillStyle = '#5B4326';
+    ctx.fillRect(q(cx) - px, q(cy) - px, px * 3, px * 3);
+  };
+  [0.16, 0.52, 0.88].forEach((fy, i) => {
+    palma(q(bordo + cell * 1.15), q(h * fy));
+    palma(q(w - bordo - cell * 1.15), q(h * (fy + (i % 2 ? -0.13 : 0.13))));
+  });
+
+  // --- Motorini in fila contro il marciapiede ---
+  [[0.30, 0, '#C8342F'], [0.66, 0, '#2E7FD6'], [0.44, 1, '#D8B62A'], [0.80, 1, '#8C4FD0']].forEach(mt => {
+    const lato = mt[1];
+    const cx = q(lato === 0 ? bordo + cell * 0.42 : w - bordo - cell * 0.42);
+    const cy = q(h * mt[0]);
+    const lu = q(cell * 0.95),
+      la = q(cell * 0.42);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(cx - la / 2 + px, cy - lu / 2 + px, la, lu);
+    ctx.fillStyle = mt[2];
+    ctx.fillRect(cx - la / 2, cy - lu / 2, la, lu);
+    ctx.fillStyle = '#141019'; // sella
+    ctx.fillRect(cx - la / 2, q(cy - lu * 0.05), la, q(lu * 0.3));
+    ctx.fillStyle = '#D9D4C6'; // specchietti
+    ctx.fillRect(cx - la / 2 - px, cy - lu / 2, px, px);
+    ctx.fillRect(cx + la / 2, cy - lu / 2, px, px);
+  });
+
   // --- Due tuk-tuk fermi in mezzo alla strada, visti dall'alto ---
-  [[0.36, 0.24, '#FFD93B'], [0.62, 0.72, '#5BFF9E']].forEach(t => {
+  [[0.38, 0.28, '#FFD93B'], [0.62, 0.68, '#5BFF9E']].forEach(t => {
     const cx = q(w * t[0]),
       cy = q(h * t[1]);
-    const tw = q(cell * 0.95),
-      th = q(cell * 1.5);
-    ctx.fillStyle = '#12101A'; // ombra
-    ctx.fillRect(cx - tw / 2 + px, cy - th / 2 + px, tw, th);
+    const tw = q(cell * 1.05),
+      th = q(cell * 1.7);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; // ombra
+    ctx.fillRect(cx - tw / 2 + px * 2, cy - th / 2 + px * 2, tw, th);
+    ctx.fillStyle = '#2A2536'; // ruote ai lati
+    [cy - th * 0.28, cy + th * 0.3].forEach(wy => {
+      ctx.fillRect(cx - tw / 2 - px, q(wy), px, q(cell * 0.3));
+      ctx.fillRect(cx + tw / 2, q(wy), px, q(cell * 0.3));
+    });
     ctx.fillStyle = t[2]; // tettuccio
     ctx.fillRect(cx - tw / 2, cy - th / 2, tw, th);
-    ctx.fillStyle = '#2B2536'; // apertura posteriore
-    ctx.fillRect(cx - tw / 2 + px, cy + th / 2 - px * 3, tw - px * 2, px * 2);
-    ctx.fillStyle = '#FFF3C4'; // faro
-    ctx.fillRect(cx - px, cy - th / 2 - px, px * 2, px);
+    ctx.fillStyle = 'rgba(0,0,0,0.22)'; // centine del telo
+    for (let k = cy - th / 2 + px * 2; k < cy + th / 2; k += px * 4) ctx.fillRect(cx - tw / 2, q(k), tw, px);
+    ctx.fillStyle = '#1B1724'; // vano passeggeri
+    ctx.fillRect(cx - tw / 2 + px, q(cy + th * 0.12), tw - px * 2, q(th * 0.32));
+    ctx.fillStyle = '#FFF3C4'; // fari
+    ctx.fillRect(cx - px * 2, cy - th / 2 - px, px * 2, px);
+    ctx.fillRect(cx + px, cy - th / 2 - px, px * 2, px);
   });
 
   // --- Bandiere thailandesi appese alle facciate ---
@@ -1548,14 +1757,14 @@ function BandyGame({
     className: "relative flex-1 min-h-0 flex items-center justify-center"
   }, /*#__PURE__*/React.createElement("canvas", {
     ref: canvasRef,
-    width: 360,
-    height: 456,
+    width: 720,
+    height: 912,
     className: "rounded-lg border-2 border-[#2D392C]/40 touch-none max-h-full max-w-full",
     style: {
       imageRendering: 'pixelated',
       height: '100%',
       width: 'auto',
-      aspectRatio: '360 / 456'
+      aspectRatio: '720 / 912'
     }
   }), levelUp && !over && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 flex items-center justify-center pointer-events-none"
@@ -4156,7 +4365,7 @@ function App() {
     if (foodDrinksSep > 0.005 && adultMealsSep === 0) {
       buchi.push({
         quanto: foodDrinksSep,
-        perche: sepDays.length === 0 ? 'spese segnate "conto separato", ma in Calendario nessun giorno è spuntato come separato' : 'spese segnate "conto separato", ma nei giorni separati non c\'è nessuna presenza'
+        perche: sepDays.length === 0 ? 'spese segnate "conto separato", ma in Calendario nessun giorno è spuntato come separato' : sepDays.every(d => freeSet.has(d)) ? 'spese segnate "conto separato", ma i giorni separati sono anche segnati come gratis: non c\'è più nessun pasto su cui dividerle' : 'spese segnate "conto separato", ma nei giorni separati non c\'è nessuna presenza'
       });
     }
     if (logisticsPurchases > 0.005 && attendingAdults.size === 0) {
@@ -4336,6 +4545,10 @@ function App() {
     };
   };
   const totals = calculateTotals();
+  // Aggancio per le prove (come canvas.__game): i conti esatti, non ricavati
+  // dal testo a schermo. La prova "oracolo" li confronta con un calcolo
+  // indipendente e con scenari fatti a mano.
+  if (typeof window !== 'undefined') window.__totali = totals;
 
   // ---------- Backup (Export / Import) ----------
   const downloadJson = (filename, payload) => {
