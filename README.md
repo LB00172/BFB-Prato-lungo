@@ -90,6 +90,10 @@ preparazione** e **offline al campo**, dove non c'è linea.
   **solo** per l'orologio interno, mai per il confronto fra due voci: il
   confronto dipende solo dai dati, altrimenti due telefoni con "adesso" diverso
   deciderebbero in modo diverso e non convergerebbero più.
+  `hi` viene **salvato sul telefono e spedito insieme ai dati**: prima si
+  azzerava a ogni riapertura dell'app, e un telefono con l'ora indietro tornava
+  a marcare le proprie modifiche con date vecchie: l'orologio logico esisteva
+  solo finché l'app restava aperta.
 - **Dati senza cronologia** (telefono fermo a una versione vecchia dell'app) non
   vengono più presi per buoni: entrano nella fusione come voci "di data ignota",
   quindi qualsiasi modifica datata ha la precedenza e nulla viene cancellato.
@@ -117,7 +121,16 @@ preparazione** e **offline al campo**, dove non c'è linea.
   qualcosa.
 - **Memoria del telefono piena**: se la cronologia delle modifiche non si può
   più salvare, alla riapertura le modifiche di quel telefono risulterebbero
-  "senza data" e perderebbero ogni confronto. Ora compare un avviso.
+  "senza data" e perderebbero ogni confronto — ed è lo stato in cui la prima
+  sincronizzazione gli porta via tutto ciò che gli altri hanno cancellato.
+  Tre difese: la cronologia si salva **prima** delle copie di sicurezza (una
+  copia da qualche decina di KB poteva prendersi gli ultimi byte liberi e far
+  fallire proprio lei); se lo spazio manca comunque, si **sacrifica il resto** —
+  prima le copie vecchie, poi il registro — e si riprova; e i salvataggi dei
+  dati non lasciano più scappare l'eccezione, che smontava l'app intera
+  (schermata bianca) impedendo perfino l'invio agli altri. Resta l'avviso in
+  cima, e in *Diagnostica* compare "questo telefono non ha ancora la cronologia
+  delle modifiche" quando i dati ci sono ma nessuno è datato.
 - **Registro delle modifiche** (Impostazioni, riga richiudibile): ogni
   cambiamento con **data e ora**, la sezione a cui appartiene, la voce in
   chiaro e se è stato fatto **qui** o è arrivato dalla **sincronizzazione**.
@@ -168,11 +181,22 @@ preparazione** e **offline al campo**, dove non c'è linea.
   cancellato una spesa), ma è anche il modo in cui un ripristino, un'importazione
   o un "Copia da ieri" cancellano il lavoro di tutti. Prima di applicare una
   sincronizzazione che toglie voci, l'app mette da parte una **copia di scorta**
-  locale; se le voci perse sono almeno tre compare un avviso in cima con
-  **"Annulla la sincronizzazione"**, che rimette lo stato di prima e lo
-  ripubblica su tutti i dispositivi (le voci che tornano vengono ridatate, quindi
-  vincono sulle cancellazioni che le avevano tolte). La copia resta comunque
-  disponibile in *Impostazioni → Diagnostica sincronizzazione*.
+  locale; se le voci perse sono almeno tre **ed è appena successo** compare un
+  avviso in cima con **"Annulla la sincronizzazione"**, che rimette lo stato di
+  prima e lo ripubblica su tutti i dispositivi (le voci che tornano vengono
+  ridatate, quindi vincono sulle cancellazioni che le avevano tolte). La copia
+  resta comunque disponibile in *Impostazioni → Diagnostica sincronizzazione*.
+  L'avviso guarda **quando** è stata fatta la cancellazione, non solo quante
+  voci sono sparite: un telefono rimasto indietro che si riaggancia viene a
+  sapere di cancellazioni fatte giorni prima, e non manca niente a nessuno — è
+  solo il recupero del ritardo. Prima le due situazioni venivano annunciate allo
+  stesso modo, e siccome togliere **un solo membro** porta via anche le sue
+  presenze di tutti i giorni (un gesto = sette "voci"), bastavano quattro
+  cancellazioni vecchie per annunciare "mancano 29 voci" a chi non aveva perso
+  niente. Ora si avvisa solo per le cancellazioni delle ultime **sei ore**, e
+  l'avviso dice **l'ora in cui sono state fatte**; le più vecchie finiscono
+  soltanto nel registro e in Diagnostica, che spiega che il telefono era
+  indietro.
 - **Diagnostica sincronizzazione** (Impostazioni): quante voci sono datate,
   quante cancellazioni sono registrate e **le ultime dodici, tradotte in
   italiano con data e ora** ("presenza di Bruno — mer 13 ago, cancellata il 3

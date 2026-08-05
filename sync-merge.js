@@ -182,6 +182,7 @@
     // solo a spostare in avanti anche il nostro orologio.
     var hi = altezza(lmeta);
     var limite = Math.max(now || Date.now(), hi) + MAX_AVANTI;
+    if (altezza(rmeta) <= limite && altezza(rmeta) > hi) hi = altezza(rmeta);
     [lmeta.rev, lmeta.del, rmeta.rev, rmeta.del].forEach(function (m) {
       if (!m) return;
       Object.keys(m).forEach(function (k) {
@@ -321,5 +322,10 @@
     emptyMeta: emptyMeta,
     equalMap: equalMap,
     sameAs: sameAs,
+    // quandoCancellata(percorso, metaLocale, metaRemota) -> istante della
+    // cancellazione (0 = mai). Serve a distinguere una cancellazione appena
+    // avvenuta — che va segnalata — da una di giorni fa, che questo telefono
+    // sta soltanto adesso venendo a sapere.
+    quandoCancellata: maxDel,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

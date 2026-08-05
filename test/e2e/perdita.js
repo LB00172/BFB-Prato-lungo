@@ -114,8 +114,9 @@ const presenti = (page) => page.evaluate(() => {
 
   // --- Il freno: l'app lo dice, invece di lasciarlo scoprire ai conti ---
   const avviso = await p.locator('body').innerText();
-  ok('compare l\'avviso della perdita', /ha tolto \d+ voci/i.test(avviso));
+  ok('compare l\'avviso della perdita', /appena cancellato \d+ voci/i.test(avviso));
   ok('l\'avviso dice cosa è sparito', /presenze/i.test(avviso));
+  ok('e dice a che ora è successo', /\d{1,2}:\d{2}/.test(avviso));
   ok('c\'è il tasto per annullare', (await p.locator('button', { hasText: 'Annulla la sincronizzazione' }).count()) > 0);
 
   const scorta = await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_rescue') || 'null'));
@@ -135,7 +136,7 @@ const presenti = (page) => page.evaluate(() => {
   await p.waitForTimeout(800);
   const tornate = await presenti(p);
   ok(`annullando tornano le presenze (${tornate})`, tornate === 3);
-  ok('l\'avviso sparisce', !/ha tolto \d+ voci/i.test(await p.locator('body').innerText()));
+  ok('l\'avviso sparisce', !/appena cancellato \d+ voci/i.test(await p.locator('body').innerText()));
 
   // Le voci tornate devono essere RIDATATE, altrimenti la cancellazione le
   // rimangerebbe al prossimo giro.
@@ -236,6 +237,71 @@ const presenti = (page) => page.evaluate(() => {
   });
   ok(`"Copia da ieri" non cancella le presenze di nessuno (lapidi: ${lapidiPrima} → ${esito.lapidi})`, esito.lapidi === lapidiPrima);
   ok(`chi ieri non c'era resta in elenco, azzerato (${esito.voci} voci)`, esito.voci >= 2);
+
+  // --- Recupero del ritardo: NON è una perdita ---
+  // Il caso che generava il falso allarme. Un telefono rimasto indietro si
+  // riaggancia e viene a sapere di cancellazioni fatte giorni prima: le voci
+  // spariscono (giustamente, non ci sono più per nessuno), ma non è un
+  // disastro in corso — e un solo membro tolto porta con sé le presenze di
+  // tutti i giorni, cioè da solo fa numero.
+  // Si invecchia la cronologia di questo telefono e si riapre l'app: è
+  // esattamente un telefono che ha lavorato giorni fa e non si è più
+  // riagganciato.
+  await p.evaluate(() => {
+    localStorage.removeItem('cambusa_rescue');
+    const m = JSON.parse(localStorage.getItem('cambusa_syncmeta') || '{}');
+    const DIECI = Date.now() - 10 * 24 * 3600 * 1000;
+    Object.keys(m.rev || {}).forEach((k) => { m.rev[k] = DIECI; });
+    m.hi = DIECI;
+    localStorage.setItem('cambusa_syncmeta', JSON.stringify(m));
+  });
+  await p.reload({ waitUntil: 'load' });
+  await p.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
+  await p.waitForTimeout(600);
+
+  const vecchie = await p.evaluate(() => {
+    const TRE_GIORNI = Date.now() - 3 * 24 * 3600 * 1000;
+    const cd = JSON.parse(localStorage.getItem('cambusa_camp_data') || '{}');
+    const membri = JSON.parse(localStorage.getItem('cambusa_members') || '[]');
+    const via = membri[0].id;
+    const del = { ['m|' + via]: TRE_GIORNI };
+    Object.keys(cd).forEach((g) => {
+      if ((cd[g].meals || {})[via]) del['c|' + g + '|meals|' + via] = TRE_GIORNI;
+    });
+    // Il cloud non ha più quel membro né le sue presenze: le tolse tre giorni fa.
+    const campData = {};
+    Object.keys(cd).forEach((g) => {
+      campData[g] = Object.assign({}, cd[g]);
+      if (campData[g].meals) {
+        campData[g].meals = Object.assign({}, campData[g].meals);
+        delete campData[g].meals[via];
+      }
+    });
+    window.__remoteCb({
+      members: membri.filter((m) => m.id !== via), campData,
+      purchases: [], toBuy: [], equipment: [], gear: [], settled: [], sepDays: [],
+      _meta: { v: 2, rev: {}, del },
+    });
+    return Object.keys(del).length;
+  });
+  await p.waitForTimeout(800);
+
+  const testo = await p.locator('body').innerText();
+  ok(`la cancellazione vecchia viene comunque applicata (${vecchie} voci)`, vecchie >= 3 &&
+    (await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_members') || '[]').length)) === 2);
+  ok('ma NON compare l\'allarme: è solo un recupero del ritardo', !/appena cancellato/i.test(testo));
+
+  // La rete di sicurezza resta: la copia di scorta c'è lo stesso, e la
+  // diagnostica spiega che la cancellazione non è di adesso.
+  const scortaVecchia = await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_rescue') || 'null'));
+  ok('la copia di scorta viene messa da parte lo stesso', !!scortaVecchia && scortaVecchia.perse === vecchie);
+  ok('e si sa quando è stata fatta la cancellazione', !!scortaVecchia && scortaVecchia.quando > 0);
+
+  await menu('Impostazioni');
+  await p.waitForTimeout(400);
+  const diagVecchia = await p.locator('main').innerText();
+  ok('la diagnostica dice che il telefono era indietro', /era indietro e l'ha saputo solo ora/i.test(diagVecchia));
+  ok('e si può annullare comunque', (await p.locator('button', { hasText: 'Annulla quella sincronizzazione' }).count()) > 0);
 
   ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
   await fine(browser);

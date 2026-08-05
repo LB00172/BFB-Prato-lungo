@@ -55,7 +55,7 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | Prova | Cosa verifica |
 |---|---|
 | `unita/compilazione` | `App.jsx` compila; **`App.js` è allineato** (cioè non hai dimenticato `npm run build`); il `CACHE_NAME` c'è; ogni script di `index.html` sta nel precache |
-| `unita/fusione-motore` | I 45 casi del motore di fusione (`sync-merge.js`): voci nuove da due telefoni, cancellazioni, lapidi, convergenza, **orologi sbagliati** (telefono indietro che deve comunque vincere, telefono avanti che non deve trascinare gli altri né spaccare l'accordo) e app vecchia che non deve cancellare nulla |
+| `unita/fusione-motore` | I 54 casi del motore di fusione (`sync-merge.js`): voci nuove da due telefoni, cancellazioni, lapidi, convergenza, **orologi sbagliati** (telefono indietro che deve comunque vincere anche **dopo aver chiuso e riaperto l'app**, telefono avanti che non deve trascinare gli altri né spaccare l'accordo), app vecchia che non deve cancellare nulla, e **quando** è stata fatta una cancellazione — un membro tolto vale sette percorsi, non sette danni |
 | `unita/arrotondamenti` | Quote sempre multiple di 0,10 €; riconciliazione dello scarto solo sopra i 50 cent |
 | `unita/pdf-ricordo` | Il PDF "foto ricordo": struttura del file, **ogni voce della tavola degli scarti punta al suo oggetto**, JPEG incorporati senza ricodifica, impaginazione, tetto di 12, accenti e ingressi rotti. Salva un esempio in `test/tmp/ricordo.pdf` |
 
@@ -74,9 +74,9 @@ sistema). Su un computer dove non lo trova: `CHROMIUM_PATH=/percorso npm test`.
 | `e2e/chiusura` | Chiusura del campo: archivio scaricato, liste azzerate, totali a zero |
 | `e2e/fusione` | La fusione dentro l'app: due telefoni offline, nessun dato perso |
 | `e2e/scorte` | Copie locali **due volte al giorno** (mattina e pomeriggio, con lo stato precedente alla modifica che le fa scattare), potatura per numero e per spazio, **ripristino che funziona senza linea**, e promemoria serale del backup: compare solo nei giorni del campo, di sera, e solo se ci sono state modifiche. Usa un orologio pilotabile, così l'esito non dipende da quando si lancia la prova |
-| `e2e/tenuta` | I guasti silenziosi della sincronizzazione: scrittura fallita che dev'essere ritentata e segnalata ("Da inviare"), campo vuoto nel cloud che va ripopolato, memoria del telefono piena che va detta, **foto e scontrini che finiscono in coda invece di perdersi** e partono da soli quando la linea regge |
+| `e2e/tenuta` | I guasti silenziosi della sincronizzazione: scrittura fallita che dev'essere ritentata e segnalata ("Da inviare"), campo vuoto nel cloud che va ripopolato, memoria del telefono piena che va detta, **foto e scontrini che finiscono in coda invece di perdersi** e partono da soli quando la linea regge, e la **cronologia che sopravvive alla memoria piena**: si salva prima delle copie di sicurezza, e se lo spazio manca sacrifica loro |
 | `e2e/registro` | Registro delle modifiche (locali e in arrivo, con data e ora, esportabile) e ciclo offline→online: il lavoro fatto senza linea sopravvive, viene ripubblicato, e ricevere ciò che si è appena spedito non produce un altro invio |
-| `e2e/perdita` | **Perdita di dati**: cancellazioni datate in arrivo dal cloud, freno di sicurezza, copia di scorta, "Annulla la sincronizzazione" con ridatazione, diagnostica, e che "Copia da ieri" non cancelli le presenze di nessuno |
+| `e2e/perdita` | **Perdita di dati**: cancellazioni datate in arrivo dal cloud, freno di sicurezza, copia di scorta, "Annulla la sincronizzazione" con ridatazione, diagnostica, che "Copia da ieri" non cancelli le presenze di nessuno, e il **recupero del ritardo**: un telefono rimasto indietro che viene a sapere di cancellazioni di giorni prima non deve gridare al disastro, ma deve comunque poterle annullare |
 | `e2e/riaggancio` | Ritorno della linea e riaggancio al cloud |
 | `e2e/login` | Blocco con password, tentativi sbagliati, "blocca ora" |
 | `e2e/autochiede` | L'app chiede da sola la password quando serve al database |

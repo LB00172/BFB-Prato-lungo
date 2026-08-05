@@ -30,6 +30,19 @@ const SYNC_META_KEY = 'cambusa_syncmeta';
 // delle voci: è quello che permette di annullarla con un tocco.
 const RESCUE_KEY = 'cambusa_rescue';
 
+// Quanto indietro può essere una cancellazione perché valga ancora la pena di
+// allarmare. Oltre, non è un disastro in corso: è questo telefono che si mette
+// in pari con quello che gli altri hanno già fatto giorni fa, e l'avviso
+// spaventerebbe per niente. La copia di scorta si mette da parte lo stesso, e
+// resta in Diagnostica: si può sempre annullare.
+// L'età si misura con l'orologio del telefono: se è sbagliato, l'avviso può
+// comparire di troppo o di meno — non tocca MAI i dati, che dipendono solo
+// dalle date delle voci.
+const PERDITA_RECENTE = 6 * 60 * 60 * 1000;
+// Le lapidi di uno stesso gesto (cancellare un membro toglie anche tutte le
+// sue presenze) portano tutte lo stesso istante: si contano insieme.
+const RAFFICA = 2 * 60 * 1000;
+
 // ---------- Copie di sicurezza locali ----------
 // Gli snapshot giornalieri automatici stanno su Firestore, e il ripristino li
 // rilegge da lì: entrambe le cose vogliono la linea. Al campo non c'è, quindi
@@ -1308,22 +1321,48 @@ function App() {
   if (metaRef.current === null) {
     const saved = load(SYNC_META_KEY, null);
     const SM = window.SyncMerge;
+    // "hi" va riletto: è l'orologio logico, cioè la data più alta che questo
+    // telefono ha mai visto. Perdendolo a ogni riapertura, un telefono con
+    // l'ora indietro tornava a marcare le proprie modifiche con date vecchie e
+    // a perdere confronti che doveva vincere.
     metaRef.current = saved && saved.rev
-      ? { flat: saved.flat || {}, rev: saved.rev, del: saved.del || {} }
-      : { flat: SM ? SM.flatten(syncStateRef.current) : {}, rev: {}, del: {} };
+      ? { flat: saved.flat || {}, rev: saved.rev, del: saved.del || {}, hi: saved.hi || 0 }
+      : { flat: SM ? SM.flatten(syncStateRef.current) : {}, rev: {}, del: {}, hi: 0 };
   }
   // Se il salvataggio della cronologia fallisce (memoria del telefono piena),
   // alla riapertura le modifiche di questo telefono risulterebbero "senza
   // data" e perderebbero ogni confronto. È un guasto silenzioso: va detto.
   const [spazioPieno, setSpazioPieno] = useState(false);
+  // La cronologia è il pezzo di localStorage che NON si può perdere: senza,
+  // questo telefono riparte "senza date" e qualsiasi cancellazione altrui gli
+  // porta via delle voci. Vale più di tutto il resto che sta lì dentro, quindi
+  // se lo spazio manca si sacrifica il resto — prima le copie di sicurezza
+  // vecchie, poi il registro — e si riprova.
   const saveMeta = (m) => {
     metaRef.current = m;
-    try {
-      localStorage.setItem(SYNC_META_KEY, JSON.stringify(m));
-      if (spazioPienoRef.current) { spazioPienoRef.current = false; setSpazioPieno(false); }
-    } catch (e) {
-      if (!spazioPienoRef.current) { spazioPienoRef.current = true; setSpazioPieno(true); }
+    const testo = JSON.stringify(m);
+    const sacrifici = [
+      () => {
+        const tutte = snapLocaliLeggi();
+        const chiavi = Object.keys(tutte).sort();
+        if (chiavi.length === 0) return false;
+        delete tutte[chiavi[0]];
+        try { localStorage.setItem(SNAP_KEY, JSON.stringify(tutte)); } catch (e) { localStorage.removeItem(SNAP_KEY); }
+        return true;
+      },
+      () => { localStorage.removeItem(SNAP_KEY); return true; },
+      () => { localStorage.removeItem(LOG_KEY); return true; },
+    ];
+    for (let i = 0; i <= sacrifici.length; i++) {
+      try {
+        localStorage.setItem(SYNC_META_KEY, testo);
+        if (spazioPienoRef.current) { spazioPienoRef.current = false; setSpazioPieno(false); }
+        return;
+      } catch (e) {
+        if (i === sacrifici.length || !sacrifici[i]()) break;
+      }
     }
+    if (!spazioPienoRef.current) { spazioPienoRef.current = true; setSpazioPieno(true); }
   };
 
   // ---------- Persistenza ----------
@@ -1332,15 +1371,27 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => localStorage.setItem('cambusa_members', JSON.stringify(members)), [members]);
-  useEffect(() => localStorage.setItem('cambusa_camp_data', JSON.stringify(campData)), [campData]);
-  useEffect(() => localStorage.setItem('cambusa_purchases', JSON.stringify(purchases)), [purchases]);
-  useEffect(() => localStorage.setItem('cambusa_gear', JSON.stringify(gear)), [gear]);
-  useEffect(() => localStorage.setItem('cambusa_settled', JSON.stringify(settled)), [settled]);
-  useEffect(() => localStorage.setItem('cambusa_equipment', JSON.stringify(equipment)), [equipment]);
-  useEffect(() => localStorage.setItem('cambusa_tobuy', JSON.stringify(toBuy)), [toBuy]);
-  useEffect(() => localStorage.setItem('cambusa_sepdays', JSON.stringify(sepDays)), [sepDays]);
-  useEffect(() => localStorage.setItem('cambusa_weather', JSON.stringify(weather)), [weather]);
+  // Salvataggio dei dati sul telefono. Se la memoria è piena, setItem SOLLEVA
+  // un'eccezione: lasciata scappare da dentro un effetto, React smonta tutta
+  // l'app (schermata bianca) e gli effetti successivi — fra cui la datazione
+  // delle modifiche e l'invio agli altri — non partono nemmeno. Si prende, si
+  // libera spazio dove si può e lo si dice, ma l'app resta in piedi.
+  const salvaLocale = (chiave, valore) => {
+    try { localStorage.setItem(chiave, JSON.stringify(valore)); }
+    catch (e) {
+      try { localStorage.removeItem(SNAP_KEY); localStorage.setItem(chiave, JSON.stringify(valore)); }
+      catch (e2) { if (!spazioPienoRef.current) { spazioPienoRef.current = true; setSpazioPieno(true); } }
+    }
+  };
+  useEffect(() => salvaLocale('cambusa_members', members), [members]);
+  useEffect(() => salvaLocale('cambusa_camp_data', campData), [campData]);
+  useEffect(() => salvaLocale('cambusa_purchases', purchases), [purchases]);
+  useEffect(() => salvaLocale('cambusa_gear', gear), [gear]);
+  useEffect(() => salvaLocale('cambusa_settled', settled), [settled]);
+  useEffect(() => salvaLocale('cambusa_equipment', equipment), [equipment]);
+  useEffect(() => salvaLocale('cambusa_tobuy', toBuy), [toBuy]);
+  useEffect(() => salvaLocale('cambusa_sepdays', sepDays), [sepDays]);
+  useEffect(() => salvaLocale('cambusa_weather', weather), [weather]);
   useEffect(() => {
     try { localStorage.setItem('cambusa_archives', JSON.stringify(archives)); }
     catch (e) { console.warn('Spazio esaurito: l\'archivio resta nel cloud e nei file scaricati.'); }
@@ -1488,13 +1539,31 @@ function App() {
 
     const perse = Object.keys(primaFlat).filter((p) => !(p in res.meta.flat));
     if (perse.length > 0) {
+      // QUANDO sono state cancellate, non solo quante. È la differenza fra due
+      // situazioni opposte che prima venivano annunciate allo stesso modo:
+      //   - qualcuno sta cancellando ADESSO -> va fermato, ed è un allarme;
+      //   - questo telefono era indietro e sta venendo a sapere ora di
+      //     cancellazioni fatte giorni fa -> non manca niente a nessuno, è
+      //     soltanto il recupero del ritardo, e gridare al disastro per un
+      //     membro tolto tre giorni fa (che porta con sé le sue presenze di
+      //     tutti i giorni: un solo gesto, sette "voci") è un falso allarme.
+      const quando = perse.map((p) => SM.quandoCancellata(p, metaRef.current, metaRemota));
+      const piuRecente = Math.max(0, ...quando);
+      const fresche = perse.filter((p, i) => piuRecente - quando[i] <= RAFFICA);
+      const eta = Date.now() - piuRecente;
+
       try {
         localStorage.setItem(RESCUE_KEY, JSON.stringify({
           at: Date.now(), perse: perse.length, paths: perse.slice(0, 200),
-          state: local, meta: metaRef.current,
+          quando: piuRecente, state: local, meta: metaRef.current,
         }));
       } catch (e) { /* spazio esaurito: si prosegue senza scorta */ }
-      if (perse.length >= 3) setLostSync({ n: perse.length, at: Date.now(), che: descriviPerdite(perse, local) });
+
+      // Si avvisa solo per le cancellazioni recenti, e si contano quelle dello
+      // stesso gesto: le lapidi di una raffica portano tutte lo stesso istante.
+      if (fresche.length >= 3 && eta <= PERDITA_RECENTE) {
+        setLostSync({ n: fresche.length, at: Date.now(), quando: piuRecente, che: descriviPerdite(fresche, local) });
+      }
     }
     // Se il risultato è già identico a quello ricevuto non c'è niente da
     // rimandare indietro; altrimenti il push riporta all'altro ciò che gli manca.
@@ -1647,6 +1716,20 @@ function App() {
     const SM = window.SyncMerge;
     const st = syncStateRef.current;
 
+    // Prima la cronologia, poi la copia di sicurezza: se la memoria è al limite
+    // deve restare fuori la copia, non le date delle modifiche. Al contrario —
+    // com'era prima — una copia da qualche decina di KB poteva prendersi gli
+    // ultimi byte liberi e far fallire il salvataggio della cronologia: alla
+    // riapertura questo telefono ripartiva "senza date" e la prima
+    // sincronizzazione gli portava via le voci cancellate dagli altri.
+    if (SM && !suppressPushRef.current) {
+      const prima = metaRef.current.flat || {};
+      const nuovo = SM.bump(st, metaRef.current, Date.now());
+      // Registro: cosa ha cambiato QUESTO telefono.
+      logScrivi(diffFlat(prima, nuovo.flat), 'io');
+      saveMeta(nuovo);
+    }
+
     // Copia di sicurezza locale della fascia (mattina/pomeriggio). Si salva lo
     // stato PRECEDENTE, non quello appena modificato: la copia deve contenere
     // com'erano le cose all'inizio della mezza giornata, cioè il punto a cui
@@ -1656,18 +1739,11 @@ function App() {
     snapLocaleSalva(statoPrecedenteRef.current || st, snapFascia(ora), ora.getTime());
     statoPrecedenteRef.current = st;
 
-    if (SM && !suppressPushRef.current) {
-      const prima = metaRef.current.flat || {};
-      const nuovo = SM.bump(st, metaRef.current, Date.now());
-      // Registro: cosa ha cambiato QUESTO telefono.
-      logScrivi(diffFlat(prima, nuovo.flat), 'io');
-      saveMeta(nuovo);
-    }
     if (!cloudConnectedRef.current) return;
     if (suppressPushRef.current) return;
     const m = metaRef.current;
     if (window.CloudSync) {
-      window.CloudSync.pushState({ ...st, _meta: { v: SM ? SM.VERSION : 0, rev: m.rev, del: m.del } });
+      window.CloudSync.pushState({ ...st, _meta: { v: SM ? SM.VERSION : 0, rev: m.rev, del: m.del, hi: m.hi || 0 } });
     }
   }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays]);
 
@@ -1687,7 +1763,7 @@ function App() {
     const pubblica = (forza) => {
       const SM = window.SyncMerge;
       const m = metaRef.current;
-      CS.pushState({ ...syncStateRef.current, _meta: { v: SM ? SM.VERSION : 0, rev: m.rev, del: m.del } }, forza);
+      CS.pushState({ ...syncStateRef.current, _meta: { v: SM ? SM.VERSION : 0, rev: m.rev, del: m.del, hi: m.hi || 0 } }, forza);
     };
 
     // 1) Campo vuoto nel cloud: pubblica quello che abbiamo.
@@ -3245,9 +3321,12 @@ function App() {
             <span className="text-base leading-none mt-0.5">⚠️</span>
             <div className="min-w-0 flex-grow">
               <p className="text-[11px] text-[#5C4A3C] leading-snug">
-                <span className="font-bold">L'ultima sincronizzazione ha tolto {lostSync.n} voci.</span>
+                <span className="font-bold">
+                  Qualcuno ha appena cancellato {lostSync.n} voci
+                  {lostSync.quando ? ` (${new Date(lostSync.quando).toLocaleString('it-IT', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })})` : ''}.
+                </span>
                 {lostSync.che ? ` ${lostSync.che}.` : ''}
-                {' '}Se non è stato qualcuno di voi a cancellarle, annulla: torna tutto com'era, su tutti i telefoni.
+                {' '}Se non è stato qualcuno di voi, annulla: torna tutto com'era, su tutti i telefoni.
               </p>
               <div className="flex gap-2 mt-2">
                 <button onClick={annullaSync} className="px-3 py-1.5 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide">
@@ -5207,6 +5286,22 @@ function App() {
                       <span><span className="font-bold text-[#2D392C]">{lapidi.length}</span> cancellazioni registrate</span>
                     </div>
 
+                    {/* Un telefono pieno di dati ma senza nemmeno una data è
+                        indifeso: non può vincere un confronto e la prima
+                        sincronizzazione gli porta via tutto ciò che gli altri
+                        hanno cancellato. È lo stato in cui si finisce quando la
+                        memoria si riempie, e non si vedeva da nessuna parte. */}
+                    {Object.keys(m.rev || {}).length === 0 &&
+                      ((st.members || []).length > 0 || (st.purchases || []).length > 0 || Object.keys(st.campData || {}).length > 0) && (
+                      <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
+                        <p className="text-[10px] text-[#5C4A3C] leading-snug">
+                          <span className="font-bold">Questo telefono non ha ancora la cronologia delle modifiche.</span> I dati ci
+                          sono, ma sono "senza data": in una sincronizzazione perdono contro quelli degli altri. Basta
+                          toccare qualcosa perché riparta. Se succede spesso, è la memoria del telefono che è piena.
+                        </p>
+                      </div>
+                    )}
+
                     {/* Cosa non è ancora arrivato agli altri, e come forzarlo. */}
                     {(cloud.pending || (cloud.foto || 0) > 0) && (
                       <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
@@ -5233,6 +5328,13 @@ function App() {
                           <span className="font-bold">Rete di sicurezza.</span> Il {new Date(scorta.at).toLocaleString('it-IT')} una
                           sincronizzazione ha tolto {scorta.perse === 1 ? 'una voce' : `${scorta.perse} voci`} da questo telefono, e
                           l'app ha messo da parte una copia di com'era prima.
+                          {scorta.quando ? (
+                            <> La cancellazione è stata fatta il <span className="font-bold">{new Date(scorta.quando).toLocaleString('it-IT')}</span>
+                              {Date.now() - scorta.quando > PERDITA_RECENTE
+                                ? <> — non adesso: questo telefono era indietro e l'ha saputo solo ora.</>
+                                : '.'}
+                            </>
+                          ) : null}
                         </p>
                         <p className="text-[10px] text-[#5C4A3C] leading-snug">
                           Annullando torna {scorta.perse === 1 ? 'quella voce' : 'quello che è sparito'}

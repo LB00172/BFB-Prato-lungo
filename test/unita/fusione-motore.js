@@ -19,7 +19,7 @@ class Dev {
     return this;
   }
   payload() {                         // ciò che viene spedito al cloud
-    return Object.assign(clone(this.state), { _meta: { v: 2, rev: this.meta.rev, del: this.meta.del } });
+    return Object.assign(clone(this.state), { _meta: { v: 2, rev: this.meta.rev, del: this.meta.del, hi: this.meta.hi || 0 } });
   }
   receive(payload, now) {             // arriva lo stato dell'altro
     const remote = clone(payload);
@@ -319,6 +319,74 @@ console.log('16) Telefono con l\'app VECCHIA (dati senza cronologia) non cancell
   const res = SM.merge(B.state, B.meta, vecchio, SM.emptyMeta(), t0 + 2000);
   ok(res.state.purchases.length === 2, 'la Birra non sparisce');
   ok(res.state.purchases.find((x) => x.id === 'p1').price === 15, 'il prezzo aggiornato non torna indietro');
+}
+
+console.log('17) L\'orologio logico deve sopravvivere alla chiusura dell\'app');
+{
+  // "hi" è la data più alta che un telefono ha mai visto: serve a far vincere
+  // le sue modifiche anche se il suo orologio è indietro. Se lo perde a ogni
+  // riapertura, torna a marcare con date vecchie e perde confronti che
+  // dovrebbe vincere.
+  const t0 = Date.parse('2026-08-03T12:00:00Z');
+  const base = { members: [{ id: 'u1', name: 'Lorenzo' }], campData: {}, purchases: [], gear: [], settled: [], equipment: [], toBuy: [] };
+
+  // A ha l'orologio indietro di due giorni. B lavora con l'ora giusta.
+  const B = new Dev('B', clone(base));
+  B.edit((s) => s.purchases.push({ id: 'p1', name: 'Pasta', price: 10 }), t0);
+
+  const A = new Dev('A', clone(base));
+  A.receive(B.payload(), t0 - 2 * 86400000);
+  ok(A.meta.hi >= t0, 'ricevendo, A adotta la data più alta che ha visto');
+
+  // Chiusura e riapertura: la cronologia si rilegge da localStorage.
+  const salvato = JSON.parse(JSON.stringify(A.meta));
+  const riaperto = new Dev('A2', clone(A.state), { flat: salvato.flat, rev: salvato.rev, del: salvato.del, hi: salvato.hi || 0 });
+  riaperto.edit((s) => { s.purchases[0].price = 99; }, t0 - 2 * 86400000);
+  ok(riaperto.meta.rev['p|p1'] > t0, 'dopo la riapertura la sua modifica è ancora datata DOPO quella vista');
+
+  const C = new Dev('C', clone(B.state), JSON.parse(JSON.stringify(B.meta)));
+  C.receive(riaperto.payload(), t0 + 1000);
+  ok(C.state.purchases[0].price === 99, 'e quindi vince, anche con l\'orologio indietro di due giorni');
+
+  // Il contrappeso: una data assurda nel futuro non si adotta.
+  const D = new Dev('D', clone(base));
+  D.receive(Object.assign(clone(base), { _meta: { v: 2, rev: {}, del: {}, hi: t0 + 400 * 86400000 } }), t0);
+  ok(D.meta.hi < t0 + 8 * 86400000, 'un telefono con la data sballata non trascina avanti gli altri');
+}
+
+console.log('18) Distinguere una cancellazione di ADESSO da una di giorni fa');
+{
+  // Il falso allarme: un telefono rimasto indietro si riaggancia e vede
+  // sparire le voci che gli altri avevano già tolto. Non manca niente a
+  // nessuno, ma senza sapere QUANDO è stata fatta la cancellazione l'app
+  // annunciava un disastro.
+  const t0 = Date.parse('2026-08-03T12:00:00Z');
+  const lmeta = { flat: {}, rev: {}, del: {}, hi: 0 };
+  const rmeta = { flat: {}, rev: {}, del: { 'm|u5': t0 - 3 * 86400000 }, hi: 0 };
+  ok(SM.quandoCancellata('m|u5', lmeta, rmeta) === t0 - 3 * 86400000, 'dice quando la voce è stata cancellata');
+  ok(SM.quandoCancellata('m|u9', lmeta, rmeta) === 0, 'e zero per una voce che nessuno ha cancellato');
+  lmeta.del['m|u5'] = t0 - 60000;
+  ok(SM.quandoCancellata('m|u5', lmeta, rmeta) === t0 - 60000, 'fra le due date vince la più recente');
+
+  // Un solo gesto — togliere un membro — porta via anche tutte le sue
+  // presenze: da solo fa numero, ed è per questo che "29 voci" non voleva
+  // dire "29 disastri".
+  const giorni = ['2026-08-11', '2026-08-12', '2026-08-13', '2026-08-14', '2026-08-15', '2026-08-16'];
+  const campData = {};
+  giorni.forEach((g) => { campData[g] = { meals: { u1: { lunch: true, dinner: true }, u5: { lunch: true, dinner: true } } }; });
+  const A = new Dev('A', { members: [{ id: 'u1', name: 'Lorenzo' }, { id: 'u5', name: 'Anna' }], campData, purchases: [], gear: [], settled: [], equipment: [], toBuy: [] });
+  const B = new Dev('B', clone(A.state), JSON.parse(JSON.stringify(A.meta)));
+  B.edit((s) => {
+    s.members = s.members.filter((m) => m.id !== 'u5');
+    giorni.forEach((g) => { delete s.campData[g].meals.u5; });
+  }, t0 - 3 * 86400000);
+
+  const prima = SM.flatten(A.state);
+  const res = SM.merge(A.state, A.meta, B.state, B.meta, t0);
+  const perse = Object.keys(prima).filter((p) => !(p in res.meta.flat));
+  ok(perse.length === 7, 'un membro tolto vale 7 percorsi (lui più sei giorni di presenze), non 7 danni');
+  ok(perse.every((p) => SM.quandoCancellata(p, A.meta, B.meta) === t0 - 3 * 86400000),
+    'e portano tutte la stessa data: è un gesto solo, di tre giorni fa');
 }
 
 console.log('\n' + checks + ' controlli — ' + (fails ? fails + ' PROBLEMI' : 'nessun problema'));

@@ -9,6 +9,13 @@ function cloudFinto(opz) {
   // Dati già presenti sul telefono PRIMA dell'aggancio: è il caso vero, cioè
   // l'app che si connette avendo già lavorato.
   if (opz.semina) localStorage.setItem('cambusa_members', JSON.stringify(opz.semina));
+  // Spia sull'ordine dei salvataggi: dev'essere attiva già al primo giro, cioè
+  // prima che l'app scriva qualsiasi cosa.
+  if (opz.spia) {
+    window.__ordine = [];
+    window.__vero = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) { window.__ordine.push(k); return window.__vero.call(this, k, v); };
+  }
   Object.defineProperty(window, 'CloudSync', {
     configurable: true,
     get() { return window.__cs; },
@@ -185,6 +192,70 @@ const aggiungiMembro = async (p, nome) => {
     ok('e la coda si svuota', (await p2.evaluate(() => window.__codaFoto.length)) === 0);
     ok('la spia torna normale', !/da inviare/i.test(await p2.locator('header').innerText()));
     await b2.close();
+  }
+
+  // ---- 5) Memoria al limite: la cronologia vale più di tutto il resto ----
+  // È la catena che ha prodotto il falso allarme: le copie di sicurezza si
+  // prendono gli ultimi byte liberi, il salvataggio della cronologia fallisce,
+  // alla riapertura il telefono riparte "senza date" e la prima
+  // sincronizzazione gli porta via le voci cancellate dagli altri.
+  {
+    const { browser: b3, page: p3, menu: m3, errori: e3 } = await apri({ initScript: [cloudFinto, { spia: true }] });
+
+    await m3('Membri');
+    await aggiungiMembro(p3, 'Lorenzo');
+    await p3.waitForTimeout(600);
+    const ordine = await p3.evaluate(() => ({
+      meta: window.__ordine.indexOf('cambusa_syncmeta'),
+      copia: window.__ordine.indexOf('cambusa_snap_locali'),
+    }));
+    ok(`la cronologia si salva PRIMA della copia di sicurezza (${ordine.meta} < ${ordine.copia})`,
+      ordine.meta >= 0 && ordine.copia >= 0 && ordine.meta < ordine.copia);
+
+    // Ora la memoria si riempie: solo la cronologia deve passare comunque.
+    await p3.evaluate(() => {
+      Storage.prototype.setItem = window.__vero;
+      // Una copia di sicurezza enorme, poi il tetto viene chiuso di netto.
+      const grosso = 'x'.repeat(300 * 1024);
+      localStorage.setItem('cambusa_snap_locali', JSON.stringify({ '2026-01-01T00': { at: 1, dati: grosso } }));
+      let tot = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        tot += k.length + (localStorage.getItem(k) || '').length;
+      }
+      window.__tetto = tot;   // da qui in poi non entra più niente di nuovo
+      Storage.prototype.setItem = function (k, v) {
+        let peso = 0;
+        for (let i = 0; i < localStorage.length; i++) {
+          const kk = localStorage.key(i);
+          if (kk !== k) peso += kk.length + (localStorage.getItem(kk) || '').length;
+        }
+        if (peso + k.length + String(v).length > window.__tetto) {
+          const e = new Error('QuotaExceededError'); e.name = 'QuotaExceededError'; throw e;
+        }
+        return window.__vero.call(this, k, v);
+      };
+    });
+
+    await aggiungiMembro(p3, 'Bruno');
+    await p3.waitForTimeout(800);
+
+    const esito = await p3.evaluate(() => {
+      const m = JSON.parse(localStorage.getItem('cambusa_syncmeta') || '{}');
+      const membri = JSON.parse(localStorage.getItem('cambusa_members') || '[]');
+      const nuovo = membri.find((x) => x.name === 'Bruno');
+      return {
+        datate: Object.keys(m.rev || {}).length,
+        haBruno: !!nuovo && !!(m.rev || {})['m|' + nuovo.id],
+        vecchiona: !!JSON.parse(localStorage.getItem('cambusa_snap_locali') || '{}')['2026-01-01T00'],
+        membri: membri.length,
+      };
+    });
+    ok(`con la memoria piena la cronologia si salva lo stesso (${esito.datate} voci datate)`, esito.haBruno);
+    ok('sacrificando la copia di sicurezza che occupava lo spazio', !esito.vecchiona);
+    ok('e l\'app resta in piedi con i suoi dati', esito.membri === 2);
+    ok('nessun errore JavaScript nella prova della memoria' + (e3.length ? ': ' + e3.join(' | ') : ''), e3.length === 0);
+    await b3.close();
   }
 
   ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
