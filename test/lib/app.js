@@ -89,4 +89,18 @@ async function apri(opzioni) {
   return { browser, ctx, page, menu, errori };
 }
 
-module.exports = { chromium, apri, ok, fine, URL_APP, SBLOCCO };
+// ---- Attese ------------------------------------------------------------
+// Aspettare "un tanto al chilo" è la causa numero uno delle prove che cadono
+// a caso: l'elaborazione di un'immagine (decodifica + ridimensionamento su
+// canvas) è l'operazione più lenta della suite, e sotto carico pieno sfora
+// qualsiasi attesa fissa. Meglio aspettare che la condizione diventi vera.
+function attendi(page, fn, arg, ms) {
+  return page.waitForFunction(fn, arg, { timeout: ms || 15000 });
+}
+
+// Aspetta che gli scontrini salvati sul telefono siano almeno n.
+function scontriniSalvati(page, n, ms) {
+  return attendi(page, (k) => Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')).length >= k, n, ms);
+}
+
+module.exports = { chromium, apri, ok, fine, attendi, scontriniSalvati, URL_APP, SBLOCCO };

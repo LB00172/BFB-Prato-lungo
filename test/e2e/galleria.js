@@ -26,7 +26,8 @@ const { chromium } = require('playwright-core');
   const capToBuy = await p.locator('div.fixed:has-text("Acquistata:") input[type=file]').getAttribute('capture');
   // carico un file "dalla galleria" (setInputFiles simula la scelta di un file)
   await p.setInputFiles('div.fixed:has-text("Acquistata:") input[type=file]', require('path').join(__dirname,'..','fixture','scontrino.png'));
-  await p.waitForTimeout(600);
+  await p.waitForFunction(() => Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')).length >= 1, null, { timeout: 15000 }).catch(() => {});
+  await p.waitForTimeout(250);
   const okToBuy = await p.locator('div.fixed:has-text("Acquistata:") button[aria-label="Vedi scontrino"]').count();
   await p.locator('button:has-text("Annulla")').first().click();
   await p.waitForTimeout(300);
@@ -43,7 +44,8 @@ const { chromium } = require('playwright-core');
   await p.click('button:has-text("Salva")'); await p.waitForTimeout(250);
   const capHist = await p.locator('li:has-text("Sale") input[type=file]').getAttribute('capture');
   await p.setInputFiles('li:has-text("Sale") input[type=file]', require('path').join(__dirname,'..','fixture','scontrino.png'));
-  await p.waitForTimeout(500);
+  await p.waitForFunction(() => Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')).length >= 2, null, { timeout: 15000 }).catch(() => {});
+  await p.waitForTimeout(250);
   const okHist = await p.locator('li:has-text("Sale") button[aria-label="Vedi scontrino"]').count();
 
   await go('Attrezzatura');
@@ -52,7 +54,8 @@ const { chromium } = require('playwright-core');
   await p.click('button:has-text("Aggiungi")'); await p.waitForTimeout(150);
   const capEq = await p.locator('li:has-text("Corda") input[type=file]').getAttribute('capture');
   await p.setInputFiles('li:has-text("Corda") input[type=file]', require('path').join(__dirname,'..','fixture','scontrino.png'));
-  await p.waitForTimeout(500);
+  await p.waitForFunction(() => Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')).length >= 3, null, { timeout: 15000 }).catch(() => {});
+  await p.waitForTimeout(250);
   const okEq = await p.locator('li:has-text("Corda") button[aria-label="Vedi scontrino"]').count();
 
   const forced = inputs.filter(i => i.capture !== null);

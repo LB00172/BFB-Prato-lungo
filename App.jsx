@@ -39,6 +39,16 @@ const RESCUE_KEY = 'cambusa_rescue';
 // comparire di troppo o di meno — non tocca MAI i dati, che dipendono solo
 // dalle date delle voci.
 const PERDITA_RECENTE = 6 * 60 * 60 * 1000;
+// Orologi che non vanno d'accordo. Le date delle modifiche vengono
+// dall'orologio di ogni telefono, e il confronto fra due voci dipende SOLO da
+// quelle: è la condizione perché tutti i telefoni decidano allo stesso modo.
+// Il prezzo è che un telefono con la data avanti vince ogni confronto, per
+// sempre, anche con dati vecchi — e in silenzio. Non si può aggiustare
+// limando le date in arrivo (due telefoni con "adesso" diverso deciderebbero
+// in modo diverso e non convergerebbero più): l'unica cosa giusta è
+// accorgersene e dirlo, così quella persona sistema l'ora del telefono.
+const OROLOGIO_KEY = 'cambusa_orologio';
+const OROLOGIO_SOGLIA = 2 * 24 * 60 * 60 * 1000;
 // Le lapidi di uno stesso gesto (cancellare un membro toglie anche tutte le
 // sue presenze) portano tutte lo stesso istante: si contano insieme.
 const RAFFICA = 2 * 60 * 1000;
@@ -1765,6 +1775,8 @@ function App() {
   const [album, setAlbum] = useState(null);          // album di un campo chiuso
   // Ultima sincronizzazione che ha tolto delle voci: banner + annulla.
   const [lostSync, setLostSync] = useState(null);
+  // Modifiche arrivate con una data nel futuro: qualcuno ha l'orologio avanti.
+  const [orologioFuori, setOrologioFuori] = useState(() => load(OROLOGIO_KEY, null));
   // Ridisegna la diagnostica dopo che si butta la copia di scorta.
   const [diagTick, setDiagTick] = useState(0);
   // Presenze: le azioni "in blocco" stanno chiuse.
@@ -2119,6 +2131,23 @@ function App() {
     const metaRemota = (rmeta && rmeta.v === SM.VERSION)
       ? rmeta
       : SM.emptyMeta();
+
+    // Orologi: si guarda la data più alta che arriva. Se è avanti di giorni
+    // rispetto a questo telefono, uno dei due ha l'ora sbagliata — e chi ce
+    // l'ha avanti sta vincendo tutti i confronti senza saperlo.
+    if (rmeta && (rmeta.rev || rmeta.del)) {
+      let piuAlta = 0;
+      [rmeta.rev, rmeta.del].forEach((m) => {
+        if (!m) return;
+        Object.keys(m).forEach((k) => { if (typeof m[k] === 'number' && m[k] > piuAlta) piuAlta = m[k]; });
+      });
+      const avanti = piuAlta - Date.now();
+      if (avanti > OROLOGIO_SOGLIA) {
+        const v = { avanti, at: Date.now() };
+        setOrologioFuori(v);
+        try { localStorage.setItem(OROLOGIO_KEY, JSON.stringify(v)); } catch (e) { /* niente */ }
+      }
+    }
 
     const res = SM.merge(local, metaRef.current, remoteState, metaRemota, Date.now());
 
@@ -2842,6 +2871,38 @@ function App() {
     return [...per.values()].filter((g) => g.length > 1);
   };
 
+  // ---------- Prezzi che non tornano ----------
+  // L'errore più probabile di tutti non è nella fusione né nei conti: è una
+  // cifra digitata male. Un 870 al posto di 87 non fa fallire niente, si
+  // spalma su tutte le quote e nessuno se ne accorge finché non si paga.
+  // Si confronta con la MEDIANA delle spese già registrate (non con la media,
+  // che una cifra sbagliata precedente sposterebbe da sola) e si chiede
+  // conferma solo quando è davvero fuori scala: meglio zero domande inutili
+  // che una domanda a ogni spesa, altrimenti si impara a rispondere sì.
+  const prezzoSospetto = (prezzo) => {
+    const p = posNum(prezzo);
+    if (p <= 0) return null;
+    const altri = purchases.map((x) => posNum(x.price)).filter((x) => x > 0).sort((a, b) => a - b);
+    if (p >= 1000) return { p, mediana: altri.length ? altri[Math.floor(altri.length / 2)] : 0, perche: 'assoluto' };
+    if (altri.length < 3) return null;
+    const mediana = altri[Math.floor(altri.length / 2)];
+    if (mediana > 0 && p >= mediana * 10 && p >= 300) return { p, mediana, perche: 'relativo' };
+    return null;
+  };
+
+  // Vero se si può procedere.
+  const confermaPrezzo = (prezzo) => {
+    const s = prezzoSospetto(prezzo);
+    if (!s) return true;
+    return window.confirm(
+      `${money(s.p)} € è una cifra alta.\n\n` +
+      (s.perche === 'relativo'
+        ? `Le altre spese del campo stanno intorno a ${money(s.mediana)} €: questa è più di dieci volte tanto.`
+        : 'Controlla che non ci sia una virgola fuori posto.') +
+      '\n\nUna cifra sbagliata qui si spalma sulle quote di tutti e non si nota più.\n\nÈ giusta?'
+    );
+  };
+
   const scartaOrfane = (orfano) => {
     const chi = orfano.nome ? `di ${orfano.nome}` : 'senza padrone';
     if (!window.confirm(`Buttare via le ${orfano.pasti} presenze ${chi}?\nNon si potranno recuperare.`)) return;
@@ -3008,6 +3069,7 @@ function App() {
     if (!buying) return;
     const price = posNum(buying.price);
     if (price <= 0) { window.alert('Inserisci un prezzo maggiore di zero.'); return; }
+    if (!confermaPrezzo(price)) return;
     const fullName = buying.qty ? `${buying.name} (${buying.qty})` : buying.name;
     setPurchases((prev) => [...prev, {
       id: buying.id, name: fullName, price, type: buying.type,
@@ -3027,6 +3089,7 @@ function App() {
       window.alert('Inserisci il nome del prodotto e un prezzo maggiore di zero.');
       return;
     }
+    if (!confermaPrezzo(price)) return;
     const id = uid();
     setPurchases((prev) => [...prev, {
       id, name, price, type: pType, buyer: pBuyer.trim(), at: Date.now(),
@@ -3068,6 +3131,7 @@ function App() {
     if (!name) { window.alert('Il nome non può restare vuoto.'); return; }
     if (editing.kind === 'purchase') {
       if (price <= 0) { window.alert('Inserisci un prezzo maggiore di zero.'); return; }
+      if (!confermaPrezzo(price)) return;
       setPurchases((prev) => prev.map((p) => (p.id !== editing.id ? p : {
         ...p, name, price, type: editing.type, buyer: (editing.buyer || '').trim(),
         // il conto vale solo per cibo e bevande: la logistica è sempre comune
@@ -3467,6 +3531,7 @@ function App() {
     const text = newEquipText.trim();
     if (!text) return;
     if (contiChiusi('aggiungere attrezzatura')) return;
+    if (!confermaPrezzo(newEquipPrice)) return;
     setEquipment((prev) => [...prev, { id: uid(), text, price: posNum(newEquipPrice), bought: false, buyer: newEquipBuyer.trim() }]);
     setNewEquipText('');
     setNewEquipPrice('');
@@ -4424,6 +4489,33 @@ function App() {
                 className="mt-2 px-3 py-1.5 bg-white border border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide"
               >
                 Ho capito
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Orologi che non vanno d'accordo. Va in modalità tecnica perché la
+          cosa da fare è chiedere in giro chi ha la data sbagliata, e questo
+          lo fa chi tiene i conti. */}
+      {admin && orologioFuori && (
+        <div className="bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3">
+          <div className="flex items-start gap-2">
+            <span className="text-base leading-none mt-0.5">🕐</span>
+            <div className="min-w-0 flex-grow">
+              <p className="text-[11px] text-[#5C4A3C] leading-snug">
+                <span className="font-bold">
+                  Un telefono ha l'orologio avanti di {Math.round(orologioFuori.avanti / 86400000)} giorni.
+                </span>{' '}
+                Le sue modifiche vincono su tutte le altre anche quando sono più vecchie, e le correzioni
+                fatte dagli altri vengono scartate senza dirlo. Chiedete in giro chi ha la data sbagliata e
+                fategliela sistemare (oppure è questo telefono a essere indietro).
+              </p>
+              <button
+                onClick={() => { setOrologioFuori(null); try { localStorage.removeItem(OROLOGIO_KEY); } catch (e) { /* niente */ } }}
+                className="mt-2 px-3 py-1.5 bg-white border border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide"
+              >
+                Sistemato
               </button>
             </div>
           </div>

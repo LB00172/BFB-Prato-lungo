@@ -249,6 +249,25 @@ preparazione** e **offline al campo**, dove non c'è linea.
   "arrotondamento". Ora la riconciliazione lavora solo sul ripartibile, e il
   buco viene detto con la cifra e il motivo — in *Quote*, nei *Saldi* ("i
   rimborsi non quadrano") e nel resoconto che si manda nel gruppo.
+- **Orologi che non vanno d'accordo**: il confronto fra due voci dipende
+  **solo** dalle date, ed è la condizione perché tutti i telefoni decidano allo
+  stesso modo. Il prezzo di quella scelta è che un telefono con la data avanti
+  **vince ogni confronto, per sempre**, anche con dati vecchi: verificato, un
+  telefono avanti di un anno fa scartare in silenzio la correzione appena
+  fatta dal pivot. Limare le date in arrivo non si può — due telefoni con
+  "adesso" diverso deciderebbero in modo diverso e non convergerebbero più —
+  quindi l'app **se ne accorge e lo dice**: se riceve modifiche datate più di
+  due giorni nel futuro, avvisa (in modalità tecnica) che qualcuno ha l'ora
+  sbagliata e che le sue modifiche stanno vincendo comunque. L'avviso resta
+  finché non si dichiara sistemato: è un problema che non si risolve da solo.
+- **Prezzi fuori scala**: l'errore più probabile del campo non è nella
+  sincronizzazione, è un **870 digitato al posto di 87**. Non fa fallire
+  niente: si spalma sulle quote di tutti e non si nota più. L'app chiede
+  conferma quando una cifra è **dieci volte la mediana delle altre spese e
+  sopra i 300 €**, oppure sopra i **1000 €** in assoluto. Si confronta con la
+  mediana e non con la media proprio perché una cifra sbagliata precedente
+  sposterebbe la media da sola. La soglia è alta di proposito: una domanda a
+  ogni spesa insegna a rispondere sì senza leggere.
 - **Stessa persona inserita due volte**: non è un difetto della fusione, è la
   fusione che funziona e produce un risultato sbagliato. Due telefoni senza
   linea che aggiungono "Anna Rossi" creano due membri con **id diversi**, ed

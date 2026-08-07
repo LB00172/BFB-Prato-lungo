@@ -105,7 +105,8 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
   ok('scelto il nome, compare quante foto restano', /restano/i.test(await p.locator('main').innerText()));
 
   await scegli.setInputFiles([FOTO, FOTO]);
-  await p.waitForTimeout(1500);
+  await p.waitForFunction(() => (window.__foto ? window.__foto.size : 0) >= 2, null, { timeout: 20000 }).catch(() => {});
+  await p.waitForTimeout(400);
 
   // --- Vista Album: è quella d'ingresso ---
   ok('si apre in vista Album', (await p.locator('.album-pagina').count()) === 1);
@@ -157,7 +158,8 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
 
   // ---- Tetto per persona ----
   await scegli.setInputFiles([FOTO, FOTO, FOTO, FOTO]);
-  await p.waitForTimeout(2500);
+  await p.waitForFunction(() => (window.__foto ? window.__foto.size : 0) >= 4, null, { timeout: 25000 }).catch(() => {});
+  await p.waitForTimeout(500);
   const dopoTetto = await p.locator('main .grid button').count();
   ok(`oltre il tetto non si carica: 5 foto e non 6 (viste: ${dopoTetto})`, dopoTetto === 5);
   ok('a tetto raggiunto lo dice chiaramente', /esaurito le sue 5 foto/i.test(await p.locator('main').innerText()));

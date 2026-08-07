@@ -36,7 +36,9 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 
   // 3. Allego la foto e confermo: deve restare attaccata all'acquisto
   await inputFoto.setInputFiles({ name: 's.png', mimeType: 'image/png', buffer: PNG });
-  await p.waitForTimeout(700);
+  // L'immagine va decodificata e ridimensionata: si aspetta il fatto compiuto.
+  await p.waitForFunction(() => Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')).length >= 1, null, { timeout: 15000 }).catch(() => {});
+  await p.waitForTimeout(250);
   console.log('dopo l\'allegato la maschera lo segnala:', /Scontrino allegato/.test(await modale.innerText()) ? 'OK' : 'PROBLEMA');
   await p.locator('input[placeholder="0.00"]').first().fill('12');
   await p.locator('button', { hasText: 'Conferma' }).first().click();
