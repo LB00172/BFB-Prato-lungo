@@ -2636,8 +2636,9 @@ function App() {
     setSettled(res.state.settled);
     setEquipment(conBlocchi.stato.equipment);
     setToBuy(res.state.toBuy);
-    setSepDays(res.state.sepDays);
-    setFreeDays(res.state.freeDays);
+    const giorni = applicaBlocchiGiorni(cdBloccata, res.state.freeDays, res.state.sepDays);
+    setSepDays(giorni.sepDays);
+    setFreeDays(giorni.freeDays);
     setBlocchi(res.state.blocchi);
     saveMeta(res.meta);
     setTimeout(() => {
@@ -3051,8 +3052,45 @@ function App() {
       salvati: torna.map(m => m.name || '—')
     };
   };
+
+  // Terzo versante: COME quel giorno entra nei conti. "Gratis per tutti" e
+  // "conto separato" non toccano nemmeno una presenza, ma spostano soldi
+  // esattamente quanto toccarle — e "conto separato" lo può premere chiunque
+  // dal Calendario, senza modalità tecnica. Il blocco fotografa anche quei due
+  // interruttori e li rimette com'erano. I blocchi vecchi non hanno la
+  // fotografia: si riconoscono da `gratis` mancante e si lasciano stare.
+  const applicaBlocchiGiorni = (cd, free, sep) => {
+    let f = Array.isArray(free) ? free : [];
+    let s = Array.isArray(sep) ? sep : [];
+    const cambiati = [];
+    Object.keys(cd || {}).forEach(d => {
+      const b = (cd[d] || {}).bloccato;
+      if (!b || typeof b !== 'object' || b.gratis === undefined) return;
+      if (f.includes(d) !== !!b.gratis) {
+        f = b.gratis ? [...f, d].sort() : f.filter(x => x !== d);
+        cambiati.push(d);
+      }
+      if (s.includes(d) !== !!b.separato) {
+        s = b.separato ? [...s, d].sort() : s.filter(x => x !== d);
+        cambiati.push(d);
+      }
+    });
+    return {
+      freeDays: f,
+      sepDays: s,
+      cambiati
+    };
+  };
+
+  // Guardia per i due interruttori del giorno.
+  const giornoIntoccabile = (dateStr, azione) => {
+    if (!giornoBloccato(dateStr)) return false;
+    window.alert(`${nomeGiorno(dateStr)}: ${azione} non è possibile.\n\n` + 'Le presenze di questo giorno sono bloccate, e questo interruttore ne cambierebbe le quote.\n\n' + 'Se serve davvero: sblocca il giorno qui in Presenze, cambia, e ribloccalo.');
+    return true;
+  };
   const giornoGratis = dateStr => (freeDays || []).includes(dateStr);
   const chiediGiornoGratis = dateStr => {
+    if (giornoIntoccabile(dateStr, 'cambiare "giorno gratis"')) return;
     const gia = giornoGratis(dateStr);
     const meals = (campData[dateStr] || {}).meals || {};
     const quanti = Object.values(meals).filter(v => v && (v.lunch || v.dinner)).length;
@@ -3088,7 +3126,9 @@ function App() {
           bloccato: {
             at: Date.now(),
             meals: copia,
-            membri: schede
+            membri: schede,
+            gratis: giornoGratis(dateStr),
+            separato: (sepDays || []).includes(dateStr)
           }
         }
       };
@@ -3532,7 +3572,12 @@ function App() {
   };
   const scartaOrfane = orfano => {
     const chi = orfano.nome ? `di ${orfano.nome}` : 'senza padrone';
-    if (!window.confirm(`Buttare via le ${orfano.pasti} presenze ${chi}?\nNon si potranno recuperare.`)) return;
+    // I giorni bloccati non si svuotano nemmeno da qui. Riattaccare una
+    // presenza alla persona giusta è una riparazione e passa (non cambia CHI
+    // ha mangiato); buttarla via è una perdita, e su un giorno chiuso cambia
+    // le quote di tutti. Si dice quante ne restano e perché.
+    const protetti = giorniBloccatiDi(orfano.id);
+    if (!window.confirm(`Buttare via le ${orfano.pasti} presenze ${chi}?\nNon si potranno recuperare.` + (protetti.length ? `\n\nQuelle dei giorni bloccati (${protetti.map(nomeGiorno).join(', ')}) restano dove sono: ` + 'per toglierle bisogna prima sbloccare quei giorni.' : ''))) return;
     setCampData(prev => {
       const out = {
         ...prev
@@ -3540,6 +3585,7 @@ function App() {
       Object.keys(out).forEach(d => {
         const day = out[d];
         if (!day || !day.meals || !day.meals[orfano.id]) return;
+        if (day.bloccato && typeof day.bloccato === 'object') return;
         const meals = {
           ...day.meals
         };
@@ -3800,6 +3846,7 @@ function App() {
 
   // ---------- Conto separato ----------
   const toggleSepDay = dateStr => {
+    if (giornoIntoccabile(dateStr, 'cambiare il conto separato')) return;
     setSepDays(prev => prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr].sort());
   };
 

@@ -163,7 +163,76 @@ const idDi = (p, nome) => p.evaluate((n) => (JSON.parse(localStorage.getItem('ca
   }, { id: idBruno });
   ok('la correzione viene rimandata agli altri telefoni', ripubblicato);
 
-  // ---- 5. Sbloccato il giorno, si elimina davvero ------------------------
+  // ---- 5. I due interruttori del giorno: gratis e conto separato ---------
+  // Non toccano nemmeno una presenza, ma spostano soldi quanto toccarle.
+  await menu('Presenze');
+  chiesto.length = 0;
+  const gratis = p.locator('main button', { hasText: /Rendi questo giorno gratis/ }).first();
+  ok('il tasto "giorno gratis" risulta spento', await gratis.isDisabled());
+  // Forzato a mano: il controllo vero deve stare nel codice, non nel CSS.
+  // Il tasto disattivato non si puo' premere davvero: React non consegna
+  // l'evento a un elemento disabled, nemmeno togliendogli l'attributo a mano.
+  // Si chiama allora direttamente il gestore del componente — cioe' si salta
+  // OGNI protezione grafica e si bussa al codice, che e' quello che conta.
+  const forzato = await p.evaluate(() => {
+    const b = [...document.querySelectorAll('button')].find((x) => /rendi questo giorno gratis/i.test(x.textContent));
+    if (!b) return 'non trovato';
+    const k = Object.keys(b).find((x) => x.indexOf('__reactProps$') === 0);
+    if (!k || !b[k].onClick) return 'gestore non raggiungibile';
+    b[k].onClick();
+    return 'premuto';
+  });
+  ok('si arriva a chiamare il gestore saltando la grafica', forzato === 'premuto');
+  await p.waitForTimeout(600);
+  ok('e il codice dice di no lo stesso', /non è possibile/i.test(chiesto[0] || ''));
+  ok('il giorno non diventa gratis',
+    (await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_freedays') || '[]').length)) === 0);
+
+  await menu('Calendario');
+  chiesto.length = 0;
+  await p.locator('button', { hasText: 'Conto separato' }).first().click();
+  await p.waitForTimeout(300);
+  const caselle = p.locator('main input[type="checkbox"]');
+  const quanteCaselle = await caselle.count();
+  ok('le caselle del conto separato ci sono', quanteCaselle === 7);
+  // Si spunta proprio la casella del giorno bloccato.
+  const indice = await p.evaluate((g) => {
+    const label = [...document.querySelectorAll('main label')];
+    for (let i = 0; i < label.length; i++) {
+      const t = label[i].getAttribute('title') || '';
+      const d = new Date(g);
+      const nome = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+      if (t.indexOf(nome) === 0) return i;
+    }
+    return -1;
+  }, giorno);
+  ok('si individua la casella del giorno bloccato', indice >= 0);
+  await caselle.nth(indice).click();
+  await p.waitForTimeout(500);
+  ok('spuntare il conto separato su un giorno bloccato viene rifiutato', /non è possibile/i.test(chiesto[0] || ''));
+  ok('e il giorno non finisce nel conto separato',
+    (await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_sepdays') || '[]').length)) === 0);
+  ok('le quote restano quelle', (await quote()) === quoteDopoCarla);
+
+  // Anche dalla sincronizzazione: un altro telefono dichiara gratis quel giorno.
+  await p.evaluate((g) => {
+    const now = Date.now() + 60000;
+    window.__remoteCb({
+      members: JSON.parse(localStorage.getItem('cambusa_members') || '[]'),
+      campData: JSON.parse(localStorage.getItem('cambusa_camp_data') || '{}'),
+      purchases: JSON.parse(localStorage.getItem('cambusa_purchases') || '[]'),
+      toBuy: [], equipment: [], gear: [], settled: [], sepDays: [g], freeDays: [g], blocchi: [],
+      _meta: { v: 2, rev: { ['f|' + g]: now, ['x|' + g]: now }, del: {}, hi: now },
+    });
+  }, giorno);
+  await p.waitForTimeout(1200);
+  ok('nemmeno dalla sincronizzazione il giorno bloccato diventa gratis',
+    (await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_freedays') || '[]').length)) === 0);
+  ok('ne\' finisce nel conto separato',
+    (await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_sepdays') || '[]').length)) === 0);
+  ok('e le quote non si sono mosse di un centesimo', (await quote()) === quoteDopoCarla);
+
+  // ---- 6. Sbloccato il giorno, si elimina davvero ------------------------
   await menu('Presenze');
   await p.locator('button', { hasText: 'Sblocca le presenze' }).first().click();
   await p.waitForTimeout(700);
