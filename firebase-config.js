@@ -69,6 +69,13 @@ window.APP_ADMIN = {
 };
 
 // Località del campo per il meteo (Open-Meteo, gratuito, senza chiave).
+// lat/lon: il PRATO, non il paese. In Google Maps si tiene premuto sul punto e
+// le coordinate compaiono nella barra di ricerca, già pronte da copiare.
+// alt: la quota in metri. Senza, il modello usa la quota media della sua cella
+// (circa un chilometro di lato) e in montagna sbaglia di gradi veri. Con la
+// modalità tecnica attiva, sotto il meteo del Calendario si legge la quota che
+// il modello ha usato davvero: se non somiglia a quella del campo, le
+// coordinate qui sotto sono da correggere.
 window.CAMP_LOCATION = { lat: 42.059, lon: 13.1, label: "Pereto (AQ)" };
 
 // ============================================================================

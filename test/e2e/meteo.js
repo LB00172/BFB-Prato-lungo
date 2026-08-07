@@ -18,7 +18,9 @@ function bollettino(tmax, tmin, code, rain) {
     weather_code.push(code); temperature_2m_max.push(tmax);
     temperature_2m_min.push(tmin); precipitation_probability_max.push(rain);
   }
-  return { daily: { time, weather_code, temperature_2m_max, temperature_2m_min, precipitation_probability_max } };
+  // "elevation" e' la quota che il modello ha usato davvero: e' il modo di
+  // accorgersi che si sta guardando il meteo del paese invece che del prato.
+  return { elevation: 1043, daily: { time, weather_code, temperature_2m_max, temperature_2m_min, precipitation_probability_max } };
 }
 
 // Previsione gia' in cache sul telefono, con una temperatura impossibile che
@@ -93,7 +95,24 @@ const testo = (p) => p.locator('main').innerText();
   ok('e non piu\' quelli della previsione morta', !/99°/.test(t2));
   ok('l\'icona segue il codice WMO del bollettino', /Temporale/.test(t2));
   ok('la probabilita\' di pioggia arriva fino allo schermo', /40%/.test(t2));
+  ok('la quota usata dal modello viene conservata',
+    (await a.page.evaluate(() => (JSON.parse(localStorage.getItem('cambusa_weather') || '{}')).quota)) === 1043);
+  ok('in modalita\' tecnica si vede da dove viene il meteo', /1043 m/.test(t2));
+  ok('e si vedono le coordinate interrogate', /42\.059/.test(t2));
   ok('nessun errore JS', a.errori.length === 0);
+  await a.browser.close();
+
+  // ---- 2-bis. All'utente normale la diagnostica non si mostra ------------
+  a = await apri({ admin: false, initScript: [seme, { wx: inCache(Date.now() - 2 * GIORNO), risposta: bollettino(21, 9, 95, 40) }] });
+  await a.menu('Calendario');
+  await attendi(a.page, () => {
+    const w = JSON.parse(localStorage.getItem('cambusa_weather') || '{}');
+    return w.byDate && w.byDate[Object.keys(w.byDate)[0]].tmax === 21;
+  }, null, 15000).catch(() => {});
+  const tn = await testo(a.page);
+  ok('senza modalita\' tecnica il meteo si vede lo stesso', /21°\s*\/\s*9°/.test(tn));
+  ok('ma non la quota del modello', !/1043 m/.test(tn));
+  ok('ne\' le coordinate', !/42\.059/.test(tn));
   await a.browser.close();
 
   // ---- 3. Previsione vecchia: si dice, non si finge ----------------------

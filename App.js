@@ -2432,12 +2432,17 @@ function App() {
       // a riconoscere la nostra eco di ritorno dal cloud. "fetchedAt" è la
       // data di cui ci si fida, ed è quella limitata da quandoMeteo.
       const ora = Date.now();
+      // La quota che il modello ha usato davvero. È l'unico modo di
+      // accorgersi che stiamo guardando il meteo del paese invece che quello
+      // del prato: se qui compaiono 850 metri e il campo sta a 1100, i gradi
+      // sono di un altro posto. Si vede solo in modalità tecnica.
       const next = {
         fetchedAt: ora,
         stampa: ora,
         byDate,
         lat: loc.lat,
-        lon: loc.lon
+        lon: loc.lon,
+        quota: typeof j.elevation === 'number' ? j.elevation : null
       };
       setWeather(next);
       // Condivide la stessa previsione con tutto il campo.
@@ -5509,7 +5514,9 @@ function App() {
       onClick: () => fetchWeather(true),
       disabled: !isOnline || wxBusy,
       className: "shrink-0 text-[9px] uppercase font-bold text-[#2D392C] px-2 py-1 rounded border border-[#8F9E8B]/40 hover:bg-[#E2EAE4] disabled:opacity-40"
-    }, wxBusy ? '…' : 'Aggiorna')));
+    }, wxBusy ? '…' : 'Aggiorna')), admin && locOk && /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-gray-400 font-mono pt-0.5"
+    }, "\uD83D\uDCCD ", loc.lat, ", ", loc.lon, typeof loc.alt === 'number' ? ` · quota dichiarata ${loc.alt} m` : ' · quota non dichiarata', typeof weather.quota === 'number' ? ` · modello a ${Math.round(weather.quota)} m` : ''));
   })(), (() => {
     const lunch = members.filter(m => getMeal(selectedDateStr, m.id).lunch).length;
     const dinner = members.filter(m => getMeal(selectedDateStr, m.id).dinner).length;

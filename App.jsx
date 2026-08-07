@@ -2068,7 +2068,14 @@ function App() {
         // a riconoscere la nostra eco di ritorno dal cloud. "fetchedAt" è la
         // data di cui ci si fida, ed è quella limitata da quandoMeteo.
         const ora = Date.now();
-        const next = { fetchedAt: ora, stampa: ora, byDate, lat: loc.lat, lon: loc.lon };
+        // La quota che il modello ha usato davvero. È l'unico modo di
+        // accorgersi che stiamo guardando il meteo del paese invece che quello
+        // del prato: se qui compaiono 850 metri e il campo sta a 1100, i gradi
+        // sono di un altro posto. Si vede solo in modalità tecnica.
+        const next = {
+          fetchedAt: ora, stampa: ora, byDate, lat: loc.lat, lon: loc.lon,
+          quota: typeof j.elevation === 'number' ? j.elevation : null,
+        };
         setWeather(next);
         // Condivide la stessa previsione con tutto il campo.
         if (window.CloudSync && window.CloudSync.putWeather) window.CloudSync.putWeather(next);
@@ -4732,6 +4739,16 @@ function App() {
                         >
                           {wxBusy ? '…' : 'Aggiorna'}
                         </button>
+                      </div>
+                    )}
+                    {/* Diagnostica: da dove viene il meteo. Serve a controllare
+                        che il modello stia guardando il prato e non il paese
+                        giù a valle. Roba da modalità tecnica. */}
+                    {admin && locOk && (
+                      <div className="text-[9px] text-gray-400 font-mono pt-0.5">
+                        📍 {loc.lat}, {loc.lon}
+                        {typeof loc.alt === 'number' ? ` · quota dichiarata ${loc.alt} m` : ' · quota non dichiarata'}
+                        {typeof weather.quota === 'number' ? ` · modello a ${Math.round(weather.quota)} m` : ''}
                       </div>
                     )}
                   </div>
