@@ -488,7 +488,13 @@
         if (!snap.exists() || !onWeatherCb) return;
         const v = snap.data();
         if (!v || typeof v.data !== 'string') return;
-        try { onWeatherCb(JSON.parse(v.data)); } catch (e) { /* dati non validi */ }
+        // L'ora del server, quando c'è, è l'unica non dipendente dall'orologio
+        // di un telefono: si passa su a chi deve datare la previsione. Sulle
+        // scritture ancora in coda (hasPendingWrites) updatedAt e' nullo, e
+        // allora si torna alla data messa da chi ha scaricato.
+        var quando = null;
+        try { if (v.updatedAt && v.updatedAt.toMillis) quando = v.updatedAt.toMillis(); } catch (e) { quando = null; }
+        try { onWeatherCb(JSON.parse(v.data), quando); } catch (e) { /* dati non validi */ }
       },
       () => { /* regole non aggiornate: il resto continua */ }
     );

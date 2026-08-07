@@ -52,6 +52,10 @@ const OROLOGIO_SOGLIA = 2 * 24 * 60 * 60 * 1000;
 // Le lapidi di uno stesso gesto (cancellare un membro toglie anche tutte le
 // sue presenze) portano tutte lo stesso istante: si contano insieme.
 const RAFFICA = 2 * 60 * 1000;
+// Oltre queste ore la previsione va detta vecchia: d'estate sull'Appennino un
+// bollettino di ieri e uno di oggi possono raccontare due giornate diverse, e
+// chi guarda deve sapere quale delle due sta leggendo.
+const METEO_VECCHIO = 12 * 60 * 60 * 1000;
 
 // ---------- Copie di sicurezza locali ----------
 // Gli snapshot giornalieri automatici stanno su Firestore, e il ripristino li
@@ -428,6 +432,23 @@ const wmoInfo = (code) => {
   if (code >= 95) return { icon: '⛈️', label: 'Temporale' };
   return { icon: '🌡️', label: 'Meteo' };
 };
+
+// Quando è stata scaricata davvero una previsione che arriva dal cloud.
+// Qui, a differenza delle revisioni delle voci, limare le date in arrivo si
+// PUÒ e si DEVE: non c'è niente da far convergere, c'è solo una foto da
+// datare, e una foto non può essere stata scattata domani. Senza questo
+// limite un telefono con l'orologio avanti scrive una previsione datata nel
+// futuro, quella diventa per giorni la più recente per tutti, nessuno la
+// sostituisce più e il campo intero resta appeso a un bollettino morto.
+// Quando c'è, si preferisce l'ora del server: non dipende da nessun telefono.
+const quandoMeteo = (remote, serverMs, now) => {
+  const adesso = now || Date.now();
+  const cliente = remote && typeof remote.fetchedAt === 'number' ? remote.fetchedAt : 0;
+  const server = typeof serverMs === 'number' && serverMs > 0 ? serverMs : 0;
+  return Math.min(server || cliente, adesso);
+};
+// Aggancio per le prove: la regola sopra si verifica senza aprire Firestore.
+if (typeof window !== 'undefined') window.__meteo = { quandoMeteo };
 
 // Dotazione personale base: uguale per tutti, non modificabile dall'app.
 // Le voci con emphasis: true sono mostrate in evidenza (piu' grandi e sottolineate).
@@ -2018,9 +2039,18 @@ function App() {
     const loc = window.CAMP_LOCATION;
     if (!loc || typeof loc.lat !== 'number' || typeof loc.lon !== 'number') return;
     if (!navigator.onLine) return;
-    if (!force && Date.now() - (weatherRef.current.fetchedAt || 0) < 60 * 60 * 1000) return;
+    // L'età va misurata, non sottratta e basta: se la previsione in cache è
+    // datata nel futuro (orologio sballato, nostro o di chi l'ha spedita) la
+    // differenza viene negativa, cade sotto l'ora di attesa e il meteo non si
+    // aggiorna più. Una foto col futuro addosso è sempre da rifare.
+    const eta = Date.now() - (weatherRef.current.fetchedAt || 0);
+    if (!force && eta >= 0 && eta < 60 * 60 * 1000) return;
     setWxBusy(true);
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=16`)
+    // Se in firebase-config.js c'è l'altitudine del campo la si passa: senza,
+    // Open-Meteo usa la quota media della sua cella (~1 km di lato), e in
+    // montagna qualche centinaio di metri di differenza vale gradi veri.
+    const quota = typeof loc.alt === 'number' ? `&elevation=${loc.alt}` : '';
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=16${quota}`)
       .then((r) => r.json())
       .then((j) => {
         const d = j && j.daily;
@@ -2034,7 +2064,11 @@ function App() {
             rain: d.precipitation_probability_max[i],
           };
         });
-        const next = { fetchedAt: Date.now(), byDate, lat: loc.lat, lon: loc.lon };
+        // "stampa" è la data messa da chi ha scaricato, così com'è: serve solo
+        // a riconoscere la nostra eco di ritorno dal cloud. "fetchedAt" è la
+        // data di cui ci si fida, ed è quella limitata da quandoMeteo.
+        const ora = Date.now();
+        const next = { fetchedAt: ora, stampa: ora, byDate, lat: loc.lat, lon: loc.lon };
         setWeather(next);
         // Condivide la stessa previsione con tutto il campo.
         if (window.CloudSync && window.CloudSync.putWeather) window.CloudSync.putWeather(next);
@@ -2050,11 +2084,17 @@ function App() {
 
   // Previsioni in arrivo da un altro dispositivo: si adottano se più recenti
   // delle nostre, così tutti guardano gli stessi numeri.
-  const handleCloudWeather = (remote) => {
+  const handleCloudWeather = (remote, serverMs) => {
     if (!remote || typeof remote.fetchedAt !== 'number' || !remote.byDate) return;
-    if (remote.fetchedAt <= (weatherRef.current.fetchedAt || 0)) return;
-    weatherRef.current = remote;
-    setWeather(remote);
+    // La nostra stessa previsione che ci torna indietro dal cloud: stessa
+    // foto, niente da fare. Senza questo controllo la data limitata a "adesso"
+    // risulterebbe sempre un filo più nuova e ci si riscriverebbe addosso.
+    if (remote.stampa && remote.stampa === weatherRef.current.stampa) return;
+    const quando = quandoMeteo(remote, serverMs);
+    if (quando <= (weatherRef.current.fetchedAt || 0)) return;
+    const next = Object.assign({}, remote, { fetchedAt: quando, stampa: remote.fetchedAt });
+    weatherRef.current = next;
+    setWeather(next);
   };
   useEffect(() => {
     receiptsRef.current = receipts;
@@ -4675,11 +4715,16 @@ function App() {
                         scaricata, così è chiaro se qualcuno ha numeri vecchi. */}
                     {locOk && (
                       <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#8F9E8B]/20">
-                        <span className="text-[9px] text-gray-400">
-                          {weather.fetchedAt
-                            ? `Previsioni del ${new Date(weather.fetchedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} alle ${new Date(weather.fetchedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} · uguali per tutto il campo`
-                            : 'Previsioni non ancora scaricate.'}
-                        </span>
+                        {(() => {
+                          const vecchia = weather.fetchedAt && Date.now() - weather.fetchedAt > METEO_VECCHIO;
+                          return (
+                            <span className={`text-[9px] ${vecchia ? 'text-[#A9752F] font-bold' : 'text-gray-400'}`}>
+                              {weather.fetchedAt
+                                ? `${vecchia ? '⚠ Previsioni vecchie, del' : 'Previsioni del'} ${new Date(weather.fetchedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} alle ${new Date(weather.fetchedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}${vecchia ? ': altrove ne trovi di più fresche.' : ' · uguali per tutto il campo'}`
+                                : 'Previsioni non ancora scaricate.'}
+                            </span>
+                          );
+                        })()}
                         <button
                           onClick={() => fetchWeather(true)}
                           disabled={!isOnline || wxBusy}
