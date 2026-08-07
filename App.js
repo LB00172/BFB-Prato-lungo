@@ -1704,24 +1704,41 @@ function BandyGame({
       }
     };
     window.addEventListener('keydown', onKey);
+
+    // Il dito deve poter fare due svolte di fila come la tastiera. Prima una
+    // strisciata valeva una svolta sola: per girare di nuovo bisognava alzare
+    // il dito e riappoggiarlo, e dal livello 3 in poi quel tempo morto vale
+    // due o tre caselle. Ora dopo ogni svolta il punto di partenza si sposta
+    // dov'è il dito adesso, così la seconda gamba di una L conta come una
+    // strisciata nuova senza staccare.
+    // Il prezzo di questa libertà è il trascinamento in diagonale, che
+    // altrimenti farebbe zigzagare Bandy da solo: dalla seconda svolta in poi
+    // serve un gesto più lungo e con una direzione chiaramente prevalente.
+    const SOGLIA_1 = 16; // px per la prima svolta: deve rispondere subito
+    const SOGLIA_N = 26; // px per quelle successive, dito ancora giù
+    const NETTEZZA = 1.6; // quanto la direzione deve battere l'altra
     let sx = 0,
       sy = 0,
-      swiped = false;
+      girato = false;
     const onStart = e => {
       const t = e.touches[0];
       sx = t.clientX;
       sy = t.clientY;
-      swiped = false;
+      girato = false;
     };
     const onMove = e => {
-      if (swiped) return;
       const t = e.touches[0];
       const dx = t.clientX - sx,
         dy = t.clientY - sy;
-      if (Math.abs(dx) < 16 && Math.abs(dy) < 16) return;
+      const ax = Math.abs(dx),
+        ay = Math.abs(dy);
+      if (ax < (girato ? SOGLIA_N : SOGLIA_1) && ay < (girato ? SOGLIA_N : SOGLIA_1)) return;
+      if (girato && Math.max(ax, ay) < Math.min(ax, ay) * NETTEZZA) return;
       // Svolta appena il dito ha percorso abbastanza: non aspetta il rilascio.
-      if (Math.abs(dx) > Math.abs(dy)) turn(dx > 0 ? 1 : -1, 0);else turn(0, dy > 0 ? 1 : -1);
-      swiped = true;
+      if (ax > ay) turn(dx > 0 ? 1 : -1, 0);else turn(0, dy > 0 ? 1 : -1);
+      sx = t.clientX;
+      sy = t.clientY;
+      girato = true;
     };
     canvas.addEventListener('touchstart', onStart, {
       passive: true
