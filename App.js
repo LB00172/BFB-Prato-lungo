@@ -2718,7 +2718,7 @@ function App() {
     if (!window.confirm(`Annullare la sincronizzazione del ${quando}?\n\n` + `${r.perse === 1 ? 'Tornerà 1 voce che era sparita' : `Torneranno ${r.perse} voci che erano sparite`}, e la copia di prima verrà ` + 'ripubblicata su TUTTI i dispositivi.\n\n' + 'Le modifiche fatte dopo, da chiunque, restano.')) return;
     const s = r.state;
     setMembers(Array.isArray(s.members) ? s.members : []);
-    setCampData(s.campData && typeof s.campData === 'object' ? s.campData : {});
+    setCampData(applicaBlocchi(s.campData && typeof s.campData === 'object' ? s.campData : {}));
     setPurchases(Array.isArray(s.purchases) ? s.purchases : []);
     setGear(Array.isArray(s.gear) ? s.gear : []);
     setSettled(Array.isArray(s.settled) ? s.settled : []);
@@ -3080,6 +3080,26 @@ function App() {
       sepDays: s,
       cambiati
     };
+  };
+
+  // Una sostituzione in blocco (ripristino, importazione) non "aggiunge":
+  // rimpiazza. Se i dati che entrano non hanno i blocchi che abbiamo adesso,
+  // quei giorni tornano modificabili e le loro presenze cambiano — in
+  // silenzio. Non si vieta (a volte il ripristino serve proprio a questo), ma
+  // si dice prima, con i giorni per nome.
+  const bloccatiInPericolo = nuovo => {
+    const dopo = nuovo && nuovo.campData || {};
+    return Object.keys(campData).filter(d => {
+      const b = (campData[d] || {}).bloccato;
+      if (!b || typeof b !== 'object') return false;
+      const nb = (dopo[d] || {}).bloccato;
+      return !nb || JSON.stringify(nb.meals || {}) !== JSON.stringify(b.meals || {});
+    }).sort();
+  };
+  const avvisoBlocchi = nuovo => {
+    const g = bloccatiInPericolo(nuovo);
+    if (!g.length) return '';
+    return `\n\nATTENZIONE: ${g.length === 1 ? 'un giorno con le presenze bloccate' : `${g.length} giorni con le presenze bloccate`} ` + `(${g.map(nomeGiorno).join(', ')}) ${g.length === 1 ? 'verrà sbloccato o cambiato' : 'verranno sbloccati o cambiati'}. ` + 'Le quote di quei giorni possono cambiare.';
   };
 
   // Guardia per i due interruttori del giorno.
@@ -3995,13 +4015,13 @@ function App() {
       return;
     }
     const perse = perditeSeApplico(d);
-    if (!window.confirm(`Ripristinare la copia del ${id.slice(0, 10)}${quando}?\n\n` + `${avvisoPerdite(perse)}\n\n` + 'Se il problema è una sincronizzazione andata male, guarda prima ' + 'Impostazioni → Diagnostica: spesso basta "Annulla la sincronizzazione".')) return;
+    if (!window.confirm(`Ripristinare la copia del ${id.slice(0, 10)}${quando}?\n\n` + `${avvisoPerdite(perse)}${avvisoBlocchi(d)}\n\n` + 'Se il problema è una sincronizzazione andata male, guarda prima ' + 'Impostazioni → Diagnostica: spesso basta "Annulla la sincronizzazione".')) return;
     try {
       scortaPrimaDi(perse);
       // Set "normali" (non via applyRemote): così il push parte e propaga
       // il ripristino a tutti i dispositivi.
       setMembers(Array.isArray(d.members) ? d.members : []);
-      setCampData(d.campData && typeof d.campData === 'object' ? d.campData : {});
+      setCampData(applicaBlocchi(d.campData && typeof d.campData === 'object' ? d.campData : {}));
       setPurchases(Array.isArray(d.purchases) ? d.purchases : []);
       setGear(Array.isArray(d.gear) ? d.gear : []);
       setSettled(Array.isArray(d.settled) ? d.settled : []);
@@ -4879,10 +4899,10 @@ function App() {
         const eta = quando && !isNaN(quando.getTime()) ? `Backup del ${quando.toLocaleString('it-IT')}` : 'Backup senza data';
         const dentro = `Contiene ${(d.members || []).length} membri, ${(d.purchases || []).length} spese, ` + `${Object.keys(d.campData || {}).length} giorni.`;
         const perse = perditeSeApplico(d);
-        if (!window.confirm(`${eta}.\n${dentro}\n\n${avvisoPerdite(perse)}\n\nImportare?`)) return;
+        if (!window.confirm(`${eta}.\n${dentro}\n\n${avvisoPerdite(perse)}${avvisoBlocchi(d)}\n\nImportare?`)) return;
         scortaPrimaDi(perse);
         setMembers(d.members);
-        if (d.campData && typeof d.campData === 'object') setCampData(d.campData);
+        if (d.campData && typeof d.campData === 'object') setCampData(applicaBlocchi(d.campData));
         if (Array.isArray(d.purchases)) setPurchases(d.purchases);
         if (Array.isArray(d.gear)) setGear(d.gear);
         if (Array.isArray(d.settled)) setSettled(d.settled);
@@ -6365,14 +6385,14 @@ function App() {
   }, /*#__PURE__*/React.createElement("button", {
     onClick: exportData,
     className: "flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]"
-  }, "Esporta"), /*#__PURE__*/React.createElement("label", {
+  }, "Esporta"), admin && /*#__PURE__*/React.createElement("label", {
     className: "flex-1 py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase text-center cursor-pointer hover:bg-[#463628]"
   }, "Importa", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "application/json,.json",
     onChange: importData,
     className: "hidden"
-  }))), /*#__PURE__*/React.createElement("button", {
+  }))), admin && /*#__PURE__*/React.createElement("button", {
     onClick: openRestore,
     className: "w-full py-2.5 bg-white border-2 border-[#D97706]/50 text-[#D97706] rounded text-xs font-bold uppercase hover:bg-[#D97706]/10"
   }, "Ripristino di emergenza")), /*#__PURE__*/React.createElement("div", {
@@ -6383,10 +6403,12 @@ function App() {
     className: "text-[10px] text-gray-500"
   }, "A conti fatti e rimborsi saldati: salva tutto (file + cloud), lo mette in ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Archivio"), " e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini. L'app resta pronta per il prossimo evento. I dati archiviati restano consultabili."), /*#__PURE__*/React.createElement("button", {
+  }, "Archivio"), " e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini. L'app resta pronta per il prossimo evento. I dati archiviati restano consultabili."), admin ? /*#__PURE__*/React.createElement("button", {
     onClick: openClose,
     className: "w-full py-3 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase tracking-wide hover:bg-[#463628]"
-  }, "\uD83C\uDFC1 Chiudi il campo e archivia"), archives.length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, "\uD83C\uDFC1 Chiudi il campo e archivia") : /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-400 italic"
+  }, "La chiusura del campo la fa chi tiene i conti."), archives.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => goTo('archivio'),
     className: "w-full py-2 text-[10px] uppercase font-bold text-[#5C4A3C] hover:underline"
   }, "Vedi l'archivio (", archives.length, ")")), /*#__PURE__*/React.createElement("div", {

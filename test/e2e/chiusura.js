@@ -4,7 +4,12 @@ const { chromium } = require('playwright-core');
   const b = await chromium.launch({ executablePath: require('../lib/app').chromium(), args: ['--no-sandbox'] });
   const ctx = await b.newContext({ viewport: { width: 390, height: 800 }, acceptDownloads: true });
   const p = await ctx.newPage();
-  await p.addInitScript(() => localStorage.setItem('cambusa_unlock', '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14'));
+  // Sbloccata e in modalità tecnica: chiudere il campo azzera tutto, giorni
+  // bloccati compresi, ed è un gesto che fa solo chi tiene i conti.
+  await p.addInitScript(() => {
+    localStorage.setItem('cambusa_unlock', '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14');
+    localStorage.setItem('cambusa_admin', '1');
+  });
   const errs = [];
   p.on('pageerror', (e) => errs.push(e.message));
   p.on('dialog', (d) => d.accept());

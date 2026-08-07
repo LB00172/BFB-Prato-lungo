@@ -3,6 +3,8 @@
 // e lasciare libero l'elenco vuol dire promettere che un giorno non cambia e
 // poi lasciarlo cambiare lo stesso — basta eliminare una persona, o
 // dichiararla bambina, e le quote di quel giorno si riscrivono tutte.
+const fs = require('fs');
+const path = require('path');
 const { apri, ok, fine, attendi } = require('../lib/app');
 
 function cloudFinto() {
@@ -48,8 +50,9 @@ const idDi = (p, nome) => p.evaluate((n) => (JSON.parse(localStorage.getItem('ca
 (async () => {
   const { browser, page: p, menu, errori } = await apri({ initScript: cloudFinto });
   const chiesto = [];
+  let rispondi = true;
   p.removeAllListeners('dialog');
-  p.on('dialog', async (d) => { chiesto.push(d.message()); await d.accept(); });
+  p.on('dialog', async (d) => { chiesto.push(d.message()); if (rispondi) await d.accept(); else await d.dismiss(); });
 
   await menu('Membri');
   await aggiungi(p, 'Anna');
@@ -241,6 +244,64 @@ const idDi = (p, nome) => p.evaluate((n) => (JSON.parse(localStorage.getItem('ca
   await p.locator('li', { hasText: 'Bruno' }).locator('button', { hasText: '×' }).first().click();
   await p.waitForTimeout(500);
   ok('sbloccato il giorno, l\'eliminazione passa', (await membri(p)) === 'Anna');
+
+  // ---- 7. Le vie di fuga: rimpiazzare tutto -----------------------------
+  // Importare un backup e il ripristino di emergenza non aggiungono: RIMPIAZZANO.
+  // Sono l'unico modo rimasto per far cambiare un giorno bloccato, quindi
+  // devono stare dietro la modalita' tecnica e dire prima cosa sbloccano.
+  await menu('Presenze');
+  await p.locator('button', { hasText: 'Blocca le presenze' }).first().click();
+  await p.waitForTimeout(700);
+  ok('si riblocca il giorno per la prova', !!(await p.locator('main', { hasText: 'Presenze chiuse' }).count()));
+
+  await menu('Spese Totali');
+  await p.locator('button', { hasText: 'Dati' }).first().click();
+  await p.waitForTimeout(400);
+  ok('in modalita\' tecnica "Importa" c\'e\'', (await p.locator('input[type="file"][accept*="json"]').count()) > 0);
+  ok('e "Ripristino di emergenza" pure', (await p.locator('main button', { hasText: 'Ripristino di emergenza' }).count()) > 0);
+  ok('e la chiusura del campo pure', (await p.locator('main button', { hasText: 'Chiudi il campo' }).count()) > 0);
+
+  // Un backup che NON contiene il blocco: l'app deve dirlo prima di applicarlo.
+  const senzaBlocco = await p.evaluate(() => JSON.stringify({
+    version: 6,
+    exportedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+    members: JSON.parse(localStorage.getItem('cambusa_members') || '[]'),
+    campData: {}, purchases: [], gear: [], settled: [], equipment: [], toBuy: [],
+    sepDays: [], freeDays: [], blocchi: [], receipts: {},
+  }));
+  const fileBackup = path.join(__dirname, '..', 'tmp', 'backup-senza-blocco.json');
+  fs.mkdirSync(path.dirname(fileBackup), { recursive: true });
+  fs.writeFileSync(fileBackup, senzaBlocco);
+
+  chiesto.length = 0;
+  rispondi = false;                       // si annulla: non deve cambiare niente
+  await p.locator('input[type="file"][accept*="json"]').first().setInputFiles(fileBackup);
+  await p.waitForTimeout(900);
+  const domanda = chiesto[0] || '';
+  ok('importare avvisa che un giorno bloccato salta', /presenze bloccate/i.test(domanda));
+  ok('e lo chiama per nome', domanda.indexOf(new Date(giorno).toLocaleDateString('it-IT', { weekday: 'long' })) >= 0);
+  ok('e dice che le quote possono cambiare', /quote di quei giorni possono cambiare/i.test(domanda));
+  rispondi = true;
+  ok('annullando il giorno resta bloccato',
+    (await p.evaluate((g) => !!((JSON.parse(localStorage.getItem('cambusa_camp_data') || '{}'))[g] || {}).bloccato, giorno)));
+
+  // ---- 8. Senza modalita' tecnica quelle strade non esistono -------------
+  await p.addInitScript(() => localStorage.removeItem('cambusa_admin'));
+  await p.reload({ waitUntil: 'load' });
+  await p.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
+  await menu('Spese Totali');
+  await p.locator('button', { hasText: 'Dati' }).first().click();
+  await p.waitForTimeout(400);
+  ok('senza modalita\' tecnica non c\'e\' "Importa"', (await p.locator('input[type="file"][accept*="json"]').count()) === 0);
+  ok('ne\' "Ripristino di emergenza"', (await p.locator('main button', { hasText: 'Ripristino di emergenza' }).count()) === 0);
+  ok('ne\' la chiusura del campo', (await p.locator('main button', { hasText: 'Chiudi il campo' }).count()) === 0);
+  ok('ma esportare resta a tutti', (await p.locator('main button', { hasText: 'Esporta' }).count()) > 0);
+
+  await menu('Presenze');
+  await p.waitForTimeout(400);
+  ok('e il giorno resta chiuso', /Presenze chiuse/i.test(await p.locator('main').innerText()));
+  ok('senza modalita\' tecnica non si sblocca',
+    (await p.locator('main button', { hasText: /Sblocca le presenze/ }).count()) === 0);
 
   ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
   await fine(browser);
