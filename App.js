@@ -1073,7 +1073,12 @@ const TH = {
   blu: '#1B2C6B',
   bianco: '#F2F0EA'
 };
-const NEON = ['#FF3DA5', '#2BE5F0', '#FFD93B', '#5BFF9E', '#B14CFF'];
+// Insegne: gli stessi cinque colori di prima, ma tirati giù di saturazione e
+// di luce. Il neon acceso al massimo su asfalto quasi nero è il contrasto
+// cromatico più aggressivo che ci sia, e dopo dieci minuti di partita gli
+// occhi se ne accorgono. Le tinte restano riconoscibili — rosa, ciano, ambra,
+// verde, viola — ma nessun canale passa i 200 invece di sfiorare 255.
+const NEON = ['#C9628E', '#5BAEB8', '#C9A85C', '#6FB98C', '#9A72C4'];
 
 // Bandiera thailandese: cinque bande orizzontali rosso-bianco-blu-bianco-rosso,
 // con quella blu doppia. È l'unica cosa che dice "Thailandia" a colpo d'occhio.
@@ -1103,7 +1108,7 @@ function drawThai(ctx, w, h, cell) {
   for (let x = 0; x < w; x += px) {
     for (let y = 0; y < h; y += px) {
       const r = rnd();
-      ctx.fillStyle = r > 0.93 ? '#2E2739' : r > 0.85 ? '#1B1723' : '#241F2B';
+      ctx.fillStyle = r > 0.93 ? '#332C3F' : r > 0.85 ? '#221E2A' : '#2A2532';
       ctx.fillRect(x, y, px, px);
     }
   }
@@ -1122,7 +1127,6 @@ function drawThai(ctx, w, h, cell) {
     ctx.fillStyle = '#463D55';
     for (let y = 0; y < h; y += px * 4) ctx.fillRect(bx, y, bordo, px); // lastre
     // cordolo verso la strada: separa il marciapiede dall'asfalto
-    ctx.fillStyle = '#6E melon';
     ctx.fillStyle = '#75688A';
     ctx.fillRect(lato === 0 ? bx + bordo - px : bx, 0, px, h);
     let y = q(cell * 0.6);
@@ -1188,7 +1192,7 @@ function drawThai(ctx, w, h, cell) {
           dy = y - l.y;
         const d = Math.sqrt(dx * dx + dy * dy);
         if (d > r) continue;
-        const a = (1 - d / r) * 0.11;
+        const a = (1 - d / r) * 0.07;
         ctx.fillStyle = l.col;
         ctx.globalAlpha = a;
         ctx.fillRect(q(x), q(y), px, px);
@@ -1198,7 +1202,7 @@ function drawThai(ctx, w, h, cell) {
     // colata sull'asfalto verso il centro
     const verso = l.lato === 0 ? 1 : -1;
     for (let k = 0; k < cell * 3.2; k += px) {
-      ctx.globalAlpha = 0.10 * (1 - k / (cell * 3.2));
+      ctx.globalAlpha = 0.06 * (1 - k / (cell * 3.2));
       ctx.fillStyle = l.col;
       const larg = q(cell * 0.5 + k * 0.25);
       ctx.fillRect(q(l.x + verso * k), q(l.y - larg / 2), px, larg);
@@ -1223,7 +1227,7 @@ function drawThai(ctx, w, h, cell) {
         ctx.fillRect(q(x), q(y), px, px);
       }
     }
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.20;
     ctx.fillStyle = pz[2];
     for (let y = cy - ry; y < cy + ry; y += px * 2) {
       const largh = q(rx * Math.sqrt(Math.max(0, 1 - ((y - cy) / ry) ** 2)) * 0.7);
@@ -1261,7 +1265,7 @@ function drawThai(ctx, w, h, cell) {
   });
 
   // --- Motorini in fila contro il marciapiede ---
-  [[0.30, 0, '#C8342F'], [0.66, 0, '#2E7FD6'], [0.44, 1, '#D8B62A'], [0.80, 1, '#8C4FD0']].forEach(mt => {
+  [[0.30, 0, '#A8443F'], [0.66, 0, '#3E6FA8'], [0.44, 1, '#AE9440'], [0.80, 1, '#7A55A0']].forEach(mt => {
     const lato = mt[1];
     const cx = q(lato === 0 ? bordo + cell * 0.42 : w - bordo - cell * 0.42);
     const cy = q(h * mt[0]);
@@ -1279,7 +1283,10 @@ function drawThai(ctx, w, h, cell) {
   });
 
   // --- Due tuk-tuk fermi in mezzo alla strada, visti dall'alto ---
-  [[0.38, 0.28, '#FFD93B'], [0.62, 0.68, '#5BFF9E']].forEach(t => {
+  // I tettucci pescano dalla tavolozza invece di avere i colori scritti a
+  // mano: erano rimasti indietro con i vecchi neon accesi al massimo, ed
+  // essendo in mezzo alla carreggiata erano la cosa che stancava di più.
+  [[0.38, 0.28, NEON[2]], [0.62, 0.68, NEON[3]]].forEach(t => {
     const cx = q(w * t[0]),
       cy = q(h * t[1]);
     const tw = q(cell * 1.05),

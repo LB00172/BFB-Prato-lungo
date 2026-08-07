@@ -111,20 +111,28 @@ const tinte = (p) => p.evaluate(() => {
   const notte = await p.evaluate(() => {
     const c = document.querySelector('canvas');
     const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-    let luce = 0, n = 0, neon = 0, rossoTh = 0, bluTh = 0;
+    let luce = 0, n = 0, neon = 0, abbaglianti = 0, rossoTh = 0, bluTh = 0;
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i], g = d[i + 1], b = d[i + 2];
       luce += (r + g + b) / 3; n++;
       // neon: molto saturo e molto chiaro
       const max = Math.max(r, g, b), min = Math.min(r, g, b);
-      if (max > 190 && max - min > 110) neon++;
+      // Le insegne devono ESSERCI e vedersi colorate...
+      if (max > 150 && max - min > 60) neon++;
+      // ...ma nessun blocco deve BRUCIARE. Il neon acceso al massimo su
+      // asfalto quasi nero e' il contrasto piu' aggressivo che ci sia, e
+      // dopo dieci minuti di partita gli occhi se ne accorgono. Con la
+      // tavolozza accesa qui si contavano 37.513 pixel; con quella calma
+      // 469, e sono la foto di Bandy, che deve saltare all'occhio.
+      if (max > 225 && max - min > 140) abbaglianti++;
       if (Math.abs(r - 216) < 30 && Math.abs(g - 43) < 40 && Math.abs(b - 60) < 40) rossoTh++;
       if (Math.abs(r - 27) < 30 && Math.abs(g - 44) < 30 && Math.abs(b - 107) < 35) bluTh++;
     }
-    return { luce: luce / n, neon, rossoTh, bluTh };
+    return { luce: luce / n, neon, abbaglianti, rossoTh, bluTh };
   });
   ok(`livello 4: è notte, la strada è scura (luminosità media ${Math.round(notte.luce)}/255)`, notte.luce < 110);
-  ok(`ci sono le insegne al neon (${notte.neon} pixel accesi)`, notte.neon > 1500);
+  ok(`ci sono le insegne al neon (${notte.neon} pixel colorati)`, notte.neon > 20000);
+  ok(`ma non abbagliano (${notte.abbaglianti} pixel accecanti, erano 37513)`, notte.abbaglianti < 1500);
   ok(`c'è il rosso della bandiera thailandese (${notte.rossoTh} pixel)`, notte.rossoTh > 200);
   ok(`e il blu (${notte.bluTh} pixel)`, notte.bluTh > 200);
 
@@ -139,7 +147,11 @@ const tinte = (p) => p.evaluate(() => {
         const i = (y * c.width + x) * 4;
         const r = d[i], g = d[i + 1], b = d[i + 2];
         const max = Math.max(r, g, b), min = Math.min(r, g, b);
-        if (max > 190 && max - min > 110) {
+        // Stesso metro di sopra: si contano i pixel COLORATI, non quelli
+        // accecanti. Col metro vecchio qui finivano dentro i tuk-tuk in
+        // mezzo alla carreggiata, e la verifica misurava quelli invece
+        // delle insegne che dice di misurare.
+        if (max > 150 && max - min > 60) {
           if (x < c.width * 0.3 || x > c.width * 0.7) bordi++; else centro++;
         }
       }
