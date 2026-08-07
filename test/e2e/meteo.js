@@ -98,7 +98,12 @@ const testo = (p) => p.locator('main').innerText();
   ok('la quota usata dal modello viene conservata',
     (await a.page.evaluate(() => (JSON.parse(localStorage.getItem('cambusa_weather') || '{}')).quota)) === 1043);
   ok('in modalita\' tecnica si vede da dove viene il meteo', /1043 m/.test(t2));
-  ok('e si vedono le coordinate interrogate', /42\.059/.test(t2));
+  // Le coordinate si leggono dalla configurazione, non si scrivono qui: un
+  // giorno il campo si sposta e la prova non deve diventare una bugia.
+  const luogo = await a.page.evaluate(() => window.CAMP_LOCATION);
+  ok('e si vedono le coordinate interrogate', t2.indexOf(String(luogo.lat)) >= 0);
+  ok('e la quota dichiarata nella configurazione',
+    typeof luogo.alt !== 'number' || t2.indexOf(String(luogo.alt) + ' m') >= 0);
   ok('nessun errore JS', a.errori.length === 0);
   await a.browser.close();
 
@@ -112,7 +117,8 @@ const testo = (p) => p.locator('main').innerText();
   const tn = await testo(a.page);
   ok('senza modalita\' tecnica il meteo si vede lo stesso', /21°\s*\/\s*9°/.test(tn));
   ok('ma non la quota del modello', !/1043 m/.test(tn));
-  ok('ne\' le coordinate', !/42\.059/.test(tn));
+  const luogoN = await a.page.evaluate(() => window.CAMP_LOCATION);
+  ok('ne\' le coordinate', tn.indexOf('📍 ' + luogoN.lat) < 0);
   await a.browser.close();
 
   // ---- 3. Previsione vecchia: si dice, non si finge ----------------------

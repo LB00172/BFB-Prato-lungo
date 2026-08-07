@@ -2063,6 +2063,9 @@ function App() {
   // Modifiche arrivate dagli altri DOPO la chiusura dei conti e respinte: non
   // si buttano in silenzio, si mettono da parte e si dicono.
   const [respinte, setRespinte] = useState([]);
+  // Persone che un altro telefono ha eliminato mentre avevano presenze in un
+  // giorno bloccato: rimesse in elenco, e lo si dice a chi guarda.
+  const [membriSalvati, setMembriSalvati] = useState([]);
   const [newBuyName, setNewBuyName] = useState('');
   const [newBuyQty, setNewBuyQty] = useState('');
   const [buying, setBuying] = useState(null); // voce in fase di registrazione acquisto
@@ -2623,8 +2626,11 @@ function App() {
     // valgono su tutti i telefoni e non solo su questo.
     const conBlocchi = applicaBloccoConti(res.state);
     if (conBlocchi.respinte.length) setRespinte(prev => [...conBlocchi.respinte, ...prev].slice(0, 40));
-    setMembers(res.state.members);
-    setCampData(applicaBlocchi(res.state.campData));
+    const cdBloccata = applicaBlocchi(res.state.campData);
+    const conMembri = applicaBlocchiMembri(res.state.members, cdBloccata);
+    if (conMembri.salvati.length) setMembriSalvati(prev => [...conMembri.salvati, ...prev].slice(0, 20));
+    setMembers(conMembri.members);
+    setCampData(cdBloccata);
     setPurchases(conBlocchi.stato.purchases);
     setGear(res.state.gear);
     setSettled(res.state.settled);
@@ -2980,6 +2986,71 @@ function App() {
     ...day,
     meals
   };
+
+  // ---------- Il blocco protegge il giorno, non solo la sua riga ----------
+  // Le quote non escono dai pasti: escono da pasti PER membri. Congelare i
+  // pasti e lasciare libero l'elenco dei membri vuol dire promettere che quel
+  // giorno non cambia e poi lasciarlo cambiare lo stesso — basta eliminare una
+  // persona, o dichiararla bambina, e le quote di quel giorno si riscrivono
+  // tutte. Il blocco, per valere qualcosa, deve fermare anche questo.
+  const giorniBloccatiDi = id => Object.keys(campData).filter(d => {
+    const b = (campData[d] || {}).bloccato;
+    const v = b && typeof b === 'object' && b.meals && b.meals[String(id)];
+    return !!(v && (v.lunch || v.dinner));
+  }).sort();
+
+  // Guardia per i tasti che toccano un membro: dice di no e spiega quali
+  // giorni lo trattengono.
+  const membroIntoccabile = (id, azione) => {
+    const g = giorniBloccatiDi(id);
+    if (!g.length) return false;
+    const m = members.find(x => x.id === id);
+    window.alert(`${m ? m.name : 'Questa persona'}: ${azione} non è possibile.\n\n` + `Ha presenze in ${g.length === 1 ? 'un giorno con le presenze bloccate' : `${g.length} giorni con le presenze bloccate`} ` + `(${g.map(nomeGiorno).join(', ')}). Cambiarla adesso riscriverebbe le quote di quei giorni, ` + 'che invece devono restare come sono.\n\n' + 'Se serve davvero, prima sblocca quei giorni dalla scheda Presenze.');
+    return true;
+  };
+
+  // Stessa difesa sul versante sincronizzazione: se un altro telefono elimina
+  // una persona che ha presenze in un giorno bloccato, l'eliminazione si
+  // respinge e la persona torna in elenco. Si ripesca prima dalla fotografia
+  // dentro il blocco (è la più fedele a quel giorno), poi da quello che
+  // abbiamo ancora noi. La correzione viene poi ripubblicata, quindi torna
+  // anche sul telefono che l'aveva tolta.
+  const applicaBlocchiMembri = (elenco, cd) => {
+    const protetti = new Set();
+    const congelati = new Map();
+    Object.keys(cd || {}).forEach(d => {
+      const b = (cd[d] || {}).bloccato;
+      if (!b || typeof b !== 'object' || !b.meals) return;
+      Object.keys(b.meals).forEach(id => {
+        const v = b.meals[id];
+        if (v && (v.lunch || v.dinner)) protetti.add(String(id));
+      });
+      (Array.isArray(b.membri) ? b.membri : []).forEach(m => {
+        if (m && m.id != null && !congelati.has(String(m.id))) congelati.set(String(m.id), m);
+      });
+    });
+    if (!protetti.size) return {
+      members: elenco,
+      salvati: []
+    };
+    const ci = new Set((elenco || []).map(m => String(m && m.id)));
+    const torna = [];
+    protetti.forEach(id => {
+      if (ci.has(id)) return;
+      const dal = congelati.get(id) || (syncStateRef.current.members || []).find(m => m && String(m.id) === id);
+      if (dal) torna.push({
+        ...dal
+      });
+    });
+    if (!torna.length) return {
+      members: elenco,
+      salvati: []
+    };
+    return {
+      members: [...(elenco || []), ...torna],
+      salvati: torna.map(m => m.name || '—')
+    };
+  };
   const giornoGratis = dateStr => (freeDays || []).includes(dateStr);
   const chiediGiornoGratis = dateStr => {
     const gia = giornoGratis(dateStr);
@@ -3001,6 +3072,14 @@ function App() {
       const copia = {
         ...(day.meals || {})
       };
+      // Nel blocco entra anche la scheda di chi ha mangiato quel giorno: se
+      // qualcuno viene eliminato altrove, è da qui che lo si rimette a posto
+      // con i suoi attributi veri (adulto o bambino su tutti), invece di
+      // ricostruirlo a occhio e sbagliare i conti nel modo opposto.
+      const dentro = Object.keys(copia).filter(id => copia[id] && (copia[id].lunch || copia[id].dinner));
+      const schede = members.filter(m => dentro.includes(String(m.id))).map(m => ({
+        ...m
+      }));
       return {
         ...prev,
         [dateStr]: {
@@ -3008,7 +3087,8 @@ function App() {
           meals: copia,
           bloccato: {
             at: Date.now(),
-            meals: copia
+            meals: copia,
+            membri: schede
           }
         }
       };
@@ -3561,6 +3641,7 @@ function App() {
     setNewMemberChild(false);
   };
   const removeMember = id => {
+    if (membroIntoccabile(id, 'eliminarla')) return;
     const m = members.find(x => x.id === id);
     if (m && !window.confirm(`Eliminare ${m.name} dai membri?\nLe sue presenze e i suoi pasti non conteranno più nei calcoli.`)) return;
     // Si tiene il nome da parte: se poi qualcuno lo riaggiunge, l'app prende un
@@ -3570,6 +3651,9 @@ function App() {
     setMembers(prev => prev.filter(x => x.id !== id));
   };
   const toggleChild = id => {
+    // Adulto o bambino cambia quanto paga tutto il campo: su un giorno
+    // bloccato vale esattamente come modificare le presenze.
+    if (membroIntoccabile(id, 'cambiare adulto/bambino')) return;
     setMembers(prev => prev.map(m => m.id === id ? {
       ...m,
       isChild: !m.isChild
@@ -3593,6 +3677,7 @@ function App() {
 
   // Esenzione dalla spesa per l'attrezzatura aggiunta.
   const toggleEquipExempt = id => {
+    if (membroIntoccabile(id, "cambiare l'esenzione dall'attrezzatura")) return;
     setMembers(prev => prev.map(m => m.id === id ? {
       ...m,
       equipExempt: !m.equipExempt
@@ -5336,7 +5421,24 @@ function App() {
     className: "font-bold"
   }, "La memoria di questo telefono \xE8 piena."), " L'app continua a funzionare, ma libera un po' di spazio appena puoi (bastano poche foto o un'app in meno), cos\xEC ogni modifica resta al sicuro.", admin && /*#__PURE__*/React.createElement(React.Fragment, null, " In dettaglio: la cronologia delle modifiche non si salva pi\xF9, e alla riapertura questo telefono perderebbe i confronti con gli altri. Si libera qualcosa anche da", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, " Impostazioni \u2192 Registro modifiche \u2192 Svuota"), "."))), respinte.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, " Impostazioni \u2192 Registro modifiche \u2192 Svuota"), "."))), membriSalvati.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-base leading-none mt-0.5"
+  }, "\uD83D\uDD12"), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-grow"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[#5C4A3C] leading-snug"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, membriSalvati.length === 1 ? `${membriSalvati[0]} è stata rimessa fra i membri.` : `${membriSalvati.length} persone sono state rimesse fra i membri: ${membriSalvati.slice(0, 4).join(', ')}${membriSalvati.length > 4 ? '…' : ''}.`), ' ', membriSalvati.length === 1 ? 'Era stata eliminata' : 'Erano state eliminate', " da un altro telefono, ma ", membriSalvati.length === 1 ? 'ha' : 'hanno', " presenze in giorni con le presenze bloccate: eliminarl", membriSalvati.length === 1 ? 'a' : 'e', " avrebbe cambiato le quote di quei giorni. Per eliminarl", membriSalvati.length === 1 ? 'a' : 'e', " davvero, prima si sbloccano quei giorni dalla scheda ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "Presenze"), "."), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMembriSalvati([]),
+    className: "mt-2 px-3 py-1.5 bg-white border border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide"
+  }, "Ho capito")))), respinte.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"

@@ -76,7 +76,7 @@ window.APP_ADMIN = {
 // modalità tecnica attiva, sotto il meteo del Calendario si legge la quota che
 // il modello ha usato davvero: se non somiglia a quella del campo, le
 // coordinate qui sotto sono da correggere.
-window.CAMP_LOCATION = { lat: 42.059, lon: 13.1, label: "Pereto (AQ)" };
+window.CAMP_LOCATION = { lat: 42.0486, lon: 13.14855, alt: 1337, label: "Prato Lungo (Pereto, AQ)" };
 
 // ============================================================================
 //  CONFIGURAZIONE APP  (branding + funzionalità)
