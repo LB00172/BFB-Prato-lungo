@@ -88,6 +88,45 @@ non quali file sono stati toccati. Esempi veri:
 Un hook `Stop` in `.claude/settings.json` fa già `node build.js`, commit e
 push a fine turno: non serve chiederlo, serve non dimenticare che succede.
 
+**Quell'hook può fallire in silenzio.** Ha `2>/dev/null` su tutto e `exit 0`
+in coda: se la firma del commit va in timeout, non committa e nessuno lo
+sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
+
+## Decisioni già prese, da non rimettere in discussione
+
+- **La velocità del gioco non si tocca.** `BASE_STEP`, `LEVEL_SPEEDUP` e
+  `MIN_STEP` sono fermi dal 27 luglio, quando l'accelerazione è passata da
+  x2 a x1.5. In classifica ci sono già dei punteggi fatti con questa curva:
+  cambiarla renderebbe incomparabili i vecchi e i nuovi. Il muro in
+  Thailandia (50 ms) è voluto — è lì che una curva geometrica costante
+  incrocia il tempo di reazione umano.
+- **Il blocco di un giorno protegge tre cose, non una.** I pasti; i membri
+  che quei pasti li hanno (eliminarli o dichiararli bambini riscriverebbe
+  le quote lo stesso); e i due interruttori "gratis" e "conto separato".
+  Riattaccare una presenza orfana o unire due schede doppie invece passa:
+  sono riparazioni, non cambiano CHI ha mangiato.
+- **Importazione, ripristino di emergenza e chiusura del campo stanno in
+  modalità tecnica.** Non modificano i dati: li RIMPIAZZANO, e si portano
+  via i blocchi insieme al resto. Erano le ultime tre strade aperte a
+  tutti. Esportare invece resta a chiunque: è di sola lettura.
+
+## Prima del campo (entro il 10 agosto)
+
+Un giro su un **iPhone** — tutte le prove girano solo su Chromium:
+1. le strisciate del gioco (la L con un dito solo, senza staccare);
+2. l'avviso arancione di memoria piena, che deve comparire e non far
+   sparire l'app;
+3. l'installazione a Home e l'avvio a schermo intero;
+4. **che il service worker si aggiorni davvero**: riaprendo l'app deve
+   arrivare la versione nuova, altrimenti il meteo continua a guardare
+   Pereto invece del prato.
+
+## Se al campo qualcosa non torna
+
+Impostazioni → Backup Dati → **Esporta**: produce il JSON completo dello
+stato. È il modo di guardare i dati veri invece di ipotizzare — Firestore
+da qui non si vede, e l'export funziona anche senza linea.
+
 ## Dopo il campo (da settembre)
 
 Spezzare `App.jsx` in più file, notifiche push (FCM + Cloud Functions, piano
