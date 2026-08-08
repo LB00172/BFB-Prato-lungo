@@ -184,6 +184,26 @@
   // che nessuno se ne accorga.
   const MAX_DOC = 900 * 1024;
 
+  // --- Regole pure, provabili senza Firebase (come sovrascrivibile) ---------
+  // Un archivio piu' grande del tetto viene rifiutato da Firestore e non si
+  // salva. Va saputo PRIMA di azzerare i dati locali, non dopo.
+  function archivioStaDentro(meta, data) {
+    const m = typeof meta === 'string' ? meta : JSON.stringify(meta || null);
+    const j = typeof data === 'string' ? data : JSON.stringify(data || null);
+    return (m.length + j.length) <= MAX_DOC;
+  }
+
+  // In classifica si scrive solo se il punteggio nuovo BATTE quello che c'e'.
+  // A parita' non si tocca: riscrivere lo stesso numero cambierebbe la data e
+  // farebbe passare avanti chi ha solo rigiocato.
+  function punteggioMigliore(attuale, nuovo) {
+    const n = Number(nuovo);
+    if (!isFinite(n)) return false;
+    if (attuale === null || attuale === undefined) return true;
+    const a = Number(attuale);
+    return !isFinite(a) ? true : n > a;
+  }
+
   function pushState(obj, forza) {
     if (!state.connected || !db || !fb) return;
     const json = JSON.stringify(obj);
@@ -258,15 +278,12 @@
         return;
       }
       const ref = fb.doc(db, 'camps', state.code);
-      // Rete di sicurezza: se questa versione dell'SDK non avesse le
-      // transazioni, meglio la vecchia scrittura diretta che nessuna scrittura.
+      // Senza transazioni non si scrive. C'era un ripiego che faceva setDoc
+      // diretto "meglio di niente": ma quel setDoc salta sovrascrivibile(), ed
+      // e' esattamente il buco che ha cancellato il lavoro altrui una volta.
+      // Meglio non scrivere e dirlo, che scrivere e distruggere in silenzio.
       if (typeof fb.runTransaction !== 'function') {
-        await conScadenza(fb.setDoc(ref, { data: json, updatedBy: deviceId, updatedAt: fb.serverTimestamp() }), 25000);
-        lastPushedJson = json;
-        if (pendingJson === json) pendingJson = null;
-        tentativi = 0;
-        emit({ status: 'connected', lastSync: Date.now(), error: null });
-        maybeDailySnapshot(json);
+        emit({ status: 'error', error: 'SDK senza transazioni: non si scrive, per non sovrascrivere il lavoro degli altri.' });
         return;
       }
       await conScadenza(fb.runTransaction(db, async function (tx) {
@@ -454,9 +471,16 @@
     if (!key) return;
     try {
       const ref = fb.doc(db, 'camps', state.code, 'scores', key);
-      const cur = await fb.getDoc(ref);
-      if (cur.exists() && (cur.data().score || 0) >= score) return;
-      await fb.setDoc(ref, { name: String(name).trim().slice(0, 24), score, at: fb.serverTimestamp() });
+      // Leggere e poi scrivere non basta: due telefoni che mandano insieme il
+      // punteggio possono far sopravvivere il piu' BASSO, perche' il secondo
+      // legge prima che il primo abbia scritto. Dentro la transazione la
+      // lettura e la scrittura sono un gesto solo.
+      if (typeof fb.runTransaction !== 'function') return;
+      await fb.runTransaction(db, async function (tx) {
+        const cur = await tx.get(ref);
+        if (!punteggioMigliore(cur.exists() ? (cur.data().score || 0) : null, score)) return;
+        tx.set(ref, { name: String(name).trim().slice(0, 24), score, at: fb.serverTimestamp() });
+      });
     } catch (e) { /* offline o regole: riprovera' */ }
   }
 
@@ -513,9 +537,14 @@
   async function putArchive(id, meta, data) {
     if (!state.connected || !db || !fb) return false;
     try {
+      const m = JSON.stringify(meta), j = JSON.stringify(data);
+      // Stesso limite di pushState: sopra il tetto Firestore rifiuta e
+      // l'archivio non viene salvato. Senza controllo si scopriva a campo
+      // chiuso, cioe' quando i dati locali erano gia' stati azzerati.
+      if (!archivioStaDentro(m, j)) return false;
       await fb.setDoc(fb.doc(db, 'camps', state.code, 'archives', id), {
-        meta: JSON.stringify(meta),
-        data: JSON.stringify(data),
+        meta: m,
+        data: j,
         savedBy: deviceId,
         savedAt: fb.serverTimestamp(),
       });
@@ -713,6 +742,8 @@
     listSnapshots,
     getSnapshot,
     putWeather,
+    archivioStaDentro,
+    punteggioMigliore,
     putArchive,
     listArchives,
     getArchive,
