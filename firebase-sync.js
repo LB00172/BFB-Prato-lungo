@@ -79,8 +79,14 @@
         return;
       } catch (e) {
         const code = (e && e.code) || '';
-        // Utente non ancora creato o metodo non abilitato: si continua come prima.
-        if (/user-not-found|operation-not-allowed|invalid-credential|wrong-password|invalid-email/.test(code)) {
+        // Password sbagliata: non si scende a compromessi, si segnala.
+        // Altrimenti l'utente entra come anonimo, le regole Firestore negano
+        // ogni lettura e l'app appare vuota senza spiegazione.
+        if (/wrong-password|invalid-credential/.test(code)) {
+          throw e;
+        }
+        // Utente non ancora creato o metodo non abilitato: si continua come prima (accesso anonimo).
+        if (/user-not-found|operation-not-allowed|invalid-email/.test(code)) {
           authMode = 'anon-fallback';
           await fb.signInAnonymously(auth);
           return;
