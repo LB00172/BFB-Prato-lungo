@@ -22,6 +22,10 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    diventi rossa, si rimette a posto. Una prova che non sa fallire è peggio
    di niente, perché rassicura a vuoto.
 
+Per gli strumenti esterni (Base44, Codex, revisori automatici) c'è
+`AGENTS.md`: contiene solo quello che dal codice non si vede e che, ignorato,
+porta a diagnosi sbagliate. Se cambia una di quelle regole, va aggiornato lì.
+
 ## Comandi
 
 ```
