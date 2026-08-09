@@ -125,7 +125,75 @@ basta. Le foto degli scontrini dentro Firestore vanno bene per un gruppo, ma su
 scala conviene spostarle su uno storage a oggetti (Firebase Storage / R2), più
 economico per i byte.
 
-## 5. Analisi di mercato
+## 5. Lettura degli scontrini con l'IA
+
+**Una funzione sola, e solo questa.** Uno scontrino della spesa per venti
+persone sono trenta righe, e oggi qualcuno le ribatte a mano una per una: nome,
+prezzo, tipologia. La foto invece c'è già — è compressa, allegata alla voce e
+sincronizzata. Farsi proporre le righe già spezzate, con la tipologia
+indovinata, è l'unico punto dell'app dove un modello fa risparmiare mezz'ora
+vera invece di sostituire un modulo che è già rapido.
+
+**La regola che decide tutto:**
+
+> L'IA propone, l'uomo conferma, e l'app funziona identica se l'IA non risponde
+> mai.
+
+Qualunque funzione che non rispetti quella riga, in questa app, è un difetto
+travestito da caratteristica. Niente chat, niente assistente, nessun pulsante
+"chiedi all'IA" sparso nelle schede: un bottone sopra una foto che dice «ho
+letto queste righe, confermi?».
+
+### Perché funziona proprio qui
+
+**La geografia divide il lavoro da sola.** Lo scontrino lo fotografi al
+supermercato, dove la linea c'è. I conti li fai al campo, dove non c'è. L'IA
+aiuta al negozio, mai al prato: non è un compromesso, è una linea
+architetturale pulita.
+
+### Il rischio, e la difesa che esiste già
+
+Un modello che legge uno scontrino, prima o poi, sbaglia una cifra. In un'app
+il cui valore è *«i conti tornano sempre»*, un componente che inventa numeri in
+silenzio è il pericolo serio — e non è ipotetico, è quasi certo.
+
+La difesa però c'è, e non era nata per questo: `prezzoSospetto()` confronta ogni
+prezzo con la **mediana** delle altre spese e ferma tutto sopra le dieci volte,
+o sopra i 1000 €. È stata scritta per il dito che batte 1290 invece di 12,90, e
+funziona identica su un modello che legge male. Più la foto resta attaccata alla
+voce: chi conferma vede le righe proposte **accanto all'immagine**.
+
+### Perché dopo il backend, non prima
+
+Quattro ostacoli, e i primi due si sciolgono da soli quando ci sarà un server
+(punti 1 e 2 di questa roadmap):
+
+- **La chiave.** Non c'è build step: qualunque chiave finirebbe nel sorgente
+  servito a ogni telefono. Serve un proxy nostro.
+- **Il costo.** Nessun limite di frequenza in un'app statica: un dito che
+  insiste, o un ritentativo in ciclo, e si paga.
+- **La privacy.** Nomi, chi ha mangiato cosa, chi deve soldi a chi, e scontrini
+  che in fondo hanno gli ultimi numeri della carta. Mandarli a terzi richiede il
+  consenso di tutti, e in un gruppo di amici non è una formalità.
+- **Il precache atomico.** Ogni dipendenza nuova va aggiunta a `sw.js` e
+  all'elenco degli hash in `build.js`, e deve degradare bene offline.
+
+**Fare l'IA prima del backend significa costruire il backend per l'IA.** Tanto
+vale farlo per il motivo giusto e prenderla come conseguenza.
+
+### Seconda, molto dietro: le quantità del menù
+
+Il ponte Menù → Lista della spesa (già previsto) diventa più utile se sa
+rispondere a «venti persone, tre giorni, pasta al pomodoro e grigliata: quanto
+compro?». È una cosa che gli umani sbagliano sistematicamente. Anche questa
+succede **prima di partire**, con la linea.
+
+Tutto il resto — inserire spese parlando, il resoconto finale scritto dall'IA,
+la diagnosi dei problemi di sincronizzazione — sono soluzioni in cerca di un
+problema: il modulo è già veloce, e la diagnosi richiede di conoscere *questo*
+codice.
+
+## 6. Analisi di mercato
 
 ### Concorrenza
 

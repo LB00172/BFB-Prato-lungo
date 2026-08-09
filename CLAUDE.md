@@ -135,4 +135,9 @@ da qui non si vede, e l'export funziona anche senza linea.
 
 Spezzare `App.jsx` in più file, notifiche push (FCM + Cloud Functions, piano
 Blaze), ponte Menù → Lista della spesa, coda persistente delle foto su
-IndexedDB. Vedi `ROADMAP.md`.
+IndexedDB. E, **dopo il backend e non prima**, la lettura degli scontrini con
+l'IA — una funzione sola, con la regola che l'IA propone e l'uomo conferma, e
+l'app funziona identica se l'IA non risponde mai (`ROADMAP.md` §5).
+
+Prima di rimettere mano all'interfaccia, `RICOGNIZIONE-UI.md`: i colori, i 127
+bottoni e le undici misure di testo, contati. Vedi `ROADMAP.md`.
