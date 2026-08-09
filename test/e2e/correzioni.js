@@ -36,6 +36,16 @@ const H = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
     tipologia: el.querySelectorAll('select')[1].value,
   }));
   console.log('campi precompilati:', JSON.stringify(precompilato));
+
+  // ---- Conto separato: c'e' solo dove ha senso, e dove non c'e' si spiega ----
+  // La logistica si divide a testa fra i presenti, non per giorno: il conto
+  // separato lavora sui pasti. Prima la riga sparivano senza dire niente, e chi
+  // la cercava non poteva sapere perche'.
+  const testoModale = await modale.innerText();
+  console.log('sulla logistica il selettore del conto non c\'e\':',
+    !/Conto comune/.test(testoModale) ? 'OK' : 'PROBLEMA');
+  console.log('ma l\'app spiega perche\':',
+    /si divide a testa/.test(testoModale) && /non si applica/.test(testoModale) ? 'OK' : 'PROBLEMA');
   await modale.locator('input[type=number]').fill('125');
   await modale.locator('select').first().selectOption({ label: 'Alice' });
   await modale.locator('button', { hasText: /^Salva$/ }).click();
@@ -45,6 +55,17 @@ const H = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
   console.log('id e data conservati:', corretta.id === 'px' && !!corretta.at ? 'OK' : 'PROBLEMA');
   const nSpese = await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_purchases')).length);
   console.log('nessuna voce duplicata o persa:', nSpese === 9 ? 'OK' : 'PROBLEMA (' + nSpese + ')');
+
+  // Su una spesa alimentare invece il selettore ci deve essere.
+  const rigaCibo = p.locator('ul li', { hasText: 'Voce 3' }).first();
+  await rigaCibo.locator('button[aria-label="Correggi"]').click(); await p.waitForTimeout(400);
+  const modaleCibo = p.locator('div.fixed', { hasText: 'Correggi la spesa' }).last();
+  const testoCibo = await modaleCibo.innerText();
+  console.log('su cibo e bevande il selettore del conto c\'e\':',
+    /Conto comune/.test(testoCibo) ? 'OK' : 'PROBLEMA');
+  console.log('e non compare la spiegazione della logistica:',
+    !/si divide a testa/.test(testoCibo) ? 'OK' : 'PROBLEMA');
+  await modaleCibo.locator('button', { hasText: /^Annulla$/ }).click(); await p.waitForTimeout(350);
 
   // ---- 2. Ricerca ----
   const cerca = p.locator('input[placeholder="Cerca fra le spese…"]');

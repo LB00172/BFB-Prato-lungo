@@ -7431,6 +7431,12 @@ function App() {
                 {Object.keys(PURCHASE_TYPES).map((k) => (<option key={k} value={k}>{PURCHASE_TYPES[k]}</option>))}
               </select>
             </div>
+            {buying.type === 'logistica' && (
+                <p className="text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2">
+                  La <span className="font-bold">logistica</span> si divide a testa fra tutti i presenti,
+                  non per giorno: il conto separato lavora sui pasti, quindi qui non si applica.
+                </p>
+            )}
             {buying.type !== 'logistica' && (
               <div>
                 <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Conto</label>
@@ -7515,7 +7521,10 @@ function App() {
               )}
             </div>
 
-            {editing.kind === 'purchase' && editing.type !== 'logistica' && (
+            {/* Il conto separato vale solo su cibo e bevande. Prima, sulla
+                logistica, la riga semplicemente non compariva: chi la cercava
+                non trovava niente e non poteva sapere perche'. Ora si dice. */}
+            {editing.kind === 'purchase' && (editing.type !== 'logistica' ? (
               <div>
                 <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Conto</label>
                 <select
@@ -7527,7 +7536,12 @@ function App() {
                   <option value="sep">Conto separato</option>
                 </select>
               </div>
-            )}
+            ) : (
+                <p className="text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2">
+                  La <span className="font-bold">logistica</span> si divide a testa fra tutti i presenti,
+                  non per giorno: il conto separato lavora sui pasti, quindi qui non si applica.
+                </p>
+            ))}
 
             <div className="flex gap-2 pt-1">
               <button onClick={() => setEditing(null)} className="flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase">Annulla</button>

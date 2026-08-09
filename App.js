@@ -7727,7 +7727,11 @@ function App() {
   }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
     key: k,
     value: k
-  }, PURCHASE_TYPES[k])))), buying.type !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, PURCHASE_TYPES[k])))), buying.type === 'logistica' && /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2"
+  }, "La ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "logistica"), " si divide a testa fra tutti i presenti, non per giorno: il conto separato lavora sui pasti, quindi qui non si applica."), buying.type !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
   }, "Conto"), /*#__PURE__*/React.createElement("select", {
     value: buying.account || 'comune',
@@ -7815,7 +7819,7 @@ function App() {
   }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
     key: k,
     value: k
-  }, PURCHASE_TYPES[k]))))), editing.kind === 'purchase' && editing.type !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, PURCHASE_TYPES[k]))))), editing.kind === 'purchase' && (editing.type !== 'logistica' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
   }, "Conto"), /*#__PURE__*/React.createElement("select", {
     value: editing.account,
@@ -7828,7 +7832,11 @@ function App() {
     value: "comune"
   }, "Conto comune"), /*#__PURE__*/React.createElement("option", {
     value: "sep"
-  }, "Conto separato"))), /*#__PURE__*/React.createElement("div", {
+  }, "Conto separato"))) : /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2"
+  }, "La ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "logistica"), " si divide a testa fra tutti i presenti, non per giorno: il conto separato lavora sui pasti, quindi qui non si applica.")), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 pt-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setEditing(null),
