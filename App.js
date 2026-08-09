@@ -558,6 +558,65 @@ const wmoInfo = code => {
   };
 };
 
+// Quanto "pesa" una condizione. Serve a due cose: scegliere la faccia della
+// giornata e capire se il brutto vale la pena di essere nominato.
+const gravitaWmo = c => c >= 95 ? 5 : c >= 80 ? 4 : c >= 71 ? 4 : c >= 61 ? 3 : c >= 51 ? 2 : c === 45 || c === 48 ? 1 : c === 3 ? 1 : 0;
+
+// Le ore in cui si sta fuori: e' su quelle che si giudica una giornata di campo.
+const ORE_FUORI = [8, 21];
+const momentoDelGiorno = ora => ora == null ? '' : ora < 6 ? 'nella notte' : ora < 12 ? 'in mattinata' : ora < 18 ? 'nel pomeriggio' : 'in serata';
+
+// Come si racconta una giornata a chi deve decidere se fare la camminata.
+// Il codice WMO GIORNALIERO di Open-Meteo e' il piu' severo delle 24 ore: una
+// sola ora di temporale dipinge di nero un giorno con otto ore di sole. Qui la
+// faccia della giornata e' la condizione PREVALENTE nelle ore diurne, e il
+// brutto — se c'e' — viene detto a parte, col suo momento. Le previsioni vecchie
+// non hanno questi campi: si torna al comportamento di prima senza rumore.
+const raccontaMeteo = wx => {
+  if (!wx) return null;
+  const testaCode = wx.giorno != null ? wx.giorno : wx.code;
+  const testa = wmoInfo(testaCode);
+  const nominaBrutto = wx.peggio != null && gravitaWmo(wx.peggio) > gravitaWmo(testaCode);
+  const mm = typeof wx.mm === 'number' && wx.mm >= 0.2 ? (wx.mm < 10 ? wx.mm.toFixed(1) : String(Math.round(wx.mm))) + ' mm' : null;
+  return {
+    icon: testa.icon,
+    label: testa.label,
+    coda: nominaBrutto ? `${wmoInfo(wx.peggio).label.toLowerCase()} ${momentoDelGiorno(wx.ora)}`.trim() : '',
+    mm
+  };
+};
+
+// Dalla previsione ORARIA si ricava la forma della giornata. Le ore non si
+// conservano: 384 valori per variabile finirebbero nel documento condiviso e
+// nella memoria di ogni telefono, e servono solo a questo riassunto.
+const formaDelGiorno = ore => {
+  if (!Array.isArray(ore) || !ore.length) return {};
+  const diurne = ore.filter(x => x.ora >= ORE_FUORI[0] && x.ora <= ORE_FUORI[1]);
+  const base = diurne.length ? diurne : ore;
+  // Condizione prevalente: la piu' frequente. A pari frequenza vince la piu'
+  // mite, perche' la faccia della giornata deve dire com'e' di solito.
+  const conta = new Map();
+  base.forEach(x => conta.set(x.code, (conta.get(x.code) || 0) + 1));
+  let giorno = base[0].code,
+    quante = 0;
+  conta.forEach((v, c) => {
+    if (v > quante || v === quante && gravitaWmo(c) < gravitaWmo(giorno)) {
+      quante = v;
+      giorno = c;
+    }
+  });
+  // L'ora peggiore, ma solo se c'e' davvero qualcosa da segnalare.
+  let peggio = null;
+  base.forEach(x => {
+    if (gravitaWmo(x.code) >= 2 && (!peggio || gravitaWmo(x.code) > gravitaWmo(peggio.code))) peggio = x;
+  });
+  return {
+    giorno,
+    peggio: peggio ? peggio.code : null,
+    ora: peggio ? peggio.ora : null
+  };
+};
+
 // Quando è stata scaricata davvero una previsione che arriva dal cloud.
 // Qui, a differenza delle revisioni delle voci, limare le date in arrivo si
 // PUÒ e si DEVE: non c'è niente da far convergere, c'è solo una foto da
@@ -2458,17 +2517,40 @@ function App() {
     // Open-Meteo usa la quota media della sua cella (~1 km di lato), e in
     // montagna qualche centinaio di metri di differenza vale gradi veri.
     const quota = typeof loc.alt === 'number' ? `&elevation=${loc.alt}` : '';
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=16${quota}`).then(r => r.json()).then(j => {
+    // Oltre ai massimi giornalieri si chiede la MISURA della pioggia
+    // (millimetri e ore) e la previsione oraria, da cui si ricava com'e' fatta
+    // la giornata. La probabilita' giornaliera di Open-Meteo e' quella dell'ora
+    // peggiore: da sola fa sembrare un pomeriggio di temporali un giorno perso.
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}` + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_probability_mean,precipitation_sum,precipitation_hours' + '&hourly=weather_code,precipitation_probability' + `&timezone=auto&forecast_days=16${quota}`).then(r => r.json()).then(j => {
       const d = j && j.daily;
       if (!d || !Array.isArray(d.time)) return;
+      // Le ore, raggruppate per data. Servono solo a formaDelGiorno: nel dato
+      // salvato non entrano.
+      const perData = {};
+      const h = j.hourly;
+      if (h && Array.isArray(h.time)) {
+        h.time.forEach((t, i) => {
+          const g = String(t).slice(0, 10);
+          if (!perData[g]) perData[g] = [];
+          perData[g].push({
+            ora: Number(String(t).slice(11, 13)),
+            code: h.weather_code ? h.weather_code[i] : null,
+            p: h.precipitation_probability ? h.precipitation_probability[i] : null
+          });
+        });
+      }
+      const num = (a, i) => Array.isArray(a) && typeof a[i] === 'number' ? a[i] : null;
       const byDate = {};
       d.time.forEach((t, i) => {
-        byDate[t] = {
+        byDate[t] = Object.assign({
           code: d.weather_code[i],
           tmax: d.temperature_2m_max[i],
           tmin: d.temperature_2m_min[i],
-          rain: d.precipitation_probability_max[i]
-        };
+          rain: d.precipitation_probability_max[i],
+          rmed: num(d.precipitation_probability_mean, i),
+          mm: num(d.precipitation_sum, i),
+          oreP: num(d.precipitation_hours, i)
+        }, formaDelGiorno(perData[t]));
       });
       // "stampa" è la data messa da chi ha scaricato, così com'è: serve solo
       // a riconoscere la nostra eco di ritorno dal cloud. "fetchedAt" è la
@@ -5691,19 +5773,30 @@ function App() {
       className: "flex items-center gap-2"
     }, !locOk ? /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] text-gray-400 italic"
-    }, "Meteo: localit\xE0 del campo da impostare.") : wx ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-      className: "text-2xl leading-none"
-    }, wmoInfo(wx.code).icon), /*#__PURE__*/React.createElement("div", {
-      className: "flex flex-col min-w-0"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-sm font-bold text-[#2D392C]"
-    }, wmoInfo(wx.code).label), loc.label && /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] text-gray-400"
-    }, loc.label)), /*#__PURE__*/React.createElement("span", {
-      className: "ml-auto text-xs text-gray-600 font-bold shrink-0"
-    }, Math.round(wx.tmax), "\xB0 / ", Math.round(wx.tmin), "\xB0", wx.rain != null ? /*#__PURE__*/React.createElement("span", {
-      className: "text-[#5C8AA8]"
-    }, " \xB7 \uD83D\uDCA7", wx.rain, "%") : null)) : /*#__PURE__*/React.createElement("span", {
+    }, "Meteo: localit\xE0 del campo da impostare.") : wx ? (() => {
+      // La faccia della giornata e', quando si sa, la
+      // condizione prevalente delle ore diurne; il brutto si
+      // nomina a parte col suo momento. I millimetri dicono
+      // se e' una spruzzata o una lavata: "40%" da solo no.
+      const r = raccontaMeteo(wx);
+      return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+        className: "text-2xl leading-none"
+      }, r.icon), /*#__PURE__*/React.createElement("div", {
+        className: "flex flex-col min-w-0"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-sm font-bold text-[#2D392C] leading-tight"
+      }, r.label, r.coda ? /*#__PURE__*/React.createElement("span", {
+        className: "font-normal"
+      }, ", ", r.coda) : null), loc.label && /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] text-gray-400"
+      }, loc.label)), /*#__PURE__*/React.createElement("span", {
+        className: "ml-auto text-xs text-gray-600 font-bold shrink-0 text-right"
+      }, Math.round(wx.tmax), "\xB0 / ", Math.round(wx.tmin), "\xB0", r.mm ? /*#__PURE__*/React.createElement("span", {
+        className: "text-[#5C8AA8]"
+      }, " \xB7 \uD83D\uDCA7", r.mm) : wx.rain != null ? /*#__PURE__*/React.createElement("span", {
+        className: "text-[#5C8AA8]"
+      }, " \xB7 \uD83D\uDCA7", wx.rain, "%") : null));
+    })() : /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] text-gray-400 italic"
     }, "Previsione non ancora disponibile per questo giorno", isOnline ? ' (copre 16 giorni in avanti)' : ' (offline)', ".")), locOk && /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-2 pt-1 border-t border-[#8F9E8B]/20"

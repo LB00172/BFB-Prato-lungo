@@ -11,16 +11,36 @@ const ds = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0'
 // non dipende da quale giorno risulti selezionato. La finestra e' larga (dal
 // mese scorso al mese prossimo) perche' il Calendario apre sul giorno di inizio
 // campo, che non e' quasi mai oggi.
-function bollettino(tmax, tmin, code, rain) {
+// opz.orario(ora) -> codice WMO di quell'ora. Il valore giornaliero resta il
+// PIU' SEVERO delle 24 ore, come fa Open-Meteo davvero: e' la differenza fra
+// quello e le ore che l'app deve saper raccontare.
+function bollettino(tmax, tmin, code, rain, opz) {
+  const o = opz || {};
+  const orario = o.orario || (() => code);
   const time = [], weather_code = [], temperature_2m_max = [], temperature_2m_min = [], precipitation_probability_max = [];
+  const precipitation_sum = [], precipitation_hours = [], precipitation_probability_mean = [];
+  const hTime = [], hCode = [], hProb = [];
   for (let i = -30; i <= 30; i++) {
-    time.push(ds(new Date(Date.now() + i * GIORNO)));
+    const g = ds(new Date(Date.now() + i * GIORNO));
+    time.push(g);
     weather_code.push(code); temperature_2m_max.push(tmax);
     temperature_2m_min.push(tmin); precipitation_probability_max.push(rain);
+    precipitation_sum.push(o.mm === undefined ? null : o.mm);
+    precipitation_hours.push(o.ore === undefined ? null : o.ore);
+    precipitation_probability_mean.push(o.rmed === undefined ? null : o.rmed);
+    for (let h = 0; h < 24; h++) {
+      hTime.push(g + 'T' + String(h).padStart(2, '0') + ':00');
+      hCode.push(orario(h)); hProb.push(rain);
+    }
   }
   // "elevation" e' la quota che il modello ha usato davvero: e' il modo di
   // accorgersi che si sta guardando il meteo del paese invece che del prato.
-  return { elevation: 1043, daily: { time, weather_code, temperature_2m_max, temperature_2m_min, precipitation_probability_max } };
+  return {
+    elevation: 1043,
+    daily: { time, weather_code, temperature_2m_max, temperature_2m_min, precipitation_probability_max,
+             precipitation_probability_mean, precipitation_sum, precipitation_hours },
+    hourly: { time: hTime, weather_code: hCode, precipitation_probability: hProb },
+  };
 }
 
 // Previsione gia' in cache sul telefono, con una temperatura impossibile che
@@ -94,7 +114,7 @@ const testo = (p) => p.locator('main').innerText();
   ok('sullo schermo compaiono i gradi nuovi', /21°\s*\/\s*9°/.test(t2));
   ok('e non piu\' quelli della previsione morta', !/99°/.test(t2));
   ok('l\'icona segue il codice WMO del bollettino', /Temporale/.test(t2));
-  ok('la probabilita\' di pioggia arriva fino allo schermo', /40%/.test(t2));
+  ok('senza millimetri si mostra ancora la probabilita\'', /40%/.test(t2));
   ok('la quota usata dal modello viene conservata',
     (await a.page.evaluate(() => (JSON.parse(localStorage.getItem('cambusa_weather') || '{}')).quota)) === 1043);
   ok('in modalita\' tecnica si vede da dove viene il meteo', /1043 m/.test(t2));
@@ -119,6 +139,57 @@ const testo = (p) => p.locator('main').innerText();
   ok('ma non la quota del modello', !/1043 m/.test(tn));
   const luogoN = await a.page.evaluate(() => window.CAMP_LOCATION);
   ok('ne\' le coordinate', tn.indexOf('📍 ' + luogoN.lat) < 0);
+  await a.browser.close();
+
+  // ---- 2-ter. La forma della giornata, non il suo momento peggiore --------
+  // Il caso che rende il meteo dell'app inutilizzabile: Open-Meteo dichiara il
+  // giorno "temporale" perche' il codice giornaliero e' il piu' severo delle 24
+  // ore. Ma le ore dicono sole tutto il giorno e due ore di temporale alle 16.
+  // Per chi deve decidere se fare la camminata sono due informazioni diverse.
+  a = await apri({ initScript: [seme, {
+    wx: inCache(Date.now() - 2 * GIORNO),
+    risposta: bollettino(24, 12, 95, 40, { mm: 2.4, ore: 2, rmed: 11, orario: (o) => (o >= 16 && o <= 17 ? 95 : 1) }),
+  }] });
+  await a.menu('Calendario');
+  await attendi(a.page, () => {
+    const w = JSON.parse(localStorage.getItem('cambusa_weather') || '{}');
+    return w.byDate && w.byDate[Object.keys(w.byDate)[0]].tmax === 24;
+  }, null, 15000).catch(() => {});
+  const tf = await testo(a.page);
+  ok('la faccia della giornata e\' la condizione prevalente, non la peggiore',
+    /Poco nuvoloso/.test(tf));
+  ok('e il brutto viene detto a parte, col suo momento',
+    /temporale nel pomeriggio/i.test(tf));
+  ok('si mostrano i millimetri invece della probabilita\' dell\'ora peggiore',
+    /2\.4 mm/.test(tf) && !/40%/.test(tf));
+  // Il codice severo del giorno non si butta: serve alla compatibilita' e a chi
+  // legge il dato grezzo.
+  const grezzo = await a.page.evaluate(() => {
+    const w = JSON.parse(localStorage.getItem('cambusa_weather') || '{}');
+    return w.byDate[Object.keys(w.byDate)[0]];
+  });
+  ok('il codice giornaliero severo resta nel dato salvato', grezzo.code === 95);
+  ok('e accanto ci sono la condizione prevalente e l\'ora peggiore',
+    grezzo.giorno === 1 && grezzo.peggio === 95 && grezzo.ora === 16);
+  ok('nessun errore JS', a.errori.length === 0);
+  await a.browser.close();
+
+  // ---- 2-quater. Ma se piove davvero tutto il giorno, si dice -------------
+  // La difesa contro l'ottimismo di comodo: ammorbidire una giornata brutta
+  // sarebbe peggio del problema che stiamo risolvendo.
+  a = await apri({ initScript: [seme, {
+    wx: inCache(Date.now() - 2 * GIORNO),
+    risposta: bollettino(14, 10, 61, 90, { mm: 18, ore: 20, rmed: 85 }),
+  }] });
+  await a.menu('Calendario');
+  await attendi(a.page, () => {
+    const w = JSON.parse(localStorage.getItem('cambusa_weather') || '{}');
+    return w.byDate && w.byDate[Object.keys(w.byDate)[0]].tmax === 14;
+  }, null, 15000).catch(() => {});
+  const tp = await testo(a.page);
+  ok('una giornata di pioggia resta una giornata di pioggia', /Pioggia/.test(tp));
+  ok('e non si aggiunge un momento inutile', !/in mattinata|nel pomeriggio|in serata/i.test(tp));
+  ok('i millimetri veri si vedono', /18 mm/.test(tp));
   await a.browser.close();
 
   // ---- 3. Previsione vecchia: si dice, non si finge ----------------------
