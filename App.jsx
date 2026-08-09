@@ -65,6 +65,13 @@ const METEO_VECCHIO = 12 * 60 * 60 * 1000;
 // modalità aereo. Le foto restano fuori: hanno già il loro posto e
 // riempirebbero lo spazio.
 const SNAP_KEY = 'cambusa_snap_locali';
+
+// Scrittura "secca" in localStorage che non fa saltare l'app se la memoria e'
+// piena. Vale per i valori che non passano da salvaLocale: stringhe singole,
+// preferenze, contatori. Se non c'e' spazio il dato si perde — l'app no.
+const scriviLocale = (chiave, valore) => {
+  try { localStorage.setItem(chiave, valore); return true; } catch (e) { return false; }
+};
 const SNAP_QUANTE = 14;                  // 7 giorni × 2 fasce
 const SNAP_SPAZIO = 600 * 1024;          // tetto di memoria per l'insieme
 
@@ -1624,10 +1631,10 @@ function LockScreen({ onUnlock, reason }) {
         return;
       }
       const fails = Number(localStorage.getItem(FAIL_KEY) || 0) + 1;
-      localStorage.setItem(FAIL_KEY, String(fails));
+      scriviLocale(FAIL_KEY, String(fails));
       if (fails >= 5) {
         const secs = Math.min(600, 30 * Math.pow(2, fails - 5));
-        localStorage.setItem(UNTIL_KEY, String(Date.now() + secs * 1000));
+        scriviLocale(UNTIL_KEY, String(Date.now() + secs * 1000));
         setError(`Password sbagliata. Troppi tentativi: riprova fra ${secs} secondi.`);
       } else {
         setError(`Password sbagliata. ${5 - fails} ${5 - fails === 1 ? 'tentativo' : 'tentativi'} prima dell'attesa.`);
@@ -1889,7 +1896,10 @@ function App() {
   const [theme, setTheme] = useState(readTheme);
   const [isDark, setIsDark] = useState(() => document.documentElement.getAttribute('data-theme') === 'dark');
   useEffect(() => {
-    localStorage.setItem(THEME_KEY, theme);
+    // L'UNICO setItem dell'app dentro un effetto. Senza rete di sicurezza,
+    // memoria piena qui vuol dire schermo bianco: l'eccezione risale a React e
+    // smonta l'albero. E' la trappola in cui siamo gia' cascati una volta.
+    scriviLocale(THEME_KEY, theme);
     setIsDark(applyTheme(theme));
     // Con "automatico" si segue il telefono anche se cambia mentre l'app è aperta.
     if (theme !== 'auto' || !window.matchMedia) return;
@@ -1905,7 +1915,7 @@ function App() {
     const next = !askAlways;
     setAskAlways(next);
     if (next) {
-      localStorage.setItem(LOCK_ALWAYS_KEY, '1');
+      scriviLocale(LOCK_ALWAYS_KEY, '1');
       try { localStorage.removeItem(UNLOCK_KEY); } catch (e) { /* ignora */ }
     } else {
       localStorage.removeItem(LOCK_ALWAYS_KEY);
@@ -1933,7 +1943,7 @@ function App() {
     return !standalone && !localStorage.getItem('cambusa_install_hint_off');
   });
   const dismissInstallHint = () => {
-    localStorage.setItem('cambusa_install_hint_off', '1');
+    scriviLocale('cambusa_install_hint_off', '1');
     setShowInstallHint(false);
   };
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -2398,7 +2408,7 @@ function App() {
 
   const disconnectCloud = () => {
     // Scelta esplicita: niente riconnessione automatica finché non si riattiva.
-    localStorage.setItem('cambusa_sync_optout', '1');
+    scriviLocale('cambusa_sync_optout', '1');
     if (window.CloudSync) window.CloudSync.disconnect();
   };
 
@@ -3534,14 +3544,14 @@ function App() {
   const startGame = () => {
     const n = gamePlayer.trim();
     if (!n) { window.alert('Scrivi il tuo nome per entrare in classifica.'); return; }
-    localStorage.setItem('cambusa_player', n);
+    scriviLocale('cambusa_player', n);
     setGameRunning(true);
   };
 
   const endGame = (score) => {
     if (score > gameBest) {
       setGameBest(score);
-      localStorage.setItem('cambusa_best', JSON.stringify(score));
+      scriviLocale('cambusa_best', JSON.stringify(score));
     }
     const CS = window.CloudSync;
     if (CS && CS.submitScore) {
@@ -6951,7 +6961,7 @@ function App() {
                   {[3, 4, 5, 7].map((n) => (
                     <button
                       key={n}
-                      onClick={() => { setPhotoCap(n); localStorage.setItem(PHOTO_CAP_KEY, String(n)); }}
+                      onClick={() => { setPhotoCap(n); scriviLocale(PHOTO_CAP_KEY, String(n)); }}
                       className={`w-9 py-1.5 rounded text-xs font-bold border-b-2 ${photoCap === n ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300'}`}
                     >
                       {n}
