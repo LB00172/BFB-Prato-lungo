@@ -193,7 +193,71 @@ la diagnosi dei problemi di sincronizzazione — sono soluzioni in cerca di un
 problema: il modulo è già veloce, e la diagnosi richiede di conoscere *questo*
 codice.
 
-## 6. Analisi di mercato
+## 6. Area "Checklist": una condivisa, una privata
+
+**Obiettivo:** una scheda in stile Google Task, con due elenchi dietro due
+bottoni — **Condivisa** (la vede e la spunta tutto il gruppo) e **Privata**
+(solo chi l'ha scritta).
+
+**Oggi non ha senso, e non per pigrizia: manca l'identità.** L'app non ha
+account nominali — si entra con la password del campo e tutti i telefoni usano
+lo stesso utente Firebase condiviso. Senza un `uid` per persona, "privata" non
+ha nessuno a cui appartenere. La funzione arriva **dopo** i punti 1 e 2.
+
+### Il punto che è facilissimo sbagliare
+
+**"Privata" non può essere una spunta su una voce condivisa.**
+
+Il modello attuale è un documento solo per campo, fuso voce per voce, e
+**replicato interi su ogni telefono**: ogni dispositivo tiene tutto lo stato in
+`localStorage`, e Impostazioni → Esporta produce tutto. Una voce con
+`privata: true` dentro quei dati funzionerebbe nell'interfaccia e sarebbe
+**leggibile da chiunque** apra l'export o guardi la memoria del proprio
+telefono. Trapelerebbe **in silenzio**, che è il modo peggiore.
+
+Serve un archivio separato per persona:
+
+```
+rooms/<roomId>/private/<uid>/checklist/<itemId>
+```
+
+con Security Rules legate a `request.auth.uid`, e con la regola che quei dati
+**non entrano nell'export condiviso**. La lista condivisa invece sta nei dati
+della room come tutto il resto.
+
+### Deve funzionare offline come il resto
+
+Una lista privata è esattamente quello che si annota in un prato senza linea.
+La buona notizia è che `sync-merge.js` è generico: basta una voce nuova in
+`LISTS` e la fusione per voce funziona già. Il lavoro sta nel **trasporto**:
+`firebase-sync.js` oggi ha un solo canale (il documento del campo), e servirebbe
+un secondo canale per il documento privato.
+
+### Il vincolo che decide se un guest può esistere
+
+Il punto 1 consiglia di tenere la possibilità di **entrare in un campo con il
+solo codice**, senza account. Ma un ospite non ha `uid`, quindi **non può avere
+una lista privata**. Le due cose sono in tensione, e la checklist è la funzione
+che costringe a decidere: o l'ospite esiste e per lui la scheda mostra solo la
+lista condivisa, o l'account diventa obbligatorio per tutti. **Da decidere
+prima di scrivere il codice, non durante.**
+
+### Come limitarla nella versione gratuita
+
+La checklist è un buon candidato per il confine fra gratis e Pro (vedi il
+modello di prezzo in § 7): per esempio solo la lista condivisa nel piano
+gratuito, o un tetto al numero di voci.
+
+Ma vale una regola generale, che conviene fissare adesso:
+
+> **Nella versione gratuita si limita la quantità, mai la correttezza.**
+
+Numero di campi, storico, spazio per le foto, formati di export: tutto
+limitabile. **Niente che possa rendere i conti sbagliati o incompleti.** Un
+utente gratuito che ottiene numeri errati non pensa "mi manca il Pro": pensa che
+l'app non funziona — e l'unica cosa che questa app vende è che i conti tornano.
+
+## 7. Analisi di mercato
 
 ### Concorrenza
 
@@ -247,8 +311,14 @@ turni, offline in mezzo al bosco).
 
 Struttura proposta:
 
+- **Account per tutti, in un tap.** L'ingresso è Google (o email/password): è
+  l'account che rende possibili le funzioni personali, prima fra tutte la
+  checklist privata (§ 6). Chi paga è **chi crea la room**, non chi entra.
 - **Gratis**: 1 campo attivo, membri illimitati, tutte le funzioni di base,
   offline completo. Deve essere generoso: è il canale di acquisizione.
+  **Si limita la quantità, mai la correttezza** — vedi § 6: un utente gratuito
+  che ottiene conti sbagliati non pensa che gli manchi il Pro, pensa che l'app
+  non funzioni.
 - **Pro (una tantum "per campo", ~4–8 € pagati da chi organizza,
   oppure ~10–15 €/anno)**: storico dei campi passati, export PDF/Excel del
   rendiconto, scontrini illimitati e archiviati, più campi contemporanei,
