@@ -6213,13 +6213,13 @@ function App() {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
   }, "Cassa Globale Campo"), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 -mt-1"
-  }, "Totali generati automaticamente dalla ", /*#__PURE__*/React.createElement("span", {
+  }, "Totali generati automaticamente da quello che registri in ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Lista della Spesa"), " e dall'", /*#__PURE__*/React.createElement("span", {
+  }, "Lista della Spesa"), " e ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Attrezzatura"), " acquistata."), /*#__PURE__*/React.createElement("div", {
+  }, "Attrezzatura"), "."), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
-  }, [['Spesa Cibo (Alimentare)', totals.totalFood], ['Spesa Bevande', totals.totalDrinks], ['Logistica', totals.logisticsPurchases], ['Attrezzatura acquistata', totals.equipBought]].map(([label, val]) => /*#__PURE__*/React.createElement("div", {
+  }, [['Spesa Cibo (Alimentare)', totals.totalFood], ['Spesa Bevande', totals.totalDrinks], ['Logistica e attrezzatura', totals.totalAccessory]].map(([label, val]) => /*#__PURE__*/React.createElement("div", {
     key: label,
     className: "flex justify-between items-center bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
   }, /*#__PURE__*/React.createElement("span", {
@@ -6252,7 +6252,15 @@ function App() {
     className: "font-rustic text-xl text-[#D97706]"
   }, money(totals.costPerMeal), " \u20AC"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 mt-1"
-  }, "Cibo+bevande (", money(totals.foodDrinksCommon), " \u20AC) / ", totals.adultMealsCommon, " pasti adulti", totals.sepDaysCount > 0 ? ' dei giorni comuni' : '', ".")), /*#__PURE__*/React.createElement("div", {
+  }, "Cibo+bevande (", money(totals.foodDrinksCommon), " \u20AC) / ", totals.adultMealsCommon, " pasti adulti", totals.sepDaysCount > 0 ? ' dei giorni comuni' : '', ".")), !(FEATURES.equipExemption && totals.equipPayersCount !== totals.attendingAdultsCount) ? /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] uppercase text-[#8F9E8B] block"
+  }, "Quota a persona"), /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic text-xl text-[#D97706]"
+  }, money(totals.accessoryPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 mt-1"
+  }, "Logistica e attrezzatura (", money(totals.totalAccessory), " \u20AC) / ", totals.attendingAdultsCount, " ", totals.attendingAdultsCount === 1 ? 'adulto presente' : 'adulti presenti', ".")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] uppercase text-[#8F9E8B] block"
@@ -6261,14 +6269,14 @@ function App() {
   }, money(totals.logisticsPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 mt-1"
   }, "Logistica (", money(totals.logisticsPurchases), " \u20AC) / ", totals.attendingAdultsCount, " adulti presenti.")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20 col-span-2"
+    className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] uppercase text-[#8F9E8B] block"
   }, "Attrezzatura a testa"), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic text-xl text-[#D97706]"
   }, money(totals.equipPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 mt-1"
-  }, "Attrezzatura (", money(totals.equipBought), " \u20AC) / ", totals.equipPayersCount, " ", FEATURES.equipExemption ? totals.equipPayersCount === 1 ? 'persona non esente' : 'persone non esenti' : totals.equipPayersCount === 1 ? 'adulto presente' : 'adulti presenti', ".")), (totals.sepDaysCount > 0 || totals.foodDrinksSep > 0) && /*#__PURE__*/React.createElement("div", {
+  }, "Attrezzatura (", money(totals.equipBought), " \u20AC) / ", totals.equipPayersCount, " ", totals.equipPayersCount === 1 ? 'persona non esente' : 'persone non esenti', "."))), (totals.sepDaysCount > 0 || totals.foodDrinksSep > 0) && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#1F271E] p-3 rounded border border-[#5C4A3C] col-span-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] uppercase text-[#8F9E8B] block"

@@ -16,8 +16,12 @@ const H = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
       { id: 'x1', name: 'Doppio malto artigianale cassa da 24 bottiglie', price: 180, type: 'bevande', buyer: 'Bandone', at: Date.now(), account: 'sep' },
       { id: 'x2', name: 'Pane', price: 4.5, type: 'alimentare', buyer: 'Anna', at: Date.now() },
     ]));
+    // Mezz'ora fa, non un'ora: un'ora e' ESATTAMENTE il confine della cache,
+    // quindi l'app riscaricava sempre e per qualche secondo il bottone mostrava
+    // "…" invece di "Aggiorna". Questa prova guarda come si vede il meteo gia'
+    // scaricato, non il riscaricamento.
     localStorage.setItem('cambusa_weather', JSON.stringify({
-      fetchedAt: Date.now() - 3600000,
+      fetchedAt: Date.now() - 30 * 60 * 1000,
       byDate: { '2026-08-11': { code: 1, tmax: 27.4, tmin: 14.2, rain: 10 } },
     }));
   }, H);
@@ -94,6 +98,12 @@ const H = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
   await p.waitForTimeout(300);
   const testoMeteo = await p.locator('main').innerText();
   console.log('mostra quando è stato scaricato:', /Previsioni del .* alle .* uguali per tutto il campo/.test(testoMeteo.replace(/\s+/g, ' ')) ? 'OK' : 'PROBLEMA');
+  // Se per qualsiasi motivo un aggiornamento fosse comunque in corso, il
+  // bottone mostra "…": si aspetta la condizione invece di un tempo fisso.
+  await p.waitForFunction(
+    () => [...document.querySelectorAll('main button')].some((b) => /Aggiorna/.test(b.textContent)),
+    null, { timeout: 15000 },
+  ).catch(() => {});
   console.log('bottone Aggiorna presente:', (await p.locator('main button', { hasText: 'Aggiorna' }).count()) > 0 ? 'OK' : 'PROBLEMA');
   await p.screenshot({ path: require('path').join(__dirname,'..','tmp','vista-menu.png'), fullPage: true });
 

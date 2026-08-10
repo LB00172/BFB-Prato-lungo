@@ -277,6 +277,25 @@ const close = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.051 : tol
     if (!close(totale, sc.attese.totale)) bad(`totale mostrato ${totale} invece di ${sc.attese.totale}`); else ok();
     if (/NaN|Infinity/.test(cassa)) bad('valori non numerici nei totali'); else ok();
 
+    // --- L'ATTREZZATURA NON E' UNA VOCE A SE' ---
+    // Logistica e attrezzatura si dividono allo stesso modo (a testa, fra i
+    // presenti): mostrarle separate faceva sembrare l'attrezzatura una tassa
+    // in piu'. Qui si verifica che siano unite A SCHERMO e che l'unione sia
+    // ARITMETICAMENTE FEDELE: i conti non devono cambiare di un centesimo.
+    if (/Attrezzatura acquistata/i.test(cassa)) bad('l\'attrezzatura compare ancora come voce separata'); else ok();
+    const serva = await p.locator('h3:has-text("Il Conto della Serva")').locator('..').innerText();
+    if (/Attrezzatura a testa/i.test(serva)) bad('c\'e\' ancora il riquadro "Attrezzatura a testa"'); else ok();
+    const attesaQuota = await p.evaluate(() => {
+      const t = window.__totali;
+      return t ? (t.logisticsPerAdult || 0) + (t.equipPerAdult || 0) : 0;
+    });
+    if (attesaQuota > 0.005) {
+      const mostrata = num(serva.split(/QUOTA A PERSONA|Quota a persona/)[1] || '');
+      if (!close(mostrata, attesaQuota)) {
+        bad(`quota a persona mostrata ${mostrata} invece di ${attesaQuota.toFixed(2)} (logistica + attrezzatura)`);
+      } else ok();
+    }
+
     // --- QUOTE ---
     await p.locator('main button:has-text("Quote")').click();
     await p.waitForTimeout(200);

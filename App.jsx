@@ -5579,13 +5579,12 @@ function App() {
             {spesaSection === 'totali' && (<div className="space-y-4">
             <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-4">
               <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Cassa Globale Campo</h3>
-              <p className="text-[10px] text-gray-500 -mt-1">Totali generati automaticamente dalla <span className="font-bold">Lista della Spesa</span> e dall'<span className="font-bold">Attrezzatura</span> acquistata.</p>
+              <p className="text-[10px] text-gray-500 -mt-1">Totali generati automaticamente da quello che registri in <span className="font-bold">Lista della Spesa</span> e <span className="font-bold">Attrezzatura</span>.</p>
               <div className="space-y-2">
                 {[
                   ['Spesa Cibo (Alimentare)', totals.totalFood],
                   ['Spesa Bevande', totals.totalDrinks],
-                  ['Logistica', totals.logisticsPurchases],
-                  ['Attrezzatura acquistata', totals.equipBought],
+                  ['Logistica e attrezzatura', totals.totalAccessory],
                 ].map(([label, val]) => (
                   <div key={label} className="flex justify-between items-center bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20">
                     <span className="text-[11px] uppercase font-bold text-gray-500">{label}</span>
@@ -5616,20 +5615,40 @@ function App() {
                     {totals.sepDaysCount > 0 ? ' dei giorni comuni' : ''}.
                   </p>
                 </div>
-                <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
-                  <span className="text-[10px] uppercase text-[#8F9E8B] block">Logistica a testa</span>
-                  <span className="font-rustic text-xl text-[#D97706]">{money(totals.logisticsPerAdult)} €</span>
-                  <p className="text-[9px] text-gray-400 mt-1">Logistica ({money(totals.logisticsPurchases)} €) / {totals.attendingAdultsCount} adulti presenti.</p>
-                </div>
-                <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20 col-span-2">
-                  <span className="text-[10px] uppercase text-[#8F9E8B] block">Attrezzatura a testa</span>
-                  <span className="font-rustic text-xl text-[#D97706]">{money(totals.equipPerAdult)} €</span>
-                  <p className="text-[9px] text-gray-400 mt-1">
-                    Attrezzatura ({money(totals.equipBought)} €) / {totals.equipPayersCount} {FEATURES.equipExemption
-                      ? (totals.equipPayersCount === 1 ? 'persona non esente' : 'persone non esenti')
-                      : (totals.equipPayersCount === 1 ? 'adulto presente' : 'adulti presenti')}.
-                  </p>
-                </div>
+                {/* Logistica e attrezzatura si dividono allo STESSO modo — a
+                    testa, fra i presenti — quindi si mostrano insieme: due
+                    riquadri separati facevano sembrare l'attrezzatura una
+                    tassa a parte, quando e' una voce del costo del campo come
+                    le altre. I numeri non cambiano di un centesimo: la somma
+                    accessoryPerAdult era gia' calcolata. Il dettaglio resta
+                    nella riga piccola, che e' dove va cercato quando serve.
+                    Se l'esenzione per membro fosse attiva i due divisori
+                    potrebbero differire: in quel caso si torna a due riquadri,
+                    perche' un numero solo sarebbe una bugia. */}
+                {!(FEATURES.equipExemption && totals.equipPayersCount !== totals.attendingAdultsCount) ? (
+                  <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
+                    <span className="text-[10px] uppercase text-[#8F9E8B] block">Quota a persona</span>
+                    <span className="font-rustic text-xl text-[#D97706]">{money(totals.accessoryPerAdult)} €</span>
+                    <p className="text-[9px] text-gray-400 mt-1">
+                      Logistica e attrezzatura ({money(totals.totalAccessory)} €) / {totals.attendingAdultsCount} {totals.attendingAdultsCount === 1 ? 'adulto presente' : 'adulti presenti'}.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
+                      <span className="text-[10px] uppercase text-[#8F9E8B] block">Logistica a testa</span>
+                      <span className="font-rustic text-xl text-[#D97706]">{money(totals.logisticsPerAdult)} €</span>
+                      <p className="text-[9px] text-gray-400 mt-1">Logistica ({money(totals.logisticsPurchases)} €) / {totals.attendingAdultsCount} adulti presenti.</p>
+                    </div>
+                    <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
+                      <span className="text-[10px] uppercase text-[#8F9E8B] block">Attrezzatura a testa</span>
+                      <span className="font-rustic text-xl text-[#D97706]">{money(totals.equipPerAdult)} €</span>
+                      <p className="text-[9px] text-gray-400 mt-1">
+                        Attrezzatura ({money(totals.equipBought)} €) / {totals.equipPayersCount} {totals.equipPayersCount === 1 ? 'persona non esente' : 'persone non esenti'}.
+                      </p>
+                    </div>
+                  </>
+                )}
                 {(totals.sepDaysCount > 0 || totals.foodDrinksSep > 0) && (
                   <div className="bg-[#1F271E] p-3 rounded border border-[#5C4A3C] col-span-2">
                     <span className="text-[10px] uppercase text-[#8F9E8B] block">Conto separato — quota pasto</span>
