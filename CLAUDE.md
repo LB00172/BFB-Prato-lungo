@@ -109,6 +109,12 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   le quote lo stesso); e i due interruttori "gratis" e "conto separato".
   Riattaccare una presenza orfana o unire due schede doppie invece passa:
   sono riparazioni, non cambiano CHI ha mangiato.
+- **Logistica e attrezzatura le pagano solo i giorni comuni.** Il divisore è
+  chi ha almeno un pasto in un giorno a conto comune. Chi c'è stato unicamente
+  nei giorni a conto separato non le paga, e la sua parte si spalma sugli
+  altri: il conto separato è una cassa a parte, non uno sconto sui pasti. Se
+  di adulti nei giorni comuni non ce n'è nessuno, quei soldi finiscono in
+  `nonRipartito` e si dichiarano — non si spalmano su chi non c'era.
 - **Importazione, ripristino di emergenza e chiusura del campo stanno in
   modalità tecnica.** Non modificano i dati: li RIMPIAZZANO, e si portano
   via i blocchi insieme al resto. Erano le ultime tre strade aperte a

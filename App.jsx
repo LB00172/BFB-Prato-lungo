@@ -3992,7 +3992,12 @@ function App() {
     let adultMealsTotal = 0;
     let adultMealsSep = 0;
     const attendingAdults = new Set();
-    const attendingForEquip = new Set(); // presenti NON esenti da attrezzatura
+    // Logistica e attrezzatura si dividono SOLO fra chi c'e' nei giorni comuni.
+    // Il conto separato e' una cassa a parte: chi e' venuto unicamente in quei
+    // giorni paga la sua spesa separata e basta, e la sua parte di logistica e
+    // attrezzatura si spalma su chi resta nel conto comune.
+    const attendingCommon = new Set();   // adulti con almeno un pasto nei giorni comuni
+    const attendingForEquip = new Set(); // come sopra, meno gli esenti da attrezzatura
     const sepPeople = new Set();         // adulti che mangiano nei giorni separati
 
     Object.keys(campData).forEach((dateStr) => {
@@ -4015,9 +4020,12 @@ function App() {
         if (!m.isChild) {
           adultMealsTotal += count;
           if (inSep) { adultMealsSep += count; sepPeople.add(m.id); }
+          else {
+            attendingCommon.add(m.id);
+            // L'esenzione vale solo se la funzione e' attiva (vedi FEATURES).
+            if (!(FEATURES.equipExemption && m.equipExempt)) attendingForEquip.add(m.id);
+          }
           attendingAdults.add(m.id);
-          // L'esenzione vale solo se la funzione e' attiva (vedi FEATURES).
-          if (!(FEATURES.equipExemption && m.equipExempt)) attendingForEquip.add(m.id);
         }
       });
     });
@@ -4028,11 +4036,11 @@ function App() {
     // ognuno sulla sua cassa.
     const costPerMeal = adultMealsCommon > 0 ? foodDrinksCommon / adultMealsCommon : 0;
     const costPerMealSep = adultMealsSep > 0 ? foodDrinksSep / adultMealsSep : 0;
-    // Logistica: parti uguali tra tutti gli adulti presenti.
-    const logisticsPerAdult = attendingAdults.size > 0 ? logisticsPurchases / attendingAdults.size : 0;
-    // Attrezzatura: parti uguali tra i presenti non esenti. Se sono tutti
-    // esenti, per non perdere la spesa si ripartisce su tutti i presenti.
-    const equipDivisorSet = attendingForEquip.size > 0 ? attendingForEquip : attendingAdults;
+    // Logistica: parti uguali fra gli adulti dei giorni COMUNI.
+    const logisticsPerAdult = attendingCommon.size > 0 ? logisticsPurchases / attendingCommon.size : 0;
+    // Attrezzatura: parti uguali fra quelli non esenti. Se sono tutti esenti,
+    // per non perdere la spesa si ripartisce su tutti i comuni.
+    const equipDivisorSet = attendingForEquip.size > 0 ? attendingForEquip : attendingCommon;
     const equipPerAdult = equipDivisorSet.size > 0 ? equipBought / equipDivisorSet.size : 0;
     // Quota "accessori" media mostrata nel riepilogo.
     const accessoryPerAdult = logisticsPerAdult + equipPerAdult;
@@ -4047,7 +4055,7 @@ function App() {
       // somma delle quote non torna col totale. In particolare chi è venuto
       // solo in un giorno gratis non deve la quota di logistica: quel giorno
       // per lui non è costato niente, ed è il senso di "gratis per tutti".
-      const present = attendingAdults.has(m.id);
+      const present = attendingCommon.has(m.id);
       const logShare =
         (present ? logisticsPerAdult : 0) +
         (present && equipDivisorSet.has(m.id) ? equipPerAdult : 0);
@@ -4089,11 +4097,11 @@ function App() {
           : 'spese segnate "conto separato", ma nei giorni separati non c\'è nessuna presenza',
       });
     }
-    if (logisticsPurchases > 0.005 && attendingAdults.size === 0) {
-      buchi.push({ quanto: logisticsPurchases, perche: 'spese di logistica, ma nessun adulto ha presenze segnate' });
+    if (logisticsPurchases > 0.005 && attendingCommon.size === 0) {
+      buchi.push({ quanto: logisticsPurchases, perche: 'spese di logistica, ma nessun adulto ha presenze nei giorni comuni' });
     }
     if (equipBought > 0.005 && equipDivisorSet.size === 0) {
-      buchi.push({ quanto: equipBought, perche: 'attrezzatura acquistata, ma nessun adulto ha presenze segnate' });
+      buchi.push({ quanto: equipBought, perche: 'attrezzatura acquistata, ma nessun adulto ha presenze nei giorni comuni' });
     }
     const nonRipartito = buchi.reduce((s, b) => s + b.quanto, 0);
 
@@ -4207,7 +4215,8 @@ function App() {
       foodDrinksCommon, foodDrinksSep, costPerMealSep,
       sepPeopleCount: sepPeople.size, sepDaysCount: sepDays.length,
       freeDaysCount: freeDays.length, mealsFree,
-      attendingAdultsCount: attendingAdults.size, breakdown,
+      attendingAdultsCount: attendingAdults.size,
+      accessoryPayersCount: attendingCommon.size, breakdown,
       collected, roundingDiff, nonRipartito, buchi,
       byBuyer, settlement, unattributed, unknownBuyers, transfers,
     };
@@ -5625,12 +5634,12 @@ function App() {
                     Se l'esenzione per membro fosse attiva i due divisori
                     potrebbero differire: in quel caso si torna a due riquadri,
                     perche' un numero solo sarebbe una bugia. */}
-                {!(FEATURES.equipExemption && totals.equipPayersCount !== totals.attendingAdultsCount) ? (
+                {!(FEATURES.equipExemption && totals.equipPayersCount !== totals.accessoryPayersCount) ? (
                   <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
                     <span className="text-[10px] uppercase text-[#8F9E8B] block">Quota a persona</span>
                     <span className="font-rustic text-xl text-[#D97706]">{money(totals.accessoryPerAdult)} €</span>
                     <p className="text-[9px] text-gray-400 mt-1">
-                      Logistica e attrezzatura ({money(totals.totalAccessory)} €) / {totals.attendingAdultsCount} {totals.attendingAdultsCount === 1 ? 'adulto presente' : 'adulti presenti'}.
+                      Logistica e attrezzatura ({money(totals.totalAccessory)} €) / {totals.accessoryPayersCount} {totals.accessoryPayersCount === 1 ? 'adulto' : 'adulti'} dei giorni comuni.
                     </p>
                   </div>
                 ) : (
@@ -5638,7 +5647,7 @@ function App() {
                     <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
                       <span className="text-[10px] uppercase text-[#8F9E8B] block">Logistica a testa</span>
                       <span className="font-rustic text-xl text-[#D97706]">{money(totals.logisticsPerAdult)} €</span>
-                      <p className="text-[9px] text-gray-400 mt-1">Logistica ({money(totals.logisticsPurchases)} €) / {totals.attendingAdultsCount} adulti presenti.</p>
+                      <p className="text-[9px] text-gray-400 mt-1">Logistica ({money(totals.logisticsPurchases)} €) / {totals.accessoryPayersCount} adulti dei giorni comuni.</p>
                     </div>
                     <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
                       <span className="text-[10px] uppercase text-[#8F9E8B] block">Attrezzatura a testa</span>
@@ -7546,8 +7555,9 @@ function App() {
             </div>
             {buying.type === 'logistica' && (
                 <p className="text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2">
-                  La <span className="font-bold">logistica</span> si divide a testa fra tutti i presenti,
-                  non per giorno: il conto separato lavora sui pasti, quindi qui non si applica.
+                  La <span className="font-bold">logistica</span> si divide a testa fra chi ha pasti nei
+                  giorni a conto comune, non per giorno: chi c'è stato solo nei giorni a conto separato
+                  non la paga, e per questo qui il conto non si applica.
                 </p>
             )}
             {buying.type !== 'logistica' && (
@@ -7651,8 +7661,9 @@ function App() {
               </div>
             ) : (
                 <p className="text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2">
-                  La <span className="font-bold">logistica</span> si divide a testa fra tutti i presenti,
-                  non per giorno: il conto separato lavora sui pasti, quindi qui non si applica.
+                  La <span className="font-bold">logistica</span> si divide a testa fra chi ha pasti nei
+                  giorni a conto comune, non per giorno: chi c'è stato solo nei giorni a conto separato
+                  non la paga, e per questo qui il conto non si applica.
                 </p>
             ))}
 

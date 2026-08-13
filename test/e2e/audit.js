@@ -131,7 +131,7 @@ const scenari = [
               saldi: { Alice: 30, Bruno: -30, Carlo: 0 } },
   },
   {
-    nome: '13. Logistica resta di tutti anche con i giorni separati',
+    nome: '13. Logistica solo a chi c-e nei giorni comuni',
     membri: [m('a', 'Alice'), m('b', 'Bruno'), m('c', 'Carlo')],
     presenze: { [DAY]:  { note: '', guestsNames: '', meals: { a: L, b: L } },
                 [DAY2]: { note: '', guestsNames: '', meals: { c: L } } },
@@ -139,9 +139,37 @@ const scenari = [
     acquisti: [buySep('p1', 'Cibo separato', 40, 'alimentare', 'Alice'),
                buy('p2', 'Gasolio', 30, 'logistica', 'Carlo')],
     attrezzatura: [],
-    // cibo separato 40/2 = 20 ad Alice e Bruno; logistica 30/3 presenti = 10 a testa
-    attese: { totale: 70, quote: { Alice: 30, Bruno: 30, Carlo: 10 },
-              saldi: { Alice: 10, Bruno: -30, Carlo: 20 } },
+    // Alice e Bruno stanno SOLO nel giorno separato: pagano la loro spesa
+    // separata (40/2 pasti = 20 a testa) e nient'altro. La logistica e' della
+    // cassa comune, dove c'e' solo Carlo: 30/1 = 30 tutti a lui.
+    attese: { totale: 70, quote: { Alice: 20, Bruno: 20, Carlo: 30 },
+              saldi: { Alice: 20, Bruno: -20, Carlo: 0 } },
+  },
+  {
+    nome: '13-bis. Attrezzatura: chi sta solo nei giorni separati non la paga',
+    membri: [m('a', 'Alice'), m('b', 'Bruno'), m('c', 'Carlo')],
+    presenze: { [DAY]:  { note: '', guestsNames: '', meals: { a: L } },
+                [DAY2]: { note: '', guestsNames: '', meals: { b: L, c: L } } },
+    giorniSeparati: [DAY],
+    acquisti: [buySep('p1', 'Cena separata', 20, 'alimentare', 'Alice'),
+               buy('p2', 'Cibo comune', 40, 'alimentare', 'Bruno')],
+    attrezzatura: [eq('e1', 'Gazebo', 60, true, 'Carlo')],
+    // Alice: solo il giorno separato -> 20 di cena, zero attrezzatura.
+    // Bruno e Carlo: giorno comune -> 20 di cibo a testa + 60/2 = 30 di gazebo.
+    attese: { totale: 120, quote: { Alice: 20, Bruno: 50, Carlo: 50 },
+              saldi: { Alice: 0, Bruno: -10, Carlo: 10 } },
+  },
+  {
+    nome: '13-ter. Solo giorni separati: logistica e attrezzatura restano un buco dichiarato',
+    membri: [m('a', 'Alice'), m('b', 'Bruno')],
+    presenze: { [DAY]: { note: '', guestsNames: '', meals: { a: L, b: L } } },
+    giorniSeparati: [DAY],
+    acquisti: [buySep('p1', 'Cena separata', 30, 'alimentare', 'Alice'),
+               buy('p2', 'Gasolio', 20, 'logistica', 'Alice')],
+    attrezzatura: [],
+    // Nessuno sta nei giorni comuni: i 20 di logistica non hanno su chi
+    // dividersi. Non spariscono nell'arrotondamento — si dichiarano.
+    attese: { totale: 50, quote: { Alice: 15, Bruno: 15 } },
   },
   {
     nome: '14. Giorni separati senza spese separate: quei pasti non costano',
@@ -368,6 +396,13 @@ const close = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.051 : tol
       .every((x) => (x.buyer || '').trim().length > 0);
     const sommaNetti = persone.reduce((a, q) => a + q.netto, 0);
     const senzaPasti = /nessun pasto registrato/i.test(quoteBox);
+    // Un buco DICHIARATO non e' un'eccezione all'invariante: e' l'invariante
+    // scritto per intero. Se dei soldi anticipati non entrano nella quota di
+    // nessuno (logistica senza adulti nei giorni comuni, per esempio), la
+    // somma dei netti DEVE valere esattamente quel buco. L'app lo dice a
+    // schermo, e qui si controlla che la cifra detta sia quella giusta.
+    const mBuco = saldiBox.replace(/\s+/g, ' ').match(/(-?[\d.,]+)\s*€ non sono nelle quote di nessuno/i);
+    const buco = mBuco ? num(mBuco[1]) : 0;
     if (senzaPasti) {
       // niente pasti: la ripartizione non e' possibile, deve avvisare
       ok();
@@ -375,8 +410,9 @@ const close = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.051 : tol
       const avvisa = /senza acquirente/i.test(saldiBox);
       if (!avvisa) bad('spese senza acquirente ma nessun avviso mostrato'); else ok();
     } else {
-      if (!close(sommaNetti, 0, 0.2)) bad(`somma dei saldi netti = ${sommaNetti.toFixed(2)} (con tutte le spese attribuite deve essere 0)`);
-      else ok();
+      if (!close(sommaNetti, buco, 0.2)) {
+        bad(`somma dei saldi netti = ${sommaNetti.toFixed(2)} (con tutte le spese attribuite deve valere il buco dichiarato: ${buco.toFixed(2)})`);
+      } else ok();
       // i trasferimenti devono coprire esattamente i crediti
       const crediti = persone.filter((q) => q.netto > 0.005).reduce((a, q) => a + q.netto, 0);
       const somTrasf = trasferimenti.reduce((a, t) => a + t.val, 0);
@@ -386,7 +422,9 @@ const close = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.051 : tol
       if (crediti > 0.005 && debiti > 0.005 && !close(somTrasf, Math.min(crediti, debiti), 0.051)) {
         bad(`trasferimenti ${somTrasf.toFixed(2)} != minimo tra crediti ${crediti.toFixed(2)} e debiti ${debiti.toFixed(2)}`);
       } else ok();
-      if (crediti - debiti > 0.5) bad(`scarto non riconciliato troppo grande: ${(crediti - debiti).toFixed(2)} €`); else ok();
+      if (crediti - debiti - buco > 0.5) {
+        bad(`scarto non riconciliato troppo grande: ${(crediti - debiti - buco).toFixed(2)} € (buco dichiarato ${buco.toFixed(2)})`);
+      } else ok();
 
       // Ogni debitore deve pagare ESATTAMENTE il suo debito, spalmato sulle
       // righe di "chi paga chi"; ogni creditore non deve incassare piu' del

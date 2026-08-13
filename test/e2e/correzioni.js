@@ -38,14 +38,15 @@ const H = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
   console.log('campi precompilati:', JSON.stringify(precompilato));
 
   // ---- Conto separato: c'e' solo dove ha senso, e dove non c'e' si spiega ----
-  // La logistica si divide a testa fra i presenti, non per giorno: il conto
-  // separato lavora sui pasti. Prima la riga sparivano senza dire niente, e chi
-  // la cercava non poteva sapere perche'.
+  // La logistica si divide a testa fra chi ha pasti nei giorni a conto comune,
+  // non per giorno: il conto separato non si applica. Prima la riga spariva
+  // senza dire niente, e chi la cercava non poteva sapere perche'.
   const testoModale = await modale.innerText();
   console.log('sulla logistica il selettore del conto non c\'e\':',
     !/Conto comune/.test(testoModale) ? 'OK' : 'PROBLEMA');
   console.log('ma l\'app spiega perche\':',
-    /si divide a testa/.test(testoModale) && /non si applica/.test(testoModale) ? 'OK' : 'PROBLEMA');
+    /si divide a testa/.test(testoModale) && /giorni a conto comune/.test(testoModale)
+      && /non si applica/.test(testoModale) ? 'OK' : 'PROBLEMA');
   await modale.locator('input[type=number]').fill('125');
   await modale.locator('select').first().selectOption({ label: 'Alice' });
   await modale.locator('button', { hasText: /^Salva$/ }).click();
