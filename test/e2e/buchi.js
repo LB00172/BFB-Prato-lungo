@@ -133,8 +133,18 @@ const quote = (p) => p.evaluate(() => {
   await p.waitForTimeout(500);
   const dopo = await p.locator('main').innerText();
   ok('spuntando il giorno separato il buco si chiude', !/non sono nelle quote di nessuno/i.test(dopo));
+  // Le quote stanno in due casse: la somma delle due deve fare 80 a testa, e
+  // la scheda "Totale a persona" deve dirlo senza farlo fare a mente.
   const q2 = await quote(p);
-  ok(`e ora le quote comprendono tutto (${q2.join(' | ')})`, q2.some((r) => /80[.,]00 €/.test(r)));
+  const sommaQuote = (nome) => q2
+    .filter((r) => r.startsWith(nome))
+    .reduce((a2, r) => {
+      const mm = r.match(/(\d+[.,]\d{2}) €/);
+      return a2 + (mm ? parseFloat(mm[1].replace(',', '.')) : 0);
+    }, 0);
+  const totPersona = await p.locator('h3:has-text("Totale a persona")').locator('..').innerText();
+  ok(`e ora le quote comprendono tutto (${q2.join(' | ')})`,
+    sommaQuote('Anna') === 80 && sommaQuote('Bruno') === 80 && /80\.00 €/.test(totPersona));
 
   ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
   await fine(browser);

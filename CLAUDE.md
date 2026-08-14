@@ -15,7 +15,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 50 prove, circa 8 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 56 prove, circa 9 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -50,7 +50,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
-| `test/` | 5 prove unitarie + 45 end‑to‑end |
+| `test/` | 6 prove unitarie + 50 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -115,6 +115,13 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   altri: il conto separato è una cassa a parte, non uno sconto sui pasti. Se
   di adulti nei giorni comuni non ce n'è nessuno, quei soldi finiscono in
   `nonRipartito` e si dichiarano — non si spalmano su chi non c'era.
+- **Le casse sono due e chiudono ognuna per conto suo.** La cassa separata è
+  solo il cibo dei giorni spuntati; tutto il resto — cibo comune, logistica,
+  attrezzatura — è cassa comune. Ognuna ha le sue quote, il suo arrotondamento
+  a 0,10 € e il suo "chi paga chi": chi ha anticipato sul conto separato viene
+  rimborsato da chi in quei giorni ha mangiato, non da chi è arrivato dopo.
+  Sommare le due prima di pareggiare farebbe sparire proprio la separazione,
+  perché un creditore di qua e debitore di là si annullerebbe da solo.
 - **Importazione, ripristino di emergenza e chiusura del campo stanno in
   modalità tecnica.** Non modificano i dati: li RIMPIAZZANO, e si portano
   via i blocchi insieme al resto. Erano le ultime tre strade aperte a

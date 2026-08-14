@@ -1,4 +1,4 @@
-const CACHE_NAME = 'brigata-bandone-a6cd737e56';
+const CACHE_NAME = 'brigata-bandone-5aa27ff5bc';
 
 // Tutte le risorse sono locali (stesso dominio): il precache è affidabile.
 // Nessuna dipendenza da CDN esterni -> l'app funziona offline al 100%.

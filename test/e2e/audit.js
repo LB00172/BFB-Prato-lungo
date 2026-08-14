@@ -325,20 +325,31 @@ const close = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.051 : tol
     }
 
     // --- QUOTE ---
+    // Due casse, due schede: "Quote cassa comune" e "Quote cassa separata".
+    // Le quote attese degli scenari sono il TOTALE a persona, quindi qui si
+    // sommano le righe delle due schede. Se una persona compare due volte e
+    // solo una viene letta, il conto non torna e la prova lo dice.
     await p.locator('main button:has-text("Quote")').click();
     await p.waitForTimeout(200);
-    const quoteBox = await p.locator('h3:has-text("Quanto deve ciascuno")').locator('..').innerText();
+    const carteQuote = p.locator('h3:has-text("Quote cassa")').locator('..');
+    const testiQuote = await carteQuote.allInnerTexts();
+    const quoteBox = testiQuote.join('\n');
     if (/NaN|Infinity/.test(quoteBox)) bad('valori non numerici nelle quote'); else ok();
+    const righeQuote = await carteQuote.locator('ul li').allInnerTexts();
+    const importo = (r) => (/Gratis/i.test(r) ? 0 : num((r.match(/(-?\d+[.,]\d{2})\s*€/) || [])[1]));
+    const nomeDiRiga = (r) => r.split('\n')[0].trim();
     let sommaQuote = 0;
     for (const [nome, atteso] of Object.entries(sc.attese.quote || {})) {
-      const riga = await p.locator(`li:has-text("${nome}")`).first().innerText();
-      // prendo l'importo attaccato al simbolo dell'euro: il resto della riga
-      // ora contiene anche il dettaglio dei pasti comuni/separati
-      const val = /Gratis/i.test(riga) ? 0 : num((riga.match(/(-?\d+[.,]\d{2})\s*€/) || [])[1]);
+      const sue = righeQuote.filter((r) => nomeDiRiga(r) === nome);
+      if (sue.length === 0) { bad(`quota di ${nome} non trovata in nessuna cassa`); continue; }
+      const val = sue.reduce((a, r) => a + importo(r), 0);
       sommaQuote += val;
-      if (!close(val, atteso)) bad(`quota di ${nome}: ${val} invece di ${atteso}  [${riga.replace(/\s+/g, ' ')}]`); else ok();
+      if (!close(val, atteso)) bad(`quota di ${nome}: ${val} invece di ${atteso}  [${sue.join(' | ').replace(/\s+/g, ' ')}]`); else ok();
     }
-    const raccolto = num((quoteBox.split(/TOTALE RACCOLTO|Totale raccolto/)[1] || '0'));
+    // "Totale raccolto" di ogni cassa, sommati: le schede devono dichiarare
+    // insieme quello che dichiara la somma delle righe.
+    const raccolto = testiQuote.reduce(
+      (a, t) => a + num((t.split(/TOTALE RACCOLTO|Totale raccolto/)[1] || '0')), 0);
     if (sc.attese.raccolto !== undefined && !close(raccolto, sc.attese.raccolto)) {
       bad(`totale raccolto ${raccolto} invece di ${sc.attese.raccolto}`);
     } else ok();
@@ -348,30 +359,52 @@ const close = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.051 : tol
     } else ok();
 
     // --- SALDI ---
+    // Anche qui due schede. Ognuna deve chiudere per conto suo: e' il senso
+    // di "cassa separata". Poi si sommano, e le somme devono ridare i saldi
+    // complessivi attesi dagli scenari.
     await p.locator('main button:has-text("Saldi")').click();
     await p.waitForTimeout(200);
-    const saldiBox = await p.locator('h3:has-text("Saldo finale")').locator('..').innerText();
+    const carteSaldi = p.locator('h3:has-text("Saldi cassa"), h3:has-text("Saldo finale")').locator('..');
+    const nCasse = await carteSaldi.count();
+    if (nCasse === 0) { bad('nessuna scheda dei saldi a schermo'); continue; }
+    const casse = [];
+    for (let i = 0; i < nCasse; i++) {
+      const carta = carteSaldi.nth(i);
+      const testo = await carta.innerText();
+      const liTesti = await carta.locator('ul li').allInnerTexts();
+      const persone = [];
+      for (const t of liTesti) {
+        const r = t.replace(/\s+/g, ' ').trim();
+        if (r.includes('→')) continue;                    // riga di trasferimento
+        if (!r.includes('ha anticipato')) continue;       // riga degli anticipi
+        const nome = r.split(' ha anticipato')[0].trim();
+        if (!nome) continue;
+        let netto = 0;
+        if (/riceve/.test(r)) netto = num(r.split('riceve')[1]);
+        else if (/dà/.test(r)) netto = -num(r.split('dà')[1]);
+        const anticipato = num(r.split('ha anticipato')[1]);
+        const dovuto = num(r.split('deve')[1]);
+        persone.push({ nome, netto, anticipato, dovuto });
+      }
+      const trasferimenti = liTesti
+        .filter((t) => t.includes('→'))
+        .map((t) => ({ testo: t.replace(/\s+/g, ' ').trim(), val: num(t.split('€')[0].split('→').pop()) }));
+      const mBuco = testo.replace(/\s+/g, ' ').match(/(-?[\d.,]+)\s*€ non sono nelle quote di nessuno/i);
+      casse.push({ testo, persone, trasferimenti, buco: mBuco ? num(mBuco[1]) : 0 });
+    }
+    const saldiBox = casse.map((c) => c.testo).join('\n');
     if (/NaN|Infinity/.test(saldiBox)) bad('valori non numerici nei saldi'); else ok();
 
-    // Leggo le righe dei saldi una per una (non a fette di testo)
-    const card = p.locator('h3:has-text("Saldo finale")').locator('..');
-    const liTesti = await card.locator('ul li').allInnerTexts();
-    const persone = [];
-    for (const t of liTesti) {
-      const r = t.replace(/\s+/g, ' ').trim();
-      if (r.includes('→')) continue;                    // riga di trasferimento
-      const nome = r.split(' ha anticipato')[0].trim();
-      if (!nome) continue;
-      let netto = 0;
-      if (/riceve/.test(r)) netto = num(r.split('riceve')[1]);
-      else if (/dà/.test(r)) netto = -num(r.split('dà')[1]);
-      const anticipato = num(r.split('ha anticipato')[1]);
-      const dovuto = num(r.split('deve')[1]);
-      persone.push({ nome, netto, anticipato, dovuto });
-    }
-    const trasferimenti = liTesti
-      .filter((t) => t.includes('→'))
-      .map((t) => ({ testo: t.replace(/\s+/g, ' ').trim(), val: num(t.split('€')[0].split('→').pop()) }));
+    // Vista d'insieme: le due casse sommate, persona per persona.
+    const perNome = {};
+    casse.forEach((c) => c.persone.forEach((q) => {
+      if (!perNome[q.nome]) perNome[q.nome] = { nome: q.nome, netto: 0, anticipato: 0, dovuto: 0 };
+      perNome[q.nome].netto += q.netto;
+      perNome[q.nome].anticipato += q.anticipato;
+      perNome[q.nome].dovuto += q.dovuto;
+    }));
+    const persone = Object.values(perNome);
+    const trasferimenti = casse.flatMap((c) => c.trasferimenti);
 
     // saldo netto = anticipato - dovuto, per ogni persona
     for (const q of persone) {
@@ -401,8 +434,7 @@ const close = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.051 : tol
     // nessuno (logistica senza adulti nei giorni comuni, per esempio), la
     // somma dei netti DEVE valere esattamente quel buco. L'app lo dice a
     // schermo, e qui si controlla che la cifra detta sia quella giusta.
-    const mBuco = saldiBox.replace(/\s+/g, ' ').match(/(-?[\d.,]+)\s*€ non sono nelle quote di nessuno/i);
-    const buco = mBuco ? num(mBuco[1]) : 0;
+    const buco = casse.reduce((a, c) => a + c.buco, 0);
     if (senzaPasti) {
       // niente pasti: la ripartizione non e' possibile, deve avvisare
       ok();
@@ -413,53 +445,65 @@ const close = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.051 : tol
       if (!close(sommaNetti, buco, 0.2)) {
         bad(`somma dei saldi netti = ${sommaNetti.toFixed(2)} (con tutte le spese attribuite deve valere il buco dichiarato: ${buco.toFixed(2)})`);
       } else ok();
-      // i trasferimenti devono coprire esattamente i crediti
-      const crediti = persone.filter((q) => q.netto > 0.005).reduce((a, q) => a + q.netto, 0);
-      const somTrasf = trasferimenti.reduce((a, t) => a + t.val, 0);
-      // I trasferimenti coprono i crediti a meno dello scarto di arrotondamento
-      // (chi ha anticipato assorbe fino a 0,49 €: regola voluta, niente monetine)
-      const debiti = persone.filter((q) => q.netto < -0.005).reduce((a, q) => a - q.netto, 0);
-      if (crediti > 0.005 && debiti > 0.005 && !close(somTrasf, Math.min(crediti, debiti), 0.051)) {
-        bad(`trasferimenti ${somTrasf.toFixed(2)} != minimo tra crediti ${crediti.toFixed(2)} e debiti ${debiti.toFixed(2)}`);
-      } else ok();
-      if (crediti - debiti - buco > 0.5) {
-        bad(`scarto non riconciliato troppo grande: ${(crediti - debiti - buco).toFixed(2)} € (buco dichiarato ${buco.toFixed(2)})`);
-      } else ok();
-
-      // Ogni debitore deve pagare ESATTAMENTE il suo debito, spalmato sulle
-      // righe di "chi paga chi"; ogni creditore non deve incassare piu' del
-      // suo credito. Senza questo controllo un errore nell'abbinamento
-      // passerebbe inosservato: i totali tornerebbero comunque.
-      const uscite = {}, entrate = {};
-      trasferimenti.forEach((t) => {
-        const m = t.testo.match(/^(.*?)\s*→\s*(.*?)\s+[\d.,]+/);
-        if (!m) return;
-        uscite[m[1].trim()] = (uscite[m[1].trim()] || 0) + t.val;
-        entrate[m[2].trim()] = (entrate[m[2].trim()] || 0) + t.val;
-      });
-      // Lo scarto di arrotondamento (voluto: quote a 0,10 €) non ha un
-      // destinatario, quindi UN lato paga/incassa meno del saldo indicato,
-      // esattamente di quello scarto. Tutto il resto deve combaciare.
-      const scarto = Math.abs(crediti - debiti);
-      let mancoTot = 0;
-      for (const q of persone) {
-        if (q.netto < -0.005) {
-          const paga = uscite[q.nome] || 0;
-          const manca = -q.netto - paga;
-          mancoTot += manca;
-          if (manca < -0.011 || manca > scarto + 0.011) bad(`${q.nome} deve dare ${(-q.netto).toFixed(2)} ma nelle righe paga ${paga.toFixed(2)}`);
-          else ok();
-        }
-        if (q.netto > 0.005) {
-          const riceve = entrate[q.nome] || 0;
-          const manca = q.netto - riceve;
-          mancoTot += manca;
-          if (manca < -0.011 || manca > scarto + 0.011) bad(`${q.nome} deve ricevere ${q.netto.toFixed(2)} ma nelle righe incassa ${riceve.toFixed(2)}`);
-          else ok();
-        }
+      // Ogni cassa chiude da sola: la somma dei suoi netti vale il suo buco.
+      // E' la differenza fra due casse vere e una sola cassa con due elenchi.
+      for (const c of casse) {
+        const somma = c.persone.reduce((a, q) => a + q.netto, 0);
+        if (!close(somma, c.buco, 0.2)) {
+          bad(`una cassa non chiude: somma dei netti ${somma.toFixed(2)} contro un buco dichiarato di ${c.buco.toFixed(2)}`);
+        } else ok();
       }
-      if (!close(mancoTot, scarto, 0.021)) bad(`i passaggi lasciano scoperti ${mancoTot.toFixed(2)} € invece dello scarto di arrotondamento ${scarto.toFixed(2)} €`);
-      else ok();
+      // Il pareggio si verifica CASSA PER CASSA. Sommando le due, chi e'
+      // creditore di qua e debitore di la' si annullerebbe da solo e un
+      // abbinamento sbagliato passerebbe inosservato.
+      for (const c of casse) {
+        const crediti = c.persone.filter((q) => q.netto > 0.005).reduce((a, q) => a + q.netto, 0);
+        const debiti = c.persone.filter((q) => q.netto < -0.005).reduce((a, q) => a - q.netto, 0);
+        const somTrasf = c.trasferimenti.reduce((a, t) => a + t.val, 0);
+        // I trasferimenti coprono i crediti a meno dello scarto di arrotondamento
+        // (chi ha anticipato assorbe fino a 0,49 €: regola voluta, niente monetine)
+        if (crediti > 0.005 && debiti > 0.005 && !close(somTrasf, Math.min(crediti, debiti), 0.051)) {
+          bad(`trasferimenti ${somTrasf.toFixed(2)} != minimo tra crediti ${crediti.toFixed(2)} e debiti ${debiti.toFixed(2)}`);
+        } else ok();
+        if (crediti - debiti - c.buco > 0.5) {
+          bad(`scarto non riconciliato troppo grande: ${(crediti - debiti - c.buco).toFixed(2)} € (buco dichiarato ${c.buco.toFixed(2)})`);
+        } else ok();
+
+        // Ogni debitore deve pagare ESATTAMENTE il suo debito, spalmato sulle
+        // righe di "chi paga chi"; ogni creditore non deve incassare piu' del
+        // suo credito. Senza questo controllo un errore nell'abbinamento
+        // passerebbe inosservato: i totali tornerebbero comunque.
+        const uscite = {}, entrate = {};
+        c.trasferimenti.forEach((t) => {
+          const mm = t.testo.match(/^(.*?)\s*→\s*(.*?)\s+[\d.,]+/);
+          if (!mm) return;
+          uscite[mm[1].trim()] = (uscite[mm[1].trim()] || 0) + t.val;
+          entrate[mm[2].trim()] = (entrate[mm[2].trim()] || 0) + t.val;
+        });
+        // Lo scarto di arrotondamento (voluto: quote a 0,10 €) non ha un
+        // destinatario, quindi UN lato paga/incassa meno del saldo indicato,
+        // esattamente di quello scarto. Tutto il resto deve combaciare.
+        const scarto = Math.abs(crediti - debiti);
+        let mancoTot = 0;
+        for (const q of c.persone) {
+          if (q.netto < -0.005) {
+            const paga = uscite[q.nome] || 0;
+            const manca = -q.netto - paga;
+            mancoTot += manca;
+            if (manca < -0.011 || manca > scarto + 0.011) bad(`${q.nome} deve dare ${(-q.netto).toFixed(2)} ma nelle righe paga ${paga.toFixed(2)}`);
+            else ok();
+          }
+          if (q.netto > 0.005) {
+            const riceve = entrate[q.nome] || 0;
+            const manca = q.netto - riceve;
+            mancoTot += manca;
+            if (manca < -0.011 || manca > scarto + 0.011) bad(`${q.nome} deve ricevere ${q.netto.toFixed(2)} ma nelle righe incassa ${riceve.toFixed(2)}`);
+            else ok();
+          }
+        }
+        if (!close(mancoTot, scarto, 0.021)) bad(`i passaggi lasciano scoperti ${mancoTot.toFixed(2)} € invece dello scarto di arrotondamento ${scarto.toFixed(2)} €`);
+        else ok();
+      }
     }
 
     if (errs.length) bad('errori JS: ' + errs.join(' | ')); else ok();

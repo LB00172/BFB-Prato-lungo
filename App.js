@@ -4168,19 +4168,27 @@ function App() {
     if (t.foodDrinksSep > 0 || t.sepDaysCount > 0) {
       lines.push(`   di cui conto separato: ${money(t.foodDrinksSep)} € su ${t.sepDaysCount} ${t.sepDaysCount === 1 ? 'giorno' : 'giorni'} (${money(t.costPerMealSep)} € a pasto)`);
     }
-    if (t.transfers.length > 0) {
-      lines.push('');
-      lines.push('👉 Chi paga chi:');
-      t.transfers.forEach(x => lines.push(`• ${x.from} → ${x.to}: ${money(x.amount)} €`));
-    }
-    if (t.settlement.length > 0) {
-      lines.push('');
-      lines.push('📋 Dettaglio a testa:');
-      t.settlement.forEach(s => {
-        const stato = s.net > 0.005 ? `riceve ${money(s.net)} €` : s.net < -0.005 ? `deve dare ${money(-s.net)} €` : 'in pari';
-        lines.push(`• ${s.name}: ${stato} (anticipato ${money(s.paid)} €, quota ${money(s.owed)} €)`);
-      });
-    }
+    // Due casse, due elenchi. Un elenco solo farebbe sembrare che chi ha
+    // anticipato sul conto separato debba essere rimborsato da tutti.
+    const sepAttiva = t.sepDaysCount > 0 || t.foodDrinksSep > 0.005;
+    const blocco = (c, titolo) => {
+      if (c.transfers.length === 0 && c.settlement.length === 0) return;
+      if (c.transfers.length > 0) {
+        lines.push('');
+        lines.push(`👉 Chi paga chi${titolo ? ` — ${titolo}` : ''}:`);
+        c.transfers.forEach(x => lines.push(`• ${x.from} → ${x.to}: ${money(x.amount)} €`));
+      }
+      if (c.settlement.length > 0) {
+        lines.push('');
+        lines.push(`📋 Dettaglio a testa${titolo ? ` — ${titolo}` : ''}:`);
+        c.settlement.forEach(s => {
+          const stato = s.net > 0.005 ? `riceve ${money(s.net)} €` : s.net < -0.005 ? `deve dare ${money(-s.net)} €` : 'in pari';
+          lines.push(`• ${s.name}: ${stato} (anticipato ${money(s.paid)} €, quota ${money(s.owed)} €)`);
+        });
+      }
+    };
+    blocco(t.casse.comune, sepAttiva ? 'cassa comune' : '');
+    if (sepAttiva) blocco(t.casse.separata, 'cassa separata');
     if (t.freeDaysCount > 0) {
       lines.push(`   🎁 ${t.freeDaysCount} ${t.freeDaysCount === 1 ? 'giorno gratis' : 'giorni gratis'}: ${t.mealsFree} pasti fuori dai conti`);
     }
@@ -4730,6 +4738,11 @@ function App() {
       // per lui non è costato niente, ed è il senso di "gratis per tutti".
       const present = attendingCommon.has(m.id);
       const logShare = (present ? logisticsPerAdult : 0) + (present && equipDivisorSet.has(m.id) ? equipPerAdult : 0);
+      // La quota si tiene divisa fra le due casse fin da qui: la cassa
+      // separata è il cibo dei giorni spuntati e basta, tutto il resto —
+      // cibo comune, logistica, attrezzatura — sta nella cassa comune.
+      const owedSep = m.isChild ? 0 : rec.sep * costPerMealSep;
+      const owedComune = m.isChild ? 0 : rec.common * costPerMeal + logShare;
       return {
         ...m,
         mealCount,
@@ -4738,7 +4751,9 @@ function App() {
         mealsGratis: rec.gratis,
         foodShare,
         logShare,
-        owed: foodShare + logShare
+        owedComune,
+        owedSep,
+        owed: owedComune + owedSep
       };
     });
 
@@ -4746,10 +4761,32 @@ function App() {
     // Ogni quota viene arrotondata a multipli di 0,10 € (niente monetine da
     // 1/2/5 cent). Lo scarto rispetto al totale reale viene riconciliato SOLO
     // se è >= 0,50 €: sotto quella soglia si lascia com'è (non vale la pena).
+    // Si arrotonda una cassa alla volta: se si arrotondasse una volta sola sul
+    // totale, i saldi di ciascuna cassa non tornerebbero a zero da soli e
+    // "cassa separata" resterebbe solo un'etichetta.
     const round10 = cents => Math.round(cents / 10) * 10;
-    breakdown.forEach(b => {
-      b.payCents = b.isChild ? 0 : round10(Math.round(b.owed * 100));
-    });
+    const arrotondaCassa = (dovuto, cents, targetCents) => {
+      breakdown.forEach(b => {
+        b[cents] = b.isChild ? 0 : round10(Math.round(b[dovuto] * 100));
+      });
+      let residuo = targetCents - breakdown.reduce((s, b) => s + b[cents], 0);
+      if (Math.abs(residuo) >= 50) {
+        // Redistribuisce lo scarto a passi di 10 cent, partendo da chi deve di più.
+        const ordine = breakdown.filter(b => !b.isChild && b[dovuto] > 0).sort((a, b) => b[dovuto] - a[dovuto]);
+        const passo = residuo > 0 ? 10 : -10;
+        let guardia = 0;
+        let idx = 0;
+        while (Math.abs(residuo) >= 10 && ordine.length > 0 && guardia < 100000) {
+          const t = ordine[idx % ordine.length];
+          if (!(passo < 0 && t[cents] + passo < 0)) {
+            t[cents] += passo;
+            residuo -= passo;
+          }
+          idx++;
+          guardia++;
+        }
+      }
+    };
 
     // --- Soldi senza divisore: un BUCO, non un arrotondamento ---
     // Se una cassa ha dei soldi dentro ma nessun pasto (o nessun presente) su
@@ -4760,159 +4797,211 @@ function App() {
     // spuntati diventavano cinquanta euro a testa per due persone che non
     // c'entravano niente, sotto l'etichetta "arrotondamento".
     // Ora si tengono fuori dal conto e si dicono.
+    // Ogni buco sa a quale cassa appartiene: serve a riconciliare le due casse
+    // separatamente e a mostrare l'avviso dove il buco è, non su entrambe.
     const buchi = [];
     if (foodDrinksCommon > 0.005 && adultMealsCommon === 0) {
       buchi.push({
+        cassa: 'comune',
         quanto: foodDrinksCommon,
         perche: 'cibo e bevande del conto comune, ma nessun pasto segnato nei giorni comuni'
       });
     }
     if (foodDrinksSep > 0.005 && adultMealsSep === 0) {
       buchi.push({
+        cassa: 'separata',
         quanto: foodDrinksSep,
         perche: sepDays.length === 0 ? 'spese segnate "conto separato", ma in Calendario nessun giorno è spuntato come separato' : sepDays.every(d => freeSet.has(d)) ? 'spese segnate "conto separato", ma i giorni separati sono anche segnati come gratis: non c\'è più nessun pasto su cui dividerle' : 'spese segnate "conto separato", ma nei giorni separati non c\'è nessuna presenza'
       });
     }
     if (logisticsPurchases > 0.005 && attendingCommon.size === 0) {
       buchi.push({
+        cassa: 'comune',
         quanto: logisticsPurchases,
         perche: 'spese di logistica, ma nessun adulto ha presenze nei giorni comuni'
       });
     }
     if (equipBought > 0.005 && equipDivisorSet.size === 0) {
       buchi.push({
+        cassa: 'comune',
         quanto: equipBought,
         perche: 'attrezzatura acquistata, ma nessun adulto ha presenze nei giorni comuni'
       });
     }
-    const nonRipartito = buchi.reduce((s, b) => s + b.quanto, 0);
+    const somma = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
+    const nonRipartito = somma(buchi, b => b.quanto);
+    const nonRipartitoComune = somma(buchi.filter(b => b.cassa === 'comune'), b => b.quanto);
+    const nonRipartitoSep = somma(buchi.filter(b => b.cassa === 'separata'), b => b.quanto);
 
     // Si riconcilia solo ciò che è davvero ripartibile: così lo scarto torna a
     // essere quello che deve essere — pochi centesimi di arrotondamento.
-    const targetCents = Math.round((overallTotal - nonRipartito) * 100);
-    let residual = targetCents - breakdown.reduce((s, b) => s + b.payCents, 0);
-    if (Math.abs(residual) >= 50) {
-      // Redistribuisce lo scarto a passi di 10 cent, partendo da chi deve di più.
-      const order = breakdown.filter(b => !b.isChild && b.owed > 0).sort((a, b) => b.owed - a.owed);
-      const step = residual > 0 ? 10 : -10;
-      let guard = 0;
-      let idx = 0;
-      while (Math.abs(residual) >= 10 && order.length > 0 && guard < 100000) {
-        const t = order[idx % order.length];
-        if (!(step < 0 && t.payCents + step < 0)) {
-          t.payCents += step;
-          residual -= step;
-        }
-        idx++;
-        guard++;
-      }
-    }
+    const totaleComune = foodDrinksCommon + totalAccessory;
+    arrotondaCassa('owedComune', 'payComuneCents', Math.round((totaleComune - nonRipartitoComune) * 100));
+    arrotondaCassa('owedSep', 'paySepCents', Math.round((foodDrinksSep - nonRipartitoSep) * 100));
     breakdown.forEach(b => {
+      b.payCents = b.payComuneCents + b.paySepCents;
+      b.payComune = b.payComuneCents / 100;
+      b.paySep = b.paySepCents / 100;
       b.pay = b.payCents / 100;
     });
-    const collected = breakdown.reduce((s, b) => s + b.payCents, 0) / 100;
+    const collectedComune = somma(breakdown, b => b.payComuneCents) / 100;
+    const collectedSep = somma(breakdown, b => b.paySepCents) / 100;
+    const collected = collectedComune + collectedSep;
     // Lo scarto ora è solo arrotondamento: il buco viaggia da solo, con il suo
     // nome, invece di nascondersi qui dentro.
+    const roundingDiffComune = collectedComune - (totaleComune - nonRipartitoComune);
+    const roundingDiffSep = collectedSep - (foodDrinksSep - nonRipartitoSep);
     const roundingDiff = collected - (overallTotal - nonRipartito);
 
-    // Anticipi per acquirente: quanto ha speso ciascuno (per i rimborsi).
-    const buyerMap = {};
-    purchases.forEach(p => {
-      const key = p.buyer && p.buyer.trim() ? p.buyer.trim() : '—';
-      buyerMap[key] = (buyerMap[key] || 0) + posNum(p.price);
-    });
-    const byBuyer = Object.keys(buyerMap).map(name => ({
-      name,
-      total: buyerMap[name]
-    })).sort((a, b) => b.total - a.total);
-
-    // --- Saldo netto per persona (stile Splitwise): anticipato - dovuto ---
+    // --- Saldi di UNA cassa: chi ha anticipato, chi deve, chi paga chi ---
+    // Scritto una volta e chiamato due volte. Ogni cassa deve chiudersi da
+    // sola: chi ha anticipato sul conto separato viene rimborsato da chi in
+    // quei giorni ha mangiato, non da chi è arrivato dopo.
     const norm = s => (s || '').trim().toLowerCase();
-    const paidByName = {}; // nome normalizzato -> { display, paid }
-    purchases.forEach(p => {
-      const raw = p.buyer && p.buyer.trim() ? p.buyer.trim() : '—';
-      const key = norm(raw) || '—';
-      if (!paidByName[key]) paidByName[key] = {
-        display: raw,
-        paid: 0
+    const faiSaldi = (anticipi, campoPay, nomeCassa) => {
+      const paidByName = {}; // nome normalizzato -> { display, paid }
+      anticipi.forEach(a => {
+        const price = posNum(a.price);
+        if (price <= 0) return;
+        const raw = a.buyer && a.buyer.trim() ? a.buyer.trim() : '—';
+        const key = norm(raw) || '—';
+        if (!paidByName[key]) paidByName[key] = {
+          display: raw,
+          paid: 0
+        };
+        paidByName[key].paid += price;
+      });
+      const owedByName = {}; // nome membro normalizzato -> { display, owed }
+      breakdown.forEach(b => {
+        const key = norm(b.name);
+        if (!owedByName[key]) owedByName[key] = {
+          display: b.name,
+          owed: 0
+        };
+        owedByName[key].owed += b[campoPay]; // già arrotondato; bambini = 0
+      });
+      const unattributed = paidByName['—'] ? paidByName['—'].paid : 0;
+      // Spese intestate a un nome che non è fra i membri: succede se un membro
+      // viene rinominato o eliminato dopo l'acquisto. Non è un errore di calcolo
+      // (i saldi restano a somma zero) ma va mostrato, perché quella persona
+      // compare nei rimborsi pur non essendo del campo.
+      const unknownBuyers = Object.keys(paidByName).filter(k => k !== '—' && !owedByName[k]).map(k => ({
+        name: paidByName[k].display,
+        paid: paidByName[k].paid
+      }));
+      const allKeys = new Set([...Object.keys(paidByName), ...Object.keys(owedByName)]);
+      allKeys.delete('—');
+      const settlement = [];
+      allKeys.forEach(k => {
+        const paid = paidByName[k] ? paidByName[k].paid : 0;
+        const owed = owedByName[k] ? owedByName[k].owed : 0;
+        if (paid === 0 && owed === 0) return;
+        const display = owedByName[k] && owedByName[k].display || paidByName[k] && paidByName[k].display || k;
+        settlement.push({
+          name: display,
+          paid,
+          owed,
+          net: paid - owed
+        });
+      });
+      settlement.sort((a, b) => b.net - a.net); // prima chi deve ricevere
+
+      // Transazioni di pareggio: chi paga chi, col minor numero di giri.
+      // Greedy sui centesimi: il debitore più grosso paga il creditore più grosso.
+      const creditors = settlement.filter(s => s.net > 0.005).map(s => ({
+        name: s.name,
+        cents: Math.round(s.net * 100)
+      }));
+      const debtors = settlement.filter(s => s.net < -0.005).map(s => ({
+        name: s.name,
+        cents: Math.round(-s.net * 100)
+      }));
+      const transfers = [];
+      let ci = 0,
+        di = 0;
+      while (ci < creditors.length && di < debtors.length) {
+        const amt = Math.min(creditors[ci].cents, debtors[di].cents);
+        if (amt > 0) transfers.push({
+          from: debtors[di].name,
+          to: creditors[ci].name,
+          amount: amt / 100,
+          cassa: nomeCassa
+        });
+        creditors[ci].cents -= amt;
+        debtors[di].cents -= amt;
+        if (creditors[ci].cents === 0) ci++;
+        if (debtors[di].cents === 0) di++;
+      }
+      // Anticipi per acquirente di questa cassa (utile per i rimborsi).
+      const byBuyer = Object.keys(paidByName).map(k => ({
+        name: paidByName[k].display,
+        total: paidByName[k].paid
+      })).sort((a, b) => b.total - a.total);
+      return {
+        settlement,
+        transfers,
+        byBuyer,
+        unattributed,
+        unknownBuyers
       };
-      paidByName[key].paid += posNum(p.price);
-    });
+    };
+
+    // La cassa separata è solo il cibo dei giorni spuntati. Tutto il resto —
+    // cibo comune, logistica, attrezzatura comprata — è cassa comune.
+    const cassaSep = faiSaldi(purchases.filter(isSepPurchase), 'paySep', 'separata');
+    const cassaComune = faiSaldi([...purchases.filter(p => !isSepPurchase(p)),
     // Attrezzatura acquistata: se ha un acquirente viene accreditata a lui
     // (verrà rimborsato); altrimenti è spesa comune ("non attribuita"). In
     // entrambi i casi la somma dei saldi resta zero.
-    equipment.forEach(e => {
-      if (!e.bought) return;
-      const price = posNum(e.price);
-      if (price <= 0) return;
-      const raw = e.buyer && e.buyer.trim() ? e.buyer.trim() : '—';
-      const key = norm(raw) || '—';
-      if (!paidByName[key]) paidByName[key] = {
-        display: raw,
-        paid: 0
-      };
-      paidByName[key].paid += price;
-    });
-    const owedByName = {}; // nome membro normalizzato -> { display, owed }
-    breakdown.forEach(b => {
-      const key = norm(b.name);
-      if (!owedByName[key]) owedByName[key] = {
-        display: b.name,
+    ...equipment.filter(e => e.bought).map(e => ({
+      buyer: e.buyer,
+      price: e.price
+    }))], 'payComune', 'comune');
+    const casse = {
+      comune: cassaComune,
+      separata: cassaSep
+    };
+
+    // Viste d'insieme: servono al resoconto da mandare nel gruppo, alla
+    // chiusura del campo e alle prove. Non sostituiscono le due casse: le
+    // riassumono.
+    const transfers = [...cassaComune.transfers, ...cassaSep.transfers];
+    const unattributed = cassaComune.unattributed + cassaSep.unattributed;
+    const perNome = {};
+    [cassaComune, cassaSep].forEach(c => c.settlement.forEach(s => {
+      const k = norm(s.name);
+      if (!perNome[k]) perNome[k] = {
+        name: s.name,
+        paid: 0,
         owed: 0
       };
-      owedByName[key].owed += b.pay; // già arrotondato; bambini = 0
-    });
-    const unattributed = paidByName['—'] ? paidByName['—'].paid : 0;
-    // Spese intestate a un nome che non è fra i membri: succede se un membro
-    // viene rinominato o eliminato dopo l'acquisto. Non è un errore di calcolo
-    // (i saldi restano a somma zero) ma va mostrato, perché quella persona
-    // compare nei rimborsi pur non essendo del campo.
-    const unknownBuyers = Object.keys(paidByName).filter(k => k !== '—' && !owedByName[k]).map(k => ({
-      name: paidByName[k].display,
-      paid: paidByName[k].paid
+      perNome[k].paid += s.paid;
+      perNome[k].owed += s.owed;
     }));
-    const allKeys = new Set([...Object.keys(paidByName), ...Object.keys(owedByName)]);
-    allKeys.delete('—');
-    const settlement = [];
-    allKeys.forEach(k => {
-      const paid = paidByName[k] ? paidByName[k].paid : 0;
-      const owed = owedByName[k] ? owedByName[k].owed : 0;
-      if (paid === 0 && owed === 0) return;
-      const display = owedByName[k] && owedByName[k].display || paidByName[k] && paidByName[k].display || k;
-      settlement.push({
-        name: display,
-        paid,
-        owed,
-        net: paid - owed
+    const settlement = Object.keys(perNome).map(k => ({
+      ...perNome[k],
+      net: perNome[k].paid - perNome[k].owed
+    })).sort((a, b) => b.net - a.net);
+    const sconosciuti = {};
+    [cassaComune, cassaSep].forEach(c => c.unknownBuyers.forEach(u => {
+      const k = norm(u.name);
+      if (!sconosciuti[k]) sconosciuti[k] = {
+        name: u.name,
+        paid: 0
+      };
+      sconosciuti[k].paid += u.paid;
+    }));
+    const unknownBuyers = Object.keys(sconosciuti).map(k => sconosciuti[k]);
+    const byBuyer = (() => {
+      const m2 = {};
+      [...cassaComune.byBuyer, ...cassaSep.byBuyer].forEach(b => {
+        m2[b.name] = (m2[b.name] || 0) + b.total;
       });
-    });
-    settlement.sort((a, b) => b.net - a.net); // prima chi deve ricevere
-
-    // Transazioni di pareggio: chi paga chi, col minor numero di giri.
-    // Greedy sui centesimi: il debitore più grosso paga il creditore più grosso.
-    const creditors = settlement.filter(s => s.net > 0.005).map(s => ({
-      name: s.name,
-      cents: Math.round(s.net * 100)
-    }));
-    const debtors = settlement.filter(s => s.net < -0.005).map(s => ({
-      name: s.name,
-      cents: Math.round(-s.net * 100)
-    }));
-    const transfers = [];
-    let ci = 0,
-      di = 0;
-    while (ci < creditors.length && di < debtors.length) {
-      const amt = Math.min(creditors[ci].cents, debtors[di].cents);
-      if (amt > 0) transfers.push({
-        from: debtors[di].name,
-        to: creditors[ci].name,
-        amount: amt / 100
-      });
-      creditors[ci].cents -= amt;
-      debtors[di].cents -= amt;
-      if (creditors[ci].cents === 0) ci++;
-      if (debtors[di].cents === 0) di++;
-    }
+      return Object.keys(m2).map(name => ({
+        name,
+        total: m2[name]
+      })).sort((a, b) => b.total - a.total);
+    })();
     return {
       totalFood,
       totalDrinks,
@@ -4943,6 +5032,14 @@ function App() {
       roundingDiff,
       nonRipartito,
       buchi,
+      totaleComune,
+      collectedComune,
+      collectedSep,
+      roundingDiffComune,
+      roundingDiffSep,
+      nonRipartitoComune,
+      nonRipartitoSep,
+      casse,
       byBuyer,
       settlement,
       unattributed,
@@ -4955,6 +5052,201 @@ function App() {
   // dal testo a schermo. La prova "oracolo" li confronta con un calcolo
   // indipendente e con scenari fatti a mano.
   if (typeof window !== 'undefined') window.__totali = totals;
+
+  // La cassa separata esiste solo se c'è qualcosa dentro: senza giorni
+  // spuntati l'app resta com'era, con una cassa sola.
+  const cassaSepAttiva = totals.sepDaysCount > 0 || totals.foodDrinksSep > 0.005;
+
+  // Chiave del rimborso segnato come saldato. La cassa separata ha il suo
+  // prefisso: senza, due passaggi identici nelle due casse (stesse persone,
+  // stessa cifra) si spegnerebbero a vicenda con un tocco solo.
+  const chiaveRimborso = t => `${t.cassa === 'separata' ? 'sep:' : ''}${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
+
+  // Scheda delle quote di UNA cassa. Scritta una volta e usata due volte: se
+  // le due casse si mostrassero con codice diverso, prima o poi direbbero le
+  // stesse cose in due modi diversi.
+  const schedaQuote = c => /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+  }, c.titolo), c.sottotitolo && /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug mb-2"
+  }, c.sottotitolo), c.avviso && /*#__PURE__*/React.createElement("div", {
+    className: "mb-3 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-[#5C4A3C] leading-snug"
+  }, c.avviso)), c.elenco.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-400 italic"
+  }, c.vuoto || 'Aggiungi membri e segna le presenze per vedere la ripartizione.') : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("ul", {
+    className: "divide-y divide-[#8F9E8B]/20"
+  }, c.elenco.map(b => /*#__PURE__*/React.createElement("li", {
+    key: b.id,
+    className: "flex items-center justify-between py-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-sm font-bold text-[#2D392C]"
+  }, b.name), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-gray-500"
+  }, c.pastiDi(b), " ", c.pastiDi(b) === 1 ? 'pasto' : 'pasti', b.mealsGratis > 0 ? ` · ${b.mealsGratis} gratis` : '', b.isChild ? ' · bambino' : '')), /*#__PURE__*/React.createElement("span", {
+    className: `font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-[#2D392C]'}`
+  }, b.isChild ? 'Gratis' : `${money(c.quotaDi(b))} €`)))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between items-center pt-2 mt-1 border-t border-[#8F9E8B]/30"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] uppercase font-bold text-gray-500"
+  }, "Totale raccolto"), /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic font-bold text-[#2D392C]"
+  }, money(c.raccolto), " \u20AC")), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic mt-2"
+  }, "Quote arrotondate a 0,10 \u20AC (niente monetine da 1/2/5 cent).", Math.abs(c.scarto) >= 0.005 ? ` Scarto rispetto al ripartibile: ${c.scarto > 0 ? '+' : ''}${money(c.scarto)} € (sotto 0,50 €, non riconciliato).` : ' Nessuno scarto.')), c.nonRipartito > 0.005 && /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mt-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-[#5C4A3C] leading-snug"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, money(c.nonRipartito), " \u20AC non sono nelle quote di nessuno."), ' ', "Questa cassa vale ", money(c.totale), " \u20AC, ma se ne raccolgono ", money(c.raccolto), " \u20AC: chi ha anticipato quei soldi non li riavrebbe indietro."), /*#__PURE__*/React.createElement("ul", {
+    className: "mt-1.5 space-y-1"
+  }, c.buchi.map(b => /*#__PURE__*/React.createElement("li", {
+    key: b.perche,
+    className: "text-[10px] text-[#5C4A3C] leading-snug"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, money(b.quanto), " \u20AC"), " \u2014 ", b.perche, "."))), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-500 italic mt-1.5 leading-snug"
+  }, "Si sistema segnando le presenze mancanti, spuntando i giorni del conto separato in Calendario, oppure rimettendo quelle spese sul conto comune (la matita nel Taccuino).")));
+
+  // Scheda dei saldi di UNA cassa: chi ha anticipato, chi deve, chi paga chi.
+  // Le tre cose stanno insieme perché insieme si leggono: separarle
+  // costringerebbe a saltare avanti e indietro per capire un rimborso.
+  const schedaSaldi = c => {
+    const s = c.cassa;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 mb-3"
+    }, c.titolo), c.sottotitolo && /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-[#8F9E8B] leading-snug mb-3"
+    }, c.sottotitolo), s.byBuyer.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "mb-3 pb-3 border-b border-[#8F9E8B]/30"
+    }, /*#__PURE__*/React.createElement("h4", {
+      className: "font-rustic text-sm text-[#8F9E8B] mb-1"
+    }, "Anticipi per acquirente"), /*#__PURE__*/React.createElement("ul", {
+      className: "divide-y divide-[#8F9E8B]/20"
+    }, s.byBuyer.map(b => /*#__PURE__*/React.createElement("li", {
+      key: b.name,
+      className: "flex items-center justify-between py-1.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-xs font-bold ${b.name === '—' ? 'text-gray-400 italic' : ''}`
+    }, b.name === '—' ? 'Non indicato' : b.name), /*#__PURE__*/React.createElement("span", {
+      className: "font-rustic font-bold text-sm"
+    }, money(b.total), " \u20AC"))))), s.settlement.length === 0 ? /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-gray-400 italic"
+    }, c.vuoto || 'Registra acquisti (con acquirente) e presenze per vedere chi deve dare o ricevere.') : /*#__PURE__*/React.createElement("ul", {
+      className: "divide-y divide-[#8F9E8B]/20"
+    }, s.settlement.map(x => {
+      const credito = x.net > 0.005;
+      const debito = x.net < -0.005;
+      return /*#__PURE__*/React.createElement("li", {
+        key: x.name,
+        className: "flex items-center justify-between py-2 gap-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex flex-col min-w-0"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-sm font-bold truncate"
+      }, x.name), /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] text-[#8F9E8B]"
+      }, "ha anticipato ", money(x.paid), " \u20AC \xB7 deve ", money(x.owed), " \u20AC")), /*#__PURE__*/React.createElement("span", {
+        className: `font-rustic font-bold text-sm shrink-0 text-right ${credito ? 'text-[#8FBF8F]' : debito ? 'text-[#D97706]' : 'text-gray-400'}`
+      }, credito ? `riceve ${money(x.net)} €` : debito ? `dà ${money(-x.net)} €` : 'in pari'));
+    })), s.transfers.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "mt-3 pt-3 border-t border-[#8F9E8B]/30"
+    }, /*#__PURE__*/React.createElement("h4", {
+      className: "font-rustic text-sm text-[#8F9E8B] mb-1"
+    }, "Chi paga chi"), /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-gray-400 mb-2"
+    }, "Tocca una riga quando il rimborso \xE8 stato fatto: resta barrata. Tocca di nuovo per annullare."), /*#__PURE__*/React.createElement("ul", {
+      className: "space-y-1.5"
+    }, s.transfers.map((t, i) => {
+      const key = chiaveRimborso(t);
+      const paid = settled.includes(key);
+      // Dati di pagamento di chi deve ricevere (scheda Membri, tasto "i").
+      const dest = members.find(m => m.name === t.to);
+      const mostraDati = !paid && dest && (dest.paypal || dest.iban);
+      return /*#__PURE__*/React.createElement("li", {
+        key: key + i,
+        onClick: () => toggleSettled(key),
+        className: `cursor-pointer select-none bg-[#1F271E] px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-[#8F9E8B]/20'}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `text-xs ${paid ? 'line-through text-gray-400' : ''}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "font-bold"
+      }, t.from), /*#__PURE__*/React.createElement("span", {
+        className: "text-[#8F9E8B]"
+      }, " \u2192 "), /*#__PURE__*/React.createElement("span", {
+        className: "font-bold"
+      }, t.to)), /*#__PURE__*/React.createElement("span", {
+        className: "flex items-center gap-1.5"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-[#D97706]'}`
+      }, money(t.amount), " \u20AC"), paid && /*#__PURE__*/React.createElement("span", {
+        className: "text-[#8FBF8F] text-sm font-bold"
+      }, "\u2713"))), mostraDati && /*#__PURE__*/React.createElement("div", {
+        className: "mt-1.5 pt-1.5 border-t border-[#8F9E8B]/20 space-y-1"
+      }, [['PayPal', dest.paypal], ['IBAN', dest.iban]].filter(r => r[1]).map(r => /*#__PURE__*/React.createElement("div", {
+        key: r[0],
+        className: "flex items-start gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] uppercase font-bold text-[#8F9E8B] w-11 shrink-0 pt-0.5"
+      }, r[0]), /*#__PURE__*/React.createElement("span", {
+        className: `text-[10px] text-[#F0F4F1] break-all leading-snug ${r[0] === 'IBAN' ? 'font-mono' : ''}`
+      }, r[1]), /*#__PURE__*/React.createElement("button", {
+        onClick: e => {
+          e.stopPropagation();
+          copiaDato(`${r[0]} di ${t.to}`, r[1]);
+        },
+        className: "ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#2D392C] border border-[#8F9E8B]/30 text-[#8F9E8B] hover:text-white"
+      }, copied === `${r[0]} di ${t.to}` ? 'copiato ✓' : 'copia')))));
+    })), (() => {
+      const senza = [...new Set(s.transfers.map(t => t.to))].filter(n => {
+        const d = members.find(m => m.name === n);
+        return d && !d.paypal && !d.iban;
+      });
+      if (senza.length === 0) return null;
+      return /*#__PURE__*/React.createElement("p", {
+        className: "text-[9px] text-gray-400 italic mt-2"
+      }, senza.join(', '), " ", senza.length === 1 ? 'deve' : 'devono', " ricevere ma non ", senza.length === 1 ? 'ha' : 'hanno', " inserito PayPal o IBAN: si aggiungono in ", /*#__PURE__*/React.createElement("span", {
+        className: "font-bold"
+      }, "Membri"), ", con la \"i\" accanto al nome.");
+    })()), s.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-[#D97706] italic mt-2"
+    }, "Attenzione: ", money(s.unattributed), " \u20AC di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti."), c.nonRipartito > 0.005 && /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-[11px] text-[#5C4A3C] leading-snug"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, "I rimborsi non quadrano: ", money(c.nonRipartito), " \u20AC non sono nelle quote di nessuno."), ' ', "Chi ha anticipato quella cifra resterebbe scoperto. Guarda l'avviso in", /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, " Quote"), ": dice quali spese sono e come sistemarle.")), s.unknownBuyers.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-[11px] text-[#5C4A3C] leading-snug"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, "Da controllare:"), " ci sono spese intestate a", ' ', s.unknownBuyers.map((u, i) => /*#__PURE__*/React.createElement("span", {
+      key: u.name
+    }, i > 0 ? ', ' : '', /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, u.name), " (", money(u.paid), " \u20AC)")), ", che non ", s.unknownBuyers.length === 1 ? 'è' : 'sono', " fra i membri. Compare comunque nei rimborsi: se \xE8 un nome scritto male o una persona eliminata, correggi l'acquirente nella", /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, " Lista della Spesa"), ".")), Math.abs(c.scarto) >= 0.005 && s.transfers.length > 0 && /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-gray-400 italic mt-2"
+    }, "Arrotondamento: i passaggi qui sopra valgono in tutto ", money(Math.abs(c.scarto)), " \u20AC in meno dei saldi indicati. \xC8 lo scarto delle quote arrotondate a 0,10 \u20AC (cos\xEC non servono monetine da 1, 2 o 5 cent)."), /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-gray-400 italic mt-1"
+    }, "\"Riceve\" = ha anticipato pi\xF9 di quanto deve; \"d\xE0\" = deve versare la differenza."));
+  };
 
   // ---------- Backup (Export / Import) ----------
   const downloadJson = (filename, payload) => {
@@ -5081,7 +5373,7 @@ function App() {
     const name = (closeName || '').trim() || 'Campo';
     const range = campRange();
     const t = totals;
-    const unpaid = t.transfers.filter(x => !settled.includes(`${x.from}→${x.to}@${Math.round(x.amount * 100)}`));
+    const unpaid = t.transfers.filter(x => !settled.includes(chiaveRimborso(x)));
     const warn = unpaid.length > 0 ? `\n\nATTENZIONE: ci sono ancora ${unpaid.length} rimborsi non segnati come saldati.` : '';
     const conferma = `Chiudere "${name}"?\n\n` + `Verrà archiviato tutto (spese ${money(t.overallTotal)} €, ${members.length} membri) ` + 'e scaricato un file di salvataggio con foto degli scontrini comprese.\n\n' + 'Poi membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e ' + 'scontrini verranno AZZERATI su tutti i dispositivi, per ripartire con il ' + 'prossimo evento.\n\n' + 'Le foto della Galleria non si perdono: passano nell\'Archivio insieme ai conti.' + warn;
     if (!window.confirm(conferma)) return;
@@ -6296,37 +6588,58 @@ function App() {
     className: "text-[9px] text-gray-400 italic"
   }, "I pasti dei bambini sono gratis: il loro costo \xE8 ripartito sugli adulti."))), spesaSection === 'quote' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
-  }, "Quanto deve ciascuno"), totals.overallTotal > 0 && totals.adultMealsTotal === 0 && /*#__PURE__*/React.createElement("div", {
-    className: "mb-3 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
+  }, totals.overallTotal > 0 && totals.adultMealsTotal === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
   }, "Attenzione:"), " ci sono spese per ", money(totals.overallTotal), " \u20AC ma nessun pasto registrato. Le quote restano a zero finch\xE9 non segni le presenze nella scheda ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Presenze"), ".")), totals.foodDrinksSep > 0 && totals.adultMealsSep === 0 && /*#__PURE__*/React.createElement("div", {
-    className: "mb-3 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
+  }, "Presenze"), ".")), totals.freeDaysCount > 0 && /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-[#2D392C] leading-snug bg-[#2D392C]/8 border border-[#2D392C]/25 rounded p-2.5"
+  }, "\uD83C\uDF81 ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Attenzione:"), " ci sono ", money(totals.foodDrinksSep), " \u20AC sul conto separato ma nessun pasto nei giorni spuntati. Spunta i giorni in", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, " Calendario"), " e segna le", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, " Presenze"), ", altrimenti quella spesa non entra nelle quote.")), totals.foodDrinksCommon > 0 && totals.adultMealsCommon === 0 && totals.adultMealsTotal > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "mb-3 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Attenzione:"), " tutti i giorni con presenze sono spuntati come conto separato, ma ci sono ", money(totals.foodDrinksCommon), " \u20AC di cibo e bevande sul conto comune. Sposta quelle spese sul conto separato, oppure togli la spunta ai giorni che sono di tutti.")), totals.breakdown.length === 0 ? /*#__PURE__*/React.createElement("p", {
-    className: "text-sm text-gray-400 italic"
-  }, "Aggiungi membri e segna le presenze per vedere la ripartizione.") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("ul", {
+  }, totals.freeDaysCount, " ", totals.freeDaysCount === 1 ? 'giorno gratis' : 'giorni gratis'), ":", ' ', totals.mealsFree, " ", totals.mealsFree === 1 ? 'pasto è escluso' : 'pasti sono esclusi', " dai conti. Restano segnati nel calendario per la cucina, ma nessuno li paga \u2014 per questo i pasti contati qui sotto possono essere meno di quelli che vedi in Presenze."), schedaQuote({
+    titolo: 'Quote cassa comune',
+    sottotitolo: cassaSepAttiva ? 'Cibo e bevande dei giorni di tutti, più logistica e attrezzatura.' : null,
+    elenco: totals.breakdown,
+    quotaDi: b => b.payComune,
+    pastiDi: b => b.mealsCommon,
+    raccolto: totals.collectedComune,
+    totale: totals.totaleComune,
+    scarto: totals.roundingDiffComune,
+    buchi: totals.buchi.filter(x => x.cassa === 'comune'),
+    nonRipartito: totals.nonRipartitoComune,
+    avviso: totals.foodDrinksCommon > 0 && totals.adultMealsCommon === 0 && totals.adultMealsTotal > 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, "Attenzione:"), " tutti i giorni con presenze sono spuntati come conto separato, ma ci sono ", money(totals.foodDrinksCommon), " \u20AC di cibo e bevande sul conto comune. Sposta quelle spese sul conto separato, oppure togli la spunta ai giorni che sono di tutti.") : null
+  }), cassaSepAttiva && schedaQuote({
+    titolo: 'Quote cassa separata',
+    sottotitolo: `Solo cibo e bevande dei ${totals.sepDaysCount} ${totals.sepDaysCount === 1 ? 'giorno spuntato' : 'giorni spuntati'} in Calendario, a carico di chi c'era.`,
+    elenco: totals.breakdown.filter(b => b.mealsSep > 0 || b.paySep > 0.005),
+    quotaDi: b => b.paySep,
+    pastiDi: b => b.mealsSep,
+    raccolto: totals.collectedSep,
+    totale: totals.foodDrinksSep,
+    scarto: totals.roundingDiffSep,
+    buchi: totals.buchi.filter(x => x.cassa === 'separata'),
+    nonRipartito: totals.nonRipartitoSep,
+    vuoto: 'Nessuno ha pasti nei giorni spuntati: qui non c\'è niente da dividere.',
+    avviso: totals.foodDrinksSep > 0 && totals.adultMealsSep === 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, "Attenzione:"), " ci sono ", money(totals.foodDrinksSep), " \u20AC sul conto separato ma nessun pasto nei giorni spuntati. Spunta i giorni in", /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, " Calendario"), " e segna le", /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, " Presenze"), ", altrimenti quella spesa non entra nelle quote.") : null
+  }), cassaSepAttiva && totals.breakdown.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+  }, "Totale a persona"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-gray-500 leading-snug mb-2"
+  }, "Le due casse sommate: \xE8 la cifra che ciascuno tira fuori in tutto."), /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-[#8F9E8B]/20"
   }, totals.breakdown.map(b => /*#__PURE__*/React.createElement("li", {
     key: b.id,
@@ -6337,7 +6650,7 @@ function App() {
     className: "text-sm font-bold text-[#2D392C]"
   }, b.name), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-gray-500"
-  }, b.mealCount, " ", b.mealCount === 1 ? 'pasto' : 'pasti', b.mealsSep > 0 ? ` (${b.mealsCommon} comuni + ${b.mealsSep} separati)` : '', b.mealsGratis > 0 ? ` · ${b.mealsGratis} gratis` : '', b.isChild ? ' · bambino' : '')), /*#__PURE__*/React.createElement("span", {
+  }, b.isChild ? 'bambino' : `${money(b.payComune)} € comune + ${money(b.paySep)} € separata`)), /*#__PURE__*/React.createElement("span", {
     className: `font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-[#2D392C]'}`
   }, b.isChild ? 'Gratis' : `${money(b.pay)} €`)))), /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center pt-2 mt-1 border-t border-[#8F9E8B]/30"
@@ -6345,157 +6658,22 @@ function App() {
     className: "text-[11px] uppercase font-bold text-gray-500"
   }, "Totale raccolto"), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C]"
-  }, money(totals.collected), " \u20AC")), totals.nonRipartito > 0.005 && /*#__PURE__*/React.createElement("div", {
-    className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mt-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, money(totals.nonRipartito), " \u20AC non sono nelle quote di nessuno."), ' ', "Il totale dice ", money(totals.overallTotal), " \u20AC, ma se ne raccolgono ", money(totals.collected), " \u20AC: chi ha anticipato quei soldi non li riavrebbe indietro."), /*#__PURE__*/React.createElement("ul", {
-    className: "mt-1.5 space-y-1"
-  }, totals.buchi.map(b => /*#__PURE__*/React.createElement("li", {
-    key: b.perche,
-    className: "text-[10px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, money(b.quanto), " \u20AC"), " \u2014 ", b.perche, "."))), /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-500 italic mt-1.5 leading-snug"
-  }, "Si sistema segnando le presenze mancanti, spuntando i giorni del conto separato in Calendario, oppure rimettendo quelle spese sul conto comune (la matita nel Taccuino).")), totals.freeDaysCount > 0 && /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-[#2D392C] leading-snug mt-2 bg-[#2D392C]/8 border border-[#2D392C]/25 rounded p-2.5"
-  }, "\uD83C\uDF81 ", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, totals.freeDaysCount, " ", totals.freeDaysCount === 1 ? 'giorno gratis' : 'giorni gratis'), ":", ' ', totals.mealsFree, " ", totals.mealsFree === 1 ? 'pasto è escluso' : 'pasti sono esclusi', " dai conti. Restano segnati nel calendario per la cucina, ma nessuno li paga \u2014 per questo i pasti contati qui sotto possono essere meno di quelli che vedi in Presenze."), /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-400 italic mt-2"
-  }, "Quote arrotondate a 0,10 \u20AC (niente monetine da 1/2/5 cent).", Math.abs(totals.roundingDiff) >= 0.005 ? ` Scarto rispetto al ripartibile: ${totals.roundingDiff > 0 ? '+' : ''}${money(totals.roundingDiff)} € (sotto 0,50 €, non riconciliato).` : ' Nessuno scarto.')))), spesaSection === 'saldi' && /*#__PURE__*/React.createElement("div", {
+  }, money(totals.collected), " \u20AC")))), spesaSection === 'saldi' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
-  }, "Anticipi per acquirente"), totals.byBuyer.length === 0 ? /*#__PURE__*/React.createElement("p", {
-    className: "text-sm text-gray-400 italic"
-  }, "Registra gli acquisti nel Taccuino per vedere chi ha anticipato quanto.") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("ul", {
-    className: "divide-y divide-[#8F9E8B]/20"
-  }, totals.byBuyer.map(b => /*#__PURE__*/React.createElement("li", {
-    key: b.name,
-    className: "flex items-center justify-between py-2"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: `text-sm font-bold ${b.name === '—' ? 'text-gray-400 italic' : 'text-[#2D392C]'}`
-  }, b.name === '—' ? 'Non indicato' : b.name), /*#__PURE__*/React.createElement("span", {
-    className: "font-rustic font-bold text-[#2D392C]"
-  }, money(b.total), " \u20AC")))), /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-400 italic mt-2"
-  }, "Quanto ha anticipato ciascuno (utile per i rimborsi)."))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 mb-3"
-  }, "Saldo finale"), totals.settlement.length === 0 ? /*#__PURE__*/React.createElement("p", {
-    className: "text-sm text-gray-400 italic"
-  }, "Registra acquisti (con acquirente) e presenze per vedere chi deve dare o ricevere.") : /*#__PURE__*/React.createElement("ul", {
-    className: "divide-y divide-[#8F9E8B]/20"
-  }, totals.settlement.map(s => {
-    const credito = s.net > 0.005;
-    const debito = s.net < -0.005;
-    return /*#__PURE__*/React.createElement("li", {
-      key: s.name,
-      className: "flex items-center justify-between py-2 gap-2"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex flex-col min-w-0"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-sm font-bold truncate"
-    }, s.name), /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] text-[#8F9E8B]"
-    }, "ha anticipato ", money(s.paid), " \u20AC \xB7 deve ", money(s.owed), " \u20AC")), /*#__PURE__*/React.createElement("span", {
-      className: `font-rustic font-bold text-sm shrink-0 text-right ${credito ? 'text-[#8FBF8F]' : debito ? 'text-[#D97706]' : 'text-gray-400'}`
-    }, credito ? `riceve ${money(s.net)} €` : debito ? `dà ${money(-s.net)} €` : 'in pari'));
-  })), totals.transfers.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "mt-3 pt-3 border-t border-[#8F9E8B]/30"
-  }, /*#__PURE__*/React.createElement("h4", {
-    className: "font-rustic text-sm text-[#8F9E8B] mb-1"
-  }, "Chi paga chi"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-400 mb-2"
-  }, "Tocca una riga quando il rimborso \xE8 stato fatto: resta barrata. Tocca di nuovo per annullare."), /*#__PURE__*/React.createElement("ul", {
-    className: "space-y-1.5"
-  }, totals.transfers.map((t, i) => {
-    const key = `${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
-    const paid = settled.includes(key);
-    // Dati di pagamento di chi deve ricevere (scheda Membri, tasto "i").
-    const dest = members.find(m => m.name === t.to);
-    const mostraDati = !paid && dest && (dest.paypal || dest.iban);
-    return /*#__PURE__*/React.createElement("li", {
-      key: key + i,
-      onClick: () => toggleSettled(key),
-      className: `cursor-pointer select-none bg-[#1F271E] px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-[#8F9E8B]/20'}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `text-xs ${paid ? 'line-through text-gray-400' : ''}`
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "font-bold"
-    }, t.from), /*#__PURE__*/React.createElement("span", {
-      className: "text-[#8F9E8B]"
-    }, " \u2192 "), /*#__PURE__*/React.createElement("span", {
-      className: "font-bold"
-    }, t.to)), /*#__PURE__*/React.createElement("span", {
-      className: "flex items-center gap-1.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-[#D97706]'}`
-    }, money(t.amount), " \u20AC"), paid && /*#__PURE__*/React.createElement("span", {
-      className: "text-[#8FBF8F] text-sm font-bold"
-    }, "\u2713"))), mostraDati && /*#__PURE__*/React.createElement("div", {
-      className: "mt-1.5 pt-1.5 border-t border-[#8F9E8B]/20 space-y-1"
-    }, [['PayPal', dest.paypal], ['IBAN', dest.iban]].filter(r => r[1]).map(r => /*#__PURE__*/React.createElement("div", {
-      key: r[0],
-      className: "flex items-start gap-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] uppercase font-bold text-[#8F9E8B] w-11 shrink-0 pt-0.5"
-    }, r[0]), /*#__PURE__*/React.createElement("span", {
-      className: `text-[10px] text-[#F0F4F1] break-all leading-snug ${r[0] === 'IBAN' ? 'font-mono' : ''}`
-    }, r[1]), /*#__PURE__*/React.createElement("button", {
-      onClick: e => {
-        e.stopPropagation();
-        copiaDato(`${r[0]} di ${t.to}`, r[1]);
-      },
-      className: "ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#2D392C] border border-[#8F9E8B]/30 text-[#8F9E8B] hover:text-white"
-    }, copied === `${r[0]} di ${t.to}` ? 'copiato ✓' : 'copia')))));
-  })), (() => {
-    const senza = [...new Set(totals.transfers.map(t => t.to))].filter(n => {
-      const d = members.find(m => m.name === n);
-      return d && !d.paypal && !d.iban;
-    });
-    if (senza.length === 0) return null;
-    return /*#__PURE__*/React.createElement("p", {
-      className: "text-[9px] text-gray-400 italic mt-2"
-    }, senza.join(', '), " ", senza.length === 1 ? 'deve' : 'devono', " ricevere ma non ", senza.length === 1 ? 'ha' : 'hanno', " inserito PayPal o IBAN: si aggiungono in ", /*#__PURE__*/React.createElement("span", {
-      className: "font-bold"
-    }, "Membri"), ", con la \"i\" accanto al nome.");
-  })()), totals.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-[#D97706] italic mt-2"
-  }, "Attenzione: ", money(totals.unattributed), " \u20AC di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti."), totals.nonRipartito > 0.005 && /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "I rimborsi non quadrano: ", money(totals.nonRipartito), " \u20AC non sono nelle quote di nessuno."), ' ', "Chi ha anticipato quella cifra resterebbe scoperto. Guarda l'avviso in", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, " Quote"), ": dice quali spese sono e come sistemarle.")), totals.unknownBuyers.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Da controllare:"), " ci sono spese intestate a", ' ', totals.unknownBuyers.map((u, i) => /*#__PURE__*/React.createElement("span", {
-    key: u.name
-  }, i > 0 ? ', ' : '', /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, u.name), " (", money(u.paid), " \u20AC)")), ", che non ", totals.unknownBuyers.length === 1 ? 'è' : 'sono', " fra i membri. Compare comunque nei rimborsi: se \xE8 un nome scritto male o una persona eliminata, correggi l'acquirente nella", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, " Lista della Spesa"), ".")), Math.abs(totals.roundingDiff) >= 0.005 && totals.transfers.length > 0 && /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-400 italic mt-2"
-  }, "Arrotondamento: i passaggi qui sopra valgono in tutto ", money(Math.abs(totals.roundingDiff)), " \u20AC in meno dei saldi indicati. \xC8 lo scarto delle quote arrotondate a 0,10 \u20AC (cos\xEC non servono monetine da 1, 2 o 5 cent)."), /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-400 italic mt-1"
-  }, "\"Riceve\" = ha anticipato pi\xF9 di quanto deve; \"d\xE0\" = deve versare la differenza.")), /*#__PURE__*/React.createElement("button", {
+  }, schedaSaldi({
+    cassa: totals.casse.comune,
+    titolo: cassaSepAttiva ? 'Saldi cassa comune' : 'Saldo finale',
+    sottotitolo: cassaSepAttiva ? 'Cibo e bevande dei giorni di tutti, logistica e attrezzatura.' : null,
+    scarto: totals.roundingDiffComune,
+    nonRipartito: totals.nonRipartitoComune
+  }), cassaSepAttiva && schedaSaldi({
+    cassa: totals.casse.separata,
+    titolo: 'Saldi cassa separata',
+    sottotitolo: `Solo cibo e bevande dei ${totals.sepDaysCount} ${totals.sepDaysCount === 1 ? 'giorno spuntato' : 'giorni spuntati'}: chi ha anticipato lì viene rimborsato da chi c'era.`,
+    scarto: totals.roundingDiffSep,
+    nonRipartito: totals.nonRipartitoSep,
+    vuoto: 'Nessun anticipo e nessuna quota su questa cassa.'
+  }), /*#__PURE__*/React.createElement("button", {
     onClick: shareReport,
     className: "w-full py-3 bg-[#25D366] text-white rounded font-bold uppercase text-sm tracking-wide hover:brightness-95 flex items-center justify-center gap-2"
   }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDCE4"), " Condividi resoconto"), /*#__PURE__*/React.createElement("p", {

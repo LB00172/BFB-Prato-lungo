@@ -28,7 +28,7 @@ const { chromium } = require('playwright-core');
 
   await go('Spese Totali');
   await p.locator('main button:has-text("Quote")').click(); await p.waitForTimeout(150);
-  const quote = (await p.locator('h3:has-text("Quanto deve ciascuno")').locator('..').innerText()).replace(/\s+/g,' ');
+  const quote = (await p.locator('h3:has-text("Quote cassa comune")').locator('..').innerText()).replace(/\s+/g,' ');
   await p.locator('main button:has-text("Saldi")').click(); await p.waitForTimeout(150);
   const saldo = (await p.locator('h3:has-text("Saldo finale")').locator('..').innerText()).replace(/\s+/g,' ');
 

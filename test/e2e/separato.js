@@ -94,17 +94,32 @@ const L = { lunch: true, dinner: false };
   await menu('Spese Totali');
   await p.getByRole('button', { name: 'Quote', exact: true }).first().click();
   await p.waitForTimeout(300);
-  const righe = await p.locator('h3:has-text("Quanto deve ciascuno")').locator('..').locator('ul li').allInnerTexts();
-  const quota = (nome) => {
-    const r = righe.find((x) => x.includes(nome)) || '';
-    const mm = r.match(/(\d+[.,]\d{2})\s*€/);
-    return mm ? parseFloat(mm[1].replace(',', '.')) : NaN;
-  };
+  // Le quote stanno in due schede: cassa comune e cassa separata. La quota
+  // totale di una persona e' la somma delle sue righe.
+  const carte = p.locator('h3:has-text("Quote cassa")').locator('..');
+  const testiCarte = await carte.allInnerTexts();
+  console.log('due casse a schermo:',
+    /Quote cassa comune/.test(testiCarte.join(' ')) && /Quote cassa separata/.test(testiCarte.join(' ')) ? 'OK' : 'PROBLEMA');
+  const righe = await carte.locator('ul li').allInnerTexts();
+  const quota = (nome) => righe
+    .filter((x) => x.split('\n')[0].trim() === nome)
+    .reduce((a2, r) => {
+      const mm = r.match(/(\d+[.,]\d{2})\s*€/);
+      return a2 + (mm ? parseFloat(mm[1].replace(',', '.')) : 0);
+    }, 0);
   const q = { Alice: quota('Alice'), Bruno: quota('Bruno'), Carlo: quota('Carlo') };
   console.log('quote:', JSON.stringify(q), '-> attese Alice 40, Bruno 40, Carlo 10');
   const okQuote = q.Alice === 40 && q.Bruno === 40 && q.Carlo === 10;
   console.log('ripartizione corretta:', okQuote ? 'OK' : 'PROBLEMA');
-  console.log('dettaglio pasti mostrato:', /comuni \+ 1 separati/.test(righe.join(' ')) ? 'OK' : 'PROBLEMA');
+  // Carlo non ha pasti nei giorni spuntati: nella cassa separata non deve
+  // proprio comparire, altrimenti sembrerebbe che quella spesa lo riguardi.
+  const cartaSep = await p.locator('h3:has-text("Quote cassa separata")').locator('..').innerText();
+  console.log('nella cassa separata ci sono solo Alice e Bruno:',
+    /Alice/.test(cartaSep) && /Bruno/.test(cartaSep) && !/Carlo/.test(cartaSep) ? 'OK' : 'PROBLEMA');
+  // La somma delle due casse e' anche scritta, cosi' nessuno la fa a mente.
+  const totPersona = await p.locator('h3:has-text("Totale a persona")').locator('..').innerText();
+  console.log('totale a persona mostrato:',
+    /10\.00 € comune \+ 30\.00 € separata/.test(totPersona.replace(/\s+/g, ' ')) ? 'OK' : 'PROBLEMA');
 
   // --- 4. Riquadro della quota separata nei Totali ---
   await p.getByRole('button', { name: 'Totali', exact: true }).first().click();
@@ -124,8 +139,15 @@ const L = { lunch: true, dinner: false };
   const testoQuote = await p.locator('body').innerText();
   const avvisa = /sul\s+conto separato ma nessun pasto nei giorni spuntati/i.test(testoQuote.replace(/\s+/g, ' '));
   console.log('avviso "spesa separata senza giorni":', avvisa ? 'OK' : 'PROBLEMA');
-  const raccolto = (testoQuote.match(/TOTALE RACCOLTO\s*([\d.,]+)/i) || [])[1];
-  console.log('totale raccolto:', raccolto, '-> deve restare pari al totale speso (90,00)');
+  // Tolta la spunta, i 60 € separati non hanno piu' nessuno su cui dividersi:
+  // diventano un buco DICHIARATO nella cassa separata, non spariscono dentro
+  // l'arrotondamento della cassa comune.
+  const cartaSepDopo = await p.locator('h3:has-text("Quote cassa separata")').locator('..').innerText();
+  const buco = /60\.00 € non sono nelle quote di nessuno/.test(cartaSepDopo.replace(/\s+/g, ' '));
+  console.log('i 60 € separati sono dichiarati come buco nella loro cassa:', buco ? 'OK' : 'PROBLEMA');
+  const cartaComDopo = await p.locator('h3:has-text("Quote cassa comune")').locator('..').innerText();
+  console.log('la cassa comune resta pulita:',
+    !/non sono nelle quote di nessuno/.test(cartaComDopo) ? 'OK' : 'PROBLEMA');
 
   console.log('errori:', errs.length ? errs.join(' | ') : 'nessuno');
   await b.close();
