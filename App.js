@@ -2119,6 +2119,9 @@ function App() {
 
   // Rimborsi segnati come "saldati" (solo barrati, non rimossi). Condivisi via sync.
   const [settled, setSettled] = useState(() => load('cambusa_settled', []));
+  // Vista dei rimborsi: per cassa (spiega) oppure ottimizzata (si paga). E'
+  // una scelta del singolo telefono, non del campo: non va in sincronia.
+  const [saldiOttimizzati, setSaldiOttimizzati] = useState(() => load('cambusa_saldi_ottimizzati', false));
 
   // Cache meteo (Open-Meteo, 16 giorni). Aggiornata al massimo una volta all'ora.
   const [weather, setWeather] = useState(() => load('cambusa_weather', {
@@ -2477,6 +2480,7 @@ function App() {
   useEffect(() => salvaLocale('cambusa_purchases', purchases), [purchases]);
   useEffect(() => salvaLocale('cambusa_gear', gear), [gear]);
   useEffect(() => salvaLocale('cambusa_settled', settled), [settled]);
+  useEffect(() => salvaLocale('cambusa_saldi_ottimizzati', saldiOttimizzati), [saldiOttimizzati]);
   useEffect(() => salvaLocale('cambusa_equipment', equipment), [equipment]);
   useEffect(() => salvaLocale('cambusa_tobuy', toBuy), [toBuy]);
   useEffect(() => salvaLocale('cambusa_sepdays', sepDays), [sepDays]);
@@ -4187,8 +4191,18 @@ function App() {
         });
       }
     };
-    blocco(t.casse.comune, sepAttiva ? 'cassa comune' : '');
-    if (sepAttiva) blocco(t.casse.separata, 'cassa separata');
+    // Il resoconto segue quello che si sta guardando: mandare nel gruppo un
+    // elenco diverso da quello a schermo e' il modo piu' rapido di far pagare
+    // due volte qualcuno.
+    if (sepAttiva && saldiOttimizzati) {
+      blocco({
+        transfers: t.transfersOttimizzati,
+        settlement: t.settlement
+      }, '');
+    } else {
+      blocco(t.casse.comune, sepAttiva ? 'cassa comune' : '');
+      if (sepAttiva) blocco(t.casse.separata, 'cassa separata');
+    }
     if (t.freeDaysCount > 0) {
       lines.push(`   🎁 ${t.freeDaysCount} ${t.freeDaysCount === 1 ? 'giorno gratis' : 'giorni gratis'}: ${t.mealsFree} pasti fuori dai conti`);
     }
@@ -4858,6 +4872,39 @@ function App() {
     // sola: chi ha anticipato sul conto separato viene rimborsato da chi in
     // quei giorni ha mangiato, non da chi è arrivato dopo.
     const norm = s => (s || '').trim().toLowerCase();
+
+    // Passaggi di pareggio: chi paga chi, col minor numero di giri. Si scorre
+    // l'elenco gia' ordinato per saldo e si accoppia a centesimi finche' uno
+    // dei due lati si esaurisce. E' lo stesso conto che fa Splitwise quando
+    // "semplifica i debiti": nessuno paga un centesimo in piu' o in meno, si
+    // riduce solo il numero di bonifici.
+    const pareggia = (elenco, nomeCassa) => {
+      const creditori = elenco.filter(s => s.net > 0.005).map(s => ({
+        name: s.name,
+        cents: Math.round(s.net * 100)
+      }));
+      const debitori = elenco.filter(s => s.net < -0.005).map(s => ({
+        name: s.name,
+        cents: Math.round(-s.net * 100)
+      }));
+      const passaggi = [];
+      let ci = 0,
+        di = 0;
+      while (ci < creditori.length && di < debitori.length) {
+        const amt = Math.min(creditori[ci].cents, debitori[di].cents);
+        if (amt > 0) passaggi.push({
+          from: debitori[di].name,
+          to: creditori[ci].name,
+          amount: amt / 100,
+          cassa: nomeCassa
+        });
+        creditori[ci].cents -= amt;
+        debitori[di].cents -= amt;
+        if (creditori[ci].cents === 0) ci++;
+        if (debitori[di].cents === 0) di++;
+      }
+      return passaggi;
+    };
     const faiSaldi = (anticipi, campoPay, nomeCassa) => {
       const paidByName = {}; // nome normalizzato -> { display, paid }
       anticipi.forEach(a => {
@@ -4905,33 +4952,7 @@ function App() {
         });
       });
       settlement.sort((a, b) => b.net - a.net); // prima chi deve ricevere
-
-      // Transazioni di pareggio: chi paga chi, col minor numero di giri.
-      // Greedy sui centesimi: il debitore più grosso paga il creditore più grosso.
-      const creditors = settlement.filter(s => s.net > 0.005).map(s => ({
-        name: s.name,
-        cents: Math.round(s.net * 100)
-      }));
-      const debtors = settlement.filter(s => s.net < -0.005).map(s => ({
-        name: s.name,
-        cents: Math.round(-s.net * 100)
-      }));
-      const transfers = [];
-      let ci = 0,
-        di = 0;
-      while (ci < creditors.length && di < debtors.length) {
-        const amt = Math.min(creditors[ci].cents, debtors[di].cents);
-        if (amt > 0) transfers.push({
-          from: debtors[di].name,
-          to: creditors[ci].name,
-          amount: amt / 100,
-          cassa: nomeCassa
-        });
-        creditors[ci].cents -= amt;
-        debtors[di].cents -= amt;
-        if (creditors[ci].cents === 0) ci++;
-        if (debtors[di].cents === 0) di++;
-      }
+      const transfers = pareggia(settlement, nomeCassa);
       // Anticipi per acquirente di questa cassa (utile per i rimborsi).
       const byBuyer = Object.keys(paidByName).map(k => ({
         name: paidByName[k].display,
@@ -4982,6 +5003,12 @@ function App() {
       ...perNome[k],
       net: perNome[k].paid - perNome[k].owed
     })).sort((a, b) => b.net - a.net);
+    // Gli stessi saldi pareggiati una volta sola invece che cassa per cassa:
+    // le cifre dovute non cambiano di un centesimo, cambiano solo i bonifici,
+    // che diventano meno. Chi era creditore di qua e debitore di la' qui si
+    // compensa da solo. E' la vista che serve QUANDO SI PAGA; quella per
+    // cassa resta, ed e' la vista che serve per capire PERCHE'.
+    const transfersOttimizzati = pareggia(settlement, 'tutte');
     const sconosciuti = {};
     [cassaComune, cassaSep].forEach(c => c.unknownBuyers.forEach(u => {
       const k = norm(u.name);
@@ -5044,7 +5071,8 @@ function App() {
       settlement,
       unattributed,
       unknownBuyers,
-      transfers
+      transfers,
+      transfersOttimizzati
     };
   };
   const totals = calculateTotals();
@@ -5060,7 +5088,20 @@ function App() {
   // Chiave del rimborso segnato come saldato. La cassa separata ha il suo
   // prefisso: senza, due passaggi identici nelle due casse (stesse persone,
   // stessa cifra) si spegnerebbero a vicenda con un tocco solo.
-  const chiaveRimborso = t => `${t.cassa === 'separata' ? 'sep:' : ''}${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
+  const chiaveRimborso = t => `${t.cassa === 'separata' ? 'sep:' : t.cassa === 'tutte' ? 'opt:' : ''}${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
+
+  // La vista dei passaggi ottimizzati: le due casse messe insieme. Riusa i
+  // saldi complessivi, che sono gia' la somma delle due.
+  const cassaUnica = {
+    settlement: totals.settlement,
+    transfers: totals.transfersOttimizzati,
+    byBuyer: totals.byBuyer,
+    unattributed: totals.unattributed,
+    unknownBuyers: totals.unknownBuyers
+  };
+  // Quanti bonifici si risparmiano davvero: se non se ne risparmia nessuno il
+  // tasto non serve e non si mostra.
+  const risparmio = totals.transfers.length - totals.transfersOttimizzati.length;
 
   // Scheda delle quote di UNA cassa. Scritta una volta e usata due volte: se
   // le due casse si mostrassero con codice diverso, prima o poi direbbero le
@@ -5373,7 +5414,8 @@ function App() {
     const name = (closeName || '').trim() || 'Campo';
     const range = campRange();
     const t = totals;
-    const unpaid = t.transfers.filter(x => !settled.includes(chiaveRimborso(x)));
+    const daPagare = saldiOttimizzati ? t.transfersOttimizzati : t.transfers;
+    const unpaid = daPagare.filter(x => !settled.includes(chiaveRimborso(x)));
     const warn = unpaid.length > 0 ? `\n\nATTENZIONE: ci sono ancora ${unpaid.length} rimborsi non segnati come saldati.` : '';
     const conferma = `Chiudere "${name}"?\n\n` + `Verrà archiviato tutto (spese ${money(t.overallTotal)} €, ${members.length} membri) ` + 'e scaricato un file di salvataggio con foto degli scontrini comprese.\n\n' + 'Poi membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e ' + 'scontrini verranno AZZERATI su tutti i dispositivi, per ripartire con il ' + 'prossimo evento.\n\n' + 'Le foto della Galleria non si perdono: passano nell\'Archivio insieme ai conti.' + warn;
     if (!window.confirm(conferma)) return;
@@ -6660,7 +6702,18 @@ function App() {
     className: "font-rustic font-bold text-[#2D392C]"
   }, money(totals.collected), " \u20AC")))), spesaSection === 'saldi' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
-  }, schedaSaldi({
+  }, cassaSepAttiva && (risparmio > 0 || saldiOttimizzati) && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSaldiOttimizzati(!saldiOttimizzati),
+    className: `w-full py-2.5 rounded text-xs font-bold uppercase tracking-wide border-2 ${saldiOttimizzati ? 'bg-[#2D392C] text-[#F0F4F1] border-[#2D392C]' : 'bg-white text-[#2D392C] border-[#2D392C]/50 hover:bg-[#E2EAE4]'}`
+  }, saldiOttimizzati ? '↩ Torna ai saldi per cassa' : `⚡ Ottimizza i passaggi (${totals.transfers.length} → ${totals.transfersOttimizzati.length})`), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic mt-1 leading-snug"
+  }, saldiOttimizzati ? 'Stai vedendo le due casse messe insieme. Per capire da dove viene una cifra, torna ai saldi per cassa.' : 'Unisce le due casse in un elenco solo di bonifici: nessuno paga un centesimo in più o in meno, sono solo meno passaggi.')), saldiOttimizzati ? schedaSaldi({
+    cassa: cassaUnica,
+    titolo: 'Passaggi ottimizzati',
+    sottotitolo: 'Le due casse insieme. Le cifre dovute sono le stesse: cambia solo chi gira i soldi a chi, per farne meno. Le spunte di questa vista sono separate da quelle per cassa.',
+    scarto: totals.roundingDiff,
+    nonRipartito: totals.nonRipartito
+  }) : /*#__PURE__*/React.createElement(React.Fragment, null, schedaSaldi({
     cassa: totals.casse.comune,
     titolo: cassaSepAttiva ? 'Saldi cassa comune' : 'Saldo finale',
     sottotitolo: cassaSepAttiva ? 'Cibo e bevande dei giorni di tutti, logistica e attrezzatura.' : null,
@@ -6673,7 +6726,7 @@ function App() {
     scarto: totals.roundingDiffSep,
     nonRipartito: totals.nonRipartitoSep,
     vuoto: 'Nessun anticipo e nessuna quota su questa cassa.'
-  }), /*#__PURE__*/React.createElement("button", {
+  })), /*#__PURE__*/React.createElement("button", {
     onClick: shareReport,
     className: "w-full py-3 bg-[#25D366] text-white rounded font-bold uppercase text-sm tracking-wide hover:brightness-95 flex items-center justify-center gap-2"
   }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDCE4"), " Condividi resoconto"), /*#__PURE__*/React.createElement("p", {
