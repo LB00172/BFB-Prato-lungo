@@ -161,5 +161,13 @@ Checklist, una condivisa e una privata — dove "privata" non può essere una
 spunta su una voce condivisa, perché lo stato viaggia interi su ogni telefono e
 finisce nell'export (`ROADMAP.md` §6).
 
+Due voci aggiunte dopo il campo 2026: **le voci di spesa che si possono
+spegnere** — logistica e attrezzatura per chi le gestisce fuori dall'app — dove
+la trappola è che spegnere una voce senza dichiararla la trasforma nel buco che
+l'app segnala come errore (`ROADMAP.md` §8); e il **modulo di creazione della
+stanza con gli inviti** per link, WhatsApp e mail, dove le due decisioni da
+prendere prima sono se la password sta nel link (un messaggio si inoltra) e se
+serve sapere chi ha accettato (`ROADMAP.md` §9).
+
 Prima di rimettere mano all'interfaccia, `RICOGNIZIONE-UI.md`: i colori, i 127
 bottoni e le undici misure di testo, contati. Vedi `ROADMAP.md`.

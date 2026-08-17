@@ -355,3 +355,140 @@ prodotto vero, pubblicato, con utenti reali.
 - Software gestione campi: [Scout Manager](https://www.scoutmanager.com/),
   [Capterra — Camp Management](https://www.capterra.com/camp-management-software/)
 - AGESCI (dimensione associativa): [Wikipedia](https://en.wikipedia.org/wiki/Associazione_Guide_e_Scouts_Cattolici_Italiani)
+
+---
+
+## 8. Voci di spesa che si possono spegnere
+
+**Obiettivo:** un interruttore per categoria — logistica, attrezzatura, e in
+generale qualunque tipologia — che dica **«questa voce non si divide qui: la
+gestiamo fuori dall'app»**. Serve ai gruppi che comprano il gasolio con la
+cassa dell'associazione, o l'attrezzatura una volta per tutte, e non vogliono
+vederla comparire come tassa a testa.
+
+Oggi le due voci sono obbligatorie: se ci sono acquisti di logistica, tutti
+quelli che hanno pasti nei giorni comuni ne pagano una quota. È giusto per la
+Brigata, non è giusto per tutti.
+
+### Spegnere una voce non è nasconderla
+
+È il punto in cui questa funzione può fare danno, e va deciso prima di scrivere
+il codice. Ci sono **due cose diverse** che sembrano la stessa:
+
+1. **La spesa non entra nell'app.** Il gruppo la paga fuori e non la registra.
+   Non serve nessun interruttore: basta non scriverla.
+2. **La spesa è registrata ma non si divide.** Qui l'interruttore serve — e
+   quei soldi diventano immediatamente il caso che l'app oggi tratta come
+   errore: `nonRipartito`, con l'avviso «X € non sono nelle quote di nessuno».
+
+Quindi l'interruttore deve fare **due cose insieme**: togliere la voce dai
+divisori **e** spostarla in un secchiello dichiarato — *«fuori conto: gestito
+dal gruppo»* — che non è un buco. Se facesse solo la prima, l'app urlerebbe un
+errore che non c'è; se non dichiarasse nulla, chi legge «Totale spese» crederebbe
+che il campo è costato meno di quanto è costato.
+
+Regola, la stessa di § 6 in altra forma: **si può togliere una voce dal conto,
+non si può far sparire un euro dalla vista.**
+
+### Cosa comporta, in pratica
+
+- **Configurazione della room**, non del telefono: le quote sono le stesse per
+  tutti, quindi la scelta sta in `rooms/<roomId>` e la cambia solo chi
+  amministra. Una scelta per dispositivo produrrebbe due gruppi con conti
+  diversi sullo stesso campo.
+- **Va protetta come i giorni bloccati.** Spegnere la logistica a rimborsi già
+  fatti riscrive le quote di tutti: l'interruttore deve essere chiuso quando i
+  conti sono chiusi (`bloccoConti`) e avvisare prima di cambiare, esattamente
+  come fa oggi il blocco delle presenze.
+- **Non appartiene a nessuna delle due casse.** Una voce spenta esce sia dalla
+  cassa comune sia da quella separata: è una terza colonna, non uno sconto.
+- **Generalizzare, non aggiungere due bandierine.** Oggi le tipologie sono
+  `alimentare`, `bevande`, `logistica` più l'attrezzatura. La forma giusta è una
+  mappa per categoria (`{ logistica: 'fuori', attrezzatura: 'dividi', … }`), così
+  domani una categoria nuova non richiede codice nuovo.
+- **Nel resoconto e nell'export** la riga «fuori conto» deve comparire con la
+  sua cifra e il suo perché, altrimenti il messaggio nel gruppo racconta un
+  campo più economico di quello vero.
+
+### Prove che servono, prima di dire fatto
+
+- Con una voce spenta: le quote scendono di esattamente quella cifra, la somma
+  dei saldi resta a zero, e **non** compare l'avviso del buco.
+- La cifra spenta è dichiarata a schermo e nel resoconto.
+- A conti chiusi l'interruttore non si muove.
+
+## 9. Form di creazione della stanza e inviti (link, WhatsApp, email)
+
+**Obiettivo:** chi crea il campo riempie un modulo, e da lì manda l'invito agli
+altri senza far digitare niente a nessuno. È il passo che decide se un gruppo
+poco tecnologico adotta l'app o la abbandona al primo tentativo.
+
+Dipende da § 1 (account) e § 2 (room): il modulo è l'interfaccia di quel modello
+dati, non una cosa a parte.
+
+### Il modulo
+
+Campi, tutti scritti in `rooms/<roomId>`:
+
+- **Nome del campo** (diventa il titolo dell'app per quel gruppo).
+- **Date**, inizio e fine: da qui nascono i giorni del calendario.
+- **Luogo**: incollando un link di Google Maps si ricavano latitudine e
+  longitudine, come si fa già a mano in `firebase-config.js` per
+  `window.CAMP_LOCATION`. Serve al meteo, e va mostrata anche l'altitudine che
+  il modello usa davvero — a 1300 m il meteo del paese in fondovalle è un'altra
+  cosa.
+- **Password d'ingresso**, mai in chiaro: solo il suo hash (§ 2).
+- **Voci di spesa attive** (§ 8), così il gruppo parte già con il conto che gli
+  somiglia.
+
+### L'invito
+
+Un link solo, canonico: `.../join?room=K7RX-2MQP`. Da lì, tre strade e un
+tasto che le copre tutte:
+
+- **Condividi** (`navigator.share`): su telefono è il tasto giusto, perché apre
+  WhatsApp, Telegram, SMS e mail con un gesto. Il meccanismo esiste già in casa
+  — l'app lo usa per il PDF ricordo e per il resoconto delle spese.
+- **WhatsApp** (`https://wa.me/?text=…`): il canale vero di questi gruppi. Anche
+  questo già usato dall'app per il resoconto, quindi è codice noto.
+- **Email** (`mailto:?subject=…&body=…`): non serve nessun backend e funziona
+  anche da computer. Una mail *vera*, spedita dal server con il logo, è un'altra
+  cosa: richiede Cloud Function e un provider, e ha senso solo se serve un
+  invito verificato o tracciato.
+- **QR** per chi è nella stessa stanza fisica (già previsto in § 2).
+
+### Le due decisioni da prendere prima
+
+**La password dentro il link.** Comodissimo — un tap e sei dentro — ma un
+messaggio WhatsApp si inoltra, e con esso l'ingresso al campo. La strada pulita
+è un **invito monouso a scadenza**:
+
+```
+rooms/<roomId>/invites/<token>
+  createdBy, createdAt, expiresAt, maxUsi, usatoDa[]
+```
+
+Il link porta il token, non la password; `joinRoom` lo consuma e scrive
+`members/<uid>`. Per un campo fra amici la password nel link è probabilmente
+accettabile, ma deve essere una **scelta dichiarata**, non il risultato del fatto
+che era più veloce da scrivere.
+
+**Chi ha accettato.** Con `mailto:` e `wa.me` l'app non sa niente di cosa è
+successo al messaggio: nessuna conferma di consegna, nessuna lettura. Se chi
+amministra deve vedere «invitati 12, entrati 9», quell'informazione può venire
+solo dalla collezione `invites` qui sopra. Senza di essa il modulo funziona
+ugualmente, ma quella schermata non si può fare.
+
+### Il vincolo che resta
+
+L'invito **non deve poter scavalcare la verifica server-side** di § 2. Il link
+pre-compila l'ID della room e, se c'è, porta il token: l'ingresso lo decide
+sempre la Cloud Function. Un client che si scrive da solo in `members` è un
+campo aperto a chiunque.
+
+### Dove sta il confine gratis/Pro
+
+Il numero di room create è il limite naturale (una gratis, più di una nel piano
+Pro), coerente con la regola di § 6: **si limita la quantità, mai la
+correttezza.** Gli inviti, invece, non si limitano: un campo con metà gruppo
+fuori non è un campo a metà, è un campo che non funziona.
