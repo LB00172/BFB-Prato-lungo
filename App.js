@@ -4354,8 +4354,9 @@ function App() {
 
   // ---------- Foto ricordo (PDF) ----------
   // La griglia ha solo le miniature: per la stampa servono gli originali, che
-  // si scaricano uno a uno. Da qui l'avanzamento e il tetto di dodici.
-  const MAX_RICORDO = window.PdfRicordo && window.PdfRicordo.MAX_FOTO || 12;
+  // si scaricano uno a uno. Da qui l'avanzamento — e l'avviso quando sono
+  // tante, perche' su una linea di montagna e' l'attesa a pesare, non il PDF.
+  const TANTE_FOTO = 20;
 
   // Sotto una polaroid ci sta il nome, non "Nome Cognome".
   const soloNome = chi => String(chi || '').trim().split(/\s+/)[0] || 'anonimo';
@@ -4380,20 +4381,17 @@ function App() {
     setAlbumPage(Math.round(el.scrollLeft / (el.clientWidth + 10)));
   };
   const togglePicked = id => {
-    setPicked(prev => {
-      if (prev.includes(id)) return prev.filter(x => x !== id);
-      if (prev.length >= MAX_RICORDO) {
-        window.alert(`Il ricordo tiene al massimo ${MAX_RICORDO} foto: oltre diventa un catalogo.\n\nTogline una per farne entrare un'altra.`);
-        return prev;
-      }
-      return [...prev, id];
-    });
+    setPicked(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
   const uscitaScelta = () => {
     setPicking(false);
     setPicked([]);
   };
-  const generaRicordo = async elenco => {
+
+  // tutte = l'album completo, in ordine di scatto: è il ricordo del campo, e
+  // un campo si racconta dal primo giorno all'ultimo. Con la scelta a mano
+  // l'ordine è invece quello con cui si tocca, che è una scelta di chi compone.
+  const generaRicordo = async (elenco, tutte) => {
     const PDF = window.PdfRicordo;
     if (!PDF) {
       window.alert('Il generatore del ricordo non è disponibile.');
@@ -4404,10 +4402,16 @@ function App() {
       window.alert('Per creare il ricordo servono le foto originali, quindi la linea.');
       return;
     }
-    const scelte = elenco.filter(p => picked.includes(p.id));
+    const scelte = tutte ? [...elenco].sort((a, b) => (a.at || 0) - (b.at || 0)) : elenco.filter(p => picked.includes(p.id));
     if (scelte.length === 0) {
-      window.alert('Scegli almeno una foto.');
+      window.alert(tutte ? 'Non c\'è ancora nessuna foto nella galleria.' : 'Scegli almeno una foto.');
       return;
+    }
+    // Le foto si scaricano a piena qualità una a una: con molte foto è una
+    // cosa lunga, e su una linea che va e viene va detto prima di partire.
+    if (scelte.length >= TANTE_FOTO) {
+      const pagine = Math.ceil(scelte.length / PER_PAGINA_ALBUM);
+      if (!window.confirm(`L'album completo ha ${scelte.length} foto (${pagine} pagine).\n\n` + 'Le foto vengono scaricate una a una a piena qualità: con una linea debole ci vogliono ' + 'diversi minuti e il PDF sarà pesante da mandare.\n\nVado avanti?')) return;
     }
     try {
       const foto = [];
@@ -5806,7 +5810,7 @@ function App() {
     k: 'galleria',
     icon: '📸',
     title: 'Galleria',
-    body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Si guarda in due modi: "Album" sfoglia le foto come polaroid appoggiate su un paesaggio di montagna, una spinta col dito per pagina; "Griglia" le mette tutte in fila, ed è la vista comoda per cercarne una. Il tasto "Crea album ricordo" ti fa scegliere fino a dodici foto e ne fa un PDF con lo stesso paesaggio, quattro per pagina: da mandare nel gruppo o da stampare.'
+    body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Si guarda in due modi: "Album" sfoglia le foto come polaroid appoggiate su un paesaggio di montagna, una spinta col dito per pagina; "Griglia" le mette tutte in fila, ed è la vista comoda per cercarne una. Il tasto "Crea album completo" fa un PDF con TUTTE le foto della galleria sullo stesso paesaggio, quattro per pagina, dalla prima all\'ultima in ordine di scatto: da mandare nel gruppo o da stampare. Se invece ne vuoi solo alcune c\'è "Scegli tu quali foto", e lì l\'ordine è quello con cui le tocchi. Le foto vengono scaricate a piena qualità una a una, quindi con tante foto ci vuole pazienza e una linea decente: sopra le venti l\'app avvisa prima di partire.'
   }, {
     k: 'gioco',
     icon: '🎮',
@@ -7417,21 +7421,34 @@ function App() {
     className: "mt-3 pt-3 border-t border-[#8F9E8B]/30 space-y-2"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-gray-600"
-  }, picked.length === 0 ? `Tocca le foto da mettere nel ricordo (fino a ${MAX_RICORDO}). L'ordine è quello con cui le scegli.` : /*#__PURE__*/React.createElement(React.Fragment, null, "Scelte ", /*#__PURE__*/React.createElement("span", {
+  }, picked.length === 0 ? 'Tocca le foto da mettere nel ricordo. L\'ordine è quello con cui le scegli.' : /*#__PURE__*/React.createElement(React.Fragment, null, "Scelte ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, picked.length), " foto su ", MAX_RICORDO, " \xB7 ", Math.ceil(picked.length / 4), " ", Math.ceil(picked.length / 4) === 1 ? 'pagina' : 'pagine')), /*#__PURE__*/React.createElement("button", {
-    onClick: () => generaRicordo(photos),
+  }, picked.length), " foto su ", photos.length, " \xB7 ", Math.ceil(picked.length / PER_PAGINA_ALBUM), " ", Math.ceil(picked.length / PER_PAGINA_ALBUM) === 1 ? 'pagina' : 'pagine')), /*#__PURE__*/React.createElement("button", {
+    onClick: () => generaRicordo(photos, false),
     disabled: picked.length === 0 || !!pdfBusy,
     className: `w-full py-3 rounded font-bold uppercase text-sm tracking-wide ${picked.length > 0 && !pdfBusy ? 'bg-[#5C4A3C] text-white hover:bg-[#463628]' : 'bg-gray-200 text-gray-400'}`
-  }, pdfBusy || `Crea album ricordo${picked.length ? ` (${picked.length})` : ''}`), /*#__PURE__*/React.createElement("p", {
+  }, pdfBusy || `Crea album con le scelte${picked.length ? ` (${picked.length})` : ''}`), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setPicked(photos.map(x => x.id)),
+    disabled: !!pdfBusy || picked.length === photos.length,
+    className: "w-full py-2 rounded border border-[#5C4A3C]/40 text-[#5C4A3C] text-[11px] font-bold uppercase disabled:opacity-40"
+  }, "Scegli tutte"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic leading-snug"
   }, "Crea un PDF con le foto scelte su uno sfondo di montagna, quattro per pagina. Le foto vengono scaricate a piena qualit\xE0, quindi ci vuole qualche secondo.")), photos.length > 0 && !picking && cloud.connected && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    onClick: () => generaRicordo(photos, true),
+    disabled: !!pdfBusy,
+    className: `w-full mt-3 py-3 rounded font-bold uppercase text-sm tracking-wide ${pdfBusy ? 'bg-gray-200 text-gray-400' : 'bg-[#5C4A3C] text-white hover:bg-[#463628]'}`
+  }, pdfBusy || `📕 Crea album completo (${photos.length} ${photos.length === 1 ? 'foto' : 'foto'})`), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic mt-1.5 leading-snug"
+  }, "Un PDF con ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "tutte"), " le foto della galleria su uno sfondo di montagna, quattro per pagina, dalla prima all'ultima in ordine di scatto (", Math.ceil(photos.length / PER_PAGINA_ALBUM), " ", Math.ceil(photos.length / PER_PAGINA_ALBUM) === 1 ? 'pagina' : 'pagine', "). Vengono scaricate a piena qualit\xE0, quindi ci vuole un po'."), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setGalleryView('griglia');
       setPicking(true);
     },
-    className: "w-full mt-3 py-2.5 rounded border-2 border-[#5C4A3C]/40 text-[#5C4A3C] font-bold uppercase text-xs tracking-wide hover:bg-[#5C4A3C]/10"
-  }, "\uD83D\uDCD5 Crea album ricordo"), /*#__PURE__*/React.createElement("p", {
+    disabled: !!pdfBusy,
+    className: "w-full mt-2 py-2 rounded border border-[#5C4A3C]/40 text-[#5C4A3C] text-[11px] font-bold uppercase tracking-wide hover:bg-[#5C4A3C]/10 disabled:opacity-40"
+  }, "Scegli tu quali foto"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
   }, "Tocca una foto per vederla grande. Le foto restano nel campo: alla chiusura finiscono nell'archivio insieme ai conti.")))), activeTab === 'archivio' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"

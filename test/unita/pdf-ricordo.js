@@ -1,5 +1,6 @@
 // Generatore del PDF "foto ricordo": struttura del file, foto incorporate
-// senza ricodifica, tetto di 12, robustezza sugli ingressi sbagliati.
+// senza ricodifica, nessun tetto al numero di foto, robustezza sugli ingressi
+// sbagliati.
 const fs = require('fs');
 const path = require('path');
 const { ok, fine } = require('../lib/app');
@@ -82,8 +83,16 @@ ok('tutte e dodici le immagini sono nel file', (t12.match(/\/Subtype \/Image/g) 
 const x12 = verificaXref(dodici);
 ok(`con dodici foto la tavola resta coerente (${x12.buone}/${x12.attesi})`, x12.buone === x12.attesi);
 
-const venti = PDF.crea({ titolo: 'X', foto: molte(20) });
-ok('oltre il tetto le foto in più vengono ignorate', (testo(venti).match(/\/Subtype \/Image/g) || []).length === PDF.MAX_FOTO);
+// Nessun tetto: l'album del campo e' l'album del campo. Il rischio vero con
+// molte foto e' la tavola degli scarti (offset a dieci cifre e numerazione
+// degli oggetti che cresce di due per pagina): si controlla su un album lungo.
+const cinquanta = PDF.crea({ titolo: 'X', foto: molte(50) });
+const t50 = testo(cinquanta);
+ok('cinquanta foto ci stanno tutte, nessuna scartata', (t50.match(/\/Subtype \/Image/g) || []).length === 50);
+ok('e stanno in tredici pagine', /\/Type \/Pages \/Count 13 /.test(t50));
+const x50 = verificaXref(cinquanta);
+ok(`con cinquanta foto la tavola resta coerente (${x50.buone}/${x50.attesi})`, x50.buone === x50.attesi);
+ok('il generatore non dichiara piu\' un tetto', PDF.MAX_FOTO === undefined);
 
 // --- ingressi sbagliati: si lamenta, non produce un file rotto ---
 let errore = '';

@@ -22,7 +22,10 @@
   var A4 = { w: 595.28, h: 841.89 };
   var MARGINE = 44;
   var PER_PAGINA = 4;          // 2 x 2: sotto sono francobolli, sopra è un elenco
-  var MAX_FOTO = 12;           // oltre, il ricordo diventa un catalogo
+  // Nessun tetto al numero di foto: l'album del campo e' l'album del campo, e
+  // uno spezzato in due non e' un ricordo. Il costo vero non e' il PDF ma lo
+  // scaricamento degli originali, uno a uno: quello si avvisa e si mostra,
+  // non si taglia di nascosto.
 
   // ---- byte e testo --------------------------------------------------------
   // Il PDF usa la codifica WinAnsi: le lettere accentate italiane ci stanno,
@@ -296,7 +299,7 @@
   // ---- assemblaggio del file ----------------------------------------------
   function crea(opz) {
     opz = opz || {};
-    var foto = (opz.foto || []).slice(0, MAX_FOTO);
+    var foto = opz.foto || [];
     if (foto.length === 0) throw new Error('Nessuna foto da mettere nel ricordo.');
 
     // Preparazione: byte del JPEG + dimensioni. Le foto illeggibili si saltano.
@@ -404,7 +407,6 @@
 
   root.PdfRicordo = {
     crea: crea,
-    MAX_FOTO: MAX_FOTO,
     PER_PAGINA: PER_PAGINA,
     infoJpeg: infoJpeg,
   };

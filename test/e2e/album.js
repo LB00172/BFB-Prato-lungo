@@ -12,6 +12,10 @@ function cloudFinto(collegato) {
       const foto = new Map();      // id -> { thumb, by, at }
       const intere = new Map();    // id -> dataURL
       let avvisa = null;
+      // Timbro strettamente crescente: due foto caricate nello stesso
+      // millisecondo renderebbero ambiguo l'ordine di scatto, e la prova
+      // sull'album completo diventerebbe un lancio di dado.
+      let orologio = 0;
       const spargi = () => {
         if (!avvisa) return;
         // Come il vero watchPhotos: le foto timbrate con un archivio non
@@ -49,13 +53,19 @@ function cloudFinto(collegato) {
         submitScore: () => Promise.resolve(),
         // --- galleria ---
         putPhoto: (id, thumb, full, by) => {
-          foto.set(id, { thumb, by, at: Date.now() });
+          foto.set(id, { thumb, by, at: Date.now() + (orologio++) });
           intere.set(id, full);
           spargi();
           return Promise.resolve(true);
         },
         watchPhotos: (cb) => { avvisa = cb; spargi(); return () => { avvisa = null; }; },
-        getPhotoFull: (id) => Promise.resolve(intere.get(id) || null),
+        getPhotoFull: (id) => {
+          // Registro l'ordine in cui l'app chiede gli originali: e' l'ordine
+          // in cui le foto finiscono nelle pagine del PDF.
+          if (!window.__chiesti) window.__chiesti = [];
+          window.__chiesti.push(id);
+          return Promise.resolve(intere.get(id) || null);
+        },
         deletePhoto: (id) => { foto.delete(id); intere.delete(id); spargi(); return Promise.resolve(true); },
       });
     },
@@ -196,18 +206,53 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
   ok('eliminando resta un posto libero', (await p.locator('main .grid button').count()) === 4);
   ok('la foto sparisce anche dal cloud', (await p.evaluate(() => window.__foto.size)) === 4);
 
-  // ---- Album ricordo: scelta delle foto e PDF ----
-  // Si torna in Album per verificare che la scelta ci riporti da sola in
-  // Griglia: sfogliando dodici pagine, selezionare sarebbe impraticabile.
+  // ---- Album ricordo: prima quello completo, poi la scelta a mano ----
   await p.locator('button', { hasText: 'Album' }).first().click();
   await p.waitForTimeout(300);
   ok('quattro foto stanno in una pagina sola', (await p.locator('.album-pagina').count()) === 1);
 
-  await p.locator('button', { hasText: 'Crea album ricordo' }).click();
+  // L'album COMPLETO e' la strada normale: un tasto, tutte le foto, niente da
+  // scegliere. Il tasto dice anche quante sono, cosi' non ci sono sorprese.
+  const tastoTutte = p.locator('button', { hasText: /Crea album completo/ });
+  ok('il tasto dell\'album completo dice quante foto ci sono: '
+    + (await tastoTutte.first().innerText()).replace(/\s+/g, ' ').trim(),
+    /\(4 foto\)/i.test(await tastoTutte.first().innerText()));
+
+  await p.evaluate(() => { window.__chiesti = []; });
+  const [tutto] = await Promise.all([
+    p.waitForEvent('download', { timeout: 25000 }).catch(() => null),
+    tastoTutte.first().click(),
+  ]);
+  await p.waitForTimeout(600);
+  ok('l\'album completo viene prodotto e scaricato: ' + (tutto ? tutto.suggestedFilename() : 'NO'),
+    !!tutto && /^foto-ricordo-\d{4}-\d{2}-\d{2}\.pdf$/.test(tutto.suggestedFilename()));
+  if (tutto) {
+    const fs = require('fs');
+    const dati = fs.readFileSync(await tutto.path());
+    const t = dati.toString('latin1');
+    ok(`l\'album completo è un PDF valido (${(dati.length / 1024).toFixed(0)} KB)`,
+      t.startsWith('%PDF-') && t.trimEnd().endsWith('%%EOF'));
+    ok('e contiene TUTTE e quattro le foto, senza sceglierne nessuna',
+      (t.match(/\/Subtype \/Image/g) || []).length === 4);
+  }
+  // Ordine di scatto: la galleria mostra le ultime per prime, ma il ricordo
+  // deve raccontare il campo dal primo giorno all'ultimo.
+  const ordine = await p.evaluate(() => {
+    const atteso = [...window.__foto.entries()]
+      .filter(([, m]) => !m.archive)
+      .sort((a, b) => a[1].at - b[1].at)
+      .map(([id]) => id);
+    return { chiesti: window.__chiesti || [], atteso };
+  });
+  ok(`le foto entrano in ordine di scatto, non a rovescio (${ordine.chiesti.length} richieste)`,
+    ordine.chiesti.length === 4 && JSON.stringify(ordine.chiesti) === JSON.stringify(ordine.atteso));
+
+  // ---- E la scelta a mano resta, come seconda strada ----
+  await p.locator('button', { hasText: 'Scegli tu quali foto' }).click();
   await p.waitForTimeout(300);
   ok('scegliere le foto riporta da solo in griglia', (await p.locator('main .grid button').count()) === 4);
   ok('la modalità di scelta si apre', /Tocca le foto da mettere nel ricordo/.test(await p.locator('main').innerText()));
-  ok('senza scelte il tasto è spento', await p.locator('button', { hasText: /^Crea album ricordo/ }).isDisabled());
+  ok('senza scelte il tasto è spento', await p.locator('button', { hasText: /^Crea album con le scelte/ }).isDisabled());
 
   const miniature = p.locator('main .grid button');
   await miniature.nth(0).click();
@@ -224,7 +269,7 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
 
   const [scarico] = await Promise.all([
     p.waitForEvent('download', { timeout: 25000 }).catch(() => null),
-    p.locator('button', { hasText: /^Crea album ricordo/ }).click(),
+    p.locator('button', { hasText: /^Crea album con le scelte/ }).click(),
   ]);
   await p.waitForTimeout(600);
 
@@ -241,7 +286,7 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
     ok('porta il nome di chi ha scattato', /\(Lorenzo · /.test(t) || t.includes('(Lorenzo'));
   }
   ok('finita la stampa si esce dalla modalità di scelta',
-    (await p.locator('button', { hasText: 'Crea album ricordo' }).count()) > 0);
+    (await p.locator('button', { hasText: /Crea album completo/ }).count()) > 0);
 
   // ---- Chiusura del campo: le foto non si perdono, cambiano posto ----
   // Serve una spesa, altrimenti la chiusura si rifiuta di partire.
