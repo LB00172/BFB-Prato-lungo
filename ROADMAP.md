@@ -23,9 +23,8 @@ cosa blocca cosa.
 
 | | Sezione | Perché adesso |
 | --- | --- | --- |
-| 1 | § 10 Verifiche su iPhone | Mai fatte. Se il service worker non si aggiorna su iOS, tutto il resto del lavoro è invisibile a metà gruppo |
-| 2 | § 11 Coda foto su IndexedDB | Oggi la promessa ha un asterisco («non chiudere l'app»). Al campo l'app si chiude da sola: è la condizione normale |
-| 3 | § 12 Ponte Menù → Lista della spesa | Valore vero, nessun backend, si usa già al prossimo campo |
+| 1 | § 11 Coda foto su IndexedDB | Oggi la promessa ha un asterisco («non chiudere l'app»). Al campo l'app si chiude da sola: è la condizione normale |
+| 2 | § 12 Ponte Menù → Lista della spesa | Valore vero, nessun backend, si usa già al prossimo campo |
 
 **Poi — si prepara il terreno, nell'ordine obbligato:**
 
@@ -48,7 +47,9 @@ cosa blocca cosa.
 | 13 | § 15 Notifiche push | Piano Blaze, Cloud Functions e — soprattutto — una domanda ancora senza risposta su cosa valga la pena notificare |
 
 **Fuori dalla fila:** § 4 (database) è una decisione già presa — si resta su
-Firestore; § 7 (analisi di mercato) non è lavoro, è la mappa.
+Firestore; § 7 (analisi di mercato) non è lavoro, è la mappa; § 10 (iPhone) è
+**fatta** ad agosto 2026 e si ripete solo quando si tocca `sw.js` o `build.js`
+— cioè, fra le voci qui sopra, il § 14.
 
 **In mezzo, e non è una voce di questo elenco:** raccogliere il *feedback dei
 venti utenti veri* del campo 2026 — cosa hanno usato, cosa non hanno capito. È
@@ -542,25 +543,33 @@ fuori non è un campo a metà, è un campo che non funziona.
 
 ---
 
-## 10. Verifiche su iPhone (mai fatte)
+## 10. Verifiche su iPhone — fatte ad agosto 2026
 
-**Le 57 prove girano tutte su Chromium.** Su iOS non è stata verificata una
-riga. Sta prima di tutto il resto non perché sia la cosa più importante, ma
-perché è l'unica che può rendere **invisibile** tutto quello che viene dopo.
+**Le 57 prove girano tutte su Chromium**, quindi su iOS l'unica prova possibile
+è un telefono in mano. È stata fatta durante il campo 2026, e **funziona**.
 
-Quattro cose, in ordine di gravità:
+Era la voce in cima all'ordine di lavoro, perché è l'unica che poteva rendere
+**invisibile** tutto il resto: se su iOS il service worker non si aggiorna, ogni
+rilascio successivo è lavoro che metà gruppo non riceve, e il sintomo è identico
+a «il codice è sbagliato». Quel dubbio è chiuso: durante il campo sono stati
+pubblicati diversi aggiornamenti e sono arrivati.
 
-1. **Che il service worker si aggiorni davvero.** Se su iOS la versione nuova
-   non arriva, ogni rilascio futuro è un lavoro che metà gruppo non riceve — e
-   il sintomo è identico a «il codice è sbagliato». È il motivo per cui questa
-   voce sta in cima: senza questa certezza, non si può misurare niente.
-2. **L'avviso arancione di memoria piena**: deve comparire e **non** far sparire
-   l'app. Su iOS la quota di `localStorage` è più stretta e si tocca prima.
-3. **Le strisciate del gioco**: la L con un dito solo, senza staccare.
-4. **Installazione a Home e avvio a schermo intero.**
+Verificato a mano:
 
-Non è automatizzabile da qui: serve un iPhone in mano. Va fatto **una volta**,
-e poi ripetuto solo quando si tocca `sw.js` o `build.js`.
+- **L'aggiornamento del service worker** — il punto che contava.
+- **Le strisciate del gioco**: la L con un dito solo, senza staccare.
+- **Installazione a Home e avvio a schermo intero.**
+
+**Resta fuori una cosa sola, e non per dimenticanza:** l'avviso arancione di
+memoria piena non si prova a comando, perché richiede un telefono davvero pieno
+— su iOS la quota di `localStorage` è più stretta e si tocca prima. Quel
+percorso è coperto dalla prova `e2e/quota`, che simula il rifiuto delle
+scritture e controlla che l'app regga invece di sparire; su Chromium, però. Se
+capita di avere fra le mani un iPhone quasi pieno, è l'occasione per guardare.
+
+**Quando va rifatta:** ogni volta che si tocca `sw.js` o `build.js`. Sono i due
+file che decidono se un rilascio arriva o resta in cache, e sono anche quelli
+che il § 14 (spezzare `App.jsx`) rischia di muovere.
 
 ## 11. Coda persistente delle foto (IndexedDB)
 

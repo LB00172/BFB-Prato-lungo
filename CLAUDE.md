@@ -147,10 +147,11 @@ priorità) e la fila in cui affrontarle, con scritto cosa blocca cosa.
 
 Le tre cose da sapere senza aprirlo:
 
-- **Si comincia dall'iPhone** (`ROADMAP.md` §10). Le 57 prove girano solo su
-  Chromium e su iOS non è mai stata verificata una riga. Se lì il service
-  worker non si aggiorna, ogni rilascio successivo è invisibile a metà gruppo
-  — e il sintomo è identico a «il codice è sbagliato».
+- **L'iPhone è verificato** (`ROADMAP.md` §10): ad agosto 2026, a mano, e
+  l'aggiornamento del service worker arriva. Le 57 prove girano comunque solo
+  su Chromium, quindi quel giro va rifatto ogni volta che si tocca `sw.js` o
+  `build.js` — sono i due file che decidono se un rilascio arriva o resta in
+  cache. Si comincia invece dalla coda delle foto (§11).
 - **Login e room vengono prima di quasi tutto** (§1 e §2): senza un `uid` non
   esistono la checklist privata, la chiave dell'IA, le voci spegnibili né il
   modulo della stanza.
