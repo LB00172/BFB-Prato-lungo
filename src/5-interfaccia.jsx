@@ -9,12 +9,18 @@
 //   - al posto di chiamata resta DOVE STA (w-full, flex-1, gap, margini).
 // Mescolare i due era proprio il motivo per cui c'erano 45 forme.
 
-// Tre altezze, non sei. py-1/py-1.5 -> piccolo, py-2/py-2.5 -> normale, py-3 -> grande.
+// Quattro misure, non sei. La quarta — "piccolo" — esiste perche' nell'app ci
+// sono molti bottoni a piena larghezza con l'etichetta a 10px: hanno il corpo
+// di un bottone normale ma la scritta minuta, e portarli a 12px avrebbe
+// cambiato l'aspetto di mezza applicazione senza che nessuno l'avesse chiesto.
+// La scala sale davvero: minuscolo < piccolo < normale < grande.
+//
 // La larghezza del bordo sta qui e non nel ruolo perche' nel codice era gia'
-// cosi': i bottoni piccoli hanno il filo sottile, i grandi quello doppio. Non
+// cosi': i bottoni minuti hanno il filo sottile, gli altri quello doppio. Non
 // l'ho deciso io, l'ho solo scritto.
 const BOTTONE_MISURA = {
-  piccolo: 'px-3 py-1.5 text-[10px] border',
+  minuscolo: 'px-3 py-1.5 text-[10px] border',
+  piccolo: 'px-4 py-2.5 text-[10px] border-2',
   normale: 'px-4 py-2.5 text-xs border-2',
   grande: 'px-4 py-3 text-sm border-2',
 };
@@ -32,7 +38,27 @@ const BOTTONE_RUOLO = {
   // L'ambra e' il colore degli avvisi in tutta l'app (86 usi): un bottone
   // ambra e' un'azione che nasce da un problema, non un'azione qualsiasi.
   avviso: 'bg-[#D97706] border-transparent text-white hover:brightness-95',
+  // Verde WhatsApp: e' un marchio altrui, non una nostra scelta di tavolozza.
+  // Sta qui per non farlo sembrare un colore dell'app usato a caso.
+  whatsapp: 'bg-[#25D366] border-transparent text-white hover:brightness-95',
 };
+
+// Le icone sono un terzo dei bottoni e non entrano in nessun ruolo: sono
+// quadrate, senza maiuscolo, senza etichetta. Forzarle dentro "testuale" le
+// farebbe diventare rettangoli con dentro un simbolo. Nel codice la stessa
+// "x" di eliminazione esisteva in quattro varianti diverse.
+const BOTTONE_ICONA = {
+  neutro: 'text-[#8F9E8B] hover:text-[#2D392C]',
+  distruttivo: 'text-red-700 hover:text-red-900',
+  pieno: 'bg-[#2D392C] text-white hover:bg-[#1F271E]',
+  tenue: 'bg-[#8F9E8B]/20 text-[#2D392C] hover:bg-[#8F9E8B]/40',
+};
+
+const bottoneIcona = (tono, extra) => [
+  'px-2.5 py-2 rounded font-bold leading-none disabled:opacity-40',
+  BOTTONE_ICONA[tono] || BOTTONE_ICONA.neutro,
+  extra || '',
+].filter(Boolean).join(' ');
 
 // La riga richiudibile non e' un bottone con un altro colore: e' una forma
 // diversa — larga, allineata a sinistra, senza maiuscolo, con il contenuto ai

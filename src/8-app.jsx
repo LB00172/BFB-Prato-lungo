@@ -2184,9 +2184,9 @@ function App() {
   const renderWeekStrip = () => (
     <>
       <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm">
-        <button onClick={() => changeWeek(-7)} aria-label="Settimana precedente" className="p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&larr;</button>
+        <button onClick={() => changeWeek(-7)} aria-label="Settimana precedente" className={bottoneIcona('tenue')}>&larr;</button>
         <span className="font-bold text-sm text-[#2D392C] uppercase font-rustic">Settimana Selezionata</span>
-        <button onClick={() => changeWeek(7)} aria-label="Settimana successiva" className="p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&rarr;</button>
+        <button onClick={() => changeWeek(7)} aria-label="Settimana successiva" className={bottoneIcona('tenue')}>&rarr;</button>
       </div>
 
       <div className="grid grid-cols-7 gap-1">
@@ -3327,7 +3327,7 @@ function App() {
               : 'apri il menu del browser (⋮) e tocca "Installa app" (o "Aggiungi a schermata Home").'}
             {' '}Una volta installata funziona anche senza linea.
           </p>
-          <button onClick={dismissInstallHint} aria-label="Chiudi avviso" className="text-[#5C4A3C] font-bold px-1 shrink-0">&times;</button>
+          <button onClick={dismissInstallHint} aria-label="Chiudi avviso" className={bottoneIcona('neutro', 'shrink-0')}>&times;</button>
         </div>
       )}
 
@@ -3348,7 +3348,7 @@ function App() {
                   Salva il file di backup: se il telefono si perde o si rompe, è l'unica copia che resta.
                 </p>
                 <div className="flex gap-2 mt-2">
-                  <button onClick={exportData} className="px-3 py-1.5 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide">
+                  <button onClick={exportData} className={bottone('bruno', 'minuscolo')}>
                     Salva il backup
                   </button>
                   <button
@@ -3357,7 +3357,7 @@ function App() {
                       try { localStorage.setItem(BACKUP_KEY, oggi); } catch (e) { /* niente */ }
                       setBackupOggi(oggi);
                     }}
-                    className={bottone('secondario', 'piccolo')}
+                    className={bottone('secondario', 'minuscolo')}
                   >
                     Ho già fatto
                   </button>
@@ -3408,7 +3408,7 @@ function App() {
               </p>
               <button
                 onClick={() => setMembriSalvati([])}
-                className={bottone('secondario', 'piccolo', 'mt-2')}
+                className={bottone('secondario', 'minuscolo', 'mt-2')}
               >
                 Ho capito
               </button>
@@ -3437,7 +3437,7 @@ function App() {
               </p>
               <button
                 onClick={() => setRespinte([])}
-                className={bottone('secondario', 'piccolo', 'mt-2')}
+                className={bottone('secondario', 'minuscolo', 'mt-2')}
               >
                 Ho capito
               </button>
@@ -3464,7 +3464,7 @@ function App() {
               </p>
               <button
                 onClick={() => { setOrologioFuori(null); try { localStorage.removeItem(OROLOGIO_KEY); } catch (e) { /* niente */ } }}
-                className={bottone('secondario', 'piccolo', 'mt-2')}
+                className={bottone('secondario', 'minuscolo', 'mt-2')}
               >
                 Sistemato
               </button>
@@ -3493,10 +3493,10 @@ function App() {
                 {' '}Se non è stato qualcuno di voi, annulla: torna tutto com'era, su tutti i telefoni.
               </p>
               <div className="flex gap-2 mt-2">
-                <button onClick={annullaSync} className="px-3 py-1.5 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide">
+                <button onClick={annullaSync} className={bottone('avviso', 'minuscolo')}>
                   Annulla la sincronizzazione
                 </button>
-                <button onClick={() => setLostSync(null)} className={bottone('secondario', 'piccolo')}>
+                <button onClick={() => setLostSync(null)} className={bottone('secondario', 'minuscolo')}>
                   Va bene così
                 </button>
               </div>
@@ -3550,7 +3550,7 @@ function App() {
             <div className="bg-white rounded-lg border border-[#8F9E8B]/30 shadow-sm overflow-hidden">
               <button
                 onClick={() => setSepOpen((v) => !v)}
-                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-[#E2EAE4]/60"
+                className={bottoneRiga()}
               >
                 <span className="text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0">Conto separato</span>
                 <span className="ml-auto text-[9px] text-gray-500 truncate">
@@ -3651,7 +3651,7 @@ function App() {
                         <button
                           onClick={() => fetchWeather(true)}
                           disabled={!isOnline || wxBusy}
-                          className="shrink-0 text-[9px] uppercase font-bold text-[#2D392C] px-2 py-1 rounded border border-[#8F9E8B]/40 hover:bg-[#E2EAE4] disabled:opacity-40"
+                          className={bottone('secondario', 'minuscolo', 'shrink-0')}
                         >
                           {wxBusy ? '…' : 'Aggiorna'}
                         </button>
@@ -3712,7 +3712,7 @@ function App() {
               {/* Scorciatoia alla scheda Menù, che lavora sullo stesso giorno */}
               <button
                 onClick={() => goTo('menu')}
-                className="w-full py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]"
+                className={bottone('secondario', 'piccolo', 'w-full')}
               >
                 🍝 Menù del giorno
                 {(getDayData(selectedDateStr).note || '').trim() ? ' · già scritto' : ' · da scrivere'}
@@ -3835,7 +3835,7 @@ function App() {
                   placeholder="Nome e cognome"
                   className="flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
                 />
-                <button onClick={addMember} className="px-4 bg-[#2D392C] text-white rounded font-bold text-sm hover:bg-[#1F271E]">+</button>
+                <button onClick={addMember} className={bottoneIcona('pieno')}>+</button>
               </div>
               <label className="flex items-center gap-2 text-xs text-gray-600">
                 <input type="checkbox" checked={newMemberChild} onChange={(e) => setNewMemberChild(e.target.checked)} />
@@ -3873,7 +3873,7 @@ function App() {
                           >
                             {m.isChild ? 'Bambino' : 'Adulto'}
                           </button>
-                          <button onClick={() => removeMember(m.id)} className="text-red-700 font-bold px-2 hover:text-red-900">&times;</button>
+                          <button onClick={() => removeMember(m.id)} className={bottoneIcona('distruttivo')}>&times;</button>
                         </div>
                       </div>
                       {/* Dati per farsi rimborsare dopo il campo. Si aprono con la "i". */}
@@ -3944,14 +3944,14 @@ function App() {
         {activeTab === 'presenze' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm">
-              <button onClick={() => navigateDate(-1)} className="px-3 py-1 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&larr;</button>
+              <button onClick={() => navigateDate(-1)} className={bottoneIcona('tenue')}>&larr;</button>
               <input
                 type="date"
                 value={selectedDateStr}
                 onChange={(e) => { if (e.target.value) { setSelectedDateStr(e.target.value); setCurrentDate(parseDate(e.target.value)); } }}
                 className="bg-transparent border-none text-sm focus:outline-none font-bold text-center w-full mx-2 text-[#5C4A3C]"
               />
-              <button onClick={() => navigateDate(1)} className="px-3 py-1 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40">&rarr;</button>
+              <button onClick={() => navigateDate(1)} className={bottoneIcona('tenue')}>&rarr;</button>
             </div>
 
             {/* Presenze appese a membri che non esistono più: succede quando
@@ -3999,7 +3999,7 @@ function App() {
                           <button
                             onClick={() => scartaOrfane(o)}
                             aria-label="Butta via queste presenze"
-                            className="shrink-0 px-2.5 py-2 rounded border border-red-700/40 text-red-700 text-[10px] font-bold uppercase"
+                            className={bottone('distruttivo', 'minuscolo', 'shrink-0')}
                           >
                             Butta
                           </button>
@@ -4075,7 +4075,7 @@ function App() {
                 <div className={`bg-[#F0F4F1]/60 rounded border border-[#8F9E8B]/30 overflow-hidden ${giornoBloccato(selectedDateStr) ? 'opacity-50 pointer-events-none' : ''}`}>
                   <button
                     onClick={() => setAzioniOpen((v) => !v)}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-[#E2EAE4]/70"
+                    className={bottoneRiga()}
                   >
                     <span className="text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0">Segna in blocco</span>
                     <span className="ml-auto text-[9px] text-gray-500 truncate">
@@ -4086,9 +4086,9 @@ function App() {
                   {azioniOpen && (
                     <div className="px-3 pb-3 space-y-2">
                       <div className="grid grid-cols-3 gap-2">
-                        <button onClick={() => chiediSetAll('lunch')} className="py-2.5 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#1F271E]">Tutti a pranzo</button>
-                        <button onClick={() => chiediSetAll('dinner')} className="py-2.5 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]">Tutti a cena</button>
-                        <button onClick={chiediCopiaDaIeri} className="py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]">Copia da ieri</button>
+                        <button onClick={() => chiediSetAll('lunch')} className={bottone('primario', 'piccolo')}>Tutti a pranzo</button>
+                        <button onClick={() => chiediSetAll('dinner')} className={bottone('bruno', 'piccolo')}>Tutti a cena</button>
+                        <button onClick={chiediCopiaDaIeri} className={bottone('secondario', 'piccolo')}>Copia da ieri</button>
                       </div>
                       <p className="text-[9px] text-gray-400 leading-snug">
                         Segna tutti, poi togli i pochi assenti. Se sono già tutti segnati, il bottone li toglie tutti.
@@ -4137,14 +4137,14 @@ function App() {
                 giornoBloccato(selectedDateStr) ? (
                   <button
                     onClick={() => sbloccaGiorno(selectedDateStr)}
-                    className="w-full py-2.5 bg-white border-2 border-[#5C4A3C]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]"
+                    className={bottone('secondario', 'piccolo', 'w-full')}
                   >
                     🔓 Sblocca le presenze di questo giorno
                   </button>
                 ) : (
                   <button
                     onClick={() => bloccaGiorno(selectedDateStr)}
-                    className="w-full py-2.5 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
+                    className={bottone('bruno', 'piccolo', 'w-full')}
                   >
                     🔒 Blocca le presenze di questo giorno
                   </button>
@@ -4423,7 +4423,7 @@ function App() {
             })}
             </>)}
 
-            <button onClick={shareReport} className="w-full py-3 bg-[#25D366] text-white rounded font-bold uppercase text-sm tracking-wide hover:brightness-95 flex items-center justify-center gap-2">
+            <button onClick={shareReport} className={bottone('whatsapp', 'grande', 'w-full flex items-center justify-center gap-2')}>
               <span>📤</span> Condividi resoconto
             </button>
             <p className="text-[9px] text-gray-400 italic text-center">Genera un messaggio pronto con totale e "chi paga chi" da mandare nel gruppo.</p>
@@ -4447,7 +4447,7 @@ function App() {
                       rimborsi già segnati come saldati restano validi. Quello che arriva dagli altri telefoni viene
                       messo da parte e segnalato qui sopra.
                     </p>
-                    <button onClick={riapriConti} className="w-full py-2.5 bg-white border-2 border-[#5C4A3C]/50 text-[#5C4A3C] rounded text-xs font-bold uppercase hover:bg-[#E2EAE4]">
+                    <button onClick={riapriConti} className={bottone('secondario', 'normale', 'w-full')}>
                       🔓 Riapri i conti
                     </button>
                   </>
@@ -4510,7 +4510,7 @@ function App() {
                 <p className="text-[10px] text-gray-400 italic">La chiusura del campo la fa chi tiene i conti.</p>
               )}
               {archives.length > 0 && (
-                <button onClick={() => goTo('archivio')} className="w-full py-2 text-[10px] uppercase font-bold text-[#5C4A3C] hover:underline">
+                <button onClick={() => goTo('archivio')} className={bottone('testuale', 'piccolo', 'w-full')}>
                   Vedi l'archivio ({archives.length})
                 </button>
               )}
@@ -4544,9 +4544,9 @@ function App() {
                       className="flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] disabled:opacity-60"
                     />
                     {cloud.connected ? (
-                      <button onClick={disconnectCloud} className="px-4 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]">Disconnetti</button>
+                      <button onClick={disconnectCloud} className={bottone('bruno', 'normale')}>Disconnetti</button>
                     ) : (
-                      <button onClick={() => connectCloud(campCodeInput)} className="px-4 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Connetti</button>
+                      <button onClick={() => connectCloud(campCodeInput)} className={bottone('primario', 'normale')}>Connetti</button>
                     )}
                   </div>
                   <div className="flex items-center justify-between text-[10px] text-gray-500">
@@ -4613,7 +4613,7 @@ function App() {
                   placeholder="Q.tà"
                   className="w-20 shrink-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm text-center focus:outline-none focus:border-[#2D392C]"
                 />
-                <button onClick={addToBuy} aria-label="Aggiungi alla lista" className="shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold text-lg leading-none hover:bg-[#1F271E]">+</button>
+                <button onClick={addToBuy} aria-label="Aggiungi alla lista" className={bottoneIcona('pieno', 'shrink-0')}>+</button>
               </div>
 
               {/* Ricerca: la lista della spesa arriva a decine di voci, e
@@ -4628,7 +4628,7 @@ function App() {
                     className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
                   />
                   {toBuyQuery && (
-                    <button onClick={() => setToBuyQuery('')} aria-label="Azzera la ricerca" className="shrink-0 px-3 text-gray-400 font-bold hover:text-gray-600">&times;</button>
+                    <button onClick={() => setToBuyQuery('')} aria-label="Azzera la ricerca" className={bottoneIcona('neutro', 'shrink-0')}>&times;</button>
                   )}
                 </div>
               )}
@@ -4664,13 +4664,13 @@ function App() {
                             nella maschera di "Segna come acquistata": è lì che
                             si ha in mano, non mentre si scrive la lista. */}
                         {receipts[it.id] && (
-                          <button onClick={() => setViewReceipt(receipts[it.id])} aria-label="Vedi scontrino" className="shrink-0 px-2 py-1.5 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white leading-none">📷</button>
+                          <button onClick={() => setViewReceipt(receipts[it.id])} aria-label="Vedi scontrino" className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
                         )}
-                        <button onClick={() => removeToBuy(it.id)} aria-label="Rimuovi" className="shrink-0 text-red-700 font-bold px-1.5 hover:text-red-900">&times;</button>
+                        <button onClick={() => removeToBuy(it.id)} aria-label="Rimuovi" className={bottoneIcona('distruttivo', 'shrink-0')}>&times;</button>
                       </div>
                       <button
                         onClick={() => setBuying({ id: it.id, name: it.name, qty: it.qty, price: '', buyer: '', type: 'alimentare', account: 'comune' })}
-                        className="mt-2 w-full py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
+                        className={bottone('bruno', 'piccolo', 'mt-2 w-full')}
                       >
                         Segna come acquistata
                       </button>
@@ -4712,7 +4712,7 @@ function App() {
                   <button
                     onClick={() => setManualOpen(false)}
                     aria-label="Chiudi la maschera"
-                    className="px-2 py-1 text-gray-400 font-bold text-xl leading-none hover:text-gray-600"
+                    className={bottoneIcona('neutro')}
                   >
                     &times;
                   </button>
@@ -4724,7 +4724,7 @@ function App() {
                 <div className="flex items-center gap-3 bg-[#F0F4F1]/60 p-2 rounded border border-[#8F9E8B]/30">
                   <img src={pReceipt} alt="Scontrino" className="w-12 h-12 object-cover rounded" />
                   <span className="flex-grow text-xs text-[#2D392C] font-bold">Scontrino allegato ✓</span>
-                  <button onClick={() => setPReceipt(null)} aria-label="Rimuovi foto" className="text-red-700 font-bold px-2 hover:text-red-900">&times;</button>
+                  <button onClick={() => setPReceipt(null)} aria-label="Rimuovi foto" className={bottoneIcona('distruttivo')}>&times;</button>
                 </div>
               )}
 
@@ -4820,7 +4820,7 @@ function App() {
                     className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
                   />
                   {purchaseQuery && (
-                    <button onClick={() => setPurchaseQuery('')} aria-label="Azzera la ricerca" className="shrink-0 px-3 text-gray-400 font-bold hover:text-gray-600">&times;</button>
+                    <button onClick={() => setPurchaseQuery('')} aria-label="Azzera la ricerca" className={bottoneIcona('neutro', 'shrink-0')}>&times;</button>
                   )}
                 </div>
               )}
@@ -4888,15 +4888,15 @@ function App() {
                           </span>
                         </div>
                         {receipts[p.id] ? (
-                          <button onClick={() => setViewReceipt(receipts[p.id])} aria-label="Vedi scontrino" className="shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none">📷</button>
+                          <button onClick={() => setViewReceipt(receipts[p.id])} aria-label="Vedi scontrino" className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
                         ) : (
                           <label title="Scontrino: scatta una foto o scegli dalla galleria" aria-label="Allega scontrino" className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]">
                             📷
                             <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, p.id)} className="hidden" />
                           </label>
                         )}
-                        <button onClick={() => openEditPurchase(p)} aria-label="Correggi" title="Correggi questa spesa" className="shrink-0 px-1.5 text-[#8F9E8B] hover:text-[#2D392C] text-sm leading-none">✏️</button>
-                        <button onClick={() => removePurchase(p.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0">&times;</button>
+                        <button onClick={() => openEditPurchase(p)} aria-label="Correggi" title="Correggi questa spesa" className={bottoneIcona('neutro', 'shrink-0')}>✏️</button>
+                        <button onClick={() => removePurchase(p.id)} aria-label="Rimuovi" className={bottoneIcona('distruttivo', 'shrink-0')}>&times;</button>
                       </div>
                     </li>
                   ))}
@@ -4940,7 +4940,7 @@ function App() {
                   placeholder="Prezzo (€)"
                   className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
                 />
-                <button onClick={addEquip} className="shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold uppercase text-xs hover:bg-[#1F271E]">Aggiungi</button>
+                <button onClick={addEquip} className={bottone('primario', 'normale', 'shrink-0')}>Aggiungi</button>
               </div>
               <p className="text-[9px] text-gray-400">Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica). Con 📷 alleghi lo scontrino (foto o galleria), anche dopo.</p>
             </div>
@@ -4981,15 +4981,15 @@ function App() {
                       </div>
                       <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-[#8F9E8B]/20">
                         {receipts[e.id] ? (
-                          <button onClick={() => setViewReceipt(receipts[e.id])} aria-label="Vedi scontrino" className="shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none">📷</button>
+                          <button onClick={() => setViewReceipt(receipts[e.id])} aria-label="Vedi scontrino" className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
                         ) : (
                           <label title="Scontrino: scatta una foto o scegli dalla galleria" aria-label="Allega scontrino" className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]">
                             📷
                             <input type="file" accept="image/*" onChange={(ev) => attachReceiptTo(ev, e.id)} className="hidden" />
                           </label>
                         )}
-                        <button onClick={() => openEditEquip(e)} aria-label="Correggi" title="Correggi questa voce" className="shrink-0 px-2 py-1 text-[#8F9E8B] hover:text-[#2D392C] text-sm leading-none">✏️</button>
-                        <button onClick={() => removeEquip(e.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-2 py-1 hover:text-red-900 shrink-0 leading-none">&times;</button>
+                        <button onClick={() => openEditEquip(e)} aria-label="Correggi" title="Correggi questa voce" className={bottoneIcona('neutro', 'shrink-0')}>✏️</button>
+                        <button onClick={() => removeEquip(e.id)} aria-label="Rimuovi" className={bottoneIcona('distruttivo', 'shrink-0')}>&times;</button>
                       </div>
                     </li>
                   ))}
@@ -5070,7 +5070,7 @@ function App() {
                   placeholder="Es. costume, torcia frontale…"
                   className="flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
                 />
-                <button onClick={addGear} aria-label="Aggiungi dotazione" className="px-4 bg-[#2D392C] text-white rounded font-bold text-lg leading-none hover:bg-[#1F271E]">+</button>
+                <button onClick={addGear} aria-label="Aggiungi dotazione" className={bottoneIcona('pieno')}>+</button>
               </div>
               {gear.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">Nessuna aggiunta. Inserisci qui le dotazioni extra per questo campo.</p>
@@ -5080,7 +5080,7 @@ function App() {
                     <li key={g.id} className="flex items-center gap-3 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
                       <span className="w-1.5 h-1.5 bg-[#8F9E8B] rounded-full shrink-0"></span>
                       <span className="flex-grow text-sm text-[#2D392C]">{g.text}</span>
-                      <button onClick={() => removeGear(g.id)} aria-label="Rimuovi" className="text-red-700 font-bold px-2 hover:text-red-900">&times;</button>
+                      <button onClick={() => removeGear(g.id)} aria-label="Rimuovi" className={bottoneIcona('distruttivo')}>&times;</button>
                     </li>
                   ))}
                 </ul>
@@ -5286,7 +5286,7 @@ function App() {
                   <button
                     onClick={() => setPicked(photos.map((x) => x.id))}
                     disabled={!!pdfBusy || picked.length === photos.length}
-                    className="w-full py-2 rounded border border-[#5C4A3C]/40 text-[#5C4A3C] text-[11px] font-bold uppercase disabled:opacity-40"
+                    className={bottone('secondario', 'piccolo', 'w-full')}
                   >
                     Scegli tutte
                   </button>
@@ -5318,7 +5318,7 @@ function App() {
                   <button
                     onClick={() => { setGalleryView('griglia'); setPicking(true); }}
                     disabled={!!pdfBusy}
-                    className="w-full mt-2 py-2 rounded border border-[#5C4A3C]/40 text-[#5C4A3C] text-[11px] font-bold uppercase tracking-wide hover:bg-[#5C4A3C]/10 disabled:opacity-40"
+                    className={bottone('secondario', 'piccolo', 'w-full mt-2')}
                   >
                     Scegli tu quali foto
                   </button>
@@ -5363,12 +5363,12 @@ function App() {
                         {!a.state && <span className="text-[#8F9E8B] italic">solo cloud</span>}
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => setViewArchive(a)} className="flex-1 py-2 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase hover:bg-[#1F271E]">Resoconto</button>
+                        <button onClick={() => setViewArchive(a)} className={bottone('primario', 'piccolo', 'flex-1')}>Resoconto</button>
                         {a.photos > 0 && (
                           <button onClick={() => openAlbum(a)} className="flex-1 py-2 bg-[#8F9E8B] text-white rounded text-[10px] font-bold uppercase hover:brightness-95">Album</button>
                         )}
-                        <button onClick={() => downloadArchive(a)} className="flex-1 py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase hover:bg-[#463628]">Scarica</button>
-                        <button onClick={() => removeArchive(a)} aria-label="Elimina archivio" className="px-3 py-2 bg-white border-2 border-red-700/30 text-red-700 rounded text-[10px] font-bold uppercase hover:bg-red-50">Elimina</button>
+                        <button onClick={() => downloadArchive(a)} className={bottone('bruno', 'piccolo', 'flex-1')}>Scarica</button>
+                        <button onClick={() => removeArchive(a)} aria-label="Elimina archivio" className={bottone('distruttivo', 'minuscolo')}>Elimina</button>
                       </div>
                     </li>
                   ))}
@@ -5381,7 +5381,7 @@ function App() {
               <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
                 <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3">
                   <h3 className="font-rustic text-lg text-[#2D392C] truncate">Album · {album.name}</h3>
-                  <button onClick={() => setAlbum(null)} className="text-[10px] uppercase font-bold text-gray-500 shrink-0 px-2">Chiudi</button>
+                  <button onClick={() => setAlbum(null)} className={bottone('testuale', 'minuscolo', 'shrink-0')}>Chiudi</button>
                 </div>
                 {album.loading ? (
                   <p className="text-sm text-gray-400 italic">Carico l'album…</p>
@@ -5659,7 +5659,7 @@ function App() {
                         </p>
                         <button
                           onClick={() => { const CS = window.CloudSync; if (CS && CS.riprova) CS.riprova(); }}
-                          className="w-full mt-2 py-2 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide"
+                          className={bottone('avviso', 'piccolo', 'w-full mt-2')}
                         >
                           Riprova adesso
                         </button>
@@ -5691,7 +5691,7 @@ function App() {
                         </button>
                         <button
                           onClick={() => { if (window.confirm('Buttare la copia di scorta?\nDopo non si potrà più annullare quella sincronizzazione.')) { localStorage.removeItem(RESCUE_KEY); setLostSync(null); setDiagTick((t) => t + 1); } }}
-                          className="w-full py-1.5 text-[9px] uppercase font-bold text-gray-500"
+                          className={bottone('testuale', 'minuscolo', 'w-full')}
                         >
                           Va bene così, butta la copia
                         </button>
@@ -5797,10 +5797,10 @@ function App() {
                         ))}
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={esportaRegistro} className="flex-1 py-2 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase">Esporta il registro</button>
+                        <button onClick={esportaRegistro} className={bottone('primario', 'piccolo', 'flex-1')}>Esporta il registro</button>
                         <button
                           onClick={() => { if (window.confirm('Svuotare il registro delle modifiche?\nI dati non vengono toccati: si perde solo lo storico.')) { localStorage.removeItem(LOG_KEY); setDiagTick((t) => t + 1); } }}
-                          className="flex-1 py-2 bg-white border-2 border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase"
+                          className={bottone('secondario', 'piccolo', 'flex-1')}
                         >
                           Svuota
                         </button>
@@ -5916,7 +5916,7 @@ function App() {
               {datiOpen && (<div className="px-4 pb-4 space-y-3">
               <div className="flex gap-2">
                 <button onClick={exportData} className={bottone('primario', 'normale', 'flex-1')}>Esporta backup</button>
-                <button onClick={() => goTo('spesa')} className="flex-1 py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-xs font-bold uppercase hover:bg-[#E2EAE4]">Gestione dati</button>
+                <button onClick={() => goTo('spesa')} className={bottone('secondario', 'normale', 'flex-1')}>Gestione dati</button>
               </div>
               <button onClick={wipeLocal} className={bottone('distruttivo', 'normale', 'w-full')}>
                 Cancella i dati da questo telefono
@@ -5955,7 +5955,7 @@ function App() {
                     </p>
                     <button
                       onClick={esciAdmin}
-                      className="w-full py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-xs font-bold uppercase hover:bg-[#E2EAE4]"
+                      className={bottone('secondario', 'normale', 'w-full')}
                     >
                       Spegni la modalità tecnica
                     </button>
@@ -5978,7 +5978,7 @@ function App() {
                       />
                       <button
                         onClick={entraAdmin}
-                        className="shrink-0 px-4 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]"
+                        className={bottone('primario', 'normale', 'shrink-0')}
                       >
                         Attiva
                       </button>
@@ -6018,7 +6018,7 @@ function App() {
                 <button
                   onClick={() => setViewReceipt(receipts[buying.id])}
                   aria-label="Vedi scontrino"
-                  className="shrink-0 px-3 py-2 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-lg leading-none"
+                  className={bottoneIcona('pieno', 'shrink-0')}
                 >
                   📷
                 </button>
@@ -6089,7 +6089,7 @@ function App() {
               </div>
             )}
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setBuying(null)} className="flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase">Annulla</button>
+              <button onClick={() => setBuying(null)} className={bottone('secondario', 'normale', 'flex-1')}>Annulla</button>
               <button onClick={confirmBuy} className={bottone('primario', 'normale', 'flex-1')}>Conferma</button>
             </div>
           </div>
@@ -6106,7 +6106,7 @@ function App() {
               </h3>
               {/* Anche in correzione si può mettere o rivedere lo scontrino */}
               {receipts[editing.id] ? (
-                <button onClick={() => setViewReceipt(receipts[editing.id])} aria-label="Vedi scontrino" className="shrink-0 px-3 py-2 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-lg leading-none">📷</button>
+                <button onClick={() => setViewReceipt(receipts[editing.id])} aria-label="Vedi scontrino" className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
               ) : (
                 <label title="Scontrino: scatta una foto o scegli dalla galleria" aria-label="Allega scontrino" className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]">
                   📷
@@ -6178,7 +6178,7 @@ function App() {
             ))}
 
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setEditing(null)} className="flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase">Annulla</button>
+              <button onClick={() => setEditing(null)} className={bottone('secondario', 'normale', 'flex-1')}>Annulla</button>
               <button onClick={saveEdit} className={bottone('primario', 'normale', 'flex-1')}>Salva</button>
             </div>
           </div>
@@ -6217,7 +6217,7 @@ function App() {
                 </button>
               );
             })}
-            <button onClick={() => setSnapList(null)} className="w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700">Annulla</button>
+            <button onClick={() => setSnapList(null)} className={bottone('testuale', 'normale', 'w-full')}>Annulla</button>
           </div>
         </div>
       )}
@@ -6245,7 +6245,7 @@ function App() {
             <button onClick={closeCamp} className={bottone('bruno', 'grande', 'w-full')}>
               Archivia e azzera
             </button>
-            <button onClick={() => setClosing(false)} className="w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700">Annulla</button>
+            <button onClick={() => setClosing(false)} className={bottone('testuale', 'normale', 'w-full')}>Annulla</button>
           </div>
         </div>
       )}
@@ -6256,8 +6256,8 @@ function App() {
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl">
             <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">{viewArchive.name}</h3>
             <pre className="text-[11px] text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">{viewArchive.report || 'Nessun resoconto salvato.'}</pre>
-            <button onClick={() => shareArchive(viewArchive)} className="w-full py-2.5 bg-[#25D366] text-white rounded text-xs font-bold uppercase hover:brightness-95">📤 Condividi</button>
-            <button onClick={() => setViewArchive(null)} className="w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700">Chiudi</button>
+            <button onClick={() => shareArchive(viewArchive)} className={bottone('whatsapp', 'normale', 'w-full')}>📤 Condividi</button>
+            <button onClick={() => setViewArchive(null)} className={bottone('testuale', 'normale', 'w-full')}>Chiudi</button>
           </div>
         </div>
       )}

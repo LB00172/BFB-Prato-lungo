@@ -102,35 +102,46 @@ cosa stava bene in quel punto.
 ## Stato del lavoro (18 agosto 2026)
 
 **Colori: fatto.** `#A9752F` è tornato sull'ambra vera `#D97706`, e `#1A201A`
-in `index.html` (colore della barra di sistema in tema scuro) è diventato
-`#1F271E`. Le due sole correzioni previste, entrambe applicate.
+in `index.html` (barra di sistema in tema scuro) è diventato `#1F271E`. Le due
+sole correzioni previste, entrambe applicate.
 
-**Bottoni: cominciato.** Il vocabolario vive in `src/5-interfaccia.jsx`:
-`bottone(ruolo, misura, extra)` con **sei ruoli** — `primario`, `bruno`,
-`secondario`, `testuale`, `distruttivo`, `avviso` — e **tre altezze**
-(`piccolo`, `normale`, `grande`), più `bottoneRiga()` per la riga richiudibile,
-che è una forma a sé.
+**Bottoni: fatto per l'84%.** Il vocabolario vive in `src/5-interfaccia.jsx`:
+`bottone(ruolo, misura, extra)`, più `bottoneIcona(tono, extra)` e
+`bottoneRiga(extra)`.
 
-Due scelte prese guardando il codice invece che decidendo a tavolino:
+| | |
+| --- | --- |
+| Ruoli | `primario`, `bruno`, `secondario`, `testuale`, `distruttivo`, `avviso`, `whatsapp` |
+| Misure | `minuscolo`, `piccolo`, `normale`, `grande` |
+| Toni delle icone | `neutro`, `distruttivo`, `pieno`, `tenue` |
+| Migrati | **102 bottoni su 121** |
+
+### Le quattro decisioni prese guardando il codice
 
 - **Il pieno marrone `#5C4A3C` è un ruolo, non un doppione del verde.** Segna
-  le azioni di secondo livello (chiudere il campo, creare l'album ricordo) ed è
-  usato abbastanza da essere una scelta.
+  le azioni di secondo livello (chiudere il campo, creare l'album ricordo).
 - **La larghezza del bordo appartiene alla misura, non al ruolo.** Nel codice
-  era già così: filo sottile sui bottoni piccoli, doppio sui grandi.
+  era già così: filo sottile sui bottoni minuti, doppio sugli altri.
+- **Le misure sono quattro, non tre.** La terza altezza avrebbe portato a 12px
+  l'etichetta di mezza applicazione: nell'app ci sono molti bottoni a piena
+  larghezza con il corpo normale e la scritta a 10px. `piccolo` è quel caso, e
+  la scala sale davvero: `minuscolo` < `piccolo` < `normale` < `grande`.
+- **Le icone hanno una funzione a parte.** Sono un terzo delle forme e non
+  entrano in nessun ruolo: quadrate, senza maiuscolo, senza etichetta. La
+  stessa "×" di eliminazione esisteva in **quattro varianti diverse**.
 
-**Migrati finora: 22 bottoni su 121.** Solo quelli il cui aspetto il
-vocabolario riproduce senza cambiare colore: quello che si aggiunge è
-`disabled:opacity-40`, un `px-4` dove non c'era e — su due famiglie — il
-`tracking-wide`. Niente viene tolto.
+### I 19 che restano fuori, e perché
 
-**Gli 83 rimasti con classi fisse** (più 22 con classi condizionali) non sono
-lavoro meccanico: chiedono di decidere *che cosa è* quel bottone, non che
-aspetto ha. Sono soprattutto grigi fuori tavolozza (`text-gray-500`,
-`text-gray-400`) che diventerebbero `#5C4A3C`, e controlli particolari —
-i più/meno delle quantità, i chip delle viste — che meritano il loro ruolo
-invece di essere forzati in uno esistente. **Quella parte cambia come appare
-l'app: va guardata su uno schermo prima di applicarla.**
+Sono `<button>` nel codice ma non bottoni nel senso del vocabolario: la
+polaroid dell'album, la miniatura di una foto, il pulsante del menu, la scheda
+tratteggiata «aggiungi», i due avvisi ambra che sono schede cliccabili, e i
+comandi che vivono **su fondo scuro** (dentro le schede dei saldi e nel
+visore delle foto), dove i colori del vocabolario non si leggerebbero.
+
+Restano anche **22 bottoni con classi condizionali** — quelli il cui aspetto
+cambia con lo stato (scheda attiva, giorno selezionato, rimborso saldato). Lì
+il vocabolario va usato dentro il ternario, e conviene farlo insieme
+all'estrazione delle schede (`ROADMAP.md` § 14), non prima.
 
 ## Cosa se ne ricava per settembre
 

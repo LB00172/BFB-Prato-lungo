@@ -693,12 +693,18 @@ const compressImage = (file, maxDim = 1200, quality = 0.6) => new Promise((resol
 //   - al posto di chiamata resta DOVE STA (w-full, flex-1, gap, margini).
 // Mescolare i due era proprio il motivo per cui c'erano 45 forme.
 
-// Tre altezze, non sei. py-1/py-1.5 -> piccolo, py-2/py-2.5 -> normale, py-3 -> grande.
+// Quattro misure, non sei. La quarta — "piccolo" — esiste perche' nell'app ci
+// sono molti bottoni a piena larghezza con l'etichetta a 10px: hanno il corpo
+// di un bottone normale ma la scritta minuta, e portarli a 12px avrebbe
+// cambiato l'aspetto di mezza applicazione senza che nessuno l'avesse chiesto.
+// La scala sale davvero: minuscolo < piccolo < normale < grande.
+//
 // La larghezza del bordo sta qui e non nel ruolo perche' nel codice era gia'
-// cosi': i bottoni piccoli hanno il filo sottile, i grandi quello doppio. Non
+// cosi': i bottoni minuti hanno il filo sottile, gli altri quello doppio. Non
 // l'ho deciso io, l'ho solo scritto.
 const BOTTONE_MISURA = {
-  piccolo: 'px-3 py-1.5 text-[10px] border',
+  minuscolo: 'px-3 py-1.5 text-[10px] border',
+  piccolo: 'px-4 py-2.5 text-[10px] border-2',
   normale: 'px-4 py-2.5 text-xs border-2',
   grande: 'px-4 py-3 text-sm border-2'
 };
@@ -715,8 +721,23 @@ const BOTTONE_RUOLO = {
   distruttivo: 'bg-white border-red-700/40 text-red-700 hover:bg-red-50',
   // L'ambra e' il colore degli avvisi in tutta l'app (86 usi): un bottone
   // ambra e' un'azione che nasce da un problema, non un'azione qualsiasi.
-  avviso: 'bg-[#D97706] border-transparent text-white hover:brightness-95'
+  avviso: 'bg-[#D97706] border-transparent text-white hover:brightness-95',
+  // Verde WhatsApp: e' un marchio altrui, non una nostra scelta di tavolozza.
+  // Sta qui per non farlo sembrare un colore dell'app usato a caso.
+  whatsapp: 'bg-[#25D366] border-transparent text-white hover:brightness-95'
 };
+
+// Le icone sono un terzo dei bottoni e non entrano in nessun ruolo: sono
+// quadrate, senza maiuscolo, senza etichetta. Forzarle dentro "testuale" le
+// farebbe diventare rettangoli con dentro un simbolo. Nel codice la stessa
+// "x" di eliminazione esisteva in quattro varianti diverse.
+const BOTTONE_ICONA = {
+  neutro: 'text-[#8F9E8B] hover:text-[#2D392C]',
+  distruttivo: 'text-red-700 hover:text-red-900',
+  pieno: 'bg-[#2D392C] text-white hover:bg-[#1F271E]',
+  tenue: 'bg-[#8F9E8B]/20 text-[#2D392C] hover:bg-[#8F9E8B]/40'
+};
+const bottoneIcona = (tono, extra) => ['px-2.5 py-2 rounded font-bold leading-none disabled:opacity-40', BOTTONE_ICONA[tono] || BOTTONE_ICONA.neutro, extra || ''].filter(Boolean).join(' ');
 
 // La riga richiudibile non e' un bottone con un altro colore: e' una forma
 // diversa — larga, allineata a sinistra, senza maiuscolo, con il contenuto ai
@@ -4648,13 +4669,13 @@ function App() {
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => changeWeek(-7),
     "aria-label": "Settimana precedente",
-    className: "p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
+    className: bottoneIcona('tenue')
   }, "\u2190"), /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-sm text-[#2D392C] uppercase font-rustic"
   }, "Settimana Selezionata"), /*#__PURE__*/React.createElement("button", {
     onClick: () => changeWeek(7),
     "aria-label": "Settimana successiva",
-    className: "p-2 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
+    className: bottoneIcona('tenue')
   }, "\u2192")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-7 gap-1"
   }, weekDays.map(d => {
@@ -5958,7 +5979,7 @@ function App() {
   }, isDesktop ? 'Installa l\'app sul computer:' : 'Installa l\'app sul telefono:'), ' ', isIOS ? 'tocca Condividi (il quadrato con la freccia in su) e poi "Aggiungi alla schermata Home".' : isDesktop ? 'clicca l\'icona di installazione nella barra degli indirizzi (o menu ⋮ → "Installa").' : 'apri il menu del browser (⋮) e tocca "Installa app" (o "Aggiungi a schermata Home").', ' ', "Una volta installata funziona anche senza linea."), /*#__PURE__*/React.createElement("button", {
     onClick: dismissInstallHint,
     "aria-label": "Chiudi avviso",
-    className: "text-[#5C4A3C] font-bold px-1 shrink-0"
+    className: bottoneIcona('neutro', 'shrink-0')
   }, "\xD7")), (() => {
     if (!admin) return null;
     const modifiche = promemoriaBackup();
@@ -5979,7 +6000,7 @@ function App() {
       className: "flex gap-2 mt-2"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: exportData,
-      className: "px-3 py-1.5 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide"
+      className: bottone('bruno', 'minuscolo')
     }, "Salva il backup"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         const oggi = toDateStr(new Date());
@@ -5988,7 +6009,7 @@ function App() {
         } catch (e) {/* niente */}
         setBackupOggi(oggi);
       },
-      className: bottone('secondario', 'piccolo')
+      className: bottone('secondario', 'minuscolo')
     }, "Ho gi\xE0 fatto")))));
   })(), spazioPieno && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
@@ -6014,7 +6035,7 @@ function App() {
     className: "font-bold"
   }, "Presenze"), "."), /*#__PURE__*/React.createElement("button", {
     onClick: () => setMembriSalvati([]),
-    className: bottone('secondario', 'piccolo', 'mt-2')
+    className: bottone('secondario', 'minuscolo', 'mt-2')
   }, "Ho capito")))), respinte.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
@@ -6033,7 +6054,7 @@ function App() {
     className: "font-bold"
   }, "Spese Totali \u2192 Dati"), " e rifalle."), /*#__PURE__*/React.createElement("button", {
     onClick: () => setRespinte([]),
-    className: bottone('secondario', 'piccolo', 'mt-2')
+    className: bottone('secondario', 'minuscolo', 'mt-2')
   }, "Ho capito")))), admin && orologioFuori && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
@@ -6053,7 +6074,7 @@ function App() {
         localStorage.removeItem(OROLOGIO_KEY);
       } catch (e) {/* niente */}
     },
-    className: bottone('secondario', 'piccolo', 'mt-2')
+    className: bottone('secondario', 'minuscolo', 'mt-2')
   }, "Sistemato")))), admin && lostSync && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
@@ -6075,10 +6096,10 @@ function App() {
     className: "flex gap-2 mt-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: annullaSync,
-    className: "px-3 py-1.5 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide"
+    className: bottone('avviso', 'minuscolo')
   }, "Annulla la sincronizzazione"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setLostSync(null),
-    className: bottone('secondario', 'piccolo')
+    className: bottone('secondario', 'minuscolo')
   }, "Va bene cos\xEC"))))), /*#__PURE__*/React.createElement("main", {
     className: "flex-grow p-4"
   }, activeTab === 'calendario' && /*#__PURE__*/React.createElement("div", {
@@ -6110,7 +6131,7 @@ function App() {
     className: "bg-white rounded-lg border border-[#8F9E8B]/30 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setSepOpen(v => !v),
-    className: "w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-[#E2EAE4]/60"
+    className: bottoneRiga()
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0"
   }, "Conto separato"), /*#__PURE__*/React.createElement("span", {
@@ -6203,7 +6224,7 @@ function App() {
     })(), /*#__PURE__*/React.createElement("button", {
       onClick: () => fetchWeather(true),
       disabled: !isOnline || wxBusy,
-      className: "shrink-0 text-[9px] uppercase font-bold text-[#2D392C] px-2 py-1 rounded border border-[#8F9E8B]/40 hover:bg-[#E2EAE4] disabled:opacity-40"
+      className: bottone('secondario', 'minuscolo', 'shrink-0')
     }, wxBusy ? '…' : 'Aggiorna')), admin && locOk && /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-gray-400 font-mono pt-0.5"
     }, "\uD83D\uDCCD ", loc.lat, ", ", loc.lon, typeof loc.alt === 'number' ? ` · quota dichiarata ${loc.alt} m` : ' · quota non dichiarata', typeof weather.quota === 'number' ? ` · modello a ${Math.round(weather.quota)} m` : ''));
@@ -6243,7 +6264,7 @@ function App() {
     className: "font-bold"
   }, "men\xF9"), " ha la sua scheda: qui ci vanno le altre cose.")), /*#__PURE__*/React.createElement("button", {
     onClick: () => goTo('menu'),
-    className: "w-full py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]"
+    className: bottone('secondario', 'piccolo', 'w-full')
   }, "\uD83C\uDF5D Men\xF9 del giorno", (getDayData(selectedDateStr).note || '').trim() ? ' · già scritto' : ' · da scrivere'))), activeTab === 'menu' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
@@ -6345,7 +6366,7 @@ function App() {
     className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: addMember,
-    className: "px-4 bg-[#2D392C] text-white rounded font-bold text-sm hover:bg-[#1F271E]"
+    className: bottoneIcona('pieno')
   }, "+")), /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 text-xs text-gray-600"
   }, /*#__PURE__*/React.createElement("input", {
@@ -6382,7 +6403,7 @@ function App() {
     className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${m.isChild ? 'bg-[#D97706] text-white' : 'bg-gray-200 text-gray-500'}`
   }, m.isChild ? 'Bambino' : 'Adulto'), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeMember(m.id),
-    className: "text-red-700 font-bold px-2 hover:text-red-900"
+    className: bottoneIcona('distruttivo')
   }, "\xD7"))), infoMember === m.id && /*#__PURE__*/React.createElement("div", {
     className: "mt-2.5 pt-2.5 border-t border-[#8F9E8B]/30 space-y-2"
   }, /*#__PURE__*/React.createElement("p", {
@@ -6430,7 +6451,7 @@ function App() {
     className: "flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => navigateDate(-1),
-    className: "px-3 py-1 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
+    className: bottoneIcona('tenue')
   }, "\u2190"), /*#__PURE__*/React.createElement("input", {
     type: "date",
     value: selectedDateStr,
@@ -6443,7 +6464,7 @@ function App() {
     className: "bg-transparent border-none text-sm focus:outline-none font-bold text-center w-full mx-2 text-[#5C4A3C]"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => navigateDate(1),
-    className: "px-3 py-1 font-bold bg-[#8F9E8B]/20 rounded hover:bg-[#8F9E8B]/40"
+    className: bottoneIcona('tenue')
   }, "\u2192")), (() => {
     const orfane = presenzeOrfane();
     if (orfane.length === 0) return null;
@@ -6489,7 +6510,7 @@ function App() {
     }, "Riassegna"), /*#__PURE__*/React.createElement("button", {
       onClick: () => scartaOrfane(o),
       "aria-label": "Butta via queste presenze",
-      className: "shrink-0 px-2.5 py-2 rounded border border-red-700/40 text-red-700 text-[10px] font-bold uppercase"
+      className: bottone('distruttivo', 'minuscolo', 'shrink-0')
     }, "Butta"))))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-[#5C4A3C] italic"
     }, "Aggiungi prima le persone nella scheda Membri."));
@@ -6526,7 +6547,7 @@ function App() {
     className: `bg-[#F0F4F1]/60 rounded border border-[#8F9E8B]/30 overflow-hidden ${giornoBloccato(selectedDateStr) ? 'opacity-50 pointer-events-none' : ''}`
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setAzioniOpen(v => !v),
-    className: "w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-[#E2EAE4]/70"
+    className: bottoneRiga()
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0"
   }, "Segna in blocco"), /*#__PURE__*/React.createElement("span", {
@@ -6539,13 +6560,13 @@ function App() {
     className: "grid grid-cols-3 gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => chiediSetAll('lunch'),
-    className: "py-2.5 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#1F271E]"
+    className: bottone('primario', 'piccolo')
   }, "Tutti a pranzo"), /*#__PURE__*/React.createElement("button", {
     onClick: () => chiediSetAll('dinner'),
-    className: "py-2.5 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
+    className: bottone('bruno', 'piccolo')
   }, "Tutti a cena"), /*#__PURE__*/React.createElement("button", {
     onClick: chiediCopiaDaIeri,
-    className: "py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]"
+    className: bottone('secondario', 'piccolo')
   }, "Copia da ieri")), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 leading-snug"
   }, "Segna tutti, poi togli i pochi assenti. Se sono gi\xE0 tutti segnati, il bottone li toglie tutti. Ognuno di questi tasti chiede conferma: cambia le presenze di tutti, su tutti i telefoni."))), /*#__PURE__*/React.createElement("ul", {
@@ -6573,10 +6594,10 @@ function App() {
     }, "Cena")));
   }))), admin && members.length > 0 && (giornoBloccato(selectedDateStr) ? /*#__PURE__*/React.createElement("button", {
     onClick: () => sbloccaGiorno(selectedDateStr),
-    className: "w-full py-2.5 bg-white border-2 border-[#5C4A3C]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#E2EAE4]"
+    className: bottone('secondario', 'piccolo', 'w-full')
   }, "\uD83D\uDD13 Sblocca le presenze di questo giorno") : /*#__PURE__*/React.createElement("button", {
     onClick: () => bloccaGiorno(selectedDateStr),
-    className: "w-full py-2.5 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
+    className: bottone('bruno', 'piccolo', 'w-full')
   }, "\uD83D\uDD12 Blocca le presenze di questo giorno"))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-2"
   }, /*#__PURE__*/React.createElement("h4", {
@@ -6775,7 +6796,7 @@ function App() {
     vuoto: 'Nessun anticipo e nessuna quota su questa cassa.'
   })), /*#__PURE__*/React.createElement("button", {
     onClick: shareReport,
-    className: "w-full py-3 bg-[#25D366] text-white rounded font-bold uppercase text-sm tracking-wide hover:brightness-95 flex items-center justify-center gap-2"
+    className: bottone('whatsapp', 'grande', 'w-full flex items-center justify-center gap-2')
   }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDCE4"), " Condividi resoconto"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic text-center"
   }, "Genera un messaggio pronto con totale e \"chi paga chi\" da mandare nel gruppo.")), spesaSection === 'dati' && /*#__PURE__*/React.createElement("div", {
@@ -6792,7 +6813,7 @@ function App() {
     className: "font-bold"
   }, new Date(bloccoConti().at).toLocaleString('it-IT')), ". Spese e attrezzatura sono congelate: gli importi di \"chi paga chi\" non cambiano pi\xF9, quindi i rimborsi gi\xE0 segnati come saldati restano validi. Quello che arriva dagli altri telefoni viene messo da parte e segnalato qui sopra."), /*#__PURE__*/React.createElement("button", {
     onClick: riapriConti,
-    className: "w-full py-2.5 bg-white border-2 border-[#5C4A3C]/50 text-[#5C4A3C] rounded text-xs font-bold uppercase hover:bg-[#E2EAE4]"
+    className: bottone('secondario', 'normale', 'w-full')
   }, "\uD83D\uDD13 Riapri i conti")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 leading-snug"
   }, "Da fare ", /*#__PURE__*/React.createElement("span", {
@@ -6836,7 +6857,7 @@ function App() {
     className: "text-[10px] text-gray-400 italic"
   }, "La chiusura del campo la fa chi tiene i conti."), archives.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => goTo('archivio'),
-    className: "w-full py-2 text-[10px] uppercase font-bold text-[#5C4A3C] hover:underline"
+    className: bottone('testuale', 'piccolo', 'w-full')
   }, "Vedi l'archivio (", archives.length, ")")), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
@@ -6862,10 +6883,10 @@ function App() {
     className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] disabled:opacity-60"
   }), cloud.connected ? /*#__PURE__*/React.createElement("button", {
     onClick: disconnectCloud,
-    className: "px-4 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]"
+    className: bottone('bruno', 'normale')
   }, "Disconnetti") : /*#__PURE__*/React.createElement("button", {
     onClick: () => connectCloud(campCodeInput),
-    className: "px-4 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]"
+    className: bottone('primario', 'normale')
   }, "Connetti")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between text-[10px] text-gray-500"
   }, /*#__PURE__*/React.createElement("span", null, cloud.status === 'connecting' && 'Connessione in corso…', cloud.status === 'saving' && 'Salvataggio…', cloud.status === 'connected' && (cloud.lastSync ? `Ultima sync: ${new Date(cloud.lastSync).toLocaleTimeString('it-IT')}` : 'In ascolto…'), cloud.status === 'error' && /*#__PURE__*/React.createElement("span", {
@@ -6907,7 +6928,7 @@ function App() {
   }), /*#__PURE__*/React.createElement("button", {
     onClick: addToBuy,
     "aria-label": "Aggiungi alla lista",
-    className: "shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold text-lg leading-none hover:bg-[#1F271E]"
+    className: bottoneIcona('pieno', 'shrink-0')
   }, "+")), toBuy.length > 4 && /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("input", {
@@ -6919,7 +6940,7 @@ function App() {
   }), toBuyQuery && /*#__PURE__*/React.createElement("button", {
     onClick: () => setToBuyQuery(''),
     "aria-label": "Azzera la ricerca",
-    className: "shrink-0 px-3 text-gray-400 font-bold hover:text-gray-600"
+    className: bottoneIcona('neutro', 'shrink-0')
   }, "\xD7")), toBuy.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
   }, "Lista vuota. Scrivi cosa serve e premi +.") : (() => {
@@ -6947,11 +6968,11 @@ function App() {
     }, "Quantit\xE0: ", it.qty)), receipts[it.id] && /*#__PURE__*/React.createElement("button", {
       onClick: () => setViewReceipt(receipts[it.id]),
       "aria-label": "Vedi scontrino",
-      className: "shrink-0 px-2 py-1.5 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white leading-none"
+      className: bottoneIcona('pieno', 'shrink-0')
     }, "\uD83D\uDCF7"), /*#__PURE__*/React.createElement("button", {
       onClick: () => removeToBuy(it.id),
       "aria-label": "Rimuovi",
-      className: "shrink-0 text-red-700 font-bold px-1.5 hover:text-red-900"
+      className: bottoneIcona('distruttivo', 'shrink-0')
     }, "\xD7")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setBuying({
         id: it.id,
@@ -6962,7 +6983,7 @@ function App() {
         type: 'alimentare',
         account: 'comune'
       }),
-      className: "mt-2 w-full py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-[#463628]"
+      className: bottone('bruno', 'piccolo', 'mt-2 w-full')
     }, "Segna come acquistata")))));
   })(), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic"
@@ -6993,7 +7014,7 @@ function App() {
   })), /*#__PURE__*/React.createElement("button", {
     onClick: () => setManualOpen(false),
     "aria-label": "Chiudi la maschera",
-    className: "px-2 py-1 text-gray-400 font-bold text-xl leading-none hover:text-gray-600"
+    className: bottoneIcona('neutro')
   }, "\xD7"))), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 -mt-1"
   }, "Per un prodotto che non era in \"Da acquistare\"."), pReceipt && /*#__PURE__*/React.createElement("div", {
@@ -7007,7 +7028,7 @@ function App() {
   }, "Scontrino allegato \u2713"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setPReceipt(null),
     "aria-label": "Rimuovi foto",
-    className: "text-red-700 font-bold px-2 hover:text-red-900"
+    className: bottoneIcona('distruttivo')
   }, "\xD7")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
   }, "Nome"), /*#__PURE__*/React.createElement("input", {
@@ -7075,7 +7096,7 @@ function App() {
   }), purchaseQuery && /*#__PURE__*/React.createElement("button", {
     onClick: () => setPurchaseQuery(''),
     "aria-label": "Azzera la ricerca",
-    className: "shrink-0 px-3 text-gray-400 font-bold hover:text-gray-600"
+    className: bottoneIcona('neutro', 'shrink-0')
   }, "\xD7")), spesePotenzialmenteDoppie().map(g => /*#__PURE__*/React.createElement("div", {
     key: g[0].id,
     className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mb-3"
@@ -7140,7 +7161,7 @@ function App() {
     })}`)), receipts[p.id] ? /*#__PURE__*/React.createElement("button", {
       onClick: () => setViewReceipt(receipts[p.id]),
       "aria-label": "Vedi scontrino",
-      className: "shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none"
+      className: bottoneIcona('pieno', 'shrink-0')
     }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
       title: "Scontrino: scatta una foto o scegli dalla galleria",
       "aria-label": "Allega scontrino",
@@ -7154,11 +7175,11 @@ function App() {
       onClick: () => openEditPurchase(p),
       "aria-label": "Correggi",
       title: "Correggi questa spesa",
-      className: "shrink-0 px-1.5 text-[#8F9E8B] hover:text-[#2D392C] text-sm leading-none"
+      className: bottoneIcona('neutro', 'shrink-0')
     }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => removePurchase(p.id),
       "aria-label": "Rimuovi",
-      className: "text-red-700 font-bold px-1.5 hover:text-red-900 shrink-0"
+      className: bottoneIcona('distruttivo', 'shrink-0')
     }, "\xD7"))))));
   })(), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
@@ -7193,7 +7214,7 @@ function App() {
       className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
     }), /*#__PURE__*/React.createElement("button", {
       onClick: addEquip,
-      className: "shrink-0 px-3 bg-[#2D392C] text-white rounded font-bold uppercase text-xs hover:bg-[#1F271E]"
+      className: bottone('primario', 'normale', 'shrink-0')
     }, "Aggiungi")), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-gray-400"
     }, "Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica). Con \uD83D\uDCF7 alleghi lo scontrino (foto o galleria), anche dopo.")), /*#__PURE__*/React.createElement("div", {
@@ -7235,7 +7256,7 @@ function App() {
     }, receipts[e.id] ? /*#__PURE__*/React.createElement("button", {
       onClick: () => setViewReceipt(receipts[e.id]),
       "aria-label": "Vedi scontrino",
-      className: "shrink-0 px-2 py-1 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-sm leading-none"
+      className: bottoneIcona('pieno', 'shrink-0')
     }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
       title: "Scontrino: scatta una foto o scegli dalla galleria",
       "aria-label": "Allega scontrino",
@@ -7249,11 +7270,11 @@ function App() {
       onClick: () => openEditEquip(e),
       "aria-label": "Correggi",
       title: "Correggi questa voce",
-      className: "shrink-0 px-2 py-1 text-[#8F9E8B] hover:text-[#2D392C] text-sm leading-none"
+      className: bottoneIcona('neutro', 'shrink-0')
     }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => removeEquip(e.id),
       "aria-label": "Rimuovi",
-      className: "text-red-700 font-bold px-2 py-1 hover:text-red-900 shrink-0 leading-none"
+      className: bottoneIcona('distruttivo', 'shrink-0')
     }, "\xD7"))))), /*#__PURE__*/React.createElement("div", {
       className: "mt-3 pt-2 border-t border-[#8F9E8B]/30 space-y-1"
     }, /*#__PURE__*/React.createElement("div", {
@@ -7317,7 +7338,7 @@ function App() {
   }), /*#__PURE__*/React.createElement("button", {
     onClick: addGear,
     "aria-label": "Aggiungi dotazione",
-    className: "px-4 bg-[#2D392C] text-white rounded font-bold text-lg leading-none hover:bg-[#1F271E]"
+    className: bottoneIcona('pieno')
   }, "+")), gear.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
   }, "Nessuna aggiunta. Inserisci qui le dotazioni extra per questo campo.") : /*#__PURE__*/React.createElement("ul", {
@@ -7332,7 +7353,7 @@ function App() {
   }, g.text), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeGear(g.id),
     "aria-label": "Rimuovi",
-    className: "text-red-700 font-bold px-2 hover:text-red-900"
+    className: bottoneIcona('distruttivo')
   }, "\xD7")))))), activeTab === 'galleria' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
@@ -7473,7 +7494,7 @@ function App() {
   }, pdfBusy || `Crea album con le scelte${picked.length ? ` (${picked.length})` : ''}`), /*#__PURE__*/React.createElement("button", {
     onClick: () => setPicked(photos.map(x => x.id)),
     disabled: !!pdfBusy || picked.length === photos.length,
-    className: "w-full py-2 rounded border border-[#5C4A3C]/40 text-[#5C4A3C] text-[11px] font-bold uppercase disabled:opacity-40"
+    className: bottone('secondario', 'piccolo', 'w-full')
   }, "Scegli tutte"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic leading-snug"
   }, "Crea un PDF con le foto scelte su uno sfondo di montagna, quattro per pagina. Le foto vengono scaricate a piena qualit\xE0, quindi ci vuole qualche secondo.")), photos.length > 0 && !picking && cloud.connected && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
@@ -7490,7 +7511,7 @@ function App() {
       setPicking(true);
     },
     disabled: !!pdfBusy,
-    className: "w-full mt-2 py-2 rounded border border-[#5C4A3C]/40 text-[#5C4A3C] text-[11px] font-bold uppercase tracking-wide hover:bg-[#5C4A3C]/10 disabled:opacity-40"
+    className: bottone('secondario', 'piccolo', 'w-full mt-2')
   }, "Scegli tu quali foto"), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
   }, "Tocca una foto per vederla grande. Le foto restano nel campo: alla chiusura finiscono nell'archivio insieme ai conti.")))), activeTab === 'archivio' && /*#__PURE__*/React.createElement("div", {
@@ -7526,17 +7547,17 @@ function App() {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewArchive(a),
-    className: "flex-1 py-2 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase hover:bg-[#1F271E]"
+    className: bottone('primario', 'piccolo', 'flex-1')
   }, "Resoconto"), a.photos > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => openAlbum(a),
     className: "flex-1 py-2 bg-[#8F9E8B] text-white rounded text-[10px] font-bold uppercase hover:brightness-95"
   }, "Album"), /*#__PURE__*/React.createElement("button", {
     onClick: () => downloadArchive(a),
-    className: "flex-1 py-2 bg-[#5C4A3C] text-white rounded text-[10px] font-bold uppercase hover:bg-[#463628]"
+    className: bottone('bruno', 'piccolo', 'flex-1')
   }, "Scarica"), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeArchive(a),
     "aria-label": "Elimina archivio",
-    className: "px-3 py-2 bg-white border-2 border-red-700/30 text-red-700 rounded text-[10px] font-bold uppercase hover:bg-red-50"
+    className: bottone('distruttivo', 'minuscolo')
   }, "Elimina")))))), album && /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
@@ -7545,7 +7566,7 @@ function App() {
     className: "font-rustic text-lg text-[#2D392C] truncate"
   }, "Album \xB7 ", album.name), /*#__PURE__*/React.createElement("button", {
     onClick: () => setAlbum(null),
-    className: "text-[10px] uppercase font-bold text-gray-500 shrink-0 px-2"
+    className: bottone('testuale', 'minuscolo', 'shrink-0')
   }, "Chiudi")), album.loading ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
   }, "Carico l'album\u2026") : album.photos.length === 0 ? /*#__PURE__*/React.createElement("p", {
@@ -7782,7 +7803,7 @@ function App() {
         const CS = window.CloudSync;
         if (CS && CS.riprova) CS.riprova();
       },
-      className: "w-full mt-2 py-2 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide"
+      className: bottone('avviso', 'piccolo', 'w-full mt-2')
     }, "Riprova adesso")), scorta && scorta.state && /*#__PURE__*/React.createElement("div", {
       className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 space-y-2"
     }, /*#__PURE__*/React.createElement("p", {
@@ -7806,7 +7827,7 @@ function App() {
           setDiagTick(t => t + 1);
         }
       },
-      className: "w-full py-1.5 text-[9px] uppercase font-bold text-gray-500"
+      className: bottone('testuale', 'minuscolo', 'w-full')
     }, "Va bene cos\xEC, butta la copia")), lapidi.length === 0 ? /*#__PURE__*/React.createElement("p", {
       className: "text-[11px] text-gray-400 italic"
     }, "Nessuna cancellazione registrata su questo telefono.") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
@@ -7906,7 +7927,7 @@ function App() {
       className: "flex gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: esportaRegistro,
-      className: "flex-1 py-2 bg-[#2D392C] text-white rounded text-[10px] font-bold uppercase"
+      className: bottone('primario', 'piccolo', 'flex-1')
     }, "Esporta il registro"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         if (window.confirm('Svuotare il registro delle modifiche?\nI dati non vengono toccati: si perde solo lo storico.')) {
@@ -7914,7 +7935,7 @@ function App() {
           setDiagTick(t => t + 1);
         }
       },
-      className: "flex-1 py-2 bg-white border-2 border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase"
+      className: bottone('secondario', 'piccolo', 'flex-1')
     }, "Svuota")));
   })())), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
@@ -8006,7 +8027,7 @@ function App() {
     className: bottone('primario', 'normale', 'flex-1')
   }, "Esporta backup"), /*#__PURE__*/React.createElement("button", {
     onClick: () => goTo('spesa'),
-    className: "flex-1 py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-xs font-bold uppercase hover:bg-[#E2EAE4]"
+    className: bottone('secondario', 'normale', 'flex-1')
   }, "Gestione dati")), /*#__PURE__*/React.createElement("button", {
     onClick: wipeLocal,
     className: bottone('distruttivo', 'normale', 'w-full')
@@ -8035,7 +8056,7 @@ function App() {
     className: "font-bold"
   }, " Registro modifiche"), ", gli avvisi sulle voci cancellate e il promemoria serale del backup. Sono strumenti per chi tiene i conti: sugli altri telefoni non compare niente di tutto questo."), /*#__PURE__*/React.createElement("button", {
     onClick: esciAdmin,
-    className: "w-full py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-xs font-bold uppercase hover:bg-[#E2EAE4]"
+    className: bottone('secondario', 'normale', 'w-full')
   }, "Spegni la modalit\xE0 tecnica")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 leading-snug"
   }, "Per chi tiene i conti del campo: mostra la diagnostica della sincronizzazione, il registro delle modifiche e gli avvisi tecnici, solo su questo telefono. Ha una password dedicata, diversa da quella del campo."), /*#__PURE__*/React.createElement("div", {
@@ -8052,7 +8073,7 @@ function App() {
     className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: entraAdmin,
-    className: "shrink-0 px-4 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]"
+    className: bottone('primario', 'normale', 'shrink-0')
   }, "Attiva")), adminErr && /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] font-bold text-red-700"
   }, adminErr)))), /*#__PURE__*/React.createElement("div", {
@@ -8082,7 +8103,7 @@ function App() {
   }, "Acquistata: ", buying.name, buying.qty ? ` (${buying.qty})` : ''), receipts[buying.id] ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[buying.id]),
     "aria-label": "Vedi scontrino",
-    className: "shrink-0 px-3 py-2 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-lg leading-none"
+    className: bottoneIcona('pieno', 'shrink-0')
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
     title: "Scontrino: scatta una foto o scegli dalla galleria",
     "aria-label": "Allega scontrino",
@@ -8150,7 +8171,7 @@ function App() {
     className: "flex gap-2 pt-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setBuying(null),
-    className: "flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase"
+    className: bottone('secondario', 'normale', 'flex-1')
   }, "Annulla"), /*#__PURE__*/React.createElement("button", {
     onClick: confirmBuy,
     className: bottone('primario', 'normale', 'flex-1')
@@ -8167,7 +8188,7 @@ function App() {
   }, editing.kind === 'purchase' ? 'Correggi la spesa' : 'Correggi la voce'), receipts[editing.id] ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[editing.id]),
     "aria-label": "Vedi scontrino",
-    className: "shrink-0 px-3 py-2 rounded border-2 border-[#2D392C] bg-[#2D392C] text-white text-lg leading-none"
+    className: bottoneIcona('pieno', 'shrink-0')
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
     title: "Scontrino: scatta una foto o scegli dalla galleria",
     "aria-label": "Allega scontrino",
@@ -8240,7 +8261,7 @@ function App() {
     className: "flex gap-2 pt-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setEditing(null),
-    className: "flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase"
+    className: bottone('secondario', 'normale', 'flex-1')
   }, "Annulla"), /*#__PURE__*/React.createElement("button", {
     onClick: saveEdit,
     className: bottone('primario', 'normale', 'flex-1')
@@ -8282,7 +8303,7 @@ function App() {
     }, s.dove === 'locale' ? 'sul telefono' : 'cloud'));
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSnapList(null),
-    className: "w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700"
+    className: bottone('testuale', 'normale', 'w-full')
   }, "Annulla"))), closing && /*#__PURE__*/React.createElement("div", {
     onClick: () => setClosing(false),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
@@ -8312,7 +8333,7 @@ function App() {
     className: bottone('bruno', 'grande', 'w-full')
   }, "Archivia e azzera"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setClosing(false),
-    className: "w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700"
+    className: bottone('testuale', 'normale', 'w-full')
   }, "Annulla"))), viewArchive && /*#__PURE__*/React.createElement("div", {
     onClick: () => setViewArchive(null),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
@@ -8325,10 +8346,10 @@ function App() {
     className: "text-[11px] text-gray-700 whitespace-pre-wrap font-sans leading-relaxed"
   }, viewArchive.report || 'Nessun resoconto salvato.'), /*#__PURE__*/React.createElement("button", {
     onClick: () => shareArchive(viewArchive),
-    className: "w-full py-2.5 bg-[#25D366] text-white rounded text-xs font-bold uppercase hover:brightness-95"
+    className: bottone('whatsapp', 'normale', 'w-full')
   }, "\uD83D\uDCE4 Condividi"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewArchive(null),
-    className: "w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700"
+    className: bottone('testuale', 'normale', 'w-full')
   }, "Chiudi"))), viewPhoto && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
   }, /*#__PURE__*/React.createElement("div", {

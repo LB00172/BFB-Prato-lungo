@@ -61,6 +61,37 @@ if (compilato !== null) {
     suDisco.slice(suDisco.indexOf('\n') + 1) === compilato);
 }
 
+// Il vocabolario dei bottoni: un ruolo o una misura scritti male non li prende
+// nessuno. Con la rete di sicurezza il bottone diventa del colore sbagliato in
+// silenzio (un "whatsap" verde bosco invece che verde WhatsApp); senza, diventa
+// trasparente. Nessuna delle due cose fa fallire una prova end-to-end, perche'
+// il bottone c'e', funziona e ha il testo giusto. Si controlla qui.
+const interfaccia = fs.readFileSync(path.join(RADICE, 'src', '5-interfaccia.jsx'), 'utf8');
+const nomiDi = (blocco) => {
+  const i = interfaccia.indexOf('const ' + blocco + ' = {');
+  const j = interfaccia.indexOf('};', i);
+  return [...interfaccia.slice(i, j).matchAll(/^\s{2}([A-Za-z]+):/gm)].map((m) => m[1]);
+};
+const RUOLI = nomiDi('BOTTONE_RUOLO');
+const MISURE = nomiDi('BOTTONE_MISURA');
+const TONI = nomiDi('BOTTONE_ICONA');
+ok(`il vocabolario dichiara ${RUOLI.length} ruoli, ${MISURE.length} misure e ${TONI.length} toni d'icona`,
+  RUOLI.length >= 5 && MISURE.length >= 3 && TONI.length >= 3);
+
+const sbagliati = [];
+SORGENTI.forEach((f) => {
+  const testo = fs.readFileSync(path.join(RADICE, 'src', f), 'utf8');
+  [...testo.matchAll(/\bbottone\('([^']*)',\s*'([^']*)'/g)].forEach((m) => {
+    if (!RUOLI.includes(m[1])) sbagliati.push(`${f}: ruolo "${m[1]}"`);
+    if (!MISURE.includes(m[2])) sbagliati.push(`${f}: misura "${m[2]}"`);
+  });
+  [...testo.matchAll(/\bbottoneIcona\('([^']*)'/g)].forEach((m) => {
+    if (!TONI.includes(m[1])) sbagliati.push(`${f}: tono "${m[1]}"`);
+  });
+});
+ok('ogni bottone chiede un ruolo e una misura che esistono'
+  + (sbagliati.length ? ' — SBAGLIATI: ' + sbagliati.join(', ') : ''), sbagliati.length === 0);
+
 // Il nome della cache del service worker cambia a ogni build: se resta
 // indietro, i telefoni non ricevono l'aggiornamento.
 const sw = fs.readFileSync(path.join(RADICE, 'sw.js'), 'utf8');
