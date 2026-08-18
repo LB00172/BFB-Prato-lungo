@@ -133,17 +133,6 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   via i blocchi insieme al resto. Erano le ultime tre strade aperte a
   tutti. Esportare invece resta a chiunque: è di sola lettura.
 
-## Prima del campo (entro il 10 agosto)
-
-Un giro su un **iPhone** — tutte le prove girano solo su Chromium:
-1. le strisciate del gioco (la L con un dito solo, senza staccare);
-2. l'avviso arancione di memoria piena, che deve comparire e non far
-   sparire l'app;
-3. l'installazione a Home e l'avvio a schermo intero;
-4. **che il service worker si aggiorni davvero**: riaprendo l'app deve
-   arrivare la versione nuova, altrimenti il meteo continua a guardare
-   Pereto invece del prato.
-
 ## Se al campo qualcosa non torna
 
 Impostazioni → Backup Dati → **Esporta**: produce il JSON completo dello
@@ -152,22 +141,21 @@ da qui non si vede, e l'export funziona anche senza linea.
 
 ## Dopo il campo (da settembre)
 
-Spezzare `App.jsx` in più file, notifiche push (FCM + Cloud Functions, piano
-Blaze), ponte Menù → Lista della spesa, coda persistente delle foto su
-IndexedDB. E, **dopo il backend e non prima**, la lettura degli scontrini con
-l'IA — una funzione sola, con la regola che l'IA propone e l'uomo conferma, e
-l'app funziona identica se l'IA non risponde mai (`ROADMAP.md` §5). E l'area
-Checklist, una condivisa e una privata — dove "privata" non può essere una
-spunta su una voce condivisa, perché lo stato viaggia interi su ogni telefono e
-finisce nell'export (`ROADMAP.md` §6).
+**Il piano sta in `ROADMAP.md`, non qui.** In testa a quel documento c'è
+l'*ordine di lavoro*: quindici sezioni con i numeri fissi (sono nomi, non
+priorità) e la fila in cui affrontarle, con scritto cosa blocca cosa.
 
-Due voci aggiunte dopo il campo 2026: **le voci di spesa che si possono
-spegnere** — logistica e attrezzatura per chi le gestisce fuori dall'app — dove
-la trappola è che spegnere una voce senza dichiararla la trasforma nel buco che
-l'app segnala come errore (`ROADMAP.md` §8); e il **modulo di creazione della
-stanza con gli inviti** per link, WhatsApp e mail, dove le due decisioni da
-prendere prima sono se la password sta nel link (un messaggio si inoltra) e se
-serve sapere chi ha accettato (`ROADMAP.md` §9).
+Le tre cose da sapere senza aprirlo:
+
+- **Si comincia dall'iPhone** (`ROADMAP.md` §10). Le 57 prove girano solo su
+  Chromium e su iOS non è mai stata verificata una riga. Se lì il service
+  worker non si aggiorna, ogni rilascio successivo è invisibile a metà gruppo
+  — e il sintomo è identico a «il codice è sbagliato».
+- **Login e room vengono prima di quasi tutto** (§1 e §2): senza un `uid` non
+  esistono la checklist privata, la chiave dell'IA, le voci spegnibili né il
+  modulo della stanza.
+- **Il vocabolario dell'interfaccia viene prima di spezzare `App.jsx`**
+  (§13 poi §14): senza un bersaglio, la divisione sposta righe di posto.
 
 Prima di rimettere mano all'interfaccia, `RICOGNIZIONE-UI.md`: i colori, i 127
-bottoni e le undici misure di testo, contati. Vedi `ROADMAP.md`.
+bottoni e le undici misure di testo, già contati. È il materiale del §13.

@@ -4,9 +4,56 @@ Documento di lavoro per l'evoluzione dell'app da *strumento interno della
 Brigata Fabio Bandone* a **prodotto neutro pubblicabile**, utilizzabile da
 qualsiasi gruppo (scout, campi estivi, ritiri, case in montagna, sagre).
 
-**Regola d'oro:** niente di tutto questo va toccato prima del campo di agosto
-2026. L'app in produzione deve restare stabile. Lo sviluppo va fatto su un
-branch dedicato (`feature/public-app`) e rilasciato solo dopo il campo.
+**Il campo di agosto 2026 è finito** (11–16 agosto): la regola d'oro che
+bloccava tutto — «niente di tutto questo prima del campo» — ha smesso di
+valere, e questa è la fase in cui si lavora. Restano due cose di quella regola,
+che valgono ancora: l'app in produzione deve restare stabile mentre il gruppo
+chiude i rimborsi, e lo sviluppo grosso va fatto su un branch dedicato
+(`feature/public-app`), non su `main`.
+
+---
+
+## Ordine di lavoro
+
+I numeri delle sezioni sono **nomi, non priorità**: servono a citarle senza
+ambiguità e non cambiano più. L'ordine in cui affrontarle è questo, e nasce da
+cosa blocca cosa.
+
+**Prima di tutto — si sistema la casa (nessuna dipendenza, tutto guadagno):**
+
+| | Sezione | Perché adesso |
+| --- | --- | --- |
+| 1 | § 10 Verifiche su iPhone | Mai fatte. Se il service worker non si aggiorna su iOS, tutto il resto del lavoro è invisibile a metà gruppo |
+| 2 | § 11 Coda foto su IndexedDB | Oggi la promessa ha un asterisco («non chiudere l'app»). Al campo l'app si chiude da sola: è la condizione normale |
+| 3 | § 12 Ponte Menù → Lista della spesa | Valore vero, nessun backend, si usa già al prossimo campo |
+
+**Poi — si prepara il terreno, nell'ordine obbligato:**
+
+| | Sezione | Perché prima dell'altro |
+| --- | --- | --- |
+| 4 | § 13 Vocabolario dell'interfaccia | Dà un bersaglio alla divisione del codice |
+| 5 | § 14 Spezzare `App.jsx` | Senza il § 13 sposta righe di posto e basta |
+
+**Poi — la versione pubblica, che è una catena:**
+
+| | Sezione | Perché in quest'ordine |
+| --- | --- | --- |
+| 6 | § 1 Login | Senza account non esiste nient'altro di quanto segue |
+| 7 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
+| 8 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
+| 9 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
+| 10 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 8 |
+| 11 | § 6 Checklist | La lista privata ha bisogno di un `uid`, quindi del § 1 |
+| 12 | § 5 Scontrini con l'IA | La chiave ha bisogno di un server. Farla prima significa costruire il backend per l'IA invece che per il motivo giusto |
+| 13 | § 15 Notifiche push | Piano Blaze, Cloud Functions e — soprattutto — una domanda ancora senza risposta su cosa valga la pena notificare |
+
+**Fuori dalla fila:** § 4 (database) è una decisione già presa — si resta su
+Firestore; § 7 (analisi di mercato) non è lavoro, è la mappa.
+
+**In mezzo, e non è una voce di questo elenco:** raccogliere il *feedback dei
+venti utenti veri* del campo 2026 — cosa hanno usato, cosa non hanno capito. È
+ricerca di mercato gratuita, la più affidabile che esista, e va fatta finché se
+lo ricordano.
 
 ---
 
@@ -492,3 +539,132 @@ Il numero di room create è il limite naturale (una gratis, più di una nel pian
 Pro), coerente con la regola di § 6: **si limita la quantità, mai la
 correttezza.** Gli inviti, invece, non si limitano: un campo con metà gruppo
 fuori non è un campo a metà, è un campo che non funziona.
+
+---
+
+## 10. Verifiche su iPhone (mai fatte)
+
+**Le 57 prove girano tutte su Chromium.** Su iOS non è stata verificata una
+riga. Sta prima di tutto il resto non perché sia la cosa più importante, ma
+perché è l'unica che può rendere **invisibile** tutto quello che viene dopo.
+
+Quattro cose, in ordine di gravità:
+
+1. **Che il service worker si aggiorni davvero.** Se su iOS la versione nuova
+   non arriva, ogni rilascio futuro è un lavoro che metà gruppo non riceve — e
+   il sintomo è identico a «il codice è sbagliato». È il motivo per cui questa
+   voce sta in cima: senza questa certezza, non si può misurare niente.
+2. **L'avviso arancione di memoria piena**: deve comparire e **non** far sparire
+   l'app. Su iOS la quota di `localStorage` è più stretta e si tocca prima.
+3. **Le strisciate del gioco**: la L con un dito solo, senza staccare.
+4. **Installazione a Home e avvio a schermo intero.**
+
+Non è automatizzabile da qui: serve un iPhone in mano. Va fatto **una volta**,
+e poi ripetuto solo quando si tocca `sw.js` o `build.js`.
+
+## 11. Coda persistente delle foto (IndexedDB)
+
+**Oggi le foto viaggiano sulla coda di scrittura di Firestore.** Funziona, ma
+l'app deve dire questa frase:
+
+> Puoi chiudere l'app, ma non prima che la spia in alto smetta di dire
+> «da inviare».
+
+Una promessa con un asterisco è una promessa che qualcuno non leggerà. Al campo
+si fotografa lo scontrino, si mette il telefono in tasca e l'app muore per conto
+suo: quella è la condizione normale, non l'eccezione.
+
+**Cosa cambia con una coda propria su IndexedDB:** i byte della foto stanno in
+un archivio pensato per i byte, non dentro documenti da 1 MB; la coda sopravvive
+alla chiusura senza asterischi; e il ritentativo diventa nostro, quindi si può
+mostrare *quante* foto mancano e *da quanto*.
+
+**Ordine, come sempre in questa app:** prima si scrive la coda, poi si toglie
+l'avviso. Toglierlo prima significa promettere una cosa che non c'è ancora.
+
+Vale sia per le foto della Galleria sia per quelle degli scontrini — sono lo
+stesso problema con due nomi.
+
+## 12. Ponte Menù → Lista della spesa
+
+**Obiettivo:** dal menù del giorno escono le voci nella Lista della Spesa, senza
+ricopiare a mano.
+
+Le due schede esistono già e non si parlano: il Menù scrive nel campo `note` del
+giorno (un foglio a righe, una pietanza per riga), la Lista della Spesa è un
+elenco separato. Chi fa la cambusa legge l'uno e ribatte nell'altra.
+
+**Il ponte deterministico viene prima dell'IA.** «Pasta al pomodoro» → *pasta*,
+*pomodoro*: è una tabella di ingredienti, non un modello. Serve senza linea, che
+è quando si fa la lista. **Le quantità** («venti persone, tre giorni: quanto
+compro?») sono un'altra cosa e stanno in § 5, con la linea e con la conferma
+dell'uomo.
+
+Il vincolo: il ponte **propone**, non scrive da solo. Una lista della spesa che
+si riempie da sola mentre scrivi il menù è una lista di cui nessuno si fida.
+
+## 13. Vocabolario dell'interfaccia
+
+Materiale già misurato in `RICOGNIZIONE-UI.md` (9 agosto 2026). **Non è un
+redesign**: è dare un nome alle cose che ci sono, ed è il passo che rende
+sensato il § 14.
+
+Nell'ordine, perché ogni passo dipende dal precedente:
+
+1. **Colori: quasi niente da fare.** 16 in tutta l'interfaccia, otto fanno il
+   99% del lavoro. Due sole correzioni: unire `#1A201A` in `#1F271E` (distanza
+   RGB 9,5: a occhio sono lo stesso colore) e riportare `#A9752F` sull'ambra
+   vera `#D97706`, che esiste già ed è usata 86 volte.
+2. **Bottoni: qui sta il lavoro.** 127 bottoni, 47 forme diverse, una ventina
+   delle quali compare **una volta sola**. I ruoli veri sono sei: primario
+   pieno, secondario bordato, testuale, distruttivo, riga richiudibile, chip di
+   scelta. Le altezze sono sei (`py-1` … `py-3`) per un elemento che ne vuole
+   tre.
+3. **Testo: da undici misure a cinque o sei**, e la scala scritta da qualche
+   parte invece che nella testa. Le misure in pixel (`8/9/10/11/13`) sono 272
+   usi decisi a occhio, uno alla volta.
+
+**Il vincolo che decide la forma della soluzione:** Tailwind è vendorizzato e
+non c'è build step in produzione (`vercel.json`: `buildCommand: ""`), quindi non
+esiste un `tailwind.config.js` dove mettere i token. La strada realistica sono
+le **variabili CSS in `index.html`**.
+
+## 14. Spezzare `App.jsx`
+
+**~7.700 righe in un file solo.** Lo sappiamo, e non è una scoperta: sta scritto
+anche in `AGENTS.md` perché gli analizzatori esterni non lo segnalino come
+novità.
+
+**Va dopo il § 13, non prima.** Con un vocabolario deciso la divisione ha un
+bersaglio (un file per i bottoni, uno per le schede, uno per i conti); senza,
+sposta soltanto le righe di posto e il giorno dopo si è nella stessa condizione
+con più file da aprire.
+
+**Come farlo senza toccare il service worker.** La tentazione è caricare più
+script da `index.html`, ma ogni file nuovo va aggiunto al precache di `sw.js` e
+all'elenco degli hash in `build.js`, e il precache è **atomico**: più file, più
+occasioni di rimanere a metà. La strada che non muove niente è tenere **un solo
+`App.js` generato** da più sorgenti `.jsx` concatenate da `build.js`. Il numero
+di file precacheati resta identico, `CACHE_NAME` continua a nascere dall'hash
+del risultato, e i telefoni non si accorgono di nulla.
+
+La prova che lo protegge esiste già: `unita/compilazione` confronta ogni file
+con l'elenco del precache e diventa rossa se qualcosa manca.
+
+## 15. Notifiche push
+
+**Ultima, e con una domanda aperta davanti.**
+
+Tecnicamente: FCM + Cloud Functions, quindi **piano Blaze** (a consumo) e un
+server — cioè dopo § 1 e § 2. Su iOS le notifiche web arrivano solo se l'app è
+installata a Home, il che la lega al § 10.
+
+Ma prima del come, il cosa: **che cosa vale la pena notificare a venti persone
+che sono in mezzo a un prato con il telefono spento per risparmiare batteria?**
+«Mancano le tue presenze di ieri» forse. «Qualcuno ha aggiunto una spesa» quasi
+certamente no. Il rischio concreto è costruire la funzione più costosa della
+lista per poi spegnerla al primo campo.
+
+**Va tenuta ultima anche per questo:** dopo un campo vero con la versione
+pubblica si saprà quali sono i due o tre momenti in cui qualcuno *ha davvero
+aspettato* un avviso. Prima di allora è una risposta senza domanda.
