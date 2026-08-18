@@ -3357,7 +3357,7 @@ function App() {
                       try { localStorage.setItem(BACKUP_KEY, oggi); } catch (e) { /* niente */ }
                       setBackupOggi(oggi);
                     }}
-                    className="px-3 py-1.5 bg-white border border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide"
+                    className={bottone('secondario', 'piccolo')}
                   >
                     Ho già fatto
                   </button>
@@ -3408,7 +3408,7 @@ function App() {
               </p>
               <button
                 onClick={() => setMembriSalvati([])}
-                className="mt-2 px-3 py-1.5 bg-white border border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide"
+                className={bottone('secondario', 'piccolo', 'mt-2')}
               >
                 Ho capito
               </button>
@@ -3437,7 +3437,7 @@ function App() {
               </p>
               <button
                 onClick={() => setRespinte([])}
-                className="mt-2 px-3 py-1.5 bg-white border border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide"
+                className={bottone('secondario', 'piccolo', 'mt-2')}
               >
                 Ho capito
               </button>
@@ -3464,7 +3464,7 @@ function App() {
               </p>
               <button
                 onClick={() => { setOrologioFuori(null); try { localStorage.removeItem(OROLOGIO_KEY); } catch (e) { /* niente */ } }}
-                className="mt-2 px-3 py-1.5 bg-white border border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide"
+                className={bottone('secondario', 'piccolo', 'mt-2')}
               >
                 Sistemato
               </button>
@@ -3496,7 +3496,7 @@ function App() {
                 <button onClick={annullaSync} className="px-3 py-1.5 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide">
                   Annulla la sincronizzazione
                 </button>
-                <button onClick={() => setLostSync(null)} className="px-3 py-1.5 bg-white border border-[#8F9E8B]/50 text-[#5C4A3C] rounded text-[10px] font-bold uppercase tracking-wide">
+                <button onClick={() => setLostSync(null)} className={bottone('secondario', 'piccolo')}>
                   Va bene così
                 </button>
               </div>
@@ -3641,7 +3641,7 @@ function App() {
                         {(() => {
                           const vecchia = weather.fetchedAt && Date.now() - weather.fetchedAt > METEO_VECCHIO;
                           return (
-                            <span className={`text-[9px] ${vecchia ? 'text-[#A9752F] font-bold' : 'text-gray-400'}`}>
+                            <span className={`text-[9px] ${vecchia ? 'text-[#D97706] font-bold' : 'text-gray-400'}`}>
                               {weather.fetchedAt
                                 ? `${vecchia ? '⚠ Previsioni vecchie, del' : 'Previsioni del'} ${new Date(weather.fetchedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} alle ${new Date(weather.fetchedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}${vecchia ? ': altrove ne trovi di più fresche.' : ' · uguali per tutto il campo'}`
                                 : 'Previsioni non ancora scaricate.'}
@@ -3813,7 +3813,7 @@ function App() {
                 </p>
                 <button
                   onClick={() => unisciDoppi(g)}
-                  className="w-full py-2 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide"
+                  className={bottone('avviso', 'piccolo', 'w-full')}
                 >
                   Unisci in una sola scheda
                 </button>
@@ -4460,7 +4460,7 @@ function App() {
                       spariscano dall'elenco. Chiudendo, spese e attrezzatura si congelano e le presenze ancora
                       aperte si bloccano.
                     </p>
-                    <button onClick={chiudiConti} className="w-full py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]">
+                    <button onClick={chiudiConti} className={bottone('bruno', 'normale', 'w-full')}>
                       🔒 Chiudi i conti
                     </button>
                   </>
@@ -4477,7 +4477,7 @@ function App() {
                   cancellano il lavoro di tutti gli altri e possono sbloccare
                   giorni chiusi. Stanno in modalità tecnica, come il blocco. */}
               <div className="flex gap-2">
-                <button onClick={exportData} className="flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Esporta</button>
+                <button onClick={exportData} className={bottone('primario', 'normale', 'flex-1')}>Esporta</button>
                 {admin && (
                   <label className="flex-1 py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase text-center cursor-pointer hover:bg-[#463628]">
                     Importa
@@ -4503,7 +4503,7 @@ function App() {
               {/* Azzera membri, presenze e spese: giorni bloccati compresi.
                   È l'ultimo gesto del campo e lo fa chi tiene i conti. */}
               {admin ? (
-                <button onClick={openClose} className="w-full py-3 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase tracking-wide hover:bg-[#463628]">
+                <button onClick={openClose} className={bottone('bruno', 'grande', 'w-full')}>
                   🏁 Chiudi il campo e archivia
                 </button>
               ) : (
@@ -4793,7 +4793,7 @@ function App() {
                 </div>
               )}
 
-              <button onClick={addPurchase} className="w-full py-3 bg-[#2D392C] text-white rounded font-bold uppercase text-sm tracking-wide hover:bg-[#1F271E]">
+              <button onClick={addPurchase} className={bottone('primario', 'grande', 'w-full')}>
                 Salva
               </button>
             </div>
@@ -5437,7 +5437,7 @@ function App() {
                       className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
                     />
                   </div>
-                  <button onClick={startGame} className="w-full py-3 bg-[#2D392C] text-white rounded font-bold uppercase text-sm tracking-wide hover:bg-[#1F271E]">
+                  <button onClick={startGame} className={bottone('primario', 'grande', 'w-full')}>
                     Gioca
                   </button>
                   <p className="text-[9px] text-gray-400 italic">Comandi: scorri il dito sul campo o usa le frecce sotto. Da computer: frecce o WASD.</p>
@@ -5686,7 +5686,7 @@ function App() {
                             ? <> — <span className="font-bold">{descriviPerdite(scorta.paths, scorta.state)}</span></>
                             : null}, su tutti i telefoni. Tutto il resto, comprese le modifiche fatte dopo, rimane.
                         </p>
-                        <button onClick={annullaSync} className="w-full py-2 bg-[#D97706] text-white rounded text-[10px] font-bold uppercase tracking-wide">
+                        <button onClick={annullaSync} className={bottone('avviso', 'piccolo', 'w-full')}>
                           Annulla quella sincronizzazione
                         </button>
                         <button
@@ -5738,7 +5738,7 @@ function App() {
             <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
               <button
                 onClick={() => setLogOpen((v) => !v)}
-                className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-[#E2EAE4]/60"
+                className={bottoneRiga()}
               >
                 <span className="font-rustic text-lg text-[#2D392C] shrink-0">Registro modifiche</span>
                 <span className="ml-auto flex items-center gap-2 shrink-0">
@@ -5817,7 +5817,7 @@ function App() {
             <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
               <button
                 onClick={() => setBloccoOpen((v) => !v)}
-                className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-[#E2EAE4]/60"
+                className={bottoneRiga()}
               >
                 <span className="font-rustic text-lg text-[#2D392C] shrink-0">Blocco con password</span>
                 <span className="ml-auto flex items-center gap-1.5 shrink-0">
@@ -5887,7 +5887,7 @@ function App() {
                       </p>
                     </div>
                   )}
-                  <button onClick={lockNow} className="w-full py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase hover:bg-[#463628]">
+                  <button onClick={lockNow} className={bottone('bruno', 'normale', 'w-full')}>
                     🔒 Blocca ora
                   </button>
                 </>
@@ -5903,7 +5903,7 @@ function App() {
             <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
               <button
                 onClick={() => setDatiOpen((v) => !v)}
-                className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-[#E2EAE4]/60"
+                className={bottoneRiga()}
               >
                 <span className="font-rustic text-lg text-[#2D392C] shrink-0">Dati su questo telefono</span>
                 <span className="ml-auto flex items-center gap-2 shrink-0">
@@ -5915,10 +5915,10 @@ function App() {
               </button>
               {datiOpen && (<div className="px-4 pb-4 space-y-3">
               <div className="flex gap-2">
-                <button onClick={exportData} className="flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Esporta backup</button>
+                <button onClick={exportData} className={bottone('primario', 'normale', 'flex-1')}>Esporta backup</button>
                 <button onClick={() => goTo('spesa')} className="flex-1 py-2.5 bg-white border-2 border-[#8F9E8B]/50 text-[#2D392C] rounded text-xs font-bold uppercase hover:bg-[#E2EAE4]">Gestione dati</button>
               </div>
-              <button onClick={wipeLocal} className="w-full py-2.5 bg-white border-2 border-red-700/40 text-red-700 rounded text-xs font-bold uppercase hover:bg-red-50">
+              <button onClick={wipeLocal} className={bottone('distruttivo', 'normale', 'w-full')}>
                 Cancella i dati da questo telefono
               </button>
               <p className="text-[9px] text-gray-400 italic leading-snug">
@@ -5934,7 +5934,7 @@ function App() {
             <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
               <button
                 onClick={() => setTecnicaOpen((v) => !v)}
-                className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-[#E2EAE4]/60"
+                className={bottoneRiga()}
               >
                 <span className="font-rustic text-lg text-[#2D392C] shrink-0">Modalità tecnica</span>
                 <span className="ml-auto flex items-center gap-2 shrink-0">
@@ -6090,7 +6090,7 @@ function App() {
             )}
             <div className="flex gap-2 pt-1">
               <button onClick={() => setBuying(null)} className="flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase">Annulla</button>
-              <button onClick={confirmBuy} className="flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Conferma</button>
+              <button onClick={confirmBuy} className={bottone('primario', 'normale', 'flex-1')}>Conferma</button>
             </div>
           </div>
         </div>
@@ -6179,7 +6179,7 @@ function App() {
 
             <div className="flex gap-2 pt-1">
               <button onClick={() => setEditing(null)} className="flex-1 py-2.5 bg-white border border-[#8F9E8B]/50 text-gray-500 rounded text-xs font-bold uppercase">Annulla</button>
-              <button onClick={saveEdit} className="flex-1 py-2.5 bg-[#2D392C] text-white rounded text-xs font-bold uppercase hover:bg-[#1F271E]">Salva</button>
+              <button onClick={saveEdit} className={bottone('primario', 'normale', 'flex-1')}>Salva</button>
             </div>
           </div>
         </div>
@@ -6242,7 +6242,7 @@ function App() {
               <p>membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e foto degli scontrini — su tutti i dispositivi.</p>
               <p className="pt-1 italic">Restano: archivio, classifica del gioco e impostazioni.</p>
             </div>
-            <button onClick={closeCamp} className="w-full py-3 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase tracking-wide hover:bg-[#463628]">
+            <button onClick={closeCamp} className={bottone('bruno', 'grande', 'w-full')}>
               Archivia e azzera
             </button>
             <button onClick={() => setClosing(false)} className="w-full py-2 text-xs uppercase font-bold text-gray-500 hover:text-gray-700">Annulla</button>

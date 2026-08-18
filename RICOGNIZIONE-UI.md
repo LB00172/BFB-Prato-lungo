@@ -99,6 +99,39 @@ Le misure in pixel (`8/9/10/11/13`) sono 272 usi decisi a occhio, uno alla
 volta. Fra `text-[9px]` e `text-[10px]` non c'è una regola: c'è la memoria di
 cosa stava bene in quel punto.
 
+## Stato del lavoro (18 agosto 2026)
+
+**Colori: fatto.** `#A9752F` è tornato sull'ambra vera `#D97706`, e `#1A201A`
+in `index.html` (colore della barra di sistema in tema scuro) è diventato
+`#1F271E`. Le due sole correzioni previste, entrambe applicate.
+
+**Bottoni: cominciato.** Il vocabolario vive in `src/5-interfaccia.jsx`:
+`bottone(ruolo, misura, extra)` con **sei ruoli** — `primario`, `bruno`,
+`secondario`, `testuale`, `distruttivo`, `avviso` — e **tre altezze**
+(`piccolo`, `normale`, `grande`), più `bottoneRiga()` per la riga richiudibile,
+che è una forma a sé.
+
+Due scelte prese guardando il codice invece che decidendo a tavolino:
+
+- **Il pieno marrone `#5C4A3C` è un ruolo, non un doppione del verde.** Segna
+  le azioni di secondo livello (chiudere il campo, creare l'album ricordo) ed è
+  usato abbastanza da essere una scelta.
+- **La larghezza del bordo appartiene alla misura, non al ruolo.** Nel codice
+  era già così: filo sottile sui bottoni piccoli, doppio sui grandi.
+
+**Migrati finora: 22 bottoni su 121.** Solo quelli il cui aspetto il
+vocabolario riproduce senza cambiare colore: quello che si aggiunge è
+`disabled:opacity-40`, un `px-4` dove non c'era e — su due famiglie — il
+`tracking-wide`. Niente viene tolto.
+
+**Gli 83 rimasti con classi fisse** (più 22 con classi condizionali) non sono
+lavoro meccanico: chiedono di decidere *che cosa è* quel bottone, non che
+aspetto ha. Sono soprattutto grigi fuori tavolozza (`text-gray-500`,
+`text-gray-400`) che diventerebbero `#5C4A3C`, e controlli particolari —
+i più/meno delle quantità, i chip delle viste — che meritano il loro ruolo
+invece di essere forzati in uno esistente. **Quella parte cambia come appare
+l'app: va guardata su uno schermo prima di applicarla.**
+
 ## Cosa se ne ricava per settembre
 
 Nell'ordine, perché ogni passo dipende dal precedente:

@@ -22,10 +22,11 @@ const SORGENTI = [
   '2-blocco-password.jsx',  // impronta PBKDF2 della password del campo
   '3-tema-e-formati.jsx',   // tema chiaro/scuro, uid/money/posNum, IBAN e PayPal
   '4-configurazione.jsx',   // marchio, funzioni attive, date del campo, meteo, regole
-  '5-gioco.jsx',            // "Aiuta Bandy": tavolozze, disegno, BandyGame
-  '6-schermata-blocco.jsx', // LockScreen
-  '7-app.jsx',              // function App(): stato, conti, sincronizzazione, interfaccia
-  '8-avvio.jsx',            // il mount di React
+  '5-interfaccia.jsx',      // vocabolario dei bottoni: sei ruoli, tre altezze
+  '6-gioco.jsx',            // "Aiuta Bandy": tavolozze, disegno, BandyGame
+  '7-schermata-blocco.jsx', // LockScreen
+  '8-app.jsx',              // function App(): stato, conti, sincronizzazione, interfaccia
+  '9-avvio.jsx',            // il mount di React
 ];
 
 const cartella = path.join(root, 'src');
