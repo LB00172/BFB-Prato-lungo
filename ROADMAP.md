@@ -168,10 +168,41 @@ esattamente ciò che Firestore fa nativamente e Supabase no. La migrazione
 costerebbe settimane per un vantaggio (SQL) che a questa app non serve.
 Riconsiderare Supabase solo se in futuro servissero report analitici pesanti.
 
-**Attenzione ai costi:** con utenti pubblici il piano gratuito prima o poi non
-basta. Le foto degli scontrini dentro Firestore vanno bene per un gruppo, ma su
-scala conviene spostarle su uno storage a oggetti (Firebase Storage / R2), più
-economico per i byte.
+### Riesaminato con l'app pubblica sul tavolo (agosto 2026)
+
+La decisione regge, e con **tre motivi nuovi** che prima non c'erano.
+
+**1. Un database diverso obbliga al fork.** Le due app (§ 16) condividono un
+solo codice e si distinguono per configurazione. Metterne una su Supabase
+significa due livelli dati diversi, quindi due codici, quindi ogni correzione
+fatta due volte. È il costo più alto della lista e non si vede al momento della
+scelta: si vede sei mesi dopo, quando le due versioni hanno smesso di
+assomigliarsi.
+
+**2. La stagionalità premia il consumo.** Questo prodotto vive tre mesi
+all'anno. Supabase Pro costa ~25 $/mese anche a novembre, quando non campeggia
+nessuno; Firestore a novembre costa quasi zero. Per un uso stagionale la
+fatturazione a consumo è la forma giusta, non un compromesso.
+
+**3. I costi veri non sono del fornitore, sono nostri.** Con i numeri del campo
+2026 (59 persone, 7 giorni, ~800 scritture in una settimana): il campo è **un
+solo documento**, quindi ogni scrittura costa una lettura per ogni telefono
+collegato. Venti telefoni × 800 scritture = ~16.000 letture per l'intero campo,
+contro le 50.000 al giorno del piano gratuito. **Un campo è praticamente
+gratis**; cinquanta campi nella stessa settimana restano sotto il caffè.
+
+Il costo che cresce davvero sono le **foto**: 29 scontrini da 112 KB più la
+galleria, e stanno dentro documenti Firestore, dove il byte costa ~7 volte più
+che su uno storage a oggetti e ogni visualizzazione è una lettura da ~1 MB.
+
+> **La modifica che conta per i costi non è cambiare fornitore: è togliere le
+> foto dai documenti.** Vale su Firestore come su Supabase, e va fatta per la
+> versione pubblica in ogni caso.
+
+**Quando riaprire la domanda:** se servisse davvero SQL per analisi trasversali
+fra campi (metriche di prodotto), o se si volesse l'auto-ospitazione. Nessuna
+delle due è sul tavolo. Gli ordini di grandezza qui sopra vanno riverificati
+prima di impegnarsi: i listini cambiano.
 
 ## 5. Lettura degli scontrini con l'IA
 
@@ -698,3 +729,99 @@ lista per poi spegnerla al primo campo.
 **Va tenuta ultima anche per questo:** dopo un campo vero con la versione
 pubblica si saprà quali sono i due o tre momenti in cui qualcuno *ha davvero
 aspettato* un avviso. Prima di allora è una risposta senza domanda.
+
+---
+
+## 16. Le due app: la nostra e la pubblica
+
+**Decisione presa il 18 agosto 2026.** L'app della Brigata resta nostra e non
+diventa un cliente della versione pubblica. Accanto nasce una **sorella
+pubblica**, da mettere su Google Play.
+
+### Un codice solo, due configurazioni — non un fork
+
+La tentazione è copiare il repository, togliere il marchio e far evolvere le due
+cose separatamente. Costa poco oggi e tantissimo per sempre: ogni correzione va
+applicata due volte, e in pochi mesi le due versioni smettono di assomigliarsi
+abbastanza perché applicarla due volte diventi difficile.
+
+La strada è l'altra, ed è **già mezza costruita**:
+
+- il marchio è fuori dal codice (`window.APP_CONFIG.brand` in
+  `firebase-config.js`);
+- gli interruttori esistono (`window.APP_CONFIG.features = { auth, rooms }`,
+  oggi spenti).
+
+Quindi: **un repository, un ramo, due progetti Vercel** che pubblicano lo stesso
+codice con due `firebase-config.js` diversi.
+
+| | La nostra | La pubblica |
+| --- | --- | --- |
+| `brand` | Brigata Fabio Bandone | nome neutro |
+| `auth` / `rooms` | `false` | `true` |
+| Ingresso | password del campo | account + room |
+| Progetto Firebase | il nostro | separato |
+
+> **La regola che tiene in piedi tutto: la differenza fra le due app deve essere
+> configurazione, mai codice.** Il primo `if (isBandone)` scritto nel sorgente è
+> l'inizio del fork, solo più lento da riconoscere.
+
+### Il vantaggio che nessun concorrente ha
+
+Tenendo un codice solo, **il nostro campo diventa il collaudo annuale della
+versione pubblica**: cinquantanove persone, una settimana, senza linea, con
+soldi veri. Nel 2026 ha già trovato l'orologio del meteo, il blocco delle
+presenze che non bloccava, e la logistica addossata a chi non c'era. Nessuna
+suite di prove trova quelle cose; un campo sì.
+
+Se invece si forka, quel collaudo smette di valere per la pubblica il giorno
+dopo la divisione.
+
+### Che cosa è davvero lavoro nuovo
+
+Il database non è la parte difficile (§ 4: si resta su Firestore). Lo sono
+queste, in ordine di gravità:
+
+1. **Un confine di sicurezza vero.** Oggi tutti i campi condividono un utente
+   Firebase e regole permissive: va bene per un gruppo, **non** per un'app
+   pubblica, dove significa che chiunque può leggere il campo di chiunque. È il
+   `joinRoom` server-side del § 2 con le regole legate a `members`. È il pezzo
+   di lavoro nuovo più grosso, e non è negoziabile.
+2. **Le foto fuori dai documenti**, su storage a oggetti (§ 4).
+3. **Cancellazione dell'account** — richiesta da Google Play e dal GDPR.
+4. **Privacy policy vera.** Non è una formalità: l'app tiene nomi, chi ha
+   mangiato con chi, chi deve soldi a chi, e foto di scontrini che a volte
+   portano le ultime cifre di una carta. Servono anche la scheda "Sicurezza dei
+   dati" di Play e una base giuridica per il trattamento.
+5. **Nome e logo neutri.**
+
+### L'ordine che eviterebbe l'errore classico
+
+L'errore è costruire l'app pubblica e poi cercare gli utenti. Il modo di
+sbagliare di questo prodotto non è «non la scarica nessuno»: è **«un gruppo l'ha
+usata per una settimana e i conti non tornavano»**. Quello lo si scopre con un
+gruppo vero, non con una scheda sullo store.
+
+1. Rendere l'app capace di room **dietro gli interruttori spenti** (§ 1, § 2):
+   il nostro campo continua a funzionare esattamente come oggi.
+2. Accendere gli interruttori per **un altro gruppo vero** — un altro reparto —
+   la prossima estate. Beta chiusa con utenti veri, offline vero, soldi veri.
+3. **Solo dopo** pubblicare su Play (§ 3).
+
+Fra il punto 2 e il punto 3 c'è un campo intero, cioè un anno. È lento e va bene
+così: l'unica cosa che questa app vende è che i conti tornano, e quella
+reputazione si perde una volta sola.
+
+### Il campo 2026 come misura
+
+Numeri veri di chiusura, utili a dimensionare la versione pubblica:
+
+- **59 membri** (39 adulti, 20 bambini), 219 pasti su 7 giorni, punta di 48
+  persone il 15 agosto — **tre volte il gruppo su cui l'app era stata pensata**,
+  e ha retto;
+- **2.303,59 €** di spesa, 2.303,60 € raccolti, **nessun buco**;
+- due casse: comune 1.989,50 €, separata 314,10 € (i giorni 11–13), che chiudono
+  ognuna per conto suo;
+- 35 passaggi per cassa, **30 ottimizzati**;
+- export completo **3,2 MB**, di cui 3,18 MB sono 29 foto di scontrini: la
+  conferma che il peso dell'app sono le immagini, non i dati.
