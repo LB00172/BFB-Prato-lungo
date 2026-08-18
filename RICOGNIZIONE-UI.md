@@ -1,10 +1,12 @@
 # Ricognizione dell'interfaccia
 
-Materiale per il lavoro di settembre (`ROADMAP.md`: spezzare `App.jsx`, versione
+Materiale per il lavoro di settembre (`ROADMAP.md`: spezzare `src/7-app.jsx`, versione
 neutra per lo store). **Non è una proposta di redesign**: è la misura di cosa
 c'è adesso, così quel lavoro parte da dati e non da impressioni.
 
-Misurato su `App.jsx` il 9 agosto 2026, a 55 prove verdi.
+Misurato sul sorgente il 9 agosto 2026, a 55 prove verdi. I numeri di riga citati
+qui sotto sono quelli dell'allora `App.jsx`, prima della divisione in `src/`:
+valgono come proporzioni, non come indirizzi.
 
 ## Metodo, e cosa è stato escluso
 
@@ -108,7 +110,7 @@ Nell'ordine, perché ogni passo dipende dal precedente:
    porta addosso la sua riga di classi.
 3. **Testo: da undici misure a cinque o sei**, e la scala scritta da qualche
    parte invece che nella testa.
-4. **Solo dopo, spezzare `App.jsx`.** Con un vocabolario deciso la divisione ha
+4. **Solo dopo, spezzare `src/7-app.jsx`.** Con un vocabolario deciso la divisione ha
    un bersaglio; senza, sposta soltanto le righe di posto.
 
 ## Vincoli che qualunque soluzione deve rispettare
@@ -121,4 +123,5 @@ Nell'ordine, perché ogni passo dipende dal precedente:
 - **Ogni file nuovo che serve all'app va aggiunto al precache** in `sw.js` e
   all'elenco degli hash in `build.js`, altrimenti `unita/compilazione` diventa
   rossa — ed è giusto così.
-- **`App.js` è generato**: si modifica `App.jsx` e si lancia `node build.js`.
+- **`App.js` è generato**: si modificano i sorgenti in `src/` e si lancia
+  `node build.js`.

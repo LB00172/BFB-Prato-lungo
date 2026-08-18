@@ -423,8 +423,8 @@ risultano "protetti dalla password".
 
 | File | Ruolo |
 |---|---|
-| `App.jsx` | **Sorgente** dell'app (React + JSX). *Questo è il file da modificare.* |
-| `App.js` | Versione **compilata** di `App.jsx`, caricata dal browser. Generato: non modificare a mano. |
+| `src/*.jsx` | **Sorgenti** dell'app (React + JSX). *Questi sono i file da modificare.* Vengono incollati nell'ordine elencato in `build.js` |
+| `App.js` | Versione **compilata** dei sorgenti, caricata dal browser. Generato: non modificare a mano. |
 | `index.html` | Pagina principale, registrazione service worker |
 | `sw.js` | Service worker (cache offline). `CACHE_NAME` è rigenerato dalla build |
 | `firebase-config.js` | Configurazione: Firebase, campo, meteo, branding, feature flag |
@@ -432,7 +432,7 @@ risultano "protetti dalla password".
 | `sync-merge.js` | Fusione degli stati fra dispositivi (`window.SyncMerge`), usata dalla sincronizzazione |
 | `pdf-ricordo.js` | Generatore del PDF "foto ricordo" (`window.PdfRicordo`), senza librerie |
 | `firestore.rules` | Regole di sicurezza del database, da incollare nella console Firebase |
-| `build.js` | Compila `App.jsx` → `App.js` e aggiorna `CACHE_NAME` |
+| `build.js` | Compila `src/*.jsx` → `App.js` e aggiorna `CACHE_NAME`. Contiene **l'ordine** dei sorgenti |
 | `test/` | Verifiche automatiche (`npm test`). Escluse dal deploy |
 | `vendor/` | React, Tailwind e font self-hosted |
 
@@ -440,7 +440,7 @@ risultano "protetti dalla password".
 
 ```bash
 npm install      # una volta
-npm run build    # App.jsx -> App.js + nuovo CACHE_NAME
+npm run build    # src/*.jsx -> App.js + nuovo CACHE_NAME
 npm test         # 28 prove automatiche (~6 min); "npm test unita" per le veloci
 ```
 

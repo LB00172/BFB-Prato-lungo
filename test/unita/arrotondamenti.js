@@ -1,4 +1,4 @@
-// Replica esatta della logica di arrotondamento/riconciliazione di App.jsx
+// Replica esatta della logica di arrotondamento/riconciliazione di src/7-app.jsx
 function reconcile(owedList, overallTotal) {
   const round10 = (cents) => Math.round(cents / 10) * 10;
   const breakdown = owedList.map((owed, i) => ({ id: i, owed, isChild: owed === 0 && false }));

@@ -1,4 +1,4 @@
-/* File GENERATO da App.jsx tramite Babel (node build.js). Non modificare a mano. */
+/* File GENERATO dai sorgenti in src/ tramite Babel (node build.js). Non modificare a mano. */
 const {
   useState,
   useEffect,

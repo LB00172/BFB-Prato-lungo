@@ -31,7 +31,7 @@ cosa blocca cosa.
 | | Sezione | Perché prima dell'altro |
 | --- | --- | --- |
 | 4 | § 13 Vocabolario dell'interfaccia | Dà un bersaglio alla divisione del codice |
-| 5 | § 14 Spezzare `App.jsx` | Senza il § 13 sposta righe di posto e basta |
+| 5 | § 14 Spezzare `src/7-app.jsx` | Il taglio grosso è fatto; per il resto serve prima il § 13, altrimenti sposta righe di posto |
 
 **Poi — la versione pubblica, che è una catena:**
 
@@ -569,7 +569,7 @@ capita di avere fra le mani un iPhone quasi pieno, è l'occasione per guardare.
 
 **Quando va rifatta:** ogni volta che si tocca `sw.js` o `build.js`. Sono i due
 file che decidono se un rilascio arriva o resta in cache, e sono anche quelli
-che il § 14 (spezzare `App.jsx`) rischia di muovere.
+che il § 14 (spezzare i sorgenti) rischia di muovere.
 
 ## 11. Coda persistente delle foto (IndexedDB)
 
@@ -638,27 +638,48 @@ non c'è build step in produzione (`vercel.json`: `buildCommand: ""`), quindi no
 esiste un `tailwind.config.js` dove mettere i token. La strada realistica sono
 le **variabili CSS in `index.html`**.
 
-## 14. Spezzare `App.jsx`
+## 14. Spezzare i sorgenti — primo taglio fatto
 
-**~7.700 righe in un file solo.** Lo sappiamo, e non è una scoperta: sta scritto
-anche in `AGENTS.md` perché gli analizzatori esterni non lo segnalino come
-novità.
+**Era un file solo da 8.080 righe.** Il 17 agosto 2026 è diventato otto
+sorgenti in `src/`, incollati da `build.js` nell'ordine dichiarato lì:
 
-**Va dopo il § 13, non prima.** Con un vocabolario deciso la divisione ha un
-bersaglio (un file per i bottoni, uno per le schede, uno per i conti); senza,
-sposta soltanto le righe di posto e il giorno dopo si è nella stessa condizione
-con più file da aprire.
+| Sorgente | Righe | Contenuto |
+| --- | --- | --- |
+| `1-fondamenta.jsx` | 267 | React dal globale, utility, memoria locale, istantanee, registro |
+| `2-blocco-password.jsx` | 68 | impronta PBKDF2 della password del campo |
+| `3-tema-e-formati.jsx` | 66 | tema, `uid`/`money`/`posNum`, IBAN e PayPal |
+| `4-configurazione.jsx` | 164 | marchio, funzioni attive, date, tipologie, meteo, regole |
+| `5-gioco.jsx` | 1.083 | "Aiuta Bandy" per intero: non tocca i conti |
+| `6-schermata-blocco.jsx` | 114 | `LockScreen` |
+| `7-app.jsx` | 6.315 | `function App()` |
+| `8-avvio.jsx` | 3 | il mount di React |
 
-**Come farlo senza toccare il service worker.** La tentazione è caricare più
-script da `index.html`, ma ogni file nuovo va aggiunto al precache di `sw.js` e
-all'elenco degli hash in `build.js`, e il precache è **atomico**: più file, più
-occasioni di rimanere a metà. La strada che non muove niente è tenere **un solo
-`App.js` generato** da più sorgenti `.jsx` concatenate da `build.js`. Il numero
-di file precacheati resta identico, `CACHE_NAME` continua a nascere dall'hash
-del risultato, e i telefoni non si accorgono di nulla.
+**Come è stato fatto senza rischiare niente.** Il taglio è stato puramente
+meccanico: nessuna riga spostata, nessuna riordinata, solo confini messi dove il
+file aveva già i suoi stacchi. Questo permette la prova più forte che esista per
+un lavoro del genere — **il codice compilato è rimasto identico al byte**
+(423 KB), quindi mandarlo in produzione non ha cambiato nulla per nessuno.
+L'unica differenza in `App.js` è la riga di intestazione, che ora dice da dove
+viene.
 
-La prova che lo protegge esiste già: `unita/compilazione` confronta ogni file
-con l'elenco del precache e diventa rossa se qualcosa manca.
+**Le due regole nuove, e la loro difesa.** I sorgenti non sono moduli: niente
+`import`, un ambito solo, quindi l'ordine è una regola. `build.js` si ferma se
+trova in `src/` un file che nessuno ha elencato (sparirebbe dall'app senza
+rompere niente, che è il modo peggiore), e `unita/compilazione` controlla anche
+i due estremi — React va preso in testa, il mount deve stare in coda.
+
+### Quello che resta
+
+`7-app.jsx` è ancora 6.315 righe su 8.080, cioè il 78%. **Quelle non si tagliano
+con `sed`:** dentro c'è una sola `function App()`, e spezzarla significa
+estrarre componenti che oggi leggono decine di variabili dalla chiusura. Le
+schede — Calendario, Menù, Presenze, Lista della Spesa, Spese Totali, Galleria,
+Impostazioni — sono i confini naturali, ma diventare `<SchedaGalleria …/>`
+richiede di decidere cosa passa per proprietà e cosa vive in un contesto.
+
+**È qui che serve prima il § 13**, e solo qui: un `<Bottone ruolo="primario">`
+è un pezzo condiviso, e conviene che esista *prima* di distribuire 127 bottoni
+in sette file — altrimenti si fa due volte lo stesso lavoro.
 
 ## 15. Notifiche push
 

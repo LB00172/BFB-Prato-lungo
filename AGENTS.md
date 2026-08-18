@@ -26,9 +26,14 @@ l'applicazione per tutti al primo deploy.
 
 **2. `App.js` è generato. Non si modifica a mano.**
 
-Si modifica `App.jsx`, poi si lancia `node build.js`, che ricompila `App.js`
-con Babel. Una correzione scritta in `App.js` viene cancellata al build
-successivo.
+Si modificano i sorgenti in `src/`, poi si lancia `node build.js`, che li
+**incolla nell'ordine elencato in `build.js`** e ricompila `App.js` con Babel.
+Una correzione scritta in `App.js` viene cancellata al build successivo.
+
+I file di `src/` **non sono moduli**: niente `import`/`export`, condividono un
+unico ambito. Per questo l'ordine conta — una costante va dichiarata prima di
+chi la usa — e per questo un file nuovo va aggiunto all'elenco in `build.js`,
+altrimenti `build.js` si ferma e `unita/compilazione` diventa rossa.
 
 **3. Dopo ogni modifica a un file precacheato, `node build.js` è obbligatorio.**
 
@@ -68,8 +73,10 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 - **Le regole Firestore a utente condiviso sono il modello scelto** per un campo
   solo. L'isolamento fra campi diversi è previsto per la versione pubblica —
   vedi `ROADMAP.md`, non è una svista.
-- **`App.jsx` è un file unico da ~7.700 righe.** Lo sappiamo; spezzarlo è la
-  prima voce del dopo-campo. Non è una scoperta.
+- **`src/7-app.jsx` è ancora un file da ~6.300 righe.** Lo sappiamo: la
+  divisione è cominciata (era un file solo da 8.080) e il resto è `function
+  App()`, che si spezza estraendo componenti, non tagliando righe. Non è una
+  scoperta, è la voce §14 di `ROADMAP.md`.
 
 ## Vincoli non negoziabili
 
@@ -86,7 +93,7 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 ## Come si prova
 
 ```
-node build.js          # App.jsx -> App.js + CACHE_NAME
+node build.js          # src/*.jsx -> App.js + CACHE_NAME
 npm test               # tutto (~10 min)
 npm test unita         # solo quelle senza browser (~10 s)
 ```

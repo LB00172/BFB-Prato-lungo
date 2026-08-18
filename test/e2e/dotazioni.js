@@ -9,7 +9,8 @@ const { apri, ok, fine } = require('../lib/app');
 
   const base = p.locator('h3:has-text("Dotazione base")').locator('..').locator('li');
   const nBase = await base.count();
-  // Le voci fisse sono BASE_GEAR in App.jsx: se ne aggiungi una, aggiorna qui.
+  // Le voci fisse sono BASE_GEAR in src/4-configurazione.jsx: se ne aggiungi una,
+  // aggiorna qui.
   ok(`la dotazione base mostra le 5 voci fisse (viste: ${nBase})`, nBase === 5);
 
   await p.fill('input[placeholder="Es. costume, torcia frontale…"]', 'Torcia frontale');
