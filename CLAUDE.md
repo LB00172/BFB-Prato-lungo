@@ -16,7 +16,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 57 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 58 prove, circa 9 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -44,16 +44,18 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 
 | File | Cosa contiene |
 | --- | --- |
-| `src/*.jsx` | i sorgenti dell'app, incollati **nell'ordine elencato in `build.js`** |
-| `src/7-app.jsx` | `function App()`: stato, conti, sincronizzazione, interfaccia. È ancora il pezzo grosso |
-| `src/5-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
+| `src/*.jsx` | i sorgenti, incollati **nell'ordine elencato in `build.js`**. I numeri vanno di dieci in dieci per poter infilare pezzi in mezzo |
+| `src/80-app.jsx` | `function App()`: stato, sincronizzazione, conti, gestori |
+| `src/8*-schede-*.jsx` | il **disegno** delle schede, uscito da `App()`. Non sono componenti React: sono funzioni che restituiscono JSX e ricevono le dipendenze in un oggetto |
+| `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga` |
+| `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
 | `App.js` | **generato**, non modificare |
 | `sync-merge.js` | fusione voce per voce fra dispositivi (`rev`, `del`, orologio `hi`) |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile` |
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
-| `test/` | 6 prove unitarie + 51 end‑to‑end |
+| `test/` | 6 prove unitarie + 52 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -158,11 +160,13 @@ Le tre cose da sapere senza aprirlo:
 - **Login e room vengono prima di quasi tutto** (§1 e §2): senza un `uid` non
   esistono la checklist privata, la chiave dell'IA, le voci spegnibili né il
   modulo della stanza.
-- **La divisione di `App.jsx` è cominciata** (§14): i sorgenti stanno in `src/`
-  e `build.js` li incolla in un ordine che è una regola, non una preferenza —
-  non sono moduli, condividono un ambito solo. Resta da spezzare
-  `src/7-app.jsx`, ed è lì che serve prima il vocabolario dell'interfaccia
-  (§13): senza un bersaglio, quella divisione sposta righe di posto.
+- **La divisione è fatta per il disegno, non per la logica** (§14). I sorgenti
+  stanno in `src/`, incollati nell'ordine di `build.js`: non sono moduli,
+  condividono un ambito solo. Il disegno delle quattordici schede è uscito da
+  `App()` in sei file; dentro `80-app.jsx` restano stato, effetti, conti e
+  gestori. **Come si sposta un pezzo senza rischiare:** si cattura il DOM di
+  tutte le schermate con `test/lib/schermate.js`, si sposta, si ricattura, e i
+  due HTML devono essere identici al carattere. È così che è stata dimostrata.
 
 Prima di rimettere mano all'interfaccia, `RICOGNIZIONE-UI.md`: i colori, i 127
 bottoni e le undici misure di testo, già contati. È il materiale del §13.

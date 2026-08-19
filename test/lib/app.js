@@ -79,10 +79,11 @@ async function apri(opzioni) {
   await page.goto(URL_APP + '/index.html', { waitUntil: 'load' });
   await page.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
 
-  const menu = async (voce) => {
-    await page.click('button[aria-label="Menu"]');
+  const menu = async (voce, ms) => {
+    const t = ms || 30000;
+    await page.click('button[aria-label="Menu"]', { timeout: t });
     await page.waitForTimeout(250);
-    await page.locator('nav button', { hasText: voce }).first().click();
+    await page.locator('nav button', { hasText: voce }).first().click({ timeout: t });
     await page.waitForTimeout(300);
   };
 

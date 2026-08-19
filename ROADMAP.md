@@ -699,18 +699,59 @@ trova in `src/` un file che nessuno ha elencato (sparirebbe dall'app senza
 rompere niente, che è il modo peggiore), e `unita/compilazione` controlla anche
 i due estremi — React va preso in testa, il mount deve stare in coda.
 
+### Secondo taglio: il disegno delle schede (18 agosto 2026)
+
+Le quattordici schede — Calendario, Menu', Presenze, Spese Totali, Lista della
+Spesa, Attrezzatura, Membri, Regole, Dotazioni, Galleria, Archivio, Aiuta
+Bandy, Come funziona, Impostazioni — sono uscite da `App()` in sei sorgenti:
+
+| Sorgente | Righe | Schede |
+| --- | --- | --- |
+| `81-schede-giorno.jsx` | 573 | Calendario, Menu', Presenze |
+| `82-schede-conti.jsx` | 932 | Spese Totali, Lista della Spesa, Attrezzatura |
+| `83-schede-gruppo.jsx` | 243 | Membri, Regole, Dotazioni |
+| `84-schede-album.jsx` | 224 | Archivio, gioco, guida |
+| `85-scheda-galleria.jsx` | 284 | Galleria |
+| `86-scheda-impostazioni.jsx` | 520 | Impostazioni |
+
+**`80-app.jsx` passa da 6.315 a 3.887 righe.** Contando dall'inizio: un file
+solo da 8.080 righe è diventato quindici sorgenti, e il più grande è meno della
+metà dell'originale.
+
+### Non sono componenti React, ed è voluto
+
+Ogni scheda è una **funzione che restituisce JSX** e riceve le dipendenze in un
+oggetto: `schedaGalleria({ photos, picked, addPhotos, … })`. Convertirle in
+componenti avrebbe aggiunto un confine di riconciliazione per scheda — un
+cambio di comportamento, non una pulizia. Così invece l'albero prodotto è
+identico, e questo permette la prova più forte:
+
+> Si cattura il DOM di tutte e sedici le schermate, si sposta il codice, si
+> ricattura. I due HTML devono essere **identici al carattere**.
+
+Lo strumento sta in `test/lib/schermate.js` e va usato a ogni prossimo
+spostamento. Il taglio di agosto è passato così su tutte e sedici.
+
+### L'elenco delle dipendenze è il risultato, non l'effetto collaterale
+
+`App()` aveva **329 variabili locali** e ogni scheda ne pescava quello che le
+serviva senza dichiararlo. Ora ogni scheda ha in cima l'elenco di ciò che usa:
+Calendario 20, Presenze 24, Spese Totali 28, Lista 40, Impostazioni 41.
+Regole zero — l'unica che si disegna da sola.
+
+Quei numeri sono la misura di quanto lavoro resta, e la lista della spesa per
+il prossimo passo: finché una scheda ne chiede quaranta, non è un modulo.
+
 ### Quello che resta
 
-`7-app.jsx` è ancora 6.315 righe su 8.080, cioè il 78%. **Quelle non si tagliano
-con `sed`:** dentro c'è una sola `function App()`, e spezzarla significa
-estrarre componenti che oggi leggono decine di variabili dalla chiusura. Le
-schede — Calendario, Menù, Presenze, Lista della Spesa, Spese Totali, Galleria,
-Impostazioni — sono i confini naturali, ma diventare `<SchedaGalleria …/>`
-richiede di decidere cosa passa per proprietà e cosa vive in un contesto.
+Dentro `80-app.jsx` ci sono ancora stato, effetti, conti e gestori. **Quelli
+non si spostano con `sed`:** vanno estratti come hook (`usaGalleria`,
+`usaPresenze`) che si portano dietro il loro `useState`. È il passo che fa
+scendere davvero il numero delle dipendenze, e va fatto una scheda alla volta,
+con la stessa prova del DOM identico.
 
-**È qui che serve prima il § 13**, e solo qui: un `<Bottone ruolo="primario">`
-è un pezzo condiviso, e conviene che esista *prima* di distribuire 127 bottoni
-in sette file — altrimenti si fa due volte lo stesso lavoro.
+Da rifare quando si tocca: le **verifiche su iPhone** (§ 10), perche' un
+sorgente nuovo cambia `App.js` e quindi `CACHE_NAME`.
 
 ## 15. Notifiche push
 

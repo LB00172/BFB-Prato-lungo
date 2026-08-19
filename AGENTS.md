@@ -73,10 +73,15 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 - **Le regole Firestore a utente condiviso sono il modello scelto** per un campo
   solo. L'isolamento fra campi diversi è previsto per la versione pubblica —
   vedi `ROADMAP.md`, non è una svista.
-- **`src/7-app.jsx` è ancora un file da ~6.300 righe.** Lo sappiamo: la
-  divisione è cominciata (era un file solo da 8.080) e il resto è `function
-  App()`, che si spezza estraendo componenti, non tagliando righe. Non è una
-  scoperta, è la voce §14 di `ROADMAP.md`.
+- **`src/80-app.jsx` è ancora un file da ~3.900 righe.** Lo sappiamo: era un
+  file solo da 8.080, il disegno delle schede è già uscito in
+  `src/8*-schede-*.jsx`, e quello che resta è stato, effetti e gestori — che si
+  spezzano estraendo hook, non tagliando righe. Non è una scoperta, è la voce
+  §14 di `ROADMAP.md`.
+- **Le schede non sono componenti React.** Sono funzioni che restituiscono JSX
+  e ricevono le dipendenze in un oggetto. È voluto: nessun confine di
+  riconciliazione nuovo, nessun hook spostato, l'albero prodotto è identico.
+  "Convertirle in componenti" è un cambio di comportamento, non una pulizia.
 
 ## Vincoli non negoziabili
 

@@ -66,7 +66,7 @@ if (compilato !== null) {
 // silenzio (un "whatsap" verde bosco invece che verde WhatsApp); senza, diventa
 // trasparente. Nessuna delle due cose fa fallire una prova end-to-end, perche'
 // il bottone c'e', funziona e ha il testo giusto. Si controlla qui.
-const interfaccia = fs.readFileSync(path.join(RADICE, 'src', '5-interfaccia.jsx'), 'utf8');
+const interfaccia = fs.readFileSync(path.join(RADICE, 'src', '50-interfaccia.jsx'), 'utf8');
 const nomiDi = (blocco) => {
   const i = interfaccia.indexOf('const ' + blocco + ' = {');
   const j = interfaccia.indexOf('};', i);
