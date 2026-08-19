@@ -21,35 +21,49 @@ cosa blocca cosa.
 
 **Prima di tutto — si sistema la casa (nessuna dipendenza, tutto guadagno):**
 
-| | Sezione | Perché adesso |
+| | Sezione | Stato |
 | --- | --- | --- |
-| 1 | § 11 Coda foto su IndexedDB | Oggi la promessa ha un asterisco («non chiudere l'app»). Al campo l'app si chiude da sola: è la condizione normale |
-| 2 | § 12 Ponte Menù → Lista della spesa | Valore vero, nessun backend, si usa già al prossimo campo |
-
-**Poi — si prepara il terreno, nell'ordine obbligato:**
-
-| | Sezione | Perché prima dell'altro |
-| --- | --- | --- |
-| 4 | § 13 Vocabolario dell'interfaccia | Dà un bersaglio alla divisione del codice |
-| 5 | § 14 Spezzare `src/7-app.jsx` | Il taglio grosso è fatto; per il resto serve prima il § 13, altrimenti sposta righe di posto |
+| — | § 12 Ponte Menù → Lista della spesa | **fatto** il 19 agosto: i menù veri del campo hanno corretto il piano (niente tabella di ingredienti) |
+| — | § 11 Coda foto | **sospesa**: la voce era sopravvalutata. Prima va deciso se la galleria deve funzionare al campo |
+| 1 | § 13 Vocabolario dell'interfaccia | colori fatti, 102 bottoni su 121 migrati; restano i 22 a classi condizionali |
+| 2 | § 14 Spezzare i sorgenti | il disegno è uscito; restano stato ed effetti, da estrarre come hook |
 
 **Poi — la versione pubblica, che è una catena:**
 
 | | Sezione | Perché in quest'ordine |
 | --- | --- | --- |
-| 6 | § 1 Login | Senza account non esiste nient'altro di quanto segue |
-| 7 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
-| 8 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
-| 9 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
-| 10 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 8 |
-| 11 | § 6 Checklist | La lista privata ha bisogno di un `uid`, quindi del § 1 |
-| 12 | § 5 Scontrini con l'IA | La chiave ha bisogno di un server. Farla prima significa costruire il backend per l'IA invece che per il motivo giusto |
-| 13 | § 15 Notifiche push | Piano Blaze, Cloud Functions e — soprattutto — una domanda ancora senza risposta su cosa valga la pena notificare |
+| 3 | § 1 Login | Senza account non esiste nient'altro di quanto segue |
+| 4 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
+| 5 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
+| 6 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
+| 7 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 8 |
+| 8 | § 6 Checklist | La lista privata ha bisogno di un `uid`, quindi del § 1 |
+| 9 | § 5 Scontrini con l'IA | La chiave ha bisogno di un server. Farla prima significa costruire il backend per l'IA invece che per il motivo giusto |
+| 10 | § 15 Notifiche push | Piano Blaze, Cloud Functions e — soprattutto — una domanda ancora senza risposta su cosa valga la pena notificare |
 
 **Fuori dalla fila:** § 4 (database) è una decisione già presa — si resta su
 Firestore; § 7 (analisi di mercato) non è lavoro, è la mappa; § 10 (iPhone) è
 **fatta** ad agosto 2026 e si ripete solo quando si tocca `sw.js` o `build.js`
 — cioè, fra le voci qui sopra, il § 14.
+
+### Il calendario, che prima non c'era
+
+Contributo utile arrivato da un'analisi esterna (agosto 2026), tenuto perché è
+l'unica cosa di quel documento che non era già nostra: **l'uso dei gestionali
+per l'outdoor crolla d'inverno e ha il picco fra giugno e settembre.** Lanciare
+in autunno disperde le energie. Da qui:
+
+- lavoro tecnico in autunno-inverno;
+- **posizionamento sullo store (ASO) in febbraio-marzo**, su parole chiave di
+  nicchia senza concorrenza diretta: «cassa scout», «gestione cambusa», «conti
+  campo»;
+- **apertura pubblica a primavera**, a ridosso dei preparativi dei campi estivi,
+  quando i capi gruppo stanno organizzando.
+
+**Ma il collaudo su un campo vero resta prima del lancio, non dopo** (§ 16). Un
+campo invernale di tre giorni al chiuso e con la linea non prova nessuna delle
+condizioni che possono affondare questa app. Se il calendario e il collaudo
+entrano in conflitto, vince il collaudo.
 
 **In mezzo, e non è una voce di questo elenco:** raccogliere il *feedback dei
 venti utenti veri* del campo 2026 — cosa hanno usato, cosa non hanno capito. È
@@ -602,46 +616,106 @@ capita di avere fra le mani un iPhone quasi pieno, è l'occasione per guardare.
 file che decidono se un rilascio arriva o resta in cache, e sono anche quelli
 che il § 14 (spezzare i sorgenti) rischia di muovere.
 
-## 11. Coda persistente delle foto (IndexedDB)
+## 11. Coda foto: da rimisurare prima di farla
 
-**Oggi le foto viaggiano sulla coda di scrittura di Firestore.** Funziona, ma
-l'app deve dire questa frase:
+**Questa voce era sopravvalutata, e la sopravvalutazione era nostra.** Diceva
+che la promessa «partono da sole appena la linea regge» ha un asterisco.
+Verificando il codice riga per riga, il quadro è più stretto:
 
-> Puoi chiudere l'app, ma non prima che la spia in alto smetta di dire
-> «da inviare».
+- `codaFoto` (`firebase-sync.js:358`) **è un array in memoria**: questo è vero.
+- Ma si riempie solo nel ramo `catch` di `putPhoto`, cioè su errori veri
+  (permessi, documento oltre il megabyte, SDK in stato cattivo) — casi in cui
+  ritentare non aiuta comunque.
+- Alla caduta di rete `setDoc` **non rifiuta**: resta in sospeso e la scrittura
+  vive nella coda persistente di Firestore (`persistentLocalCache`,
+  `firebase-sync.js:116`), che è già su IndexedDB. Il guasto comune non passa da
+  `codaFoto`.
+- E soprattutto: `addPhotos` (`src/80-app.jsx:1923`) **rifiuta il caricamento
+  quando manca la linea**. Al campo non si possono aggiungere foto, quindi lo
+  scenario «l'app muore e la coda con lei» non è raggiungibile.
 
-Una promessa con un asterisco è una promessa che qualcuno non leggerà. Al campo
-si fotografa lo scontrino, si mette il telefono in tasca e l'app muore per conto
-suo: quella è la condizione normale, non l'eccezione.
+**Quindi la riparazione vale poco.** Quello che vale è una domanda di prodotto:
 
-**Cosa cambia con una coda propria su IndexedDB:** i byte della foto stanno in
-un archivio pensato per i byte, non dentro documenti da 1 MB; la coda sopravvive
-alla chiusura senza asterischi; e il ritentativo diventa nostro, quindi si può
-mostrare *quante* foto mancano e *da quanto*.
+> La galleria deve funzionare al campo?
 
-**Ordine, come sempre in questa app:** prima si scrive la coda, poi si toglie
-l'avviso. Toglierlo prima significa promettere una cosa che non c'è ancora.
+Se sì, allora serve una coda persistente vera — e allora questa voce diventa
+una **funzione** («scatta al campo, parte a casa»), con il suo peso e il suo
+posto in fila. Se no, la voce si chiude: basta togliere l'asterisco dal
+messaggio, perché non c'è niente da promettere.
 
-Vale sia per le foto della Galleria sia per quelle degli scontrini — sono lo
-stesso problema con due nomi.
+**Da decidere prima di scrivere una riga.**
 
-## 12. Ponte Menù → Lista della spesa
+## 12. Ponte Menù → Lista della spesa — fatto (19 agosto 2026)
 
-**Obiettivo:** dal menù del giorno escono le voci nella Lista della Spesa, senza
-ricopiare a mano.
+**Il piano era sbagliato, e sono stati i dati veri a dirlo.** Prevedeva una
+tabella di ingredienti per tradurre «pasta al pomodoro» in «pasta, pomodoro».
+Guardando i menù scritti davvero al campo 2026:
 
-Le due schede esistono già e non si parlano: il Menù scrive nel campo `note` del
-giorno (un foglio a righe, una pietanza per riga), la Lista della Spesa è un
-elenco separato. Chi fa la cambusa legge l'uno e ribatte nell'altra.
+```
+Pranzo :
+Pasta funghi e piselli
+40 scamorze
 
-**Il ponte deterministico viene prima dell'IA.** «Pasta al pomodoro» → *pasta*,
-*pomodoro*: è una tabella di ingredienti, non un modello. Serve senza linea, che
-è quando si fa la lista. **Le quantità** («venti persone, tre giorni: quanto
-compro?») sono un'altra cosa e stanno in § 5, con la linea e con la conferma
-dell'uomo.
+Cena :
+150 arrosticini
+40 COSCE pollo
+50 salsiccie
+Pannocchie
+```
 
-Il vincolo: il ponte **propone**, non scrive da solo. Una lista della spesa che
-si riempie da sola mentre scrivi il menù è una lista di cui nessuno si fida.
+e l'11 agosto: `Vongole: 1,5 kg 6€ al kg`.
+
+**Il menù era già la lista della spesa**, con le quantità e a volte i prezzi.
+Nel frattempo la scheda «Da acquistare», che esiste esattamente per quello,
+conteneva **cinque voci in tutto**. Non è disciplina che manca: chi pensa al
+cibo scrive nel campo che ha davanti.
+
+Quindi niente tabella di ingredienti — la gente scrive già gli ingredienti — e
+niente IA. Serve un lettore che riconosca la quantità e proponga la riga.
+
+### Com'è fatto
+
+`menu-spesa.js`, modulo a sé come `sync-merge.js` e `pdf-ricordo.js`: sta fuori
+da `src/` perché così è **provabile con una prova unitaria** invece che
+duplicando la logica in un test (che è quello che fa ancora
+`unita/arrotondamenti`). Espone `vociDalMenu(testo)` e `nuove(voci, giaInLista)`.
+
+Tre forme riconosciute, in ordine di certezza:
+
+| Riga | Nome | Quantità |
+| --- | --- | --- |
+| `Vongole: 1,5 kg 6€ al kg` | Vongole | `1,5 kg 6€ al kg` |
+| `150 arrosticini` | arrosticini | `150` |
+| `FIORENTINA 5kg` | FIORENTINA | `5kg` |
+| `Pannocchie` | Pannocchie | — |
+
+Le decisioni che contano, tutte prese guardando i menù veri:
+
+- **Quello che segue i due punti resta verbatim, prezzo compreso.** Se chi
+  cucina ha scritto `6€ al kg` è un'informazione sua: non tocca a noi buttarla.
+- **Il numero in coda vale come quantità solo se ha l'unità attaccata**
+  (`5kg`): senza unità, un numero in fondo è più probabilmente parte del nome.
+- **Le virgole separano voci diverse solo se non c'è una quantità.** Con una
+  quantità non si saprebbe a quale pezzo appartiene, e indovinare lì vorrebbe
+  dire sbagliare le quantità della spesa.
+- **Niente filtro «non sembra cibo».** Filtrare richiederebbe un dizionario
+  alimentare, cioè la cosa che si è deciso di non costruire. `Montaggio serale
+  tende etc.` viene proposto come tutto il resto: una spunta da togliere costa
+  meno di una voce persa.
+- **Propone, non scrive.** Il tasto apre una finestra con le voci spuntate; la
+  lista non si muove finché non si conferma. I doppioni si riconoscono dal
+  **contenuto** della lista, non dal fatto che il tasto sia già stato premuto.
+
+### Quello che i dati hanno mostrato e che non abbiamo fatto
+
+Negli `appunti` del campo si legge *«Arrosticini Eleonora / Salsicce Leonardo /
+Pollo Nunzio / Pecora Ugo»*. È un **terzo bisogno** — chi porta cosa — che
+l'app non copre e che la gente sta già gestendo a mano in un campo libero.
+Candidato naturale per il prossimo giro.
+
+E il ponte oggi lavora **su un giorno alla volta**. Chi fa la spesa la fa per
+tutta la settimana: una versione «tutti i giorni» è un'aggiunta piccola, ma va
+decisa guardando come lo usano, non prima.
 
 ## 13. Vocabolario dell'interfaccia
 

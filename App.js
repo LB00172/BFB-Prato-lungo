@@ -3951,6 +3951,57 @@ function App() {
     setNewBuyName('');
     setNewBuyQty('');
   };
+
+  // ---------- Dal menù alla lista della spesa ----------
+  // Il menù è già la spesa: al campo 2026 le quantità stavano lì e la scheda
+  // "Da acquistare" aveva cinque voci. Qui si propongono le righe del menù del
+  // giorno; nessuna entra senza conferma, e quelle già in lista non ricompaiono.
+  const [propostaSpesa, setPropostaSpesa] = useState(null); // { voci:[], scelte:{} }
+
+  const proponiDalMenu = () => {
+    const MS = window.MenuSpesa;
+    if (!MS) {
+      window.alert('Il lettore dei menù non è disponibile.');
+      return;
+    }
+    const testo = getDayData(selectedDateStr).note || '';
+    const tutte = MS.vociDalMenu(testo);
+    if (tutte.length === 0) {
+      window.alert('Il menù di questo giorno è vuoto: scrivi cosa si mangia e riprova.');
+      return;
+    }
+    const voci = MS.nuove(tutte, toBuy);
+    if (voci.length === 0) {
+      window.alert(`Le ${tutte.length} ${tutte.length === 1 ? 'voce' : 'voci'} di questo menù sono già nella lista della spesa.`);
+      return;
+    }
+    // Tutte spuntate: la maggioranza delle righe è roba da comprare, e togliere
+    // una spunta costa meno che metterne sei.
+    const scelte = {};
+    voci.forEach((_, i) => {
+      scelte[i] = true;
+    });
+    setPropostaSpesa({
+      voci,
+      scelte,
+      scartate: tutte.length - voci.length
+    });
+  };
+  const confermaPropostaSpesa = () => {
+    const p = propostaSpesa;
+    if (!p) return;
+    const prese = p.voci.filter((_, i) => p.scelte[i]);
+    if (prese.length === 0) {
+      setPropostaSpesa(null);
+      return;
+    }
+    setToBuy(prev => [...prev, ...prese.map(v => ({
+      id: uid(),
+      name: v.nome,
+      qty: v.qta
+    }))]);
+    setPropostaSpesa(null);
+  };
   const removeToBuy = id => {
     const it = toBuy.find(x => x.id === id);
     if (it && !window.confirm(`Eliminare "${it.name}" dalla lista da acquistare?`)) return;
@@ -6124,13 +6175,18 @@ function App() {
     weekDays,
     wxBusy
   }), activeTab === 'menu' && schedaMenu({
+    confermaPropostaSpesa,
     getDayData,
     getMeal,
     members,
+    proponiDalMenu,
+    propostaSpesa,
     renderWeekStrip,
     selectedDateStr,
     setCurrentDate,
+    setPropostaSpesa,
     setSelectedDateStr,
+    toBuy,
     updateDayData
   }), activeTab === 'membri' && schedaMembri({
     addMember,
@@ -6861,13 +6917,18 @@ const schedaCalendario = ({
   className: bottone('secondario', 'piccolo', 'w-full')
 }, "\uD83C\uDF5D Men\xF9 del giorno", (getDayData(selectedDateStr).note || '').trim() ? ' · già scritto' : ' · da scrivere')));
 const schedaMenu = ({
+  confermaPropostaSpesa,
   getDayData,
   getMeal,
   members,
+  proponiDalMenu,
+  propostaSpesa,
   renderWeekStrip,
   selectedDateStr,
   setCurrentDate,
+  setPropostaSpesa,
   setSelectedDateStr,
+  toBuy,
   updateDayData
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
@@ -6906,7 +6967,58 @@ const schedaMenu = ({
   className: "lined-paper w-full p-3 rounded-lg border border-[#8F9E8B]/30 focus:outline-none focus:border-[#2D392C] resize-y"
 }), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic"
-}, "Una pietanza per riga. Si sincronizza con gli altri: chi cucina lo trova gi\xE0 scritto.")), /*#__PURE__*/React.createElement("div", {
+}, "Una pietanza per riga. Si sincronizza con gli altri: chi cucina lo trova gi\xE0 scritto."), /*#__PURE__*/React.createElement("button", {
+  onClick: proponiDalMenu,
+  className: bottone('secondario', 'piccolo', 'w-full mt-1')
+}, "\uD83E\uDDFE Porta nella lista della spesa"), /*#__PURE__*/React.createElement("p", {
+  className: "text-[9px] text-gray-400 italic"
+}, "Legge le righe qui sopra e le propone in ", /*#__PURE__*/React.createElement("span", {
+  className: "font-bold"
+}, "Lista della Spesa \u2192 Da acquistare"), ". Prima di aggiungerle te le fa vedere: niente entra senza la tua spunta.", toBuy.length > 0 && ` Adesso in lista ce ne sono ${toBuy.length}.`)), propostaSpesa && /*#__PURE__*/React.createElement("div", {
+  className: "fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-3 z-50",
+  onClick: () => setPropostaSpesa(null)
+}, /*#__PURE__*/React.createElement("div", {
+  className: "bg-white rounded-lg w-full max-w-md max-h-[85vh] flex flex-col shadow-xl",
+  onClick: e => e.stopPropagation()
+}, /*#__PURE__*/React.createElement("div", {
+  className: "p-4 border-b border-[#8F9E8B]/30"
+}, /*#__PURE__*/React.createElement("h3", {
+  className: "font-rustic text-lg text-[#2D392C]"
+}, "Dal men\xF9 alla spesa"), /*#__PURE__*/React.createElement("p", {
+  className: "text-[10px] text-gray-500 leading-snug mt-1"
+}, propostaSpesa.voci.length, " ", propostaSpesa.voci.length === 1 ? 'voce trovata' : 'voci trovate', " nel men\xF9 di", ' ', parseDate(selectedDateStr).toLocaleDateString('it-IT', {
+  day: 'numeric',
+  month: 'long'
+}), ". Togli la spunta a quello che non serve comprare.", propostaSpesa.scartate > 0 && ` (${propostaSpesa.scartate} ${propostaSpesa.scartate === 1 ? 'era già' : 'erano già'} in lista.)`)), /*#__PURE__*/React.createElement("ul", {
+  className: "overflow-y-auto divide-y divide-[#8F9E8B]/15 px-4"
+}, propostaSpesa.voci.map((v, i) => /*#__PURE__*/React.createElement("li", {
+  key: i
+}, /*#__PURE__*/React.createElement("label", {
+  className: "flex items-center gap-3 py-2.5 cursor-pointer"
+}, /*#__PURE__*/React.createElement("input", {
+  type: "checkbox",
+  checked: !!propostaSpesa.scelte[i],
+  onChange: () => setPropostaSpesa(p => ({
+    ...p,
+    scelte: {
+      ...p.scelte,
+      [i]: !p.scelte[i]
+    }
+  })),
+  className: "w-4 h-4 shrink-0 accent-[#2D392C]"
+}), /*#__PURE__*/React.createElement("span", {
+  className: "text-sm text-[#2D392C] min-w-0 flex-1 truncate"
+}, v.nome), v.qta && /*#__PURE__*/React.createElement("span", {
+  className: "text-[10px] font-bold text-[#5C4A3C] shrink-0"
+}, v.qta))))), /*#__PURE__*/React.createElement("div", {
+  className: "p-4 border-t border-[#8F9E8B]/30 flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: () => setPropostaSpesa(null),
+  className: bottone('testuale', 'normale', 'flex-1')
+}, "Annulla"), /*#__PURE__*/React.createElement("button", {
+  onClick: confermaPropostaSpesa,
+  className: bottone('primario', 'normale', 'flex-1')
+}, "Aggiungi (", propostaSpesa.voci.filter((_, i) => propostaSpesa.scelte[i]).length, ")")))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"

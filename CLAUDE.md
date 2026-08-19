@@ -16,7 +16,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 58 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 60 prove, circa 9 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -51,11 +51,12 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
 | `App.js` | **generato**, non modificare |
 | `sync-merge.js` | fusione voce per voce fra dispositivi (`rev`, `del`, orologio `hi`) |
+| `menu-spesa.js` | dal menù del giorno alle voci della spesa. Sta fuori da `src/` perché così è provabile con una prova unitaria invece di duplicare la logica nel test |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile` |
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
-| `test/` | 6 prove unitarie + 52 end‑to‑end |
+| `test/` | 7 prove unitarie + 53 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -75,6 +76,12 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 - **Prima si aggiorna la storia della sincronizzazione, poi l'istantanea
   locale.** All'inverso, con lo spazio agli sgoccioli, l'istantanea si mangia
   i byte che servivano alla storia.
+- **I dati veri correggono i piani, e vanno guardati prima di scrivere.** Il
+  ponte Menù → Lista prevedeva una tabella di ingredienti: i menù del campo 2026
+  hanno mostrato che la gente scrive già gli ingredienti con le quantità, e che
+  la scheda «Da acquistare» era vuota perché nessuno scrive due volte. La
+  tabella non è servita. Lo stesso è capitato al §11, sopravvalutato finché non
+  ho letto `firebase-sync.js` riga per riga.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.

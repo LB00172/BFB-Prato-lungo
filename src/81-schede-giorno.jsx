@@ -241,13 +241,18 @@ const schedaCalendario = ({
 );
 
 const schedaMenu = ({
+  confermaPropostaSpesa,
   getDayData,
   getMeal,
   members,
+  proponiDalMenu,
+  propostaSpesa,
   renderWeekStrip,
   selectedDateStr,
   setCurrentDate,
+  setPropostaSpesa,
   setSelectedDateStr,
+  toBuy,
   updateDayData,
 }) => (
   <div className="space-y-4">
@@ -285,7 +290,61 @@ const schedaMenu = ({
         className="lined-paper w-full p-3 rounded-lg border border-[#8F9E8B]/30 focus:outline-none focus:border-[#2D392C] resize-y"
       />
       <p className="text-[9px] text-gray-400 italic">Una pietanza per riga. Si sincronizza con gli altri: chi cucina lo trova già scritto.</p>
+
+      {/* Il ponte verso la spesa. Sta qui e non nella Lista perché è qui che si
+          scrivono le quantità: al campo 2026 il menù aveva tutta la spesa e la
+          scheda "Da acquistare" cinque voci in croce. */}
+      <button
+        onClick={proponiDalMenu}
+        className={bottone('secondario', 'piccolo', 'w-full mt-1')}
+      >
+        🧾 Porta nella lista della spesa
+      </button>
+      <p className="text-[9px] text-gray-400 italic">
+        Legge le righe qui sopra e le propone in <span className="font-bold">Lista della Spesa → Da acquistare</span>.
+        Prima di aggiungerle te le fa vedere: niente entra senza la tua spunta.
+        {toBuy.length > 0 && ` Adesso in lista ce ne sono ${toBuy.length}.`}
+      </p>
     </div>
+
+    {/* Conferma della proposta: l'uomo decide, il lettore propone. */}
+    {propostaSpesa && (
+      <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-3 z-50" onClick={() => setPropostaSpesa(null)}>
+        <div className="bg-white rounded-lg w-full max-w-md max-h-[85vh] flex flex-col shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b border-[#8F9E8B]/30">
+            <h3 className="font-rustic text-lg text-[#2D392C]">Dal menù alla spesa</h3>
+            <p className="text-[10px] text-gray-500 leading-snug mt-1">
+              {propostaSpesa.voci.length} {propostaSpesa.voci.length === 1 ? 'voce trovata' : 'voci trovate'} nel menù di
+              {' '}{parseDate(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}.
+              Togli la spunta a quello che non serve comprare.
+              {propostaSpesa.scartate > 0 && ` (${propostaSpesa.scartate} ${propostaSpesa.scartate === 1 ? 'era già' : 'erano già'} in lista.)`}
+            </p>
+          </div>
+          <ul className="overflow-y-auto divide-y divide-[#8F9E8B]/15 px-4">
+            {propostaSpesa.voci.map((v, i) => (
+              <li key={i}>
+                <label className="flex items-center gap-3 py-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!propostaSpesa.scelte[i]}
+                    onChange={() => setPropostaSpesa((p) => ({ ...p, scelte: { ...p.scelte, [i]: !p.scelte[i] } }))}
+                    className="w-4 h-4 shrink-0 accent-[#2D392C]"
+                  />
+                  <span className="text-sm text-[#2D392C] min-w-0 flex-1 truncate">{v.nome}</span>
+                  {v.qta && <span className="text-[10px] font-bold text-[#5C4A3C] shrink-0">{v.qta}</span>}
+                </label>
+              </li>
+            ))}
+          </ul>
+          <div className="p-4 border-t border-[#8F9E8B]/30 flex gap-2">
+            <button onClick={() => setPropostaSpesa(null)} className={bottone('testuale', 'normale', 'flex-1')}>Annulla</button>
+            <button onClick={confermaPropostaSpesa} className={bottone('primario', 'normale', 'flex-1')}>
+              Aggiungi ({propostaSpesa.voci.filter((_, i) => propostaSpesa.scelte[i]).length})
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* Colpo d'occhio sui giorni del campo con il menù già scritto */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">

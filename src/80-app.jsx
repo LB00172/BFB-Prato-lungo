@@ -1589,6 +1589,42 @@ function App() {
     setNewBuyQty('');
   };
 
+  // ---------- Dal menù alla lista della spesa ----------
+  // Il menù è già la spesa: al campo 2026 le quantità stavano lì e la scheda
+  // "Da acquistare" aveva cinque voci. Qui si propongono le righe del menù del
+  // giorno; nessuna entra senza conferma, e quelle già in lista non ricompaiono.
+  const [propostaSpesa, setPropostaSpesa] = useState(null); // { voci:[], scelte:{} }
+
+  const proponiDalMenu = () => {
+    const MS = window.MenuSpesa;
+    if (!MS) { window.alert('Il lettore dei menù non è disponibile.'); return; }
+    const testo = getDayData(selectedDateStr).note || '';
+    const tutte = MS.vociDalMenu(testo);
+    if (tutte.length === 0) {
+      window.alert('Il menù di questo giorno è vuoto: scrivi cosa si mangia e riprova.');
+      return;
+    }
+    const voci = MS.nuove(tutte, toBuy);
+    if (voci.length === 0) {
+      window.alert(`Le ${tutte.length} ${tutte.length === 1 ? 'voce' : 'voci'} di questo menù sono già nella lista della spesa.`);
+      return;
+    }
+    // Tutte spuntate: la maggioranza delle righe è roba da comprare, e togliere
+    // una spunta costa meno che metterne sei.
+    const scelte = {};
+    voci.forEach((_, i) => { scelte[i] = true; });
+    setPropostaSpesa({ voci, scelte, scartate: tutte.length - voci.length });
+  };
+
+  const confermaPropostaSpesa = () => {
+    const p = propostaSpesa;
+    if (!p) return;
+    const prese = p.voci.filter((_, i) => p.scelte[i]);
+    if (prese.length === 0) { setPropostaSpesa(null); return; }
+    setToBuy((prev) => [...prev, ...prese.map((v) => ({ id: uid(), name: v.nome, qty: v.qta }))]);
+    setPropostaSpesa(null);
+  };
+
   const removeToBuy = (id) => {
     const it = toBuy.find((x) => x.id === id);
     if (it && !window.confirm(`Eliminare "${it.name}" dalla lista da acquistare?`)) return;
@@ -3513,7 +3549,7 @@ function App() {
 
         {/* ---------- MENÙ ---------- */}
         {activeTab === 'menu' && schedaMenu({
-          getDayData, getMeal, members, renderWeekStrip, selectedDateStr, setCurrentDate, setSelectedDateStr, updateDayData,
+          confermaPropostaSpesa, getDayData, getMeal, members, proponiDalMenu, propostaSpesa, renderWeekStrip, selectedDateStr, setCurrentDate, setPropostaSpesa, setSelectedDateStr, toBuy, updateDayData,
         })}
 
         {/* ---------- MEMBRI ---------- */}
