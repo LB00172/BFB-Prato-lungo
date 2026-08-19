@@ -24,22 +24,23 @@ cosa blocca cosa.
 | | Sezione | Stato |
 | --- | --- | --- |
 | — | § 12 Ponte Menù → Lista della spesa | **fatto** il 19 agosto: i menù veri del campo hanno corretto il piano (niente tabella di ingredienti) |
-| — | § 11 Coda foto | **sospesa**: la voce era sopravvalutata. Prima va deciso se la galleria deve funzionare al campo |
-| 1 | § 13 Vocabolario dell'interfaccia | colori fatti, 102 bottoni su 121 migrati; restano i 22 a classi condizionali |
-| 2 | § 14 Spezzare i sorgenti | il disegno è uscito; restano stato ed effetti, da estrarre come hook |
+| — | § 11 Coda foto | **chiusa**: la galleria resta online (§ 15-bis.4), e il messaggio ora dice anche cosa si perde chiudendo l'app |
+| 1 | § 17 «Chi porta cosa» | Al campo lo scrivevano negli appunti a mano: il bisogno è dimostrato, come per il § 12 |
+| 2 | § 13 Vocabolario dell'interfaccia | colori fatti, 102 bottoni su 121 migrati; restano i 22 a classi condizionali |
+| 3 | § 14 Spezzare i sorgenti | il disegno è uscito; restano stato ed effetti, da estrarre come hook |
 
 **Poi — la versione pubblica, che è una catena:**
 
 | | Sezione | Perché in quest'ordine |
 | --- | --- | --- |
-| 3 | § 1 Login | Senza account non esiste nient'altro di quanto segue |
-| 4 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
-| 5 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
-| 6 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
-| 7 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 8 |
-| 8 | § 6 Checklist | La lista privata ha bisogno di un `uid`, quindi del § 1 |
-| 9 | § 5 Scontrini con l'IA | La chiave ha bisogno di un server. Farla prima significa costruire il backend per l'IA invece che per il motivo giusto |
-| 10 | § 15 Notifiche push | Piano Blaze, Cloud Functions e — soprattutto — una domanda ancora senza risposta su cosa valga la pena notificare |
+| 4 | § 1 Login | Senza account non esiste nient'altro di quanto segue |
+| 5 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
+| 6 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
+| 7 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
+| 8 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 8 |
+| 9 | § 6 Checklist | La lista privata ha bisogno di un `uid`, quindi del § 1 |
+| 10 | § 5 Scontrini con l'IA | La chiave ha bisogno di un server. Farla prima significa costruire il backend per l'IA invece che per il motivo giusto |
+| 11 | § 15 Notifiche push | Piano Blaze, Cloud Functions e — soprattutto — una domanda ancora senza risposta su cosa valga la pena notificare |
 
 **Fuori dalla fila:** § 4 (database) è una decisione già presa — si resta su
 Firestore; § 7 (analisi di mercato) non è lavoro, è la mappa; § 10 (iPhone) è
@@ -616,34 +617,37 @@ capita di avere fra le mani un iPhone quasi pieno, è l'occasione per guardare.
 file che decidono se un rilascio arriva o resta in cache, e sono anche quelli
 che il § 14 (spezzare i sorgenti) rischia di muovere.
 
-## 11. Coda foto: da rimisurare prima di farla
+## 11. Coda foto — chiusa (19 agosto 2026)
 
 **Questa voce era sopravvalutata, e la sopravvalutazione era nostra.** Diceva
 che la promessa «partono da sole appena la linea regge» ha un asterisco.
-Verificando il codice riga per riga, il quadro è più stretto:
+Verificando il codice riga per riga:
 
-- `codaFoto` (`firebase-sync.js:358`) **è un array in memoria**: questo è vero.
+- `codaFoto` (`firebase-sync.js:358`) **è un array in memoria**: vero.
 - Ma si riempie solo nel ramo `catch` di `putPhoto`, cioè su errori veri
   (permessi, documento oltre il megabyte, SDK in stato cattivo) — casi in cui
   ritentare non aiuta comunque.
 - Alla caduta di rete `setDoc` **non rifiuta**: resta in sospeso e la scrittura
   vive nella coda persistente di Firestore (`persistentLocalCache`,
-  `firebase-sync.js:116`), che è già su IndexedDB. Il guasto comune non passa da
-  `codaFoto`.
-- E soprattutto: `addPhotos` (`src/80-app.jsx:1923`) **rifiuta il caricamento
-  quando manca la linea**. Al campo non si possono aggiungere foto, quindi lo
-  scenario «l'app muore e la coda con lei» non è raggiungibile.
+  `firebase-sync.js:116`), che è già su IndexedDB.
+- E soprattutto `addPhotos` (`src/80-app.jsx:1923`) **rifiuta il caricamento
+  senza linea**. Al campo non si aggiungono foto: lo scenario «l'app muore e la
+  coda con lei» non è raggiungibile.
 
-**Quindi la riparazione vale poco.** Quello che vale è una domanda di prodotto:
+**Decisione (§ 15-bis.4): la galleria resta online e la voce si chiude.** Le
+foto vivono solo nel cloud per non mangiare il `localStorage` che serve a
+presenze e conti; si caricano a casa.
 
-> La galleria deve funzionare al campo?
+**Una riga aggiunta al messaggio, ed era l'unica cosa che mancava.** Il testo
+già diceva «*puoi chiudere l'app, ma non prima che la spia smetta di dire "da
+inviare"*»: quindi non prometteva nulla di falso. Diceva però solo **cosa fare**,
+non **cosa si perde** a non farlo. Ora aggiunge che quella coda vive finché
+l'app è aperta e che, chiudendola prima, le foto vanno riprese dal rullino.
 
-Se sì, allora serve una coda persistente vera — e allora questa voce diventa
-una **funzione** («scatta al campo, parte a casa»), con il suo peso e il suo
-posto in fila. Se no, la voce si chiude: basta togliere l'asterisco dal
-messaggio, perché non c'è niente da promettere.
-
-**Da decidere prima di scrivere una riga.**
+*(Nota per chi legge fra sei mesi: la prima stesura di questa sezione diceva che
+il messaggio «prometteva» la persistenza. Non era vero — è stato verificato
+leggendolo. Vale come promemoria che anche le correzioni vanno controllate
+contro il codice, non contro il ricordo che se ne ha.)*
 
 ## 12. Ponte Menù → Lista della spesa — fatto (19 agosto 2026)
 
@@ -847,6 +851,91 @@ aspettato* un avviso. Prima di allora è una risposta senza domanda.
 
 ---
 
+## 15-bis. Le cinque decisioni (19 agosto 2026)
+
+Le cinque domande aperte della revisione hanno avuto risposta. Quattro sono
+accettate, una è respinta, e due hanno un dettaglio da correggere prima di
+essere messe in pratica.
+
+### 1. Il confine gratis/Pro — accettato a metà
+
+**Accettato:** nel piano Pro vanno l'**export del resoconto in PDF/Excel** (è il
+momento «fine campo, archivio tutto», quello in cui l'organizzatore sente
+davvero la mancanza) e le **foto degli scontrini** — che sono anche il primo
+costo d'infrastruttura, quindi il prezzo segue la spesa. Buona economia.
+
+**Respinto: il conto separato non si vende.** Un gruppo che fa una serata a
+parte e non può separarla ottiene **quote sbagliate**, o rifà i conti a mano.
+
+> **Si limita la quantità, mai la correttezza** (§ 6, § 7).
+
+Non è una regola di stile: un utente gratuito che ottiene numeri errati non
+pensa «mi manca il Pro», pensa che l'app non funzioni — e l'unica cosa che
+questa app vende è che i conti tornano. Al campo 2026 il conto separato
+riguardava 314 € su 2.303: senza, quei soldi sarebbero finiti addosso a chi
+era arrivato dopo.
+
+Al suo posto, come limite di quantità: numero di campi archiviati consultabili,
+numero di foto, formati di export.
+
+**E una cosa che non si tocca mai:** *Impostazioni → Backup Dati → Esporta*
+resta gratuito per sempre. È il JSON dei dati dell'utente, non un nostro
+servizio: metterlo dietro un pagamento è ostile e, con utenti europei, è un
+problema di portabilità dei dati. Il **resoconto bello** si vende; **i dati
+propri** no.
+
+### 2. Stripe dal browser invece di Play Billing — accettato con avvertenza
+
+L'economia è giusta: niente 15%, niente Digital Goods API dentro una TWA.
+
+**Ma «app gratuita su Play + sblocco Stripe dentro la stessa app» è il modo
+classico di farsi togliere dallo store.** La policy sui pagamenti di Google
+chiede Play Billing per i beni digitali consumati nell'app. In Europa il quadro
+si sta muovendo (DMA, offerte esterne), ma è una questione aperta, non una
+strada sicura.
+
+Le vie senza rischio sono tre: non pubblicare su Play e restare PWA pura;
+pubblicare su Play un'app **senza** funzioni a pagamento; oppure accettare Play
+Billing. **La decisione si può rimandare**, perché fino a fine 2027 non c'è
+niente da vendere (vedi qui sotto) — ma non va data per risolta.
+
+### 3. Open Beta gratuita per l'estate 2027 — accettato
+
+Risolve il conflitto fra calendario e collaudo: il primo campo estivo vero di
+altri gruppi avviene sotto l'etichetta «beta», le aspettative sono corrette, e
+si comincia a pagare solo dopo che ha funzionato. Versione 1.0 a pagamento a
+fine 2027.
+
+**Con un limite:** in beta si perdona una foto persa, non un conto sbagliato.
+La reputazione sui numeri si perde una volta sola, etichetta o non etichetta.
+
+### 4. Il § 11 si chiude — accettato
+
+La galleria resta online. Il motivo sta già scritto nel codice: le foto vivono
+solo nel cloud per non mangiare il `localStorage` che serve a presenze e conti.
+Si caricano a casa.
+
+**Fatto:** il messaggio già avvisava di non chiudere l'app prima che la spia si
+spegnesse — quindi non prometteva il falso. Ora dice anche **cosa si perde** a
+non dar retta all'avviso: quella coda vive finché l'app è aperta, e le foto
+vanno riprese dal rullino.
+
+### 5. Tetto di spesa su Blaze — accettato, ma non così
+
+Il meccanismo è giusto (budget di Cloud Billing → Pub/Sub → Cloud Function).
+**L'azione proposta no:** spegnere il database a 5 € di spesa significa
+fermare l'app a tutti i gruppi, e con ogni probabilità nel momento peggiore —
+la sera in cui si chiudono i conti.
+
+- **Avvisi a soglie crescenti** (50%, 90%, 100% del budget) che arrivano a chi
+  amministra: quella è la difesa.
+- **Interruzione automatica solo come ultima spiaggia**, e degradando le vie
+  non essenziali (caricamento foto) prima di quelle vitali (documento dei conti).
+- 5 € è un'ottima soglia di **allarme**, pessima di spegnimento.
+
+L'app regge comunque: è offline-first, e un blocco del cloud non ferma i conti
+sul telefono. Ma non deve mai accadere in silenzio.
+
 ## 16. Le due app: la nostra e la pubblica
 
 **Decisione presa il 18 agosto 2026.** L'app della Brigata resta nostra e non
@@ -940,3 +1029,43 @@ Numeri veri di chiusura, utili a dimensionare la versione pubblica:
 - 35 passaggi per cassa, **30 ottimizzati**;
 - export completo **3,2 MB**, di cui 3,18 MB sono 29 foto di scontrini: la
   conferma che il peso dell'app sono le immagini, non i dati.
+
+---
+
+## 17. «Chi porta cosa»
+
+**Il bisogno è dimostrato, come per il § 12.** Negli `appunti` del campo 2026 si
+legge, scritto a mano in un campo libero:
+
+```
+Arrosticini Eleonora
+Salsicce/pancetta Leonardo
+Pollo/Nunzio
+Pecora/Ugo
+```
+
+e il giorno prima: `Carne da ritirare: Federica`, `Leo portare formaggio`.
+
+È il terzo uso che la gente fa dell'app senza che l'app lo sappia — dopo il
+menù usato come lista della spesa. Tre bisogni: **cosa si mangia** (Menù),
+**cosa si compra** (Lista), **chi lo porta** (oggi: un campo di testo).
+
+### Quello che va deciso prima di scrivere codice
+
+- **È un attributo della voce di spesa o una lista a sé?** Se «chi porta» è un
+  campo su una voce di `toBuy`, il ponte del § 12 lo riempie già a metà e la
+  cosa si chiude in poco. Se è una lista separata, si duplica il contenuto.
+  L'indizio dai dati: quello che si porta **non si compra** (arrosticini
+  portati da Eleonora non entrano nella cassa), quindi è una terza colonna,
+  non un doppione.
+- **Chi porta una cosa la paga?** No: se la porta da casa non c'è una spesa da
+  dividere. Ma se la compra e la porta, sì — ed è una spesa normale con un
+  acquirente. **Il confine è la spesa registrata, non la persona.** Va scritto
+  nell'interfaccia, altrimenti qualcuno segnerà due volte.
+- **Serve un elenco di nomi?** I membri ci sono già. Riusare la tendina degli
+  acquirenti (`renderBuyerSelect`) evita nomi scritti in tre modi diversi —
+  che è esattamente il problema che i saldi hanno già oggi con gli acquirenti
+  scritti a mano.
+
+**Nessuna di queste tre è una domanda tecnica.** Vanno guardate su come lo
+scrivono davvero, come è successo per il § 12.

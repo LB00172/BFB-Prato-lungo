@@ -4449,7 +4449,7 @@ function App() {
     setPhotoBusy('');
     const rimaste = daCaricare.length - fatte;
     if (rimaste > 0) {
-      window.alert(`${fatte} ${fatte === 1 ? 'foto caricata' : 'foto caricate'} su ${daCaricare.length}.\n\n` + `${rimaste === 1 ? 'Quella che manca è' : `Le altre ${rimaste} sono`} in coda: ` + 'partono da sole appena la linea regge. Puoi chiudere l\'app, ma non prima che la spia ' + 'in alto smetta di dire "da inviare".');
+      window.alert(`${fatte} ${fatte === 1 ? 'foto caricata' : 'foto caricate'} su ${daCaricare.length}.\n\n` + `${rimaste === 1 ? 'Quella che manca è' : `Le altre ${rimaste} sono`} in coda: ` + 'partono da sole appena la linea regge. Puoi chiudere l\'app, ma non prima che la spia ' + 'in alto smetta di dire "da inviare": quella coda vive solo finché l\'app è aperta, ' + 'e chiudendola prima le foto vanno riprese dal rullino.');
     }
   };
   const openPhoto = async p => {
