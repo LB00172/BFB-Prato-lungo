@@ -6,8 +6,11 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 
 ## Regole che non si negoziano
 
-1. **Si parla italiano.** Chat, commenti nel codice, messaggi di commit,
-   testi nell'interfaccia: tutto in italiano.
+1. **Si parla italiano.** Chat, commenti nel codice, messaggi di commit:
+   tutto in italiano, e questo non cambia. I **testi che legge l'utente** sono
+   l'eccezione decisa ad agosto 2026 (`ROADMAP.md` §18): si scrivono in
+   italiano per primi, ma passano da un dizionario perché l'app parlerà anche
+   spagnolo e francese.
 2. **`App.js` è generato. Non si tocca mai a mano.** Si modificano i sorgenti
    in `src/` e poi si lancia `node build.js`, che li incolla nell'ordine
    dichiarato, ricompila `App.js` e ricalcola `CACHE_NAME` in `sw.js` dall'hash
@@ -163,7 +166,9 @@ Le tre cose da sapere senza aprirlo:
   l'aggiornamento del service worker arriva. Le 57 prove girano comunque solo
   su Chromium, quindi quel giro va rifatto ogni volta che si tocca `sw.js` o
   `build.js` — sono i due file che decidono se un rilascio arriva o resta in
-  cache. Si comincia invece dalla coda delle foto (§11).
+  cache. Si comincia invece dalle immagini fuori da `localStorage` (§19): nel
+  campo 2026 gli scontrini occupavano 3,18 MB dei 5 disponibili, e i dati che
+  contano ne pesano 35 KB.
 - **Login e room vengono prima di quasi tutto** (§1 e §2): senza un `uid` non
   esistono la checklist privata, la chiave dell'IA, le voci spegnibili né il
   modulo della stanza.

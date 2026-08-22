@@ -25,9 +25,11 @@ cosa blocca cosa.
 | --- | --- | --- |
 | — | § 12 Ponte Menù → Lista della spesa | **fatto** il 19 agosto: i menù veri del campo hanno corretto il piano (niente tabella di ingredienti) |
 | — | § 11 Coda foto | **chiusa**: la galleria resta online (§ 15-bis.4), e il messaggio ora dice anche cosa si perde chiudendo l'app |
-| 1 | § 17 «Chi porta cosa» | Al campo lo scrivevano negli appunti a mano: il bisogno è dimostrato, come per il § 12 |
+| 1 | § 19 Immagini fuori da `localStorage` | 3,18 MB su 3,2 MB sono foto: è l'unica cosa che oggi può far perdere una presenza per colpa di uno scontrino |
 | 2 | § 13 Vocabolario dell'interfaccia | colori fatti, 102 bottoni su 121 migrati; restano i 22 a classi condizionali |
 | 3 | § 14 Spezzare i sorgenti | il disegno è uscito; restano stato ed effetti, da estrarre come hook |
+| 4 | § 17 Compiti assegnati | Al campo li scrivevano negli appunti a mano: il bisogno è dimostrato, come per il § 12. Dietro bandiera, il gestore arriva col § 2 |
+| 5 | § 18 Più lingue | Ha bisogno del § 14 (le schede ricevono `t` come dipendenza) e deve precedere il § 3, o si rifanno le schede degli store |
 
 **Poi — la versione pubblica, che è una catena:**
 
@@ -37,7 +39,7 @@ cosa blocca cosa.
 | 5 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
 | 6 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
 | 7 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
-| 8 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 8 |
+| 8 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 7 — e dopo il § 18, altrimenti le schede dello store si rifanno |
 | 9 | § 6 Checklist | La lista privata ha bisogno di un `uid`, quindi del § 1 |
 | 10 | § 5 Scontrini con l'IA | La chiave ha bisogno di un server. Farla prima significa costruire il backend per l'IA invece che per il motivo giusto |
 | 11 | § 15 Notifiche push | Piano Blaze, Cloud Functions e — soprattutto — una domanda ancora senza risposta su cosa valga la pena notificare |
@@ -45,7 +47,7 @@ cosa blocca cosa.
 **Fuori dalla fila:** § 4 (database) è una decisione già presa — si resta su
 Firestore; § 7 (analisi di mercato) non è lavoro, è la mappa; § 10 (iPhone) è
 **fatta** ad agosto 2026 e si ripete solo quando si tocca `sw.js` o `build.js`
-— cioè, fra le voci qui sopra, il § 14.
+— cioè, fra le voci qui sopra, il § 14 e il § 19.
 
 ### Il calendario, che prima non c'era
 
@@ -1032,7 +1034,8 @@ Numeri veri di chiusura, utili a dimensionare la versione pubblica:
 
 ---
 
-## 17. «Chi porta cosa»
+
+## 17. Compiti assegnati (la scheda «Chi fa cosa»)
 
 **Il bisogno è dimostrato, come per il § 12.** Negli `appunti` del campo 2026 si
 legge, scritto a mano in un campo libero:
@@ -1046,26 +1049,201 @@ Pecora/Ugo
 
 e il giorno prima: `Carne da ritirare: Federica`, `Leo portare formaggio`.
 
-È il terzo uso che la gente fa dell'app senza che l'app lo sappia — dopo il
-menù usato come lista della spesa. Tre bisogni: **cosa si mangia** (Menù),
-**cosa si compra** (Lista), **chi lo porta** (oggi: un campo di testo).
+### Cos'era davvero, e perché il primo modello era sbagliato
 
-### Quello che va deciso prima di scrivere codice
+La prima lettura di queste righe è stata «roba portata da casa, quindi fuori
+dalla cassa». **Sbagliato.** Erano **compiti concordati e già pagati**: ci si
+divideva chi comprava cosa, prima di partire. Non è una terza colonna accanto
+a Menù e Lista: è **il passaggio che manca prima della Lista**, cioè
+*l'assegnazione*.
 
-- **È un attributo della voce di spesa o una lista a sé?** Se «chi porta» è un
-  campo su una voce di `toBuy`, il ponte del § 12 lo riempie già a metà e la
-  cosa si chiude in poco. Se è una lista separata, si duplica il contenuto.
-  L'indizio dai dati: quello che si porta **non si compra** (arrosticini
-  portati da Eleonora non entrano nella cassa), quindi è una terza colonna,
-  non un doppione.
-- **Chi porta una cosa la paga?** No: se la porta da casa non c'è una spesa da
-  dividere. Ma se la compra e la porta, sì — ed è una spesa normale con un
-  acquirente. **Il confine è la spesa registrata, non la persona.** Va scritto
-  nell'interfaccia, altrimenti qualcuno segnerà due volte.
-- **Serve un elenco di nomi?** I membri ci sono già. Riusare la tendina degli
-  acquirenti (`renderBuyerSelect`) evita nomi scritti in tre modi diversi —
-  che è esattamente il problema che i saldi hanno già oggi con gli acquirenti
-  scritti a mano.
+Questo cambia tre cose:
 
-**Nessuna di queste tre è una domanda tecnica.** Vanno guardate su come lo
-scrivono davvero, come è successo per il § 12.
+1. **Il compito ha un assegnatario, non un pagatore.** Chi lo esegue è quasi
+   sempre anche chi anticipa i soldi, ma sono due fatti diversi: il compito si
+   assegna prima, la spesa si registra dopo, col prezzo che si scopre in cassa.
+2. **Il compito non è mai fuori dai conti.** Un compito eseguito produce una
+   spesa normale, con acquirente e prezzo, che finisce nelle casse come tutte
+   le altre. Il modello «portato da casa, non si divide» non descriveva quello
+   che succedeva davvero.
+3. **Serve un ciclo, non un campo.** Assegnato → fatto → registrato. Le tre
+   righe sopra erano assegnazioni; le spese che ne sono nate stanno già in
+   `purchases`. Oggi le due cose non si toccano e nessuno sa quale compito è
+   ancora scoperto.
+
+### Com'è fatta la scheda
+
+Compiti **completamente editabili**: il testo lo scrive chi assegna, e può
+essere qualunque cosa — comprare un cibo, comprare un'attrezzatura, prenotare
+un servizio, ritirare qualcosa. Nessun elenco chiuso di tipi: al campo servono
+cose che oggi non sappiamo prevedere, e un elenco chiuso costringe a scrivere
+tutto in «altro».
+
+- **Assegna il gestore della Room**, a **un membro già inserito**, con la
+  solita tendina (`renderBuyerSelect`). Nomi scritti a mano no: è lo stesso
+  problema che i saldi hanno già oggi con gli acquirenti liberi.
+- **Stati**: da fare / fatto. Niente di più. Un terzo stato («in corso») è
+  la cosa che in ogni gestionale nessuno aggiorna mai.
+- **Il legame con la spesa è facoltativo e a posteriori**: da un compito fatto
+  si può aprire l'inserimento di una spesa già compilato col nome e con
+  l'acquirente. Se non si fa, il compito resta fatto lo stesso e la spesa si
+  registra a mano come sempre. **Il compito non entra nei conti**: nei conti
+  entra la spesa che ne nasce.
+- **Offline come tutto il resto**: è una lista con `id`, quindi entra in
+  `LISTS` di `sync-merge.js` e si fonde voce per voce come `toBuy`. Nessun
+  meccanismo nuovo.
+
+### Le due cose da sistemare prima
+
+**Questa scheda è Premium, e il Premium non esiste ancora.** Non c'è né
+autenticazione (§ 1) né incasso (§ 3 / § 15-bis.2). E soprattutto: «il gestore
+della Room» presuppone **le Room**, che sono il § 2, cioè il numero 5 della
+fila. Assegnare compiti senza un gestore vuol dire che li assegna chiunque, e
+la scheda perde esattamente la cosa che la rende utile.
+
+Quindi: **la si costruisce dietro una bandiera**, come `auth` e `rooms` del
+§ 16. Sulla nostra app resta accesa e senza gestore — chiunque assegna, che in
+un gruppo di amici va benissimo ed è come funzionava sugli appunti. Sulla
+pubblica si accende quando il § 2 esiste, e allora la tendina «chi assegna» ha
+un significato.
+
+**Vantaggio di farla ora anche se il Premium è lontano:** si prova sul campo
+2027 con dati veri prima di venderla. È lo stesso metodo che ha corretto il
+§ 12 e questo stesso § 17.
+
+---
+
+## 18. Più lingue (IT, ES, FR, poi EN, DE)
+
+**Decisione presa, e cambia un intento iniziale.** L'app era stata scritta in
+italiano e basta, per una ragione buona: la usavano venti amici italiani. Il
+progetto è cambiato, e una app di divisione spese in un solo idioma non esce
+dall'Italia.
+
+**Cosa resta italiano:** il codice, i commenti, i commit, i nomi delle
+variabili, questa roadmap, `CLAUDE.md`. La lingua di lavoro non si tocca. A
+diventare traducibile è **solo quello che l'utente legge**.
+
+### L'ordine, e perché
+
+1. **Spagnolo e francese.** Sono i due mercati dove il campeggio di gruppo e le
+   spese condivise hanno la stessa forma sociale che hanno qui — e dove
+   Splitwise è meno radicato che nei paesi anglosassoni.
+2. **Inglese e tedesco** subito dopo. L'inglese non è prioritario nonostante
+   sembri: è il mercato dove i concorrenti sono più forti (§ 7).
+
+L'italiano resta la lingua predefinita e la sola completa per definizione:
+è quella in cui si scrive prima.
+
+### Come si fa senza rompere niente
+
+Il rischio vero non è tradurre: è che il meccanismo di traduzione **non si
+accorga** che manca una stringa, e la mostri vuota in mezzo a una schermata.
+
+- **Un file di dizionario fuori da `src/`**, come `menu-spesa.js`. Sta fuori
+  perché così si prova con una prova unitaria — e la prova che serve è
+  esattamente una: *ogni chiave presente in italiano esiste in tutte le altre
+  lingue, e nessuna lingua ha chiavi che l'italiano non ha*. Dentro `src/`
+  sarebbe provabile solo aprendo il browser.
+- **`t()` deve conoscere lo stato di React.** La lingua è uno stato: se `t()`
+  legge una variabile globale, cambiare lingua non ridisegna niente e serve un
+  ricaricamento. Va presa da un contesto, o passata giù come le altre
+  dipendenze delle schede.
+- **I plurali non sono concatenazioni.** «1 pasto» / «2 pasti» in italiano sono
+  due forme, in francese pure, ma non con le stesse regole (0 è singolare in
+  francese, plurale in italiano). Le voci con un numero dentro sono **funzioni**
+  che ricevono il numero, non stringhe con un `%s`.
+- **Le date sono trentaquattro.** In `src/30-tema-e-formati.jsx` i formati sono
+  già centralizzati: è **un punto solo** da agganciare alla lingua scelta, e
+  questo è il motivo per cui il lavoro è fattibile. Se fossero sparsi nelle
+  schede sarebbe un altro discorso.
+- **Le costanti che non si traducono**: le regole del campo (§ 40) sono un
+  testo verbatim di Lorenzo. Nella versione pubblica non esistono proprio —
+  sono contenuto della room, non dell'app.
+
+### Quanto costa davvero
+
+`RICOGNIZIONE-UI.md` ha già contato i testi. Il lavoro grosso non è la
+traduzione: è **passare `t` a quattordici schede** che oggi ricevono le
+dipendenze in un oggetto. Il § 14 ha reso questa cosa meccanica — è una voce
+in più nell'oggetto — ed è la ragione per cui questo § 18 viene *dopo* il
+§ 14 e non prima.
+
+**Va fatto prima del § 3 (Google Play).** Pubblicare in un solo idioma e poi
+aggiungere le lingue significa rifare le schede degli store, gli screenshot e
+le descrizioni.
+
+---
+
+## 19. Le immagini fuori da `localStorage`
+
+**Questa sezione nasce da una critica esterna, verificata sui dati veri del
+campo.** Delle quattro sollevate, è l'unica che i numeri confermano — e ne
+confermano due insieme, perché hanno la stessa causa.
+
+### Il numero
+
+Nell'export di chiusura: **3,18 MB su 3,2 MB sono 29 foto di scontrini**, in
+Base64, dentro la chiave `cambusa_receipts`. Il tetto di `localStorage` è
+**circa 5 MB per origine**. Ventinove foto in un campo da sei giorni: al 60 %
+del tetto. Il campo 2026 è finito senza incidenti *per un pelo*, e con un
+gruppo grande il triplo del previsto.
+
+Lo stato che davvero conta — membri, presenze, spese, saldi — pesa **35 KB**.
+Le foto occupano **novanta volte** i dati che proteggono.
+
+### Perché è un problema anche di velocità
+
+`JSON.stringify(receipts)` gira in un `useEffect` **a ogni foto aggiunta**.
+Misurato sui dati veri: **53 ms su un portatile**, che su un telefono di fascia
+media diventano tre-quattro decimi di secondo di interfaccia ferma. Per
+confronto, lo `stringify` dello stato intero — quello che parte verso Firestore
+ogni volta — costa **0,128 ms**. Non è la sincronizzazione a pesare: sono le
+immagini.
+
+### Cosa fare
+
+**Le immagini in IndexedDB, i dati in `localStorage`.** IndexedDB non ha il
+tetto dei 5 MB, accetta i `Blob` senza la tassa del +33 % del Base64, e scrive
+in modo asincrono: sparisce il blocco del thread e sparisce la competizione per
+lo spazio.
+
+Quel che va tenuto d'occhio quando si fa:
+
+- **Prima si scrive nel posto nuovo, poi si cancella dal vecchio.** Una
+  migrazione che pota prima di aver confermato è come l'istantanea che si
+  mangiava i byte della storia della sincronizzazione (`CLAUDE.md`).
+- **La migrazione deve poter fallire senza portarsi via i conti.** Se
+  IndexedDB non è disponibile (Safari privato ha fatto di peggio), si resta
+  su `localStorage` e non succede niente di male.
+- **La prova va vista fallire.** Si riempie `localStorage` fino al tetto e si
+  controlla che presenze e spese si salvino lo stesso. Oggi il salvataggio
+  degli scontrini ha un `try/catch` che avvisa e tira dritto, ma **non libera
+  spazio**: `salvaLocale` sacrifica le istantanee, mai le foto. È il percorso
+  esatto in cui, con la memoria agli sgoccioli, si perde una presenza per
+  colpa di una foto.
+
+### Le tre critiche che invece non reggono, e perché è scritto qui
+
+Perché non vengano riproposte:
+
+- **«Il documento di stato si avvicina al tetto dei 900 KB.»** Misurato:
+  **35,2 KB, il 3,9 % del tetto**. Novantasei per cento di margine con tre
+  volte le persone previste. Riscrivere la sincronizzazione con dei delta o
+  una libreria CRDT per questo motivo significherebbe rifare, senza un
+  problema, l'unica parte del codice che ha già cancellato il lavoro di
+  qualcuno una volta.
+- **«`JSON.stringify` sui dati blocca il thread.»** Vero solo per le foto
+  (sopra). Sullo stato costa 0,128 ms, sui pasti di un giorno **0,0011 ms**.
+- **«L'app dipende dagli orologi locali e un telefono avanti di minuti
+  sovrascrive gli altri per sempre.»** No: il confronto fra due versioni non
+  usa `Date.now()`, usa `rev`, e ogni dispositivo alza il proprio orologio a
+  `hi + 1` appena vede una data più alta (`sync-merge.js`). Un telefono avanti
+  vince **una volta**, poi tutti gli altri lo superano. `OROLOGIO_SOGLIA` non
+  è la difesa, è solo l'avviso in modalità tecnica. E il meteo è già
+  normalizzato sull'ora del server (`quandoMeteo`, `src/40-configurazione.jsx`).
+  L'unico residuo onesto: due modifiche fatte **davvero in contemporanea** da
+  due telefoni che non si sono mai visti si decidono in modo arbitrario ma
+  deterministico. È il compromesso scritto in `CLAUDE.md`, ed è voluto:
+  «meglio un telefono con l'ora sbagliata che vince un confronto, che due
+  telefoni che non si accordano».
