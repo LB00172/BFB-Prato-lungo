@@ -10,6 +10,7 @@ const schedaImpostazioni = ({
   askAlways,
   bloccoOpen,
   campData,
+  campoInCorso,
   cloud,
   datiOpen,
   diagTick,
@@ -48,31 +49,44 @@ const schedaImpostazioni = ({
   wipeLocal,
 }) => (
   <div className="space-y-4">
-    {/* Pronto per il campo */}
-    <div className={`p-4 rounded-lg border-2 shadow-sm space-y-3 ${readyOk ? 'bg-white border-[#2D392C]/20' : 'bg-white border-[#D97706]/50'}`}>
+    {/* Pronto per il campo.
+        Senza un campo in corso i controlli non hanno oggetto: due dei tre
+        parlano dei dati, e i dati sono quelli del campo. Dopo la chiusura
+        resterebbero rossi per sempre — su un telefono che sta benissimo. */}
+    <div className={`p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-white border-[#2D392C]/20' : 'bg-white border-[#D97706]/50'}`}>
       <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
         <h3 className="font-rustic text-lg text-[#2D392C]">Pronto per il campo</h3>
-        <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${readyOk ? 'bg-[#2D392C] text-white' : 'bg-[#D97706] text-white'}`}>
-          {readyOk ? 'Sì' : 'Non ancora'}
+        <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-[#D97706] text-white' : 'bg-[#2D392C] text-white'}`}>
+          {!campoInCorso ? 'Nessun campo' : readyOk ? 'Sì' : 'Non ancora'}
         </span>
       </div>
-      <p className="text-[10px] text-gray-500 leading-snug">
-        A Prato Lungo non c'è linea. Controlla queste tre cose <span className="font-bold">prima di partire</span>:
-        lassù non si sistemano.
-      </p>
-      <ul className="space-y-2">
-        {readyChecks.map((c) => (
-          <li key={c.titolo} className={`flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
-            <span className="text-base leading-none shrink-0">{c.ok ? '✅' : '⚠️'}</span>
-            <div className="min-w-0">
-              <div className="text-[11px] font-bold text-[#2D392C]">{c.titolo}</div>
-              {!c.ok && <div className="text-[10px] text-[#5C4A3C] leading-snug mt-0.5">{c.no}</div>}
-            </div>
-          </li>
-        ))}
-      </ul>
-      {readyOk && (
-        <p className="text-[9px] text-gray-400 italic">Questo telefono funziona anche senza linea. Ricontrolla il giorno della partenza.</p>
+      {!campoInCorso ? (
+        <p className="text-[10px] text-gray-500 leading-snug">
+          Non c'è un campo in corso: nessun membro, nessuna spesa, nessuna lista. I controlli
+          tornano <span className="font-bold">quando si comincia a riempire l'app</span> — inutile
+          chiedersi se si è pronti per qualcosa che non c'è ancora. I campi passati stanno in Archivio.
+        </p>
+      ) : (
+        <>
+          <p className="text-[10px] text-gray-500 leading-snug">
+            A Prato Lungo non c'è linea. Controlla queste tre cose <span className="font-bold">prima di partire</span>:
+            lassù non si sistemano.
+          </p>
+          <ul className="space-y-2">
+            {readyChecks.map((c) => (
+              <li key={c.titolo} className={`flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
+                <span className="text-base leading-none shrink-0">{c.ok ? '✅' : '⚠️'}</span>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold text-[#2D392C]">{c.titolo}</div>
+                  {!c.ok && <div className="text-[10px] text-[#5C4A3C] leading-snug mt-0.5">{c.no}</div>}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {readyOk && (
+            <p className="text-[9px] text-gray-400 italic">Questo telefono funziona anche senza linea. Ricontrolla il giorno della partenza.</p>
+          )}
+        </>
       )}
     </div>
 

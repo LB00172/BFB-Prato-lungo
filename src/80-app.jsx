@@ -2765,8 +2765,7 @@ function App() {
   const campRange = () => intervalloCampo(campData);
 
   const openClose = () => {
-    const hasData = members.length > 0 || purchases.length > 0 || toBuy.length > 0 || equipment.length > 0;
-    if (!hasData) {
+    if (!campoInCorso) {
       window.alert('Non c\'è niente da chiudere: membri e spese sono già vuoti.');
       return;
     }
@@ -2907,6 +2906,12 @@ function App() {
     const id = setInterval(controlla, 5000);
     return () => { vivo = false; clearInterval(id); };
   }, []);
+
+  // Un campo c'e' quando c'e' qualcosa dentro. Serve in due posti che devono
+  // dire la stessa cosa: "chiudi il campo" (non si chiude il vuoto) e i
+  // controlli qui sotto (non si e' pronti per un campo che non c'e').
+  const campoInCorso = members.length > 0 || purchases.length > 0
+    || toBuy.length > 0 || equipment.length > 0;
 
   const readyChecks = [
     { ok: readiness.sw && readiness.cache, titolo: 'App scaricata sul telefono',
@@ -3357,7 +3362,7 @@ function App() {
       <main className="flex-grow p-4">
         {/* ---------- CALENDARIO ---------- */}
         {activeTab === 'calendario' && schedaCalendario({
-          admin, calculateTotals, fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
+          admin, calculateTotals, campoInCorso, fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
         })}
 
         {/* ---------- MENÙ ---------- */}
@@ -3420,7 +3425,7 @@ function App() {
 
         {/* ---------- IMPOSTAZIONI ---------- */}
         {activeTab === 'impostazioni' && schedaImpostazioni({
-          admin, adminErr, adminPwd, annullaSync, askAlways, bloccoOpen, campData, cloud, datiOpen, diagTick, entraAdmin, esciAdmin, esportaRegistro, exportData, fotoDove, goTo, isDark, isOnline, lockNow, logOpen, members, metaRef, photoCap, purchases, readyChecks, readyOk, receipts, setAdminErr, setAdminPwd, setBloccoOpen, setDatiOpen, setDiagTick, setLogOpen, setLostSync, setPhotoCap, setTecnicaOpen, setTheme, swVersion, syncStateRef, tecnicaOpen, theme, toggleAskAlways, wipeLocal,
+          admin, adminErr, adminPwd, annullaSync, askAlways, bloccoOpen, campData, campoInCorso, cloud, datiOpen, diagTick, entraAdmin, esciAdmin, esportaRegistro, exportData, fotoDove, goTo, isDark, isOnline, lockNow, logOpen, members, metaRef, photoCap, purchases, readyChecks, readyOk, receipts, setAdminErr, setAdminPwd, setBloccoOpen, setDatiOpen, setDiagTick, setLogOpen, setLostSync, setPhotoCap, setTecnicaOpen, setTheme, swVersion, syncStateRef, tecnicaOpen, theme, toggleAskAlways, wipeLocal,
         })}
       </main>
 

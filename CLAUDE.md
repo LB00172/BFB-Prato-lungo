@@ -19,7 +19,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 62 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 63 prove, circa 9 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -61,7 +61,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
-| `test/` | 8 prove unitarie + 54 end‑to‑end |
+| `test/` | 8 prove unitarie + 55 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -87,6 +87,10 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   la scheda «Da acquistare» era vuota perché nessuno scrive due volte. La
   tabella non è servita. Lo stesso è capitato al §11, sopravvalutato finché non
   ho letto `firebase-sync.js` riga per riga.
+- **Un controllo che chiede dei dati non vale quando i dati non ci sono.**
+  «Pronto per il campo» chiedeva dei membri, ma chiudere il campo azzera le
+  liste: l'avviso restava per sempre su un telefono che stava benissimo. Ogni
+  avviso va chiesto anche al contrario — *quando NON deve comparire?*
 - **Le foto degli scontrini NON sono in `localStorage`.** Stanno nel magazzino
   (`magazzino-foto.js`, IndexedDB) e arrivano **dopo** il primo disegno. Chi
   scrive un effetto che le guarda deve metterle fra le dipendenze, altrimenti

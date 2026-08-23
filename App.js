@@ -5807,8 +5807,7 @@ function App() {
   // azzera i dati di lavoro: l'app resta pronta per l'evento successivo.
   const campRange = () => intervalloCampo(campData);
   const openClose = () => {
-    const hasData = members.length > 0 || purchases.length > 0 || toBuy.length > 0 || equipment.length > 0;
-    if (!hasData) {
+    if (!campoInCorso) {
       window.alert('Non c\'è niente da chiudere: membri e spese sono già vuoti.');
       return;
     }
@@ -5976,6 +5975,11 @@ function App() {
       clearInterval(id);
     };
   }, []);
+
+  // Un campo c'e' quando c'e' qualcosa dentro. Serve in due posti che devono
+  // dire la stessa cosa: "chiudi il campo" (non si chiude il vuoto) e i
+  // controlli qui sotto (non si e' pronti per un campo che non c'e').
+  const campoInCorso = members.length > 0 || purchases.length > 0 || toBuy.length > 0 || equipment.length > 0;
   const readyChecks = [{
     ok: readiness.sw && readiness.cache,
     titolo: 'App scaricata sul telefono',
@@ -6448,6 +6452,7 @@ function App() {
   }, activeTab === 'calendario' && schedaCalendario({
     admin,
     calculateTotals,
+    campoInCorso,
     fetchWeather,
     getDayData,
     getMeal,
@@ -6678,6 +6683,7 @@ function App() {
     askAlways,
     bloccoOpen,
     campData,
+    campoInCorso,
     cloud,
     datiOpen,
     diagTick,
@@ -7035,6 +7041,7 @@ const schedaCalendario = ({
   isOnline,
   members,
   presenzeOrfane,
+  campoInCorso,
   readyOk,
   renderWeekStrip,
   selectedDateStr,
@@ -7048,7 +7055,7 @@ const schedaCalendario = ({
   wxBusy
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
-}, !readyOk && /*#__PURE__*/React.createElement("button", {
+}, campoInCorso && !readyOk && /*#__PURE__*/React.createElement("button", {
   onClick: () => goTo('impostazioni'),
   className: "w-full bg-[#D97706]/10 border border-[#D97706]/40 rounded-lg p-3 text-left flex items-start gap-2 hover:bg-[#D97706]/15"
 }, /*#__PURE__*/React.createElement("span", {
@@ -8948,6 +8955,7 @@ const schedaImpostazioni = ({
   askAlways,
   bloccoOpen,
   campData,
+  campoInCorso,
   cloud,
   datiOpen,
   diagTick,
@@ -8987,14 +8995,18 @@ const schedaImpostazioni = ({
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
-  className: `p-4 rounded-lg border-2 shadow-sm space-y-3 ${readyOk ? 'bg-white border-[#2D392C]/20' : 'bg-white border-[#D97706]/50'}`
+  className: `p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-white border-[#2D392C]/20' : 'bg-white border-[#D97706]/50'}`
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg text-[#2D392C]"
 }, "Pronto per il campo"), /*#__PURE__*/React.createElement("span", {
-  className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${readyOk ? 'bg-[#2D392C] text-white' : 'bg-[#D97706] text-white'}`
-}, readyOk ? 'Sì' : 'Non ancora')), /*#__PURE__*/React.createElement("p", {
+  className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-[#D97706] text-white' : 'bg-[#2D392C] text-white'}`
+}, !campoInCorso ? 'Nessun campo' : readyOk ? 'Sì' : 'Non ancora')), !campoInCorso ? /*#__PURE__*/React.createElement("p", {
+  className: "text-[10px] text-gray-500 leading-snug"
+}, "Non c'\xE8 un campo in corso: nessun membro, nessuna spesa, nessuna lista. I controlli tornano ", /*#__PURE__*/React.createElement("span", {
+  className: "font-bold"
+}, "quando si comincia a riempire l'app"), " \u2014 inutile chiedersi se si \xE8 pronti per qualcosa che non c'\xE8 ancora. I campi passati stanno in Archivio.") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug"
 }, "A Prato Lungo non c'\xE8 linea. Controlla queste tre cose ", /*#__PURE__*/React.createElement("span", {
   className: "font-bold"
@@ -9013,7 +9025,7 @@ const schedaImpostazioni = ({
   className: "text-[10px] text-[#5C4A3C] leading-snug mt-0.5"
 }, c.no))))), readyOk && /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic"
-}, "Questo telefono funziona anche senza linea. Ricontrolla il giorno della partenza.")), /*#__PURE__*/React.createElement("div", {
+}, "Questo telefono funziona anche senza linea. Ricontrolla il giorno della partenza."))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"

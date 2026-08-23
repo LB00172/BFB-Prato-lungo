@@ -15,6 +15,7 @@ const schedaCalendario = ({
   isOnline,
   members,
   presenzeOrfane,
+  campoInCorso,
   readyOk,
   renderWeekStrip,
   selectedDateStr,
@@ -28,7 +29,12 @@ const schedaCalendario = ({
   wxBusy,
 }) => (
   <div className="space-y-4">
-    {!readyOk && (
+    {/* L'avviso compare solo quando c'e' un campo per cui essere pronti.
+        Chiudendo il campo le liste si azzerano — e' giusto cosi', i dati sono
+        nell'Archivio — ma "Dati del campo ricevuti" chiede dei membri: senza
+        questa condizione l'avviso resterebbe li' per sempre a dire "non sei
+        pronto" a un telefono che sta benissimo. */}
+    {campoInCorso && !readyOk && (
       <button
         onClick={() => goTo('impostazioni')}
         className="w-full bg-[#D97706]/10 border border-[#D97706]/40 rounded-lg p-3 text-left flex items-start gap-2 hover:bg-[#D97706]/15"
