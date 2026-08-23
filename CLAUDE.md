@@ -49,7 +49,8 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | --- | --- |
 | `src/*.jsx` | i sorgenti, incollati **nell'ordine elencato in `build.js`**. I numeri vanno di dieci in dieci per poter infilare pezzi in mezzo |
 | `src/80-app.jsx` | `function App()`: stato, sincronizzazione, conti, gestori |
-| `src/8*-schede-*.jsx` | il **disegno** delle schede, uscito da `App()`. Non sono componenti React: sono funzioni che restituiscono JSX e ricevono le dipendenze in un oggetto |
+| `src/7*-usa-*.jsx` | lo **stato** uscito da `App()`: hook (`usaGioco`, `usaGalleria`) che si portano dietro i loro `useState`. Tengono stato e **non disegnano** |
+| `src/8*-schede-*.jsx` | il **disegno** delle schede, uscito da `App()`. Non sono componenti React: sono funzioni che restituiscono JSX e ricevono le dipendenze in un oggetto. Disegnano e **non tengono stato** |
 | `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneScelta` (i chip accesi/spenti) |
 | `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
 | `App.js` | **generato**, non modificare |
@@ -178,13 +179,14 @@ Le tre cose da sapere senza aprirlo:
 - **Login e room vengono prima di quasi tutto** (§1 e §2): senza un `uid` non
   esistono la checklist privata, la chiave dell'IA, le voci spegnibili né il
   modulo della stanza.
-- **La divisione è fatta per il disegno, non per la logica** (§14). I sorgenti
+- **La divisione ha due mucchi con due regole opposte** (§14). I sorgenti
   stanno in `src/`, incollati nell'ordine di `build.js`: non sono moduli,
-  condividono un ambito solo. Il disegno delle quattordici schede è uscito da
-  `App()` in sei file; dentro `80-app.jsx` restano stato, effetti, conti e
-  gestori. **Come si sposta un pezzo senza rischiare:** si cattura il DOM di
-  tutte le schermate con `test/lib/schermate.js`, si sposta, si ricattura, e i
-  due HTML devono essere identici al carattere. È così che è stata dimostrata.
+  condividono un ambito solo. Gli **hook** (`7*-usa-*.jsx`) tengono lo stato e
+  non disegnano; le **schede** (`8*-schede-*.jsx`) disegnano e non tengono
+  stato. Dentro `80-app.jsx` resta quello che tocca i soldi: presenze, spese,
+  sincronizzazione, conti. **Come si sposta un pezzo senza rischiare:**
+  `node test/schermate-confronto.js prima.json`, si sposta, `… dopo.json`,
+  `… prima.json dopo.json` — i due HTML devono essere identici al carattere.
 
 Prima di rimettere mano all'interfaccia, `RICOGNIZIONE-UI.md`: i colori, i 127
 bottoni e le undici misure di testo, già contati. È il materiale del §13 — di

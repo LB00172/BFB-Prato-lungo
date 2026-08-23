@@ -21,6 +21,7 @@ fallisce, e in coda stampa per esteso l'output di quelle guaste.
 |---|---|
 | `esegui.js` | Avvia il server statico e lancia le prove una per una |
 | `lib/server.js` | Server statico minimo (nessuna dipendenza): serve il progetto com'è |
+| `schermate-confronto.js` | **Non è una prova, è lo strumento del § 14.** Fotografa il DOM delle sedici schermate su file, e confronta due fotografie carattere per carattere. Si usa per spostare codice senza rischiare: `node test/schermate-confronto.js prima.json`, si sposta, `… dopo.json`, `… prima.json dopo.json`. Serve il server acceso |
 | `lib/app.js` | Aiuti condivisi: dove sta Chromium, `apri()` l'app già sbloccata, `ok()` / `fine()`, e `fotoSalvate()` / `scontriniSalvati()` — che chiedono **quali foto ci sono**, non cosa c'è in una certa chiave. Le foto si sono già spostate una volta (da `localStorage` al magazzino IndexedDB): le prove che guardavano la chiave sono diventate rosse, quelle che chiedevano le foto no |
 | `unita/` | Prove che non aprono il browser: veloci |
 | `e2e/` | Prove che pilotano l'app vera in Chromium |

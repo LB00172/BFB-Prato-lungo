@@ -27,7 +27,7 @@ cosa blocca cosa.
 | — | § 11 Coda foto | **chiusa**: la galleria resta online (§ 15-bis.4), e il messaggio ora dice anche cosa si perde chiudendo l'app |
 | — | § 19 Immagini fuori da `localStorage` | **fatto** il 23 agosto: le foto stanno in IndexedDB, `localStorage` è tornato da 3 MB a 2 KB |
 | — | § 13 Vocabolario dell'interfaccia | **bottoni fatti** il 23 agosto: 102 su 124, più il sesto ruolo (chip di scelta). Restano le misure di testo, che si fanno col § 18 |
-| 1 | § 14 Spezzare i sorgenti | il disegno è uscito; restano stato ed effetti, da estrarre come hook |
+| 1 | § 14 Spezzare i sorgenti | disegno fuori, gioco e galleria fuori; restano le aree che toccano i soldi e i conti, che vanno in un file provabile |
 | 2 | § 17 Compiti assegnati | Al campo li scrivevano negli appunti a mano: il bisogno è dimostrato, come per il § 12. Dietro bandiera, il gestore arriva col § 2 |
 | 3 | § 18 Più lingue | Ha bisogno del § 14 (le schede ricevono `t` come dipendenza) e deve precedere il § 3, o si rifanno le schede degli store. **Si porta dietro le misure di testo del § 13**: stessi file |
 
@@ -817,7 +817,7 @@ dei bottoni non c'è un ruolo dietro cui nasconderli. Va fatto quando si
 toccheranno le schede per il § 18 (le lingue), non prima: sono gli stessi file,
 e aprirli due volte per due motivi diversi è il modo di sbagliare tutte e due.
 
-## 14. Spezzare i sorgenti — primo taglio fatto
+## 14. Spezzare i sorgenti — il disegno e la parte isolata dello stato sono fuori
 
 **Era un file solo da 8.080 righe.** Il 17 agosto 2026 è diventato otto
 sorgenti in `src/`, incollati da `build.js` nell'ordine dichiarato lì:
@@ -890,13 +890,75 @@ Regole zero — l'unica che si disegna da sola.
 Quei numeri sono la misura di quanto lavoro resta, e la lista della spesa per
 il prossimo passo: finché una scheda ne chiede quaranta, non è un modulo.
 
+### Terzo taglio: lo stato esce come hook (23 agosto 2026)
+
+Il disegno era uscito, lo stato no. I primi due mucchi:
+
+| Sorgente | Righe | Cosa si porta via |
+| --- | --- | --- |
+| `75-usa-gioco.jsx` | 55 | 4 variabili di stato, la classifica, inizio e fine partita |
+| `76-usa-galleria.jsx` | 250 | 12 variabili di stato, un riferimento, l'ascolto delle miniature, il caricamento, l'album e il PDF ricordo |
+
+**Perché si è cominciato da lì.** Il gioco è l'unica parte dell'app che non
+tocca i conti: se qualcosa va storto si vede subito e non si porta via una
+presenza. La galleria è la seconda per lo stesso motivo — dodici variabili di
+stato e dodici gestori che stavano in mezzo ai conti senza avere niente a che
+farci.
+
+**`80-app.jsx` passa da 3.979 a 3.734 righe.** Non è il numero che conta: è che
+`usaGalleria` riceve **tre cose** — la scheda aperta, lo stato della linea e i
+giorni del campo — e non vede nient'altro di `App()`.
+
+### Sono hook, non componenti — e stavolta la differenza è la prova
+
+Un componente aggiungerebbe un confine di riconciliazione: cambierebbe
+**quando** le cose si ridisegnano, che è un cambio di comportamento e non una
+pulizia. Un hook no. Ed è proprio questo che permette la prova:
+
+> **DOM identico al carattere su tutte e sedici le schermate**, prima e dopo,
+> per tutti e due gli spostamenti.
+
+Lo strumento adesso è completo e sta nel repository: `test/schermate-confronto.js`
+fotografa e confronta, e `test/lib/schermate.js` stabilizza ciò che cambia da
+solo. Il primo confronto ha segnalato una differenza che non c'era — «Versione
+installata» in Impostazioni, che a volte mostra l'impronta e a volte un
+trattino secondo quando il service worker fa in tempo a registrarsi. Uno
+strumento che dà falsi allarmi si smette di guardarlo, quindi quella riga è
+stata neutralizzata.
+
+### Le due regole della divisione, e la guardia che le tiene
+
+    gli HOOK  (7*-usa-*.jsx)   tengono lo stato e NON disegnano
+    le SCHEDE (8[1-9]-*.jsx)   disegnano e NON tengono stato
+
+`test/unita/compilazione.js` controlla tutte e quattro le cose: nessun hook
+disegna, nessuna scheda tiene stato, gli hook stanno **prima** di `80-app.jsx`
+(li si chiama mentre `App()` si disegna, quindi devono già esistere) e vengono
+davvero chiamati — un hook dichiarato e mai usato è codice morto che sembra
+lavoro fatto. Tutte e quattro viste fallire prima di essere credute.
+
 ### Quello che resta
 
-Dentro `80-app.jsx` ci sono ancora stato, effetti, conti e gestori. **Quelli
-non si spostano con `sed`:** vanno estratti come hook (`usaGalleria`,
-`usaPresenze`) che si portano dietro il loro `useState`. È il passo che fa
-scendere davvero il numero delle dipendenze, e va fatto una scheda alla volta,
-con la stessa prova del DOM identico.
+Dentro `80-app.jsx` restano stato, effetti, conti e gestori delle aree che
+**toccano i soldi**: presenze, spese, sincronizzazione, saldi. Sono il pezzo
+grosso e il pezzo delicato, e vanno staccati uno alla volta con la stessa
+prova. L'ordine sensato, dal più isolato al più intrecciato:
+
+1. **`usaArchivio`** — archivi, chiusura del campo, esporta/importa: legge
+   tutto ma è letto da poco;
+2. **`usaListaSpesa`** — voci da acquistare, acquisti, scontrini, il ponte dal
+   menù (§ 12);
+3. **`usaPresenze`** — presenze e blocchi dei giorni;
+4. **`usaSincronizzazione`** — l'ascolto del cloud, la fusione, la diagnostica:
+   per ultimo, perché è l'unica parte che ha già cancellato il lavoro di
+   qualcuno una volta.
+
+I **conti** (`calculateTotals`) non sono un hook: sono una funzione pura con
+dentro le decisioni difficili del progetto. Vanno fuori da `App()` come
+`menu-spesa.js` e `magazzino-foto.js` — in un file a sé, provabile con una
+prova unitaria invece che aprendo il browser. È il passo che vale di più, ed è
+anche l'unico che non si dimostra col DOM: lì serve confrontare i numeri
+sull'export vero del campo.
 
 Da rifare quando si tocca: le **verifiche su iPhone** (§ 10), perche' un
 sorgente nuovo cambia `App.js` e quindi `CACHE_NAME`.

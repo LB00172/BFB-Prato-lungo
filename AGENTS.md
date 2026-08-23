@@ -83,11 +83,16 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 - **Le regole Firestore a utente condiviso sono il modello scelto** per un campo
   solo. L'isolamento fra campi diversi è previsto per la versione pubblica —
   vedi `ROADMAP.md`, non è una svista.
-- **`src/80-app.jsx` è ancora un file da ~3.900 righe.** Lo sappiamo: era un
-  file solo da 8.080, il disegno delle schede è già uscito in
-  `src/8*-schede-*.jsx`, e quello che resta è stato, effetti e gestori — che si
-  spezzano estraendo hook, non tagliando righe. Non è una scoperta, è la voce
-  §14 di `ROADMAP.md`.
+- **`src/80-app.jsx` è ancora un file da ~3.700 righe.** Lo sappiamo: era un
+  file solo da 8.080. Il disegno delle schede è uscito in `src/8*-schede-*.jsx`
+  e lo stato sta uscendo in `src/7*-usa-*.jsx` (`usaGioco`, `usaGalleria`), un
+  hook alla volta. Quello che resta dentro è ciò che tocca i soldi — presenze,
+  spese, sincronizzazione, conti — e si sposta con la stessa prova, non
+  tagliando righe. Non è una scoperta, è la voce §14 di `ROADMAP.md`.
+- **Gli hook non disegnano, le schede non tengono stato.** Non è uno stile: un
+  hook che restituisce JSX diventa un componente, e un componente aggiunge un
+  confine di riconciliazione — cambia QUANDO le cose si ridisegnano. Le due
+  regole sono controllate da `test/unita/compilazione.js`.
 - **Le schede non sono componenti React.** Sono funzioni che restituiscono JSX
   e ricevono le dipendenze in un oggetto. È voluto: nessun confine di
   riconciliazione nuovo, nessun hook spostato, l'albero prodotto è identico.

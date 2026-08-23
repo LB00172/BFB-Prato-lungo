@@ -140,6 +140,22 @@ const BASE_GEAR = [
 const PHOTO_CAP_KEY = 'cambusa_photo_cap';
 const PHOTO_CAP_DEFAULT = 4;
 
+// Da quando a quando e' durato il campo, guardando i pasti veri invece delle
+// date sul calendario: un campo che finisce un giorno prima non deve
+// raccontarsi piu' lungo di com'e' stato. Serve al resoconto di chiusura e al
+// sottotitolo dell'album, quindi sta qui e non dentro App(): cosi' la usano
+// tutti e due senza passarsela.
+const intervalloCampo = (campData) => {
+  const giorni = Object.keys(campData || {}).filter((d) => {
+    const day = (campData || {})[d];
+    if (!day) return false;
+    const meals = day.meals || {};
+    return Object.keys(meals).some((k) => meals[k] && (meals[k].lunch || meals[k].dinner));
+  }).sort();
+  if (giorni.length) return { from: giorni[0], to: giorni[giorni.length - 1] };
+  return { from: CAMP_START, to: CAMP_END };
+};
+
 // Comprime una foto (scontrino) ridimensionandola e convertendola in JPEG,
 // così da poterla salvare in localStorage senza esaurire lo spazio.
 const compressImage = (file, maxDim = 1200, quality = 0.6) =>

@@ -29,6 +29,10 @@ const SORGENTI = [
   '50-interfaccia.jsx',      // vocabolario dei bottoni: sei ruoli, tre altezze
   '60-gioco.jsx',            // "Aiuta Bandy": tavolozze, disegno, BandyGame
   '70-schermata-blocco.jsx', // LockScreen
+  // Gli hook: stato ed effetti usciti da App(), un file per area. Stanno
+  // PRIMA di 80-app.jsx perche' App() li chiama mentre si disegna, non dopo.
+  '75-usa-gioco.jsx',        // "Aiuta Bandy": stato, classifica, partite
+  '76-usa-galleria.jsx',     // foto del campo: ascolto, caricamento, album, PDF ricordo
   '80-app.jsx',              // function App(): stato, sincronizzazione, conti, gestori
   // Le schede: disegno uscito da App(), un file per area. Stanno DOPO
   // 80-app.jsx e va bene: sono `const` che App() chiama solo al disegno,

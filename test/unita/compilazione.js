@@ -42,6 +42,49 @@ ok(`l'ultimo sorgente (${SORGENTI[SORGENTI.length - 1]}) e' quello che monta l'a
 ok('e nessun altro sorgente monta l\'app',
   SORGENTI.slice(0, -1).every((f) => !/createRoot\(document/.test(fs.readFileSync(path.join(RADICE, 'src', f), 'utf8'))));
 
+// La divisione di App() ha due mucchi con due regole opposte, e sono proprio
+// le regole a renderla una divisione invece che uno spostamento di righe:
+//
+//   gli HOOK (7*-usa-*.jsx)  tengono lo stato e NON disegnano;
+//   le SCHEDE (8[1-9]-*.jsx) disegnano e NON tengono stato.
+//
+// Se un hook comincia a restituire JSX diventa un componente — e un componente
+// aggiunge un confine di riconciliazione, cioe' cambia QUANDO le cose si
+// ridisegnano: non e' piu' una pulizia, e' un cambio di comportamento. Se una
+// scheda comincia a tenere stato, il suo stato nasce e muore col disegno.
+// Nessuna delle due cose fa fallire una prova end-to-end.
+const HOOK = SORGENTI.filter((f) => /^7\d-usa-/.test(f));
+const SCHEDE = SORGENTI.filter((f) => /^8[1-9]-/.test(f));
+const leggi = (f) => fs.readFileSync(path.join(RADICE, 'src', f), 'utf8');
+
+ok(`ci sono ${HOOK.length} hook e ${SCHEDE.length} schede`, HOOK.length > 0 && SCHEDE.length > 0);
+
+const hookCheDisegnano = HOOK.filter((f) => /className=/.test(leggi(f)));
+ok('nessun hook disegna' + (hookCheDisegnano.length ? ' — DISEGNANO: ' + hookCheDisegnano.join(', ') : ''),
+  hookCheDisegnano.length === 0);
+
+const schedeConStato = SCHEDE.filter((f) => /\buse(State|Effect|Ref|Memo|Callback)\(/.test(leggi(f)));
+ok('nessuna scheda tiene stato' + (schedeConStato.length ? ' — LO TENGONO: ' + schedeConStato.join(', ') : ''),
+  schedeConStato.length === 0);
+
+// Un hook si chiama mentre App() si disegna, quindi dev'essere gia' stato
+// dichiarato: e' l'unico punto dell'ordine in cui un errore fa schermata
+// bianca invece di un difetto silenzioso.
+const doveApp = SORGENTI.indexOf('80-app.jsx');
+const hookInRitardo = HOOK.filter((f) => SORGENTI.indexOf(f) > doveApp);
+ok('gli hook stanno prima di 80-app.jsx' + (hookInRitardo.length ? ' — IN RITARDO: ' + hookInRitardo.join(', ') : ''),
+  hookInRitardo.length === 0);
+
+// E devono essere chiamati davvero: un hook dichiarato e mai usato e' codice
+// morto che sembra lavoro fatto.
+const app = leggi('80-app.jsx');
+const hookMorti = HOOK.filter((f) => {
+  const m = leggi(f).match(/^const (usa[A-Za-z]+) = /m);
+  return !m || !new RegExp('\\b' + m[1] + '\\(').test(app);
+});
+ok('e vengono chiamati da App()' + (hookMorti.length ? ' — MAI CHIAMATI: ' + hookMorti.join(', ') : ''),
+  hookMorti.length === 0);
+
 let compilato = null;
 try {
   compilato = Babel.transform(sorgente, {

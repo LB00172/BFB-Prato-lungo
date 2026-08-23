@@ -52,6 +52,11 @@ const stabilizza = (html) => html
   .replace(/\d{1,2}:\d{2}(:\d{2})?/g, 'ORA')
   .replace(/\d{1,2}\/\d{1,2}\/\d{4}/g, 'DATA')
   .replace(/brigata-bandone-[0-9a-f]+/g, 'VERSIONE')
+  // "Versione installata" in Impostazioni: la mostra il service worker, che si
+  // registra per conto suo. A seconda di quanto ci mette, li' c'e' l'impronta
+  // o un trattino — e non dipende dal codice, ma dal momento in cui si guarda.
+  // Senza questa riga il confronto segnala una differenza che non c'e'.
+  .replace(/(Versione installata<\/span><span class="font-bold">)[^<]*/g, '$1VERSIONE')
   .replace(/id="[^"]*"/g, '')
   .replace(/\s+/g, ' ');
 
