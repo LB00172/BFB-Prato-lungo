@@ -26,23 +26,23 @@ cosa blocca cosa.
 | — | § 12 Ponte Menù → Lista della spesa | **fatto** il 19 agosto: i menù veri del campo hanno corretto il piano (niente tabella di ingredienti) |
 | — | § 11 Coda foto | **chiusa**: la galleria resta online (§ 15-bis.4), e il messaggio ora dice anche cosa si perde chiudendo l'app |
 | — | § 19 Immagini fuori da `localStorage` | **fatto** il 23 agosto: le foto stanno in IndexedDB, `localStorage` è tornato da 3 MB a 2 KB |
-| 1 | § 13 Vocabolario dell'interfaccia | colori fatti, 102 bottoni su 121 migrati; restano i 22 a classi condizionali |
-| 2 | § 14 Spezzare i sorgenti | il disegno è uscito; restano stato ed effetti, da estrarre come hook |
-| 3 | § 17 Compiti assegnati | Al campo li scrivevano negli appunti a mano: il bisogno è dimostrato, come per il § 12. Dietro bandiera, il gestore arriva col § 2 |
-| 4 | § 18 Più lingue | Ha bisogno del § 14 (le schede ricevono `t` come dipendenza) e deve precedere il § 3, o si rifanno le schede degli store |
+| — | § 13 Vocabolario dell'interfaccia | **bottoni fatti** il 23 agosto: 102 su 124, più il sesto ruolo (chip di scelta). Restano le misure di testo, che si fanno col § 18 |
+| 1 | § 14 Spezzare i sorgenti | il disegno è uscito; restano stato ed effetti, da estrarre come hook |
+| 2 | § 17 Compiti assegnati | Al campo li scrivevano negli appunti a mano: il bisogno è dimostrato, come per il § 12. Dietro bandiera, il gestore arriva col § 2 |
+| 3 | § 18 Più lingue | Ha bisogno del § 14 (le schede ricevono `t` come dipendenza) e deve precedere il § 3, o si rifanno le schede degli store. **Si porta dietro le misure di testo del § 13**: stessi file |
 
 **Poi — la versione pubblica, che è una catena:**
 
 | | Sezione | Perché in quest'ordine |
 | --- | --- | --- |
-| 5 | § 1 Login | Senza account non esiste nient'altro di quanto segue |
-| 6 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
-| 7 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
-| 8 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
-| 9 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 8 — e dopo il § 18, altrimenti le schede dello store si rifanno |
-| 10 | § 6 Checklist | La lista privata ha bisogno di un `uid`, quindi del § 1 |
-| 11 | § 5 Scontrini con l'IA | La chiave ha bisogno di un server. Farla prima significa costruire il backend per l'IA invece che per il motivo giusto |
-| 12 | § 15 Notifiche push | Piano Blaze, Cloud Functions e — soprattutto — una domanda ancora senza risposta su cosa valga la pena notificare |
+| 4 | § 1 Login | Senza account non esiste nient'altro di quanto segue |
+| 5 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
+| 6 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
+| 7 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
+| 8 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 7 — e dopo il § 18, altrimenti le schede dello store si rifanno |
+| 9 | § 6 Checklist | La lista privata ha bisogno di un `uid`, quindi del § 1 |
+| 10 | § 5 Scontrini con l'IA | La chiave ha bisogno di un server. Farla prima significa costruire il backend per l'IA invece che per il motivo giusto |
+| 11 | § 15 Notifiche push | Piano Blaze, Cloud Functions e — soprattutto — una domanda ancora senza risposta su cosa valga la pena notificare |
 
 **Fuori dalla fila:** § 4 (database) è una decisione già presa — si resta su
 Firestore; § 7 (analisi di mercato) non è lavoro, è la mappa; § 10 (iPhone) è
@@ -723,7 +723,7 @@ E il ponte oggi lavora **su un giorno alla volta**. Chi fa la spesa la fa per
 tutta la settimana: una versione «tutti i giorni» è un'aggiunta piccola, ma va
 decisa guardando come lo usano, non prima.
 
-## 13. Vocabolario dell'interfaccia
+## 13. Vocabolario dell'interfaccia — bottoni fatti (23 agosto 2026)
 
 Materiale già misurato in `RICOGNIZIONE-UI.md` (9 agosto 2026). **Non è un
 redesign**: è dare un nome alle cose che ci sono, ed è il passo che rende
@@ -748,6 +748,74 @@ Nell'ordine, perché ogni passo dipende dal precedente:
 non c'è build step in produzione (`vercel.json`: `buildCommand: ""`), quindi non
 esiste un `tailwind.config.js` dove mettere i token. La strada realistica sono
 le **variabili CSS in `index.html`**.
+
+### Il sesto ruolo: il chip di scelta
+
+Dei sei ruoli, cinque erano già nel vocabolario. Mancava quello che non è
+un'azione ma **una scelta che resta accesa** — e nel codice erano quindici
+forme scritte a mano, tutte con lo stesso schema
+`${acceso ? 'verde e bianco' : 'bianco e verde'}` e ogni volta un pixel
+diverso: chi `py-2` e chi `py-2.5`, chi `border-b-2` e chi `border-b-4`, chi
+`text-white` e chi `text-[#F0F4F1]` — che a occhio sono lo stesso colore.
+
+`bottoneScelta(forma, tono, acceso, misura, extra)`, sui soliti due assi:
+
+| forma | dov'è |
+| --- | --- |
+| `linguetta` | in quale sezione sto (Totali/Quote/Saldi/Dati, Aspetto, Da acquistare/Acquistato, foto per persona) |
+| `interruttore` | una cosa sola, accesa o spenta, a piena larghezza (giorno gratis, ottimizza i passaggi) |
+| `spunta` | il chip minuto dei pasti |
+| `pillola` | scelta leggera in un gruppo che va a capo (le guide) |
+| `giunta` | due chip dentro una cornice sola (Album \| Griglia) |
+| `etichetta` | dice cos'è una cosa, non cosa succede (Adulto/Bambino) |
+
+I toni sono sette — `sezione`, `bordato`, `pranzo`, `cena`, `tenue`, `piatto`,
+`ambra` — e servono tutti: la stessa forma cambia colore secondo il
+significato. Il chip del pranzo è verde e quello della cena è bruno, e non è
+un vezzo — sono i due colori con cui l'app distingue i pasti dappertutto.
+
+### Com'è stato dimostrato
+
+Con lo stesso strumento del § 14: si cattura il DOM delle sedici schermate
+prima, si migra, si ricattura. Qui però il confronto non può essere carattere
+per carattere — il vocabolario rimette le classi nel *suo* ordine — quindi si
+confrontano gli **insiemi di classi**, ordinati: una classe in più o in meno
+resta una differenza, l'ordine no.
+
+**Tredici schermate su sedici sono identiche classe per classe.** Le tre che
+cambiano sono le tre modifiche volute, e sono queste:
+
+- **Presenze** — «Rendi questo giorno gratis» da `py-2` a `py-2.5`: adesso è
+  alto come ogni altro comando a piena larghezza.
+- **Saldi** — «Ottimizza i passaggi» perde `text-[#F0F4F1]` (era bianco sporco
+  dove tutto il resto è bianco) e il bordo da spento passa da `#2D392C/50` al
+  sage `#8F9E8B/50`, che è il bordo di ogni altro bottone chiaro.
+- **Impostazioni** — il selettore «foto per persona» (3 4 5 7) era l'unico
+  `border-b-2` in tutta l'app, alto la metà delle linguette che gli stanno
+  sopra. Adesso è una linguetta come le altre.
+
+### Quello che NON è passato dal vocabolario, e perché
+
+**Ventidue bottoni su 124** restano scritti a mano, e non è una dimenticanza:
+sono forme che un vocabolario di bottoni non descrive. La casella di un giorno
+sul calendario (che ha tre stati, non due), le voci del menu di navigazione, le
+caselle di spunta quadrate, le frecce tonde dell'album, le mattonelle delle
+foto, la polaroid, il pulsante a tre righe in cima, i riquadri tratteggiati
+«aggiungi», e i due bottoni del visore foto — che stanno su fondo nero e con i
+colori dell'app diventerebbero illeggibili.
+
+Inventare un ruolo per ognuna significherebbe ricostruire la ventina di forme
+usate una volta sola da cui si era partiti. **Il conteggio però è congelato in
+`test/unita/compilazione.js`**: se sale, qualcuno ha scritto un bottone a mano
+invece di chiedere una parola al vocabolario.
+
+### Quello che resta del § 13
+
+Il punto 3 — **le undici misure di testo** ridotte a cinque o sei. È il pezzo
+più invasivo dei tre: 272 usi decisi a occhio, uno alla volta, e a differenza
+dei bottoni non c'è un ruolo dietro cui nasconderli. Va fatto quando si
+toccheranno le schede per il § 18 (le lingue), non prima: sono gli stessi file,
+e aprirli due volte per due motivi diversi è il modo di sbagliare tutte e due.
 
 ## 14. Spezzare i sorgenti — primo taglio fatto
 

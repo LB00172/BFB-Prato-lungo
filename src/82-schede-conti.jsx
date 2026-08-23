@@ -38,9 +38,7 @@ const schedaSpesa = ({
         <button
           key={k}
           onClick={() => setSpesaSection(k)}
-          className={`py-2.5 rounded text-[10px] font-bold uppercase tracking-wide border-b-4 transition-all ${
-            spesaSection === k ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'
-          }`}
+          className={bottoneScelta('linguetta', 'sezione', spesaSection === k, 'minuscolo')}
         >
           {l}
         </button>
@@ -245,11 +243,7 @@ const schedaSpesa = ({
       <div>
         <button
           onClick={() => setSaldiOttimizzati(!saldiOttimizzati)}
-          className={`w-full py-2.5 rounded text-xs font-bold uppercase tracking-wide border-2 ${
-            saldiOttimizzati
-              ? 'bg-[#2D392C] text-[#F0F4F1] border-[#2D392C]'
-              : 'bg-white text-[#2D392C] border-[#2D392C]/50 hover:bg-[#E2EAE4]'
-          }`}
+          className={bottoneScelta('interruttore', 'bordato', saldiOttimizzati, 'normale', 'w-full')}
         >
           {saldiOttimizzati
             ? '↩ Torna ai saldi per cassa'
@@ -482,9 +476,7 @@ const schedaLista = ({
         <button
           key={k}
           onClick={() => setListaSection(k)}
-          className={`py-2.5 rounded text-[11px] font-bold uppercase tracking-wide border-b-4 transition-all ${
-            listaSection === k ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'
-          }`}
+          className={bottoneScelta('linguetta', 'sezione', listaSection === k, 'piccolo')}
         >
           {l}{n > 0 ? ` (${n})` : ''}
         </button>

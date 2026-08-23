@@ -188,9 +188,7 @@ const schedaGuida = ({
           <button
             key={g.k}
             onClick={() => setGuideOpen(g.k)}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors ${
-              guideOpen === g.k ? 'bg-[#2D392C] text-white' : 'bg-[#F0F4F1] text-[#2D392C] border border-[#8F9E8B]/40 hover:bg-[#E2EAE4]'
-            }`}
+            className={bottoneScelta('pillola', 'tenue', guideOpen === g.k, 'piccolo')}
           >
             {g.icon} {g.title}
           </button>

@@ -75,8 +75,13 @@ const nomiDi = (blocco) => {
 const RUOLI = nomiDi('BOTTONE_RUOLO');
 const MISURE = nomiDi('BOTTONE_MISURA');
 const TONI = nomiDi('BOTTONE_ICONA');
+const FORME = nomiDi('SCELTA_FORMA');
+const TONI_SCELTA = nomiDi('SCELTA_TONO');
+const TESTI_SCELTA = nomiDi('SCELTA_TESTO');
 ok(`il vocabolario dichiara ${RUOLI.length} ruoli, ${MISURE.length} misure e ${TONI.length} toni d'icona`,
   RUOLI.length >= 5 && MISURE.length >= 3 && TONI.length >= 3);
+ok(`e ${FORME.length} forme di chip, ${TONI_SCELTA.length} toni e ${TESTI_SCELTA.length} misure di testo`,
+  FORME.length >= 5 && TONI_SCELTA.length >= 5 && TESTI_SCELTA.length >= 3);
 
 const sbagliati = [];
 SORGENTI.forEach((f) => {
@@ -88,9 +93,87 @@ SORGENTI.forEach((f) => {
   [...testo.matchAll(/\bbottoneIcona\('([^']*)'/g)].forEach((m) => {
     if (!TONI.includes(m[1])) sbagliati.push(`${f}: tono "${m[1]}"`);
   });
+  // Il chip di scelta ha un argomento in piu' — il tono — e con la rete di
+  // sicurezza uno sbagliato non si vede: il chip resta acceso e verde, solo
+  // di un verde che non e' il suo. E' proprio quello che si vuole scoprire.
+  [...testo.matchAll(/\bbottoneScelta\('([^']*)',\s*'([^']*)',[^,]*,\s*'([^']*)'/g)].forEach((m) => {
+    if (!FORME.includes(m[1])) sbagliati.push(`${f}: forma "${m[1]}"`);
+    if (!TONI_SCELTA.includes(m[2])) sbagliati.push(`${f}: tono di scelta "${m[2]}"`);
+    if (!TESTI_SCELTA.includes(m[3])) sbagliati.push(`${f}: misura di scelta "${m[3]}"`);
+  });
 });
 ok('ogni bottone chiede un ruolo e una misura che esistono'
   + (sbagliati.length ? ' — SBAGLIATI: ' + sbagliati.join(', ') : ''), sbagliati.length === 0);
+
+// I bottoni ancora scritti a mano, contati. Non e' un divieto: e' un
+// inventario che non deve crescere da solo.
+//
+// Ventidue su 134 non passano dal vocabolario, e non e' una dimenticanza.
+// Sono forme che un vocabolario di bottoni non descrive: la casella di un
+// giorno sul calendario (tre stati), le voci del menu di navigazione, le
+// caselle di spunta quadrate, le frecce tonde dell'album, le mattonelle
+// delle foto, la polaroid, il pulsante a tre righe in cima, i riquadri
+// tratteggiati "aggiungi", e i due bottoni del visore foto — che stanno su
+// fondo nero e con i colori dell'app diventerebbero illeggibili.
+// Inventare un ruolo per ognuna vorrebbe dire rifare la ventina di forme
+// usate una volta sola da cui si era partiti (RICOGNIZIONE-UI.md, § 13).
+//
+// Il conteggio e' la guardia: se sale, qualcuno ha scritto un bottone a mano
+// invece di chiedere una parola al vocabolario; se scende, si aggiorna qui.
+const A_MANO_ATTESI = {
+  '80-app.jsx': 7,
+  '81-schede-giorno.jsx': 3,
+  '82-schede-conti.jsx': 3,
+  '83-schede-gruppo.jsx': 2,
+  '84-schede-album.jsx': 3,
+  '85-scheda-galleria.jsx': 4,
+};
+
+// Legge la className di un <button>, comprese quelle scritte fra graffe.
+const classeDi = (testo, da) => {
+  let d = 0;
+  let fine = -1;
+  for (let j = da; j < testo.length; j++) {
+    const c = testo[j];
+    if (c === '{') d++;
+    else if (c === '}') d--;
+    else if (c === '>' && d === 0) { fine = j; break; }
+  }
+  const tag = testo.slice(da, fine < 0 ? da + 500 : fine + 1);
+  const k = tag.indexOf('className=');
+  if (k < 0) return '';
+  const resto = tag.slice(k + 'className='.length);
+  if (resto[0] === '"') return resto.slice(1, resto.indexOf('"', 1));
+  if (resto[0] !== '{') return '';
+  let p = 0;
+  for (let j = 0; j < resto.length; j++) {
+    if (resto[j] === '{') p++;
+    else if (resto[j] === '}') { p--; if (p === 0) return resto.slice(0, j + 1); }
+  }
+  return '';
+};
+
+const aMano = {};
+const schedeNuove = [];
+SORGENTI.filter((f) => /^8/.test(f)).forEach((f) => {
+  const testo = fs.readFileSync(path.join(RADICE, 'src', f), 'utf8');
+  let i = testo.indexOf('<button');
+  while (i >= 0) {
+    const cls = classeDi(testo, i);
+    if (!/\bbottone(Icona|Riga|Scelta)?\(/.test(cls)) {
+      aMano[f] = (aMano[f] || 0) + 1;
+      if (!(f in A_MANO_ATTESI)) schedeNuove.push(`${f}: ${cls.replace(/\s+/g, ' ').slice(0, 50)}…`);
+    }
+    i = testo.indexOf('<button', i + 7);
+  }
+});
+const scostamenti = Object.keys(A_MANO_ATTESI)
+  .filter((f) => (aMano[f] || 0) !== A_MANO_ATTESI[f])
+  .map((f) => `${f}: ${aMano[f] || 0} invece di ${A_MANO_ATTESI[f]}`)
+  .concat(schedeNuove);
+const totaleAMano = Object.values(aMano).reduce((a, b) => a + b, 0);
+ok(`i bottoni scritti a mano restano ${totaleAMano}, quelli censiti`
+  + (scostamenti.length ? ' — CAMBIATI: ' + scostamenti.join(', ') : ''), scostamenti.length === 0);
 
 // Il nome della cache del service worker cambia a ogni build: se resta
 // indietro, i telefoni non ricevono l'aggiornamento.

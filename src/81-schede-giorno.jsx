@@ -459,7 +459,7 @@ const schedaPresenze = ({
                   <button
                     onClick={() => riassegnaOrfane(o, orfanoScelte[o.id])}
                     disabled={!orfanoScelte[o.id]}
-                    className={`shrink-0 px-3 py-2 rounded text-[10px] font-bold uppercase ${orfanoScelte[o.id] ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-400'}`}
+                    className={bottone('primario', 'minuscolo', 'shrink-0')}
                   >
                     Riassegna
                   </button>
@@ -507,11 +507,8 @@ const schedaPresenze = ({
         <button
           onClick={() => chiediGiornoGratis(selectedDateStr)}
           disabled={!!giornoBloccato(selectedDateStr)}
-          className={`w-full py-2 rounded text-[10px] font-bold uppercase tracking-wide border-2 ${
-            giornoGratis(selectedDateStr)
-              ? 'bg-[#2D392C] text-white border-[#2D392C]'
-              : 'bg-white text-[#2D392C] border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'
-          } ${giornoBloccato(selectedDateStr) ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={bottoneScelta('interruttore', 'bordato', giornoGratis(selectedDateStr), 'minuscolo',
+            'w-full' + (giornoBloccato(selectedDateStr) ? ' opacity-50 cursor-not-allowed' : ''))}
         >
           {giornoGratis(selectedDateStr) ? '🎁 Giorno gratis — rimettilo nei conti' : '🎁 Rendi questo giorno gratis'}
         </button>
@@ -578,14 +575,14 @@ const schedaPresenze = ({
                   <button
                     onClick={() => toggleMeal(selectedDateStr, m.id, 'lunch')}
                     disabled={chiuso}
-                    className={`text-[10px] uppercase font-bold px-2.5 py-1.5 rounded border ${meal.lunch ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white text-gray-400 border-gray-300'} ${chiuso ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    className={bottoneScelta('spunta', 'pranzo', meal.lunch, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')}
                   >
                     Pranzo
                   </button>
                   <button
                     onClick={() => toggleMeal(selectedDateStr, m.id, 'dinner')}
                     disabled={chiuso}
-                    className={`text-[10px] uppercase font-bold px-2.5 py-1.5 rounded border ${meal.dinner ? 'bg-[#5C4A3C] text-white border-[#5C4A3C]' : 'bg-white text-gray-400 border-gray-300'} ${chiuso ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    className={bottoneScelta('spunta', 'cena', meal.dinner, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')}
                   >
                     Cena
                   </button>

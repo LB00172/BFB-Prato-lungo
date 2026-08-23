@@ -50,7 +50,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `src/*.jsx` | i sorgenti, incollati **nell'ordine elencato in `build.js`**. I numeri vanno di dieci in dieci per poter infilare pezzi in mezzo |
 | `src/80-app.jsx` | `function App()`: stato, sincronizzazione, conti, gestori |
 | `src/8*-schede-*.jsx` | il **disegno** delle schede, uscito da `App()`. Non sono componenti React: sono funzioni che restituiscono JSX e ricevono le dipendenze in un oggetto |
-| `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga` |
+| `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneScelta` (i chip accesi/spenti) |
 | `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
 | `App.js` | **generato**, non modificare |
 | `sync-merge.js` | fusione voce per voce fra dispositivi (`rev`, `del`, orologio `hi`) |
@@ -187,4 +187,7 @@ Le tre cose da sapere senza aprirlo:
   due HTML devono essere identici al carattere. È così che è stata dimostrata.
 
 Prima di rimettere mano all'interfaccia, `RICOGNIZIONE-UI.md`: i colori, i 127
-bottoni e le undici misure di testo, già contati. È il materiale del §13.
+bottoni e le undici misure di testo, già contati. È il materiale del §13 — di
+cui i **bottoni sono fatti** (102 su 124 passano dal vocabolario, i 22 rimasti
+sono censiti e il conteggio è una prova). Restano le misure di testo, e si
+fanno insieme al §18: stessi file.

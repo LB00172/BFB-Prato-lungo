@@ -75,3 +75,89 @@ const bottone = (ruolo, misura, extra) => [
   BOTTONE_RUOLO[ruolo] || BOTTONE_RUOLO.primario,
   extra || '',
 ].filter(Boolean).join(' ');
+
+// ---------- Chip di scelta ----------
+// Il sesto ruolo (RICOGNIZIONE-UI.md, §13): non un'azione, ma una scelta che
+// resta accesa. Nel codice erano quindici forme scritte a mano, tutte con lo
+// stesso schema `${acceso ? 'verde e bianco' : 'bianco e verde'}` e ogni volta
+// un pixel diverso: chi py-2 e chi py-2.5, chi border-b-2 e chi border-b-4,
+// chi text-white e chi text-[#F0F4F1] — che a occhio sono lo stesso colore.
+//
+// Due assi, come per i bottoni:
+//   - la FORMA dice com'e' fatto e quanto e' spesso (linguetta, pillola…);
+//   - il TONO dice di che colore e' da acceso e da spento.
+// Servono tutte e due perche' la stessa forma cambia colore secondo il
+// significato: il chip del pranzo e' verde, quello della cena bruno, e non
+// e' un vezzo — sono i due colori con cui l'app distingue i pasti ovunque.
+const SCELTA_FORMA = {
+  // Linguetta: in quale sezione sto. Il filo spesso sotto dice dove sei.
+  linguetta: 'py-2.5 rounded font-bold uppercase tracking-wide border-b-4 transition-all',
+  // Interruttore: una cosa sola, accesa o spenta, a piena larghezza.
+  interruttore: 'py-2.5 rounded font-bold uppercase tracking-wide border-2',
+  // Spunta: chip minuto in riga, quello dei pasti.
+  spunta: 'px-2.5 py-1.5 rounded font-bold uppercase border',
+  // Pillola: scelta leggera in un gruppo che va a capo.
+  pillola: 'px-3 py-1.5 rounded-full font-bold transition-colors',
+  // Giunta: due chip attaccati dentro una cornice sola. Niente angoli
+  // propri: glieli da' il contenitore, altrimenti si vedono due bordi.
+  giunta: 'px-2.5 py-1.5 font-bold uppercase',
+  // Etichetta: dice cos'e' una cosa (adulto/bambino), non cosa succede.
+  etichetta: 'px-2 py-1 rounded font-bold uppercase',
+};
+
+const SCELTA_TONO = {
+  // Da acceso il bordo sotto e' bruno, non verde: e' quello che fa sembrare
+  // la linguetta una linguetta invece di un bottone premuto.
+  sezione: {
+    acceso: 'bg-[#2D392C] text-white border-[#5C4A3C]',
+    spento: 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]',
+  },
+  bordato: {
+    acceso: 'bg-[#2D392C] text-white border-[#2D392C]',
+    spento: 'bg-white text-[#2D392C] border-[#8F9E8B]/50 hover:bg-[#E2EAE4]',
+  },
+  // Pranzo e cena: spento e' GRIGIO, non bianco. Qui "spento" vuol dire "non
+  // c'era", e deve sparire dall'occhio — a colpo d'occhio si contano i
+  // presenti, non si legge riga per riga.
+  pranzo: {
+    acceso: 'bg-[#2D392C] text-white border-[#2D392C]',
+    spento: 'bg-white text-gray-400 border-gray-300',
+  },
+  cena: {
+    acceso: 'bg-[#5C4A3C] text-white border-[#5C4A3C]',
+    spento: 'bg-white text-gray-400 border-gray-300',
+  },
+  tenue: {
+    acceso: 'bg-[#2D392C] text-white',
+    spento: 'bg-[#F0F4F1] text-[#2D392C] border border-[#8F9E8B]/40 hover:bg-[#E2EAE4]',
+  },
+  piatto: {
+    acceso: 'bg-[#2D392C] text-white',
+    spento: 'bg-white text-[#2D392C]',
+  },
+  // Ambra: il colore con cui l'app segna le cose fuori dai conti. Un bambino
+  // non paga, e quel chip lo dice con lo stesso colore degli avvisi.
+  ambra: {
+    acceso: 'bg-[#D97706] text-white',
+    spento: 'bg-gray-200 text-gray-500',
+  },
+};
+
+// Quattro misure di testo, le stesse che c'erano gia'.
+const SCELTA_TESTO = {
+  minimo: 'text-[9px]',
+  minuscolo: 'text-[10px]',
+  piccolo: 'text-[11px]',
+  normale: 'text-xs',
+};
+
+// Uso: className={bottoneScelta('linguetta', 'sezione', spesaSection === k, 'minuscolo')}
+const bottoneScelta = (forma, tono, acceso, misura, extra) => {
+  const t = SCELTA_TONO[tono] || SCELTA_TONO.sezione;
+  return [
+    SCELTA_FORMA[forma] || SCELTA_FORMA.linguetta,
+    SCELTA_TESTO[misura] || SCELTA_TESTO.minuscolo,
+    acceso ? t.acceso : t.spento,
+    extra || '',
+  ].filter(Boolean).join(' ');
+};

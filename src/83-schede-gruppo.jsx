@@ -87,7 +87,7 @@ const schedaMembri = ({
                   </button>
                   <button
                     onClick={() => toggleChild(m.id)}
-                    className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${m.isChild ? 'bg-[#D97706] text-white' : 'bg-gray-200 text-gray-500'}`}
+                    className={bottoneScelta('etichetta', 'ambra', m.isChild, 'minimo')}
                   >
                     {m.isChild ? 'Bambino' : 'Adulto'}
                   </button>

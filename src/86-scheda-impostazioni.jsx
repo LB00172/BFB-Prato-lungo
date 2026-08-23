@@ -84,9 +84,7 @@ const schedaImpostazioni = ({
           <button
             key={k}
             onClick={() => setTheme(k)}
-            className={`py-2.5 rounded text-[10px] font-bold uppercase tracking-wide border-b-4 transition-all ${
-              theme === k ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'
-            }`}
+            className={bottoneScelta('linguetta', 'sezione', theme === k, 'minuscolo')}
           >
             <span className="block text-base leading-none mb-1">{icon}</span>
             {l}
@@ -111,7 +109,7 @@ const schedaImpostazioni = ({
             <button
               key={n}
               onClick={() => { setPhotoCap(n); scriviLocale(PHOTO_CAP_KEY, String(n)); }}
-              className={`w-9 py-1.5 rounded text-xs font-bold border-b-2 ${photoCap === n ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300'}`}
+              className={bottoneScelta('linguetta', 'sezione', photoCap === n, 'normale', 'w-9')}
             >
               {n}
             </button>

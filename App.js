@@ -746,6 +746,86 @@ const bottoneRiga = extra => ['w-full flex items-center justify-between gap-2 px
 
 // Uso: className={bottone('primario', 'grande', 'w-full mt-3')}
 const bottone = (ruolo, misura, extra) => ['rounded font-bold uppercase tracking-wide disabled:opacity-40', BOTTONE_MISURA[misura] || BOTTONE_MISURA.normale, BOTTONE_RUOLO[ruolo] || BOTTONE_RUOLO.primario, extra || ''].filter(Boolean).join(' ');
+
+// ---------- Chip di scelta ----------
+// Il sesto ruolo (RICOGNIZIONE-UI.md, §13): non un'azione, ma una scelta che
+// resta accesa. Nel codice erano quindici forme scritte a mano, tutte con lo
+// stesso schema `${acceso ? 'verde e bianco' : 'bianco e verde'}` e ogni volta
+// un pixel diverso: chi py-2 e chi py-2.5, chi border-b-2 e chi border-b-4,
+// chi text-white e chi text-[#F0F4F1] — che a occhio sono lo stesso colore.
+//
+// Due assi, come per i bottoni:
+//   - la FORMA dice com'e' fatto e quanto e' spesso (linguetta, pillola…);
+//   - il TONO dice di che colore e' da acceso e da spento.
+// Servono tutte e due perche' la stessa forma cambia colore secondo il
+// significato: il chip del pranzo e' verde, quello della cena bruno, e non
+// e' un vezzo — sono i due colori con cui l'app distingue i pasti ovunque.
+const SCELTA_FORMA = {
+  // Linguetta: in quale sezione sto. Il filo spesso sotto dice dove sei.
+  linguetta: 'py-2.5 rounded font-bold uppercase tracking-wide border-b-4 transition-all',
+  // Interruttore: una cosa sola, accesa o spenta, a piena larghezza.
+  interruttore: 'py-2.5 rounded font-bold uppercase tracking-wide border-2',
+  // Spunta: chip minuto in riga, quello dei pasti.
+  spunta: 'px-2.5 py-1.5 rounded font-bold uppercase border',
+  // Pillola: scelta leggera in un gruppo che va a capo.
+  pillola: 'px-3 py-1.5 rounded-full font-bold transition-colors',
+  // Giunta: due chip attaccati dentro una cornice sola. Niente angoli
+  // propri: glieli da' il contenitore, altrimenti si vedono due bordi.
+  giunta: 'px-2.5 py-1.5 font-bold uppercase',
+  // Etichetta: dice cos'e' una cosa (adulto/bambino), non cosa succede.
+  etichetta: 'px-2 py-1 rounded font-bold uppercase'
+};
+const SCELTA_TONO = {
+  // Da acceso il bordo sotto e' bruno, non verde: e' quello che fa sembrare
+  // la linguetta una linguetta invece di un bottone premuto.
+  sezione: {
+    acceso: 'bg-[#2D392C] text-white border-[#5C4A3C]',
+    spento: 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'
+  },
+  bordato: {
+    acceso: 'bg-[#2D392C] text-white border-[#2D392C]',
+    spento: 'bg-white text-[#2D392C] border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'
+  },
+  // Pranzo e cena: spento e' GRIGIO, non bianco. Qui "spento" vuol dire "non
+  // c'era", e deve sparire dall'occhio — a colpo d'occhio si contano i
+  // presenti, non si legge riga per riga.
+  pranzo: {
+    acceso: 'bg-[#2D392C] text-white border-[#2D392C]',
+    spento: 'bg-white text-gray-400 border-gray-300'
+  },
+  cena: {
+    acceso: 'bg-[#5C4A3C] text-white border-[#5C4A3C]',
+    spento: 'bg-white text-gray-400 border-gray-300'
+  },
+  tenue: {
+    acceso: 'bg-[#2D392C] text-white',
+    spento: 'bg-[#F0F4F1] text-[#2D392C] border border-[#8F9E8B]/40 hover:bg-[#E2EAE4]'
+  },
+  piatto: {
+    acceso: 'bg-[#2D392C] text-white',
+    spento: 'bg-white text-[#2D392C]'
+  },
+  // Ambra: il colore con cui l'app segna le cose fuori dai conti. Un bambino
+  // non paga, e quel chip lo dice con lo stesso colore degli avvisi.
+  ambra: {
+    acceso: 'bg-[#D97706] text-white',
+    spento: 'bg-gray-200 text-gray-500'
+  }
+};
+
+// Quattro misure di testo, le stesse che c'erano gia'.
+const SCELTA_TESTO = {
+  minimo: 'text-[9px]',
+  minuscolo: 'text-[10px]',
+  piccolo: 'text-[11px]',
+  normale: 'text-xs'
+};
+
+// Uso: className={bottoneScelta('linguetta', 'sezione', spesaSection === k, 'minuscolo')}
+const bottoneScelta = (forma, tono, acceso, misura, extra) => {
+  const t = SCELTA_TONO[tono] || SCELTA_TONO.sezione;
+  return [SCELTA_FORMA[forma] || SCELTA_FORMA.linguetta, SCELTA_TESTO[misura] || SCELTA_TESTO.minuscolo, acceso ? t.acceso : t.spento, extra || ''].filter(Boolean).join(' ');
+};
 // ============================================================================
 //  MINI GIOCO "Aiuta Bandy" — snake in canvas, tutto offline.
 //  La canna cresce ogni volta che raccoglie Bandy. Sfondo: bosco visto
@@ -7200,7 +7280,7 @@ const schedaPresenze = ({
   }, m.name))), /*#__PURE__*/React.createElement("button", {
     onClick: () => riassegnaOrfane(o, orfanoScelte[o.id]),
     disabled: !orfanoScelte[o.id],
-    className: `shrink-0 px-3 py-2 rounded text-[10px] font-bold uppercase ${orfanoScelte[o.id] ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-400'}`
+    className: bottone('primario', 'minuscolo', 'shrink-0')
   }, "Riassegna"), /*#__PURE__*/React.createElement("button", {
     onClick: () => scartaOrfane(o),
     "aria-label": "Butta via queste presenze",
@@ -7228,7 +7308,7 @@ const schedaPresenze = ({
 }, "\uD83C\uDF81 Giorno gratis."), " Le presenze restano segnate per la cucina, ma non entrano in nessun conto: nessuno paga i pasti di oggi, e chi \xE8 venuto solo oggi non deve niente.")), admin && members.length > 0 && /*#__PURE__*/React.createElement("button", {
   onClick: () => chiediGiornoGratis(selectedDateStr),
   disabled: !!giornoBloccato(selectedDateStr),
-  className: `w-full py-2 rounded text-[10px] font-bold uppercase tracking-wide border-2 ${giornoGratis(selectedDateStr) ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white text-[#2D392C] border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'} ${giornoBloccato(selectedDateStr) ? 'opacity-50 cursor-not-allowed' : ''}`
+  className: bottoneScelta('interruttore', 'bordato', giornoGratis(selectedDateStr), 'minuscolo', 'w-full' + (giornoBloccato(selectedDateStr) ? ' opacity-50 cursor-not-allowed' : ''))
 }, giornoGratis(selectedDateStr) ? '🎁 Giorno gratis — rimettilo nei conti' : '🎁 Rendi questo giorno gratis'), giornoBloccato(selectedDateStr) && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#5C4A3C]/10 border border-[#5C4A3C]/40 rounded p-2.5"
 }, /*#__PURE__*/React.createElement("p", {
@@ -7280,11 +7360,11 @@ const schedaPresenze = ({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleMeal(selectedDateStr, m.id, 'lunch'),
     disabled: chiuso,
-    className: `text-[10px] uppercase font-bold px-2.5 py-1.5 rounded border ${meal.lunch ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white text-gray-400 border-gray-300'} ${chiuso ? 'opacity-60 cursor-not-allowed' : ''}`
+    className: bottoneScelta('spunta', 'pranzo', meal.lunch, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')
   }, "Pranzo"), /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleMeal(selectedDateStr, m.id, 'dinner'),
     disabled: chiuso,
-    className: `text-[10px] uppercase font-bold px-2.5 py-1.5 rounded border ${meal.dinner ? 'bg-[#5C4A3C] text-white border-[#5C4A3C]' : 'bg-white text-gray-400 border-gray-300'} ${chiuso ? 'opacity-60 cursor-not-allowed' : ''}`
+    className: bottoneScelta('spunta', 'cena', meal.dinner, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')
   }, "Cena")));
 }))), admin && members.length > 0 && (giornoBloccato(selectedDateStr) ? /*#__PURE__*/React.createElement("button", {
   onClick: () => sbloccaGiorno(selectedDateStr),
@@ -7341,7 +7421,7 @@ const schedaSpesa = ({
 }, [['totali', 'Totali'], ['quote', 'Quote'], ['saldi', 'Saldi'], ['dati', 'Dati']].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
   key: k,
   onClick: () => setSpesaSection(k),
-  className: `py-2.5 rounded text-[10px] font-bold uppercase tracking-wide border-b-4 transition-all ${spesaSection === k ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'}`
+  className: bottoneScelta('linguetta', 'sezione', spesaSection === k, 'minuscolo')
 }, l))), spesaSection === 'totali' && /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
@@ -7499,7 +7579,7 @@ const schedaSpesa = ({
   className: "space-y-4"
 }, cassaSepAttiva && (risparmio > 0 || saldiOttimizzati) && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
   onClick: () => setSaldiOttimizzati(!saldiOttimizzati),
-  className: `w-full py-2.5 rounded text-xs font-bold uppercase tracking-wide border-2 ${saldiOttimizzati ? 'bg-[#2D392C] text-[#F0F4F1] border-[#2D392C]' : 'bg-white text-[#2D392C] border-[#2D392C]/50 hover:bg-[#E2EAE4]'}`
+  className: bottoneScelta('interruttore', 'bordato', saldiOttimizzati, 'normale', 'w-full')
 }, saldiOttimizzati ? '↩ Torna ai saldi per cassa' : `⚡ Ottimizza i passaggi (${totals.transfers.length} → ${totals.transfersOttimizzati.length})`), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic mt-1 leading-snug"
 }, saldiOttimizzati ? 'Stai vedendo le due casse messe insieme. Per capire da dove viene una cifra, torna ai saldi per cassa.' : 'Unisce le due casse in un elenco solo di bonifici: nessuno paga un centesimo in più o in meno, sono solo meno passaggi.')), saldiOttimizzati ? schedaSaldi({
@@ -7669,7 +7749,7 @@ const schedaLista = ({
 }, [['daacquistare', 'Da acquistare', toBuy.length], ['acquistato', 'Acquistato', purchases.length]].map(([k, l, n]) => /*#__PURE__*/React.createElement("button", {
   key: k,
   onClick: () => setListaSection(k),
-  className: `py-2.5 rounded text-[11px] font-bold uppercase tracking-wide border-b-4 transition-all ${listaSection === k ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'}`
+  className: bottoneScelta('linguetta', 'sezione', listaSection === k, 'piccolo')
 }, l, n > 0 ? ` (${n})` : ''))), listaSection === 'daacquistare' && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#5C4A3C]/30 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("div", {
@@ -8160,7 +8240,7 @@ const schedaMembri = ({
   className: `w-6 h-6 rounded-full border-2 font-serif italic font-bold text-[11px] leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B] text-[#5C4A3C]'}`
 }, "i"), /*#__PURE__*/React.createElement("button", {
   onClick: () => toggleChild(m.id),
-  className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${m.isChild ? 'bg-[#D97706] text-white' : 'bg-gray-200 text-gray-500'}`
+  className: bottoneScelta('etichetta', 'ambra', m.isChild, 'minimo')
 }, m.isChild ? 'Bambino' : 'Adulto'), /*#__PURE__*/React.createElement("button", {
   onClick: () => removeMember(m.id),
   className: bottoneIcona('distruttivo')
@@ -8469,7 +8549,7 @@ const schedaGuida = ({
 }, GUIDE.map(g => /*#__PURE__*/React.createElement("button", {
   key: g.k,
   onClick: () => setGuideOpen(g.k),
-  className: `px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors ${guideOpen === g.k ? 'bg-[#2D392C] text-white' : 'bg-[#F0F4F1] text-[#2D392C] border border-[#8F9E8B]/40 hover:bg-[#E2EAE4]'}`
+  className: bottoneScelta('pillola', 'tenue', guideOpen === g.k, 'piccolo')
 }, g.icon, " ", g.title))), (() => {
   const g = GUIDE.find(x => x.k === guideOpen) || GUIDE[0];
   return /*#__PURE__*/React.createElement("div", {
@@ -8603,10 +8683,10 @@ const schedaGalleria = ({
 }, [['album', '📖 Album'], ['griglia', '▦ Griglia']].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
   key: k,
   onClick: () => setGalleryView(k),
-  className: `text-[10px] uppercase font-bold px-2.5 py-1.5 ${galleryView === k ? 'bg-[#2D392C] text-white' : 'bg-white text-[#2D392C]'}`
+  className: bottoneScelta('giunta', 'piatto', galleryView === k, 'minuscolo')
 }, l))), picking && /*#__PURE__*/React.createElement("button", {
   onClick: uscitaScelta,
-  className: "text-[10px] uppercase font-bold px-3 py-1.5 rounded border-2 shrink-0 bg-[#2D392C] text-white border-[#2D392C]"
+  className: bottone('primario', 'minuscolo', 'shrink-0')
 }, "Annulla")), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
 }, "Senza linea l'album non si pu\xF2 sfogliare.") : !photosReady ? /*#__PURE__*/React.createElement("p", {
@@ -8679,7 +8759,7 @@ const schedaGalleria = ({
 }, picked.length), " foto su ", photos.length, " \xB7 ", Math.ceil(picked.length / PER_PAGINA_ALBUM), " ", Math.ceil(picked.length / PER_PAGINA_ALBUM) === 1 ? 'pagina' : 'pagine')), /*#__PURE__*/React.createElement("button", {
   onClick: () => generaRicordo(photos, false),
   disabled: picked.length === 0 || !!pdfBusy,
-  className: `w-full py-3 rounded font-bold uppercase text-sm tracking-wide ${picked.length > 0 && !pdfBusy ? 'bg-[#5C4A3C] text-white hover:bg-[#463628]' : 'bg-gray-200 text-gray-400'}`
+  className: bottone('bruno', 'grande', 'w-full')
 }, pdfBusy || `Crea album con le scelte${picked.length ? ` (${picked.length})` : ''}`), /*#__PURE__*/React.createElement("button", {
   onClick: () => setPicked(photos.map(x => x.id)),
   disabled: !!pdfBusy || picked.length === photos.length,
@@ -8689,7 +8769,7 @@ const schedaGalleria = ({
 }, "Crea un PDF con le foto scelte su uno sfondo di montagna, quattro per pagina. Le foto vengono scaricate a piena qualit\xE0, quindi ci vuole qualche secondo.")), photos.length > 0 && !picking && cloud.connected && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
   onClick: () => generaRicordo(photos, true),
   disabled: !!pdfBusy,
-  className: `w-full mt-3 py-3 rounded font-bold uppercase text-sm tracking-wide ${pdfBusy ? 'bg-gray-200 text-gray-400' : 'bg-[#5C4A3C] text-white hover:bg-[#463628]'}`
+  className: bottone('bruno', 'grande', 'w-full mt-3')
 }, pdfBusy || `📕 Crea album completo (${photos.length} ${photos.length === 1 ? 'foto' : 'foto'})`), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic mt-1.5 leading-snug"
 }, "Un PDF con ", /*#__PURE__*/React.createElement("span", {
@@ -8790,7 +8870,7 @@ const schedaImpostazioni = ({
 }, [['auto', 'Automatico', '🌗'], ['light', 'Chiaro', '☀️'], ['dark', 'Scuro', '🌙']].map(([k, l, icon]) => /*#__PURE__*/React.createElement("button", {
   key: k,
   onClick: () => setTheme(k),
-  className: `py-2.5 rounded text-[10px] font-bold uppercase tracking-wide border-b-4 transition-all ${theme === k ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]'}`
+  className: bottoneScelta('linguetta', 'sezione', theme === k, 'minuscolo')
 }, /*#__PURE__*/React.createElement("span", {
   className: "block text-base leading-none mb-1"
 }, icon), l))), /*#__PURE__*/React.createElement("p", {
@@ -8811,7 +8891,7 @@ const schedaImpostazioni = ({
     setPhotoCap(n);
     scriviLocale(PHOTO_CAP_KEY, String(n));
   },
-  className: `w-9 py-1.5 rounded text-xs font-bold border-b-2 ${photoCap === n ? 'bg-[#2D392C] text-white border-[#5C4A3C]' : 'bg-white text-[#2D392C] border-gray-300'}`
+  className: bottoneScelta('linguetta', 'sezione', photoCap === n, 'normale', 'w-9')
 }, n)))), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug"
 }, "Quante foto pu\xF2 caricare ciascuno. \xC8 un accordo di gruppo che vale su questo telefono, non un controllo: serve a far scegliere le foto belle. Mettetevi d'accordo sullo stesso numero.")), admin && /*#__PURE__*/React.createElement("div", {

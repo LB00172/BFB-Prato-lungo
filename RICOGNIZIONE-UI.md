@@ -114,7 +114,9 @@ sole correzioni previste, entrambe applicate.
 | Ruoli | `primario`, `bruno`, `secondario`, `testuale`, `distruttivo`, `avviso`, `whatsapp` |
 | Misure | `minuscolo`, `piccolo`, `normale`, `grande` |
 | Toni delle icone | `neutro`, `distruttivo`, `pieno`, `tenue` |
-| Migrati | **102 bottoni su 121** |
+| Forme dei chip | `linguetta`, `interruttore`, `spunta`, `pillola`, `giunta`, `etichetta` |
+| Toni dei chip | `sezione`, `bordato`, `pranzo`, `cena`, `tenue`, `piatto`, `ambra` |
+| Migrati | **102 bottoni su 124** |
 
 ### Le quattro decisioni prese guardando il codice
 
@@ -138,10 +140,20 @@ tratteggiata «aggiungi», i due avvisi ambra che sono schede cliccabili, e i
 comandi che vivono **su fondo scuro** (dentro le schede dei saldi e nel
 visore delle foto), dove i colori del vocabolario non si leggerebbero.
 
-Restano anche **22 bottoni con classi condizionali** — quelli il cui aspetto
-cambia con lo stato (scheda attiva, giorno selezionato, rimborso saldato). Lì
-il vocabolario va usato dentro il ternario, e conviene farlo insieme
-all'estrazione delle schede (`ROADMAP.md` § 14), non prima.
+### I bottoni con le classi condizionali — fatti (23 agosto 2026)
+
+Erano **22**, quelli il cui aspetto cambia con lo stato. Undici erano la stessa
+cosa scritta undici volte: una scelta che resta accesa. Sono diventati il sesto
+ruolo, `bottoneScelta(forma, tono, acceso, misura, extra)`, che è la voce qui
+sopra. Gli altri undici erano davvero forme a sé (caselle di spunta quadrate,
+frecce tonde, mattonelle) e restano scritti a mano — ma **contati**: se il
+numero cambia, `test/unita/compilazione.js` diventa rossa.
+
+Il confronto del DOM delle sedici schermate, prima e dopo, dà **tredici
+identiche classe per classe** e tre con esattamente le modifiche volute:
+`py-2` → `py-2.5` sul giorno gratis, il bianco sporco `#F0F4F1` che torna
+bianco sui saldi ottimizzati, e il selettore «foto per persona» che smette di
+essere l'unico `border-b-2` dell'app.
 
 ## Cosa se ne ricava per settembre
 
@@ -149,9 +161,9 @@ Nell'ordine, perché ogni passo dipende dal precedente:
 
 1. **Colori: quasi niente da fare.** Unire `#1A201A` in `#1F271E`, e riportare
    `#A9752F` sull'ambra vera `#D97706`. Due modifiche, non una revisione.
-2. **Bottoni: qui sta il lavoro.** Ridurre 47 forme ai sei ruoli veri, con tre
-   altezze. È anche il passo che rende leggibile il codice: oggi ogni bottone
-   porta addosso la sua riga di classi.
+2. ~~**Bottoni: qui sta il lavoro.**~~ **Fatto** il 23 agosto 2026: 47 forme
+   ridotte ai sei ruoli veri più quattro misure, e il sesto ruolo — il chip di
+   scelta — che da solo ne ha assorbite undici.
 3. **Testo: da undici misure a cinque o sei**, e la scala scritta da qualche
    parte invece che nella testa.
 4. **Solo dopo, spezzare `src/7-app.jsx`.** Con un vocabolario deciso la divisione ha

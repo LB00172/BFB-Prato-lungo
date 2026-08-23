@@ -125,7 +125,7 @@ const schedaGalleria = ({
               <button
                 key={k}
                 onClick={() => setGalleryView(k)}
-                className={`text-[10px] uppercase font-bold px-2.5 py-1.5 ${galleryView === k ? 'bg-[#2D392C] text-white' : 'bg-white text-[#2D392C]'}`}
+                className={bottoneScelta('giunta', 'piatto', galleryView === k, 'minuscolo')}
               >
                 {l}
               </button>
@@ -135,7 +135,7 @@ const schedaGalleria = ({
         {picking && (
           <button
             onClick={uscitaScelta}
-            className="text-[10px] uppercase font-bold px-3 py-1.5 rounded border-2 shrink-0 bg-[#2D392C] text-white border-[#2D392C]"
+            className={bottone('primario', 'minuscolo', 'shrink-0')}
           >
             Annulla
           </button>
@@ -230,7 +230,7 @@ const schedaGalleria = ({
           <button
             onClick={() => generaRicordo(photos, false)}
             disabled={picked.length === 0 || !!pdfBusy}
-            className={`w-full py-3 rounded font-bold uppercase text-sm tracking-wide ${picked.length > 0 && !pdfBusy ? 'bg-[#5C4A3C] text-white hover:bg-[#463628]' : 'bg-gray-200 text-gray-400'}`}
+            className={bottone('bruno', 'grande', 'w-full')}
           >
             {pdfBusy || `Crea album con le scelte${picked.length ? ` (${picked.length})` : ''}`}
           </button>
@@ -256,7 +256,7 @@ const schedaGalleria = ({
           <button
             onClick={() => generaRicordo(photos, true)}
             disabled={!!pdfBusy}
-            className={`w-full mt-3 py-3 rounded font-bold uppercase text-sm tracking-wide ${pdfBusy ? 'bg-gray-200 text-gray-400' : 'bg-[#5C4A3C] text-white hover:bg-[#463628]'}`}
+            className={bottone('bruno', 'grande', 'w-full mt-3')}
           >
             {pdfBusy || `📕 Crea album completo (${photos.length} ${photos.length === 1 ? 'foto' : 'foto'})`}
           </button>
