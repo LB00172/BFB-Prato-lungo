@@ -25,24 +25,24 @@ cosa blocca cosa.
 | --- | --- | --- |
 | — | § 12 Ponte Menù → Lista della spesa | **fatto** il 19 agosto: i menù veri del campo hanno corretto il piano (niente tabella di ingredienti) |
 | — | § 11 Coda foto | **chiusa**: la galleria resta online (§ 15-bis.4), e il messaggio ora dice anche cosa si perde chiudendo l'app |
-| 1 | § 19 Immagini fuori da `localStorage` | 3,18 MB su 3,2 MB sono foto: è l'unica cosa che oggi può far perdere una presenza per colpa di uno scontrino |
-| 2 | § 13 Vocabolario dell'interfaccia | colori fatti, 102 bottoni su 121 migrati; restano i 22 a classi condizionali |
-| 3 | § 14 Spezzare i sorgenti | il disegno è uscito; restano stato ed effetti, da estrarre come hook |
-| 4 | § 17 Compiti assegnati | Al campo li scrivevano negli appunti a mano: il bisogno è dimostrato, come per il § 12. Dietro bandiera, il gestore arriva col § 2 |
-| 5 | § 18 Più lingue | Ha bisogno del § 14 (le schede ricevono `t` come dipendenza) e deve precedere il § 3, o si rifanno le schede degli store |
+| — | § 19 Immagini fuori da `localStorage` | **fatto** il 23 agosto: le foto stanno in IndexedDB, `localStorage` è tornato da 3 MB a 2 KB |
+| 1 | § 13 Vocabolario dell'interfaccia | colori fatti, 102 bottoni su 121 migrati; restano i 22 a classi condizionali |
+| 2 | § 14 Spezzare i sorgenti | il disegno è uscito; restano stato ed effetti, da estrarre come hook |
+| 3 | § 17 Compiti assegnati | Al campo li scrivevano negli appunti a mano: il bisogno è dimostrato, come per il § 12. Dietro bandiera, il gestore arriva col § 2 |
+| 4 | § 18 Più lingue | Ha bisogno del § 14 (le schede ricevono `t` come dipendenza) e deve precedere il § 3, o si rifanno le schede degli store |
 
 **Poi — la versione pubblica, che è una catena:**
 
 | | Sezione | Perché in quest'ordine |
 | --- | --- | --- |
-| 4 | § 1 Login | Senza account non esiste nient'altro di quanto segue |
-| 5 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
-| 6 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
-| 7 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
-| 8 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 7 — e dopo il § 18, altrimenti le schede dello store si rifanno |
-| 9 | § 6 Checklist | La lista privata ha bisogno di un `uid`, quindi del § 1 |
-| 10 | § 5 Scontrini con l'IA | La chiave ha bisogno di un server. Farla prima significa costruire il backend per l'IA invece che per il motivo giusto |
-| 11 | § 15 Notifiche push | Piano Blaze, Cloud Functions e — soprattutto — una domanda ancora senza risposta su cosa valga la pena notificare |
+| 5 | § 1 Login | Senza account non esiste nient'altro di quanto segue |
+| 6 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
+| 7 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
+| 8 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
+| 9 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 8 — e dopo il § 18, altrimenti le schede dello store si rifanno |
+| 10 | § 6 Checklist | La lista privata ha bisogno di un `uid`, quindi del § 1 |
+| 11 | § 5 Scontrini con l'IA | La chiave ha bisogno di un server. Farla prima significa costruire il backend per l'IA invece che per il motivo giusto |
+| 12 | § 15 Notifiche push | Piano Blaze, Cloud Functions e — soprattutto — una domanda ancora senza risposta su cosa valga la pena notificare |
 
 **Fuori dalla fila:** § 4 (database) è una decisione già presa — si resta su
 Firestore; § 7 (analisi di mercato) non è lavoro, è la mappa; § 10 (iPhone) è
@@ -1175,7 +1175,7 @@ le descrizioni.
 
 ---
 
-## 19. Le immagini fuori da `localStorage`
+## 19. Le immagini fuori da `localStorage` — fatto (23 agosto 2026)
 
 **Questa sezione nasce da una critica esterna, verificata sui dati veri del
 campo.** Delle quattro sollevate, è l'unica che i numeri confermano — e ne
@@ -1201,27 +1201,71 @@ confronto, lo `stringify` dello stato intero — quello che parte verso Firestor
 ogni volta — costa **0,128 ms**. Non è la sincronizzazione a pesare: sono le
 immagini.
 
-### Cosa fare
+### Com'è fatto
 
-**Le immagini in IndexedDB, i dati in `localStorage`.** IndexedDB non ha il
-tetto dei 5 MB, accetta i `Blob` senza la tassa del +33 % del Base64, e scrive
-in modo asincrono: sparisce il blocco del thread e sparisce la competizione per
-lo spazio.
+**`magazzino-foto.js`**, fuori da `src/` per lo stesso motivo di
+`menu-spesa.js`: le regole che decidono se si perde una foto si provano con
+una prova unitaria, senza aprire un browser. Le foto stanno in IndexedDB —
+niente tetto dei 5 MB, scritture asincrone — e `localStorage` torna a
+contenere solo i conti.
 
-Quel che va tenuto d'occhio quando si fa:
+Tre cose lo tengono in piedi:
 
-- **Prima si scrive nel posto nuovo, poi si cancella dal vecchio.** Una
-  migrazione che pota prima di aver confermato è come l'istantanea che si
-  mangiava i byte della storia della sincronizzazione (`CLAUDE.md`).
-- **La migrazione deve poter fallire senza portarsi via i conti.** Se
-  IndexedDB non è disponibile (Safari privato ha fatto di peggio), si resta
-  su `localStorage` e non succede niente di male.
-- **La prova va vista fallire.** Si riempie `localStorage` fino al tetto e si
-  controlla che presenze e spese si salvino lo stesso. Oggi il salvataggio
-  degli scontrini ha un `try/catch` che avvisa e tira dritto, ma **non libera
-  spazio**: `salvaLocale` sacrifica le istantanee, mai le foto. È il percorso
-  esatto in cui, con la memoria agli sgoccioli, si perde una presenza per
-  colpa di una foto.
+- **Si scrive solo il cambiamento.** `daScrivere(prima, dopo)` confronta le
+  due mappe: aggiungere la trentesima foto fa partire **una** scrittura, non
+  trenta. Riversare tutto a ogni scatto era esattamente il difetto da cui si
+  veniva.
+- **Il vecchio si cancella solo dopo aver riletto il nuovo.**
+  `migrazioneRiuscita(originali, rilette)` confronta i **contenuti**, non i
+  conteggi: una foto riletta a metà vale come persa e la chiave vecchia resta
+  dov'è. Si occupa spazio per un altro giro, ma non si perde una foto.
+- **Senza magazzino non succede niente di male.** Safari in navigazione
+  privata ha fatto di peggio che mancare: c'è l'oggetto `indexedDB` ma aprire
+  un database fallisce. Si prova una volta, e se non va si resta su
+  `localStorage` come prima — e la diagnostica lo **dice**, invece di far
+  finta di niente.
+
+### Il numero, dopo
+
+Le stesse tre foto da un megabyte che prima riempivano `localStorage` adesso
+lo lasciano a **2 KB**. La diagnostica in modalità tecnica mostra quante foto
+ci sono, quanto pesano e dove stanno: è il numero che ha fatto nascere questa
+sezione, quindi è anche quello da tenere d'occhio.
+
+### Quello che le prove hanno trovato
+
+Due cose che non erano nel piano:
+
+- **La potatura delle foto orfane aveva smesso di funzionare.** Le foto adesso
+  arrivano *dopo* il primo disegno, e l'effetto che toglie quelle di voci
+  cancellate girava solo quando cambiavano gli acquisti: al primo giro non
+  c'era ancora niente da potare. Corretto mettendo le foto fra le dipendenze —
+  e c'è una prova apposta, con una foto che non appartiene a nessuna spesa.
+- **«Cancella i dati da questo telefono» lasciava indietro i megabyte.**
+  Svuotava le chiavi `cambusa_*` e ricaricava: con le foto altrove, il tasto
+  prometteva una cosa e ne faceva un'altra.
+- **Quattro prove guardavano la chiave invece delle foto.** `e2e/scontrino`,
+  `e2e/tenuta`, `e2e/galleria` e `e2e/chiusura` leggevano
+  `localStorage.cambusa_receipts` a mano: due sono diventate rosse subito, e
+  le altre due passavano solo perché ingoiavano l'errore. Adesso passano tutte
+  da `fotoSalvate()` in `test/lib/app.js`, che chiede **quali foto ci sono**.
+  Una prova che descrive dove stanno i dati invece di cosa fa l'app diventa
+  rossa a ogni spostamento, e a furia di rimetterla a posto si smette di
+  crederle.
+
+Una terza cosa è stata chiusa senza che una prova la mostrasse: le scritture
+nel magazzino sono **messe in fila**. Due in volo insieme partirebbero dallo
+stesso punto — aggiungi una foto e cancellala subito, e la cancellazione parte
+da uno stato in cui quella foto non c'era ancora, quindi resta nel magazzino
+per sempre. È una finestra di pochi millisecondi che non si riesce a colpire
+da fuori: la correzione è ragionata, non dimostrata, e va detto.
+
+**Prove:** `test/unita/magazzino-foto.js` (17 verifiche) e
+`test/e2e/magazzino-foto.js` (15). Tutte e due viste fallire prima di essere
+credute: riscrivendo tutto a ogni foto, accontentandosi che la chiave esista
+invece di confrontare il contenuto, non cancellando mai niente, tornando a
+scrivere in `localStorage`, togliendo le foto dalle dipendenze della potatura,
+e togliendo la rete di sicurezza a chi il magazzino non ce l'ha.
 
 ### Le tre critiche che invece non reggono, e perché è scritto qui
 

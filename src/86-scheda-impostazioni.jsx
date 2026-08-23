@@ -17,6 +17,7 @@ const schedaImpostazioni = ({
   esciAdmin,
   esportaRegistro,
   exportData,
+  fotoDove,
   goTo,
   isDark,
   isOnline,
@@ -28,6 +29,7 @@ const schedaImpostazioni = ({
   purchases,
   readyChecks,
   readyOk,
+  receipts,
   setAdminErr,
   setAdminPwd,
   setBloccoOpen,
@@ -144,6 +146,26 @@ const schedaImpostazioni = ({
               <span><span className="font-bold text-[#2D392C]">{Object.keys(m.rev || {}).length}</span> voci datate</span>
               <span><span className="font-bold text-[#2D392C]">{lapidi.length}</span> cancellazioni registrate</span>
             </div>
+
+            {/* Quanto pesano le foto e dove stanno. Nel campo 2026 gli
+                scontrini occupavano 3,18 MB dei 5 di localStorage e i dati
+                dei conti 35 KB: e' il numero che ha spostato le foto nel
+                magazzino, quindi e' anche il numero da tenere d'occhio. */}
+            {(() => {
+              const MF = window.MagazzinoFoto;
+              const quante = Object.keys(receipts || {}).length;
+              const kb = MF ? Math.round(MF.peso(receipts) / 1024) : 0;
+              return (
+                <p className="text-[11px] text-gray-600">
+                  <span className="font-bold text-[#2D392C]">{quante}</span> foto di scontrini
+                  {quante > 0 && <> per <span className="font-bold text-[#2D392C]">{kb} KB</span></>}
+                  {', '}
+                  {fotoDove === 'magazzino'
+                    ? 'nel magazzino: non tolgono spazio ai conti.'
+                    : 'nella memoria del telefono: il magazzino non è disponibile, quindi contendono lo spazio ai conti.'}
+                </p>
+              );
+            })()}
 
             {/* Un telefono pieno di dati ma senza nemmeno una data è
                 indifeso: non può vincere un confronto e la prima

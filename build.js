@@ -69,7 +69,7 @@ console.log('Compilato src/*.jsx -> App.js (' + SORGENTI.length + ' sorgenti)');
 // 2) Calcola una versione dal contenuto degli asset cacheati e la scrive in sw.js
 const filesToHash = [
   'App.js', 'index.html', 'manifest.json',
-  'firebase-config.js', 'sync-merge.js', 'pdf-ricordo.js', 'menu-spesa.js', 'firebase-sync.js',
+  'firebase-config.js', 'sync-merge.js', 'pdf-ricordo.js', 'menu-spesa.js', 'magazzino-foto.js', 'firebase-sync.js',
   'vendor/tailwind.js', 'vendor/fonts.css',
 ];
 const h = crypto.createHash('sha1');

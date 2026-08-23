@@ -2194,9 +2194,23 @@ function App() {
   }));
 
   // Foto scontrini: sincronizzate via Firestore (sotto-collezione dedicata,
-  // un documento per foto) + copia locale in localStorage.
-  const [receipts, setReceipts] = useState(() => load('cambusa_receipts', {}));
+  // un documento per foto) + copia locale nel magazzino (IndexedDB).
+  //
+  // Parte VUOTA e si riempie subito dopo, perche' il magazzino si legge in
+  // modo asincrono. Prima si partiva da localStorage, che si legge di colpo:
+  // comodo, ma erano 3,18 MB di foto dentro i 5 disponibili, e i conti
+  // rischiavano di non avere piu' posto dove salvarsi (ROADMAP.md § 19).
+  const [receipts, setReceipts] = useState({});
   const receiptsRef = useRef({});
+  // Cosa risulta gia' scritto nel magazzino: serve a scrivere SOLO le foto
+  // nuove invece di riversare ogni volta l'intera mappa.
+  const receiptsSalvatiRef = useRef({});
+  // Le scritture nel magazzino si mettono in fila. Due in volo insieme
+  // vedrebbero lo stesso punto di partenza: aggiungi una foto e cancellala
+  // subito dopo, e la cancellazione parte da uno stato in cui quella foto non
+  // c'era ancora — resta nel magazzino per sempre, che e' proprio il problema
+  // che questa sezione doveva chiudere.
+  const codaMagazzinoRef = useRef(Promise.resolve());
 
   // Dotazioni aggiuntive (box editabile), condivise via sync.
   const [gear, setGear] = useState(() => load('cambusa_gear', []));
@@ -2469,6 +2483,10 @@ function App() {
   // alla riapertura le modifiche di questo telefono risulterebbero "senza
   // data" e perderebbero ogni confronto. È un guasto silenzioso: va detto.
   const [spazioPieno, setSpazioPieno] = useState(false);
+  // Dove sono finite davvero le foto: nel magazzino (IndexedDB) o, se quello
+  // non e' disponibile, nella memoria del telefono come prima. In modalita'
+  // tecnica va detto, perche' cambia quanto spazio resta ai conti.
+  const [fotoDove, setFotoDove] = useState('magazzino');
   // La cronologia è il pezzo di localStorage che NON si può perdere: senza,
   // questo telefono riparte "senza date" e qualsiasi cancellazione altrui gli
   // porta via delle voci. Vale più di tutto il resto che sta lì dentro, quindi
@@ -2663,13 +2681,44 @@ function App() {
     weatherRef.current = next;
     setWeather(next);
   };
+  // All'avvio: si sposta la vecchia chiave di localStorage nel magazzino (una
+  // volta sola, e solo se le foto si rileggono identiche) e si carica quello
+  // che c'e'. Le foto gia' arrivate dal cloud nel frattempo hanno la
+  // precedenza: sono le stesse, ma non ha senso sovrascriverle all'indietro.
+  useEffect(() => {
+    const MF = window.MagazzinoFoto;
+    if (!MF) return;
+    let vivo = true;
+    codaMagazzinoRef.current = codaMagazzinoRef.current.then(() => MF.migra()).then(esito => {
+      if (!vivo) return;
+      receiptsSalvatiRef.current = esito.mappa || {};
+      setReceipts(prev => ({
+        ...(esito.mappa || {}),
+        ...prev
+      }));
+      setFotoDove(esito.ripiego || !MF.disponibile() ? 'memoria del telefono' : 'magazzino');
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
   useEffect(() => {
     receiptsRef.current = receipts;
-    try {
-      localStorage.setItem('cambusa_receipts', JSON.stringify(receipts));
-    } catch (e) {
-      console.warn('localStorage pieno: le foto restano comunque nella cache di Firestore.');
-    }
+    const MF = window.MagazzinoFoto;
+    if (!MF) return;
+    codaMagazzinoRef.current = codaMagazzinoRef.current
+    // Il punto di partenza si legge quando tocca a noi, non quando ci si
+    // mette in coda: chi ci precede lo ha appena spostato.
+    .then(() => MF.applica(receiptsSalvatiRef.current, receipts)).then(esito => {
+      // Il segnaposto si sposta SOLO a scrittura riuscita: segnarlo prima
+      // vorrebbe dire che una scrittura fallita non viene piu' ritentata —
+      // lo stesso errore gia' fatto con lastPushedJson in firebase-sync.js.
+      if (esito.salvato) receiptsSalvatiRef.current = receipts;
+      if (esito.ripiego) setFotoDove('memoria del telefono');
+    })
+    // Una scrittura andata male non deve rompere la fila: chi viene dopo
+    // riparte dall'ultimo punto di partenza buono e riprova.
+    .catch(() => {/* si riprova al prossimo cambiamento */});
   }, [receipts]);
 
   // Pulizia: elimina le foto locali di voci che non esistono più (es. acquisto
@@ -2687,7 +2736,12 @@ function App() {
       });
       return copy;
     });
-  }, [purchases, toBuy, equipment]);
+    // "receipts" fra le dipendenze e' voluto: le foto adesso arrivano dal
+    // magazzino DOPO il primo disegno, quindi al primo giro non c'e' ancora
+    // niente da potare. Senza, la foto di una spesa cancellata altrove
+    // resterebbe nel magazzino per sempre. Non fa cicli: quando non c'e'
+    // niente da togliere la funzione restituisce lo stesso oggetto di prima.
+  }, [purchases, toBuy, equipment, receipts]);
   useEffect(() => {
     const on = () => {
       setIsOnline(true);
@@ -5729,7 +5783,13 @@ function App() {
       Object.keys(localStorage).filter(k => k.indexOf('cambusa_') === 0).forEach(k => localStorage.removeItem(k));
       sessionStorage.removeItem(UNLOCK_KEY);
     } catch (e) {/* ignora */}
-    window.location.reload();
+    // Le foto non stanno piu' in localStorage: svuotare solo quello lascerebbe
+    // indietro i megabyte, cioe' proprio la cosa che questo tasto promette di
+    // togliere. Si aspetta che il magazzino sia vuoto prima di ricaricare,
+    // altrimenti la pagina se ne va a meta' cancellazione.
+    const MF = window.MagazzinoFoto;
+    (MF ? MF.svuota() : Promise.resolve()).then(() => window.location.reload());
+    return;
   };
 
   // Quando si apre l'Archivio si recuperano anche i campi chiusi da altri
@@ -6393,6 +6453,7 @@ function App() {
     esciAdmin,
     esportaRegistro,
     exportData,
+    fotoDove,
     goTo,
     isDark,
     isOnline,
@@ -6404,6 +6465,7 @@ function App() {
     purchases,
     readyChecks,
     readyOk,
+    receipts,
     setAdminErr,
     setAdminPwd,
     setBloccoOpen,
@@ -8661,6 +8723,7 @@ const schedaImpostazioni = ({
   esciAdmin,
   esportaRegistro,
   exportData,
+  fotoDove,
   goTo,
   isDark,
   isOnline,
@@ -8672,6 +8735,7 @@ const schedaImpostazioni = ({
   purchases,
   readyChecks,
   readyOk,
+  receipts,
   setAdminErr,
   setAdminPwd,
   setBloccoOpen,
@@ -8776,7 +8840,18 @@ const schedaImpostazioni = ({
     className: "font-bold text-[#2D392C]"
   }, Object.keys(m.rev || {}).length), " voci datate"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-[#2D392C]"
-  }, lapidi.length), " cancellazioni registrate")), Object.keys(m.rev || {}).length === 0 && ((st.members || []).length > 0 || (st.purchases || []).length > 0 || Object.keys(st.campData || {}).length > 0) && /*#__PURE__*/React.createElement("div", {
+  }, lapidi.length), " cancellazioni registrate")), (() => {
+    const MF = window.MagazzinoFoto;
+    const quante = Object.keys(receipts || {}).length;
+    const kb = MF ? Math.round(MF.peso(receipts) / 1024) : 0;
+    return /*#__PURE__*/React.createElement("p", {
+      className: "text-[11px] text-gray-600"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold text-[#2D392C]"
+    }, quante), " foto di scontrini", quante > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, " per ", /*#__PURE__*/React.createElement("span", {
+      className: "font-bold text-[#2D392C]"
+    }, kb, " KB")), ', ', fotoDove === 'magazzino' ? 'nel magazzino: non tolgono spazio ai conti.' : 'nella memoria del telefono: il magazzino non è disponibile, quindi contendono lo spazio ai conti.');
+  })(), Object.keys(m.rev || {}).length === 0 && ((st.members || []).length > 0 || (st.purchases || []).length > 0 || Object.keys(st.campData || {}).length > 0) && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-[#5C4A3C] leading-snug"

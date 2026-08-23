@@ -19,7 +19,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 60 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 62 prove, circa 9 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -55,11 +55,12 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `App.js` | **generato**, non modificare |
 | `sync-merge.js` | fusione voce per voce fra dispositivi (`rev`, `del`, orologio `hi`) |
 | `menu-spesa.js` | dal menù del giorno alle voci della spesa. Sta fuori da `src/` perché così è provabile con una prova unitaria invece di duplicare la logica nel test |
+| `magazzino-foto.js` | dove stanno le foto degli scontrini: IndexedDB, con `localStorage` come rete di sicurezza. Fuori da `src/` per lo stesso motivo |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile` |
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
-| `test/` | 7 prove unitarie + 53 end‑to‑end |
+| `test/` | 8 prove unitarie + 54 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -85,6 +86,11 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   la scheda «Da acquistare» era vuota perché nessuno scrive due volte. La
   tabella non è servita. Lo stesso è capitato al §11, sopravvalutato finché non
   ho letto `firebase-sync.js` riga per riga.
+- **Le foto degli scontrini NON sono in `localStorage`.** Stanno nel magazzino
+  (`magazzino-foto.js`, IndexedDB) e arrivano **dopo** il primo disegno. Chi
+  scrive un effetto che le guarda deve metterle fra le dipendenze, altrimenti
+  al primo giro non c'è ancora niente: è così che la potatura delle foto
+  orfane era smessa di funzionare senza che si vedesse.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.

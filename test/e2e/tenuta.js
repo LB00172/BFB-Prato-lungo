@@ -1,7 +1,7 @@
 // Tenuta della sincronizzazione nei casi che non si vedono: scrittura fallita,
 // campo vuoto nel cloud, memoria piena. Sono i modi in cui i dati restano
 // fermi su un telefono senza che nessuno se ne accorga.
-const { apri, ok, fine, scontriniSalvati } = require('../lib/app');
+const { apri, ok, fine, scontriniSalvati, fotoSalvate } = require('../lib/app');
 
 // Cloud finto pilotabile: si può far fallire la scrittura a comando e si può
 // dire che nel cloud non c'è ancora niente.
@@ -184,7 +184,7 @@ const aggiungiMembro = async (p, nome) => {
     const salvata = await scontriniSalvati(p2, 1).then(() => true).catch(() => false);
     await p2.waitForTimeout(400);
 
-    ok('la foto è comunque sul telefono', salvata && (await p2.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')).length)) === 1);
+    ok('la foto è comunque sul telefono', salvata && (await fotoSalvate(p2)).length === 1);
     ok('e finisce in coda invece di sparire', (await p2.evaluate(() => window.__codaFoto.length)) === 1);
     ok('l\'app dice che c\'è una foto da inviare', /foto da inviare/i.test(await p2.locator('header').innerText()));
 

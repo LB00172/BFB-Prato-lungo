@@ -1,6 +1,7 @@
 // La foto dello scontrino si allega nella maschera di conferma acquisto,
 // non più sulla mini scheda della lista.
 const { chromium } = require('playwright-core');
+const { scontriniSalvati, fotoSalvate } = require('../lib/app');
 const H = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 (async () => {
@@ -37,7 +38,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
   // 3. Allego la foto e confermo: deve restare attaccata all'acquisto
   await inputFoto.setInputFiles({ name: 's.png', mimeType: 'image/png', buffer: PNG });
   // L'immagine va decodificata e ridimensionata: si aspetta il fatto compiuto.
-  await p.waitForFunction(() => Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')).length >= 1, null, { timeout: 15000 }).catch(() => {});
+  await scontriniSalvati(p, 1).catch(() => {});
   await p.waitForTimeout(250);
   console.log('dopo l\'allegato la maschera lo segnala:', /Scontrino allegato/.test(await modale.innerText()) ? 'OK' : 'PROBLEMA');
   await p.locator('input[placeholder="0.00"]').first().fill('12');
@@ -46,9 +47,9 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 
   const stato = await p.evaluate(() => ({
     acquisti: JSON.parse(localStorage.getItem('cambusa_purchases') || '[]'),
-    scontrini: Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')),
     lista: JSON.parse(localStorage.getItem('cambusa_tobuy') || '[]').length,
   }));
+  stato.scontrini = await fotoSalvate(p);
   console.log('acquisto registrato:', stato.acquisti.length === 1 && stato.acquisti[0].id === 't1' ? 'OK' : 'PROBLEMA');
   console.log('scontrino collegato all\'acquisto:', stato.scontrini.includes('t1') ? 'OK' : 'PROBLEMA', JSON.stringify(stato.scontrini));
   console.log('voce tolta da "Da acquistare":', stato.lista === 0 ? 'OK' : 'PROBLEMA');

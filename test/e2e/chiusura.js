@@ -1,4 +1,5 @@
 const { chromium } = require('playwright-core');
+const { scontriniSalvati, fotoSalvate } = require('../lib/app');
 
 (async () => {
   const b = await chromium.launch({ executablePath: require('../lib/app').chromium(), args: ['--no-sandbox'] });
@@ -105,11 +106,11 @@ const { chromium } = require('playwright-core');
     equipment: JSON.parse(localStorage.getItem('cambusa_equipment') || '[]').length,
     gear: JSON.parse(localStorage.getItem('cambusa_gear') || '[]').length,
     settled: JSON.parse(localStorage.getItem('cambusa_settled') || '[]').length,
-    receipts: Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')).length,
     campData: Object.keys(JSON.parse(localStorage.getItem('cambusa_camp_data') || '{}')).length,
     archivi: JSON.parse(localStorage.getItem('cambusa_archives') || '[]').length,
     lapidi: Object.keys((JSON.parse(localStorage.getItem('cambusa_syncmeta') || '{}').del) || {}).length,
   }));
+  dopo.receipts = (await fotoSalvate(p)).length;
   console.log('dopo la chiusura ->', JSON.stringify(dopo));
   const azzerato = ['members', 'purchases', 'toBuy', 'equipment', 'gear', 'settled', 'receipts'].every((k) => dopo[k] === 0);
   console.log('tutte le liste azzerate:', azzerato, '| archivi salvati:', dopo.archivi, '| cancellazioni datate:', dopo.lapidi);

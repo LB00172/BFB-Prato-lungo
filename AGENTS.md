@@ -66,6 +66,16 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 - **Le chiavi `localStorage` con prefisso `cambusa_*` sono un contratto**, non
   un residuo estetico. Rinominarle fa perdere i dati a ogni telefono che non
   migra: è una migrazione con codice di compatibilità, non una rinomina.
+- **Le foto degli scontrini non stanno in `localStorage`.** Stanno in IndexedDB
+  (`magazzino-foto.js`) e arrivano in modo **asincrono**, dopo il primo
+  disegno. Non è un'astrazione di troppo: in `localStorage` occupavano 3,18 MB
+  dei ~5 disponibili mentre i conti ne pesavano 35 KB, e riscriverle costava
+  53 ms di thread bloccato a ogni scatto. `cambusa_receipts` resta come rete di
+  sicurezza per i browser che il magazzino non lo concedono, e la migrazione
+  cancella la chiave vecchia **solo dopo** aver riletto ogni foto identica.
+- **Italiano nel codice, ma non per sempre nell'interfaccia.** I testi che
+  legge l'utente diventano traducibili (`ROADMAP.md` §18): spagnolo e francese
+  per primi. Commenti, commit e nomi restano italiani.
 - **In `firebase-config.js` non ci sono password in chiaro**: ci sono impronte
   PBKDF2 (`salt`, `hash`, `iter`). Non è un segreto trapelato. Le chiavi
   Firebase di un'app web sono pubbliche per progetto: stanno nel sorgente che
@@ -88,9 +98,11 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 - **Offline-first.** L'app deve funzionare senza rete. Niente nuove dipendenze
   di rete a runtime, niente script di terze parti, niente CDN aggiuntivi,
   niente telemetria.
-- **Italiano.** Interfaccia, commenti nel codice, messaggi di commit.
+- **Italiano** nel codice, nei commenti e nei messaggi di commit. Per
+  l'interfaccia vedi sopra: si scrive in italiano, ma passando dal dizionario.
 - **Nessun `localStorage.setItem` fuori da `salvaLocale`.** Un'eccezione dentro
-  un `useEffect` smonta React e l'app sparisce.
+  un `useEffect` smonta React e l'app sparisce. E niente immagini là dentro:
+  quelle vanno nel magazzino.
 - **Si scrive su Firestore solo dentro `runTransaction`**, passando da
   `sovrascrivibile()`. Firestore rigioca le scritture messe in coda offline: un
   `setDoc` cieco cancella il lavoro di chi era online.

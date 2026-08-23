@@ -99,9 +99,52 @@ function attendi(page, fn, arg, ms) {
   return page.waitForFunction(fn, arg, { timeout: ms || 15000 });
 }
 
+// Gli id delle foto salvate sul telefono, da dovunque stiano.
+//
+// Stavano in localStorage sotto 'cambusa_receipts'; da agosto 2026 stanno nel
+// magazzino (IndexedDB), e la vecchia chiave resta solo come rete di sicurezza
+// per i browser che il magazzino non lo concedono (ROADMAP.md § 19). Le prove
+// devono chiedere "quali foto ci sono", non "cosa c'è in quella chiave":
+// altrimenti descrivono un dettaglio di implementazione e diventano rosse
+// ogni volta che si sposta qualcosa.
+const LEGGI_FOTO = () => new Promise((ris) => {
+  const daLocale = () => {
+    try { return Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')); }
+    catch (e) { return []; }
+  };
+  let req;
+  try { req = indexedDB.open('cambusa-foto', 1); } catch (e) { ris(daLocale()); return; }
+  req.onerror = () => ris(daLocale());
+  req.onsuccess = () => {
+    let neg;
+    try { neg = req.result.transaction('scontrini', 'readonly').objectStore('scontrini'); }
+    catch (e) { ris(daLocale()); return; }
+    const out = [];
+    const c = neg.openCursor();
+    c.onsuccess = () => {
+      const cur = c.result;
+      if (!cur) { ris(out.length ? out : daLocale()); return; }
+      out.push(cur.key);
+      cur.continue();
+    };
+    c.onerror = () => ris(daLocale());
+  };
+});
+
+function fotoSalvate(page) { return page.evaluate(LEGGI_FOTO); }
+
 // Aspetta che gli scontrini salvati sul telefono siano almeno n.
-function scontriniSalvati(page, n, ms) {
-  return attendi(page, (k) => Object.keys(JSON.parse(localStorage.getItem('cambusa_receipts') || '{}')).length >= k, n, ms);
+// Si interroga da qui invece che con waitForFunction perche' la lettura del
+// magazzino e' una promessa: il predicato andrebbe serializzato dentro la
+// pagina, e ci si ritroverebbe la stessa funzione scritta due volte.
+async function scontriniSalvati(page, n, ms) {
+  const scadenza = Date.now() + (ms || 15000);
+  for (;;) {
+    const ids = await fotoSalvate(page);
+    if (ids.length >= n) return ids;
+    if (Date.now() > scadenza) throw new Error(`solo ${ids.length} foto su ${n} attese`);
+    await new Promise((r) => setTimeout(r, 200));
+  }
 }
 
-module.exports = { chromium, apri, ok, fine, attendi, scontriniSalvati, URL_APP, SBLOCCO };
+module.exports = { chromium, apri, ok, fine, attendi, scontriniSalvati, fotoSalvate, URL_APP, SBLOCCO };
