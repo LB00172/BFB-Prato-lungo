@@ -17,9 +17,12 @@ const applyTheme = (pref) => {
 };
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-const money = (n) => (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
-// Numero >= 0 a partire da una stringa di input.
-const posNum = (v) => Math.max(0, parseFloat(v) || 0);
+// Formato dei soldi e numero non negativo: stanno in conti.js insieme a chi
+// li usa di piu'. Qui si riprendono da li' invece di riscriverli, perche' due
+// copie della stessa regola sui soldi prima o poi divergono — e l'app e i
+// conti mostrerebbero due cifre diverse per la stessa spesa.
+const money = window.Conti.money;
+const posNum = window.Conti.posNum;
 
 // "note" tiene il MENÙ del giorno (la scheda Menù scrive lì da sempre);
 // "appunti" sono le note libere del Calendario. Due campi distinti: unirli

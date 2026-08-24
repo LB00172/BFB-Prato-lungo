@@ -953,12 +953,73 @@ prova. L'ordine sensato, dal più isolato al più intrecciato:
    per ultimo, perché è l'unica parte che ha già cancellato il lavoro di
    qualcuno una volta.
 
-I **conti** (`calculateTotals`) non sono un hook: sono una funzione pura con
-dentro le decisioni difficili del progetto. Vanno fuori da `App()` come
-`menu-spesa.js` e `magazzino-foto.js` — in un file a sé, provabile con una
-prova unitaria invece che aprendo il browser. È il passo che vale di più, ed è
-anche l'unico che non si dimostra col DOM: lì serve confrontare i numeri
-sull'export vero del campo.
+### I conti fuori da `App()` — fatto (24 agosto 2026)
+
+**`conti.js`, 384 righe, fuori da `src/`** come `menu-spesa.js` e
+`magazzino-foto.js`. `calculateTotals` sembrava un metodo e invece era una
+funzione pura travestita: legge **sei** cose — membri, presenze, acquisti,
+attrezzatura, giorni a conto separato, giorni gratis — e nient'altro. La
+settima, l'esenzione dall'attrezzatura, era una configurazione letta dall'aria
+(`FEATURES`): adesso si passa, perché una funzione che decide dei soldi non
+deve guardare cose che il chiamante non vede.
+
+`80-app.jsx` scende a **3.396 righe** (era 8.080).
+
+**La prova, che è il vero motivo per cui si fa.** Finora i conti si potevano
+guardare solo a schermo, dentro una prova end-to-end che leggeva una cifra
+scritta da qualche parte: bastava che l'interfaccia cambiasse una riga perché
+diventasse cieca, o rossa senza motivo. Adesso c'è
+`test/unita/conti-campo-2026.js`, che fa girare **il campo vero del 2026** —
+59 persone, 7 giorni, 35 spese, due casse — e controlla i numeri di chiusura in
+centesimi di secondo invece che in venti secondi di browser.
+
+I dati stanno in `test/fixture/campo-2026.json`: **numeri intatti, nomi
+sostituiti**. Nomi di persone vere non entrano nel repository, nemmeno dentro
+le descrizioni delle spese («Spesa di X»), e i conti non se ne accorgono —
+il nome è un'etichetta, quello che conta sono presenze e prezzi.
+
+**Sei sabotaggi, sei rossi.** Ognuno è una regola del progetto:
+
+| se si rompe questo | quante prove diventano rosse |
+| --- | --- |
+| la logistica la paga chiunque abbia un pasto | 8 |
+| i bambini contano come adulti | 7 |
+| la cassa separata si scioglie in quella comune | 10 |
+| niente arrotondamento a 10 centesimi | 6 |
+| l'ottimizzatore non ottimizza | 2 |
+| il divisore dell'attrezzatura è sbagliato | 1 |
+
+E due sabotaggi **non** hanno fatto niente, il che è la parte più utile: la
+regola «logistica solo ai giorni comuni» è difesa da due strati indipendenti, e
+rompere quello interno non basta. Il primo tentativo l'aveva mancata; la prova
+adesso chiede anche il divisore dell'attrezzatura, che era il buco.
+
+**Una cosa che credevo e non era vera.** Pensavo che ottimizzando i passaggi
+girassero gli stessi soldi. Non è così: girano **meno** soldi (1.073,93 € invece
+di 1.110,74 €), perché chi è creditore in una cassa e debitore nell'altra si
+compensa da solo invece di fare due bonifici incrociati. Quello che non cambia
+non è il totale dei bonifici, è la **posizione** di ognuno — e infatti nessuno
+si sposta di più di un arrotondamento. La prova adesso dice quella, che è la
+cosa vera.
+
+### Quello che resta
+
+Dentro `80-app.jsx` restano stato, effetti e gestori delle aree che toccano i
+soldi: presenze, spese, sincronizzazione. Vanno staccati uno alla volta con la
+prova del DOM identico, dal più isolato al più intrecciato:
+
+1. **`usaListaSpesa`** — voci da acquistare, acquisti, scontrini, il ponte dal
+   menù (§ 12);
+2. **`usaPresenze`** — presenze e blocchi dei giorni;
+3. **`usaSincronizzazione`** — l'ascolto del cloud, la fusione, la diagnostica:
+   per ultimo, perché è l'unica parte che ha già cancellato il lavoro di
+   qualcuno una volta.
+
+**L'archivio no.** Sembrava il candidato più facile — «legge tutto ma è letto da
+poco» — e invece è il peggiore: `closeCamp` e `importData` *scrivono* dodici
+stati diversi, quindi l'hook riceverebbe venti setter e non ridurrebbe niente.
+Un hook che si porta dietro venti dipendenze non ha staccato niente, ha solo
+spostato le righe.
 
 Da rifare quando si tocca: le **verifiche su iPhone** (§ 10), perche' un
 sorgente nuovo cambia `App.js` e quindi `CACHE_NAME`.

@@ -1,0 +1,1414 @@
+{
+ "nota": "Campo Prato Lungo, 11-16 agosto 2026, alla chiusura. Nomi sostituiti, numeri veri.",
+ "members": [
+  {
+   "id": "mrqe7x583i8nj",
+   "name": "Membro 1",
+   "isChild": false
+  },
+  {
+   "id": "mrqe81c1x1hut",
+   "name": "Membro 2",
+   "isChild": false
+  },
+  {
+   "id": "mrqe89z4vifla",
+   "name": "Membro 3",
+   "isChild": true
+  },
+  {
+   "id": "mrqe98pofhu1x",
+   "name": "Membro 4",
+   "isChild": false
+  },
+  {
+   "id": "mrqe9bpcyjawg",
+   "name": "Membro 5",
+   "isChild": false
+  },
+  {
+   "id": "mrqecamx3gzdg",
+   "name": "Membro 6",
+   "isChild": false
+  },
+  {
+   "id": "mrqecd3z3n2wv",
+   "name": "Membro 7",
+   "isChild": false
+  },
+  {
+   "id": "mrqecgrffyw8r",
+   "name": "Membro 8",
+   "isChild": true
+  },
+  {
+   "id": "mrqecnhw8so35",
+   "name": "Membro 9",
+   "isChild": true
+  },
+  {
+   "id": "mrqecsr53ot4d",
+   "name": "Membro 10",
+   "isChild": false
+  },
+  {
+   "id": "mrqecy90s7zii",
+   "name": "Membro 11",
+   "isChild": false
+  },
+  {
+   "id": "mrqed5zzwfhcu",
+   "name": "Membro 12",
+   "isChild": false
+  },
+  {
+   "id": "mrqedjfqtxk91",
+   "name": "Membro 13",
+   "isChild": false
+  },
+  {
+   "id": "mrqedljh93rtm",
+   "name": "Membro 14",
+   "isChild": false
+  },
+  {
+   "id": "mrqednsq08ca7",
+   "name": "Membro 15",
+   "isChild": true
+  },
+  {
+   "id": "mrqee0we52mps",
+   "name": "Membro 16",
+   "isChild": false
+  },
+  {
+   "id": "mrqee8b6s37m3",
+   "name": "Membro 17",
+   "isChild": false
+  },
+  {
+   "id": "mrqeef1hhot0j",
+   "name": "Membro 18",
+   "isChild": true
+  },
+  {
+   "id": "mrqeet94gnpbh",
+   "name": "Membro 19",
+   "isChild": false
+  },
+  {
+   "id": "mrqef41k2hwcf",
+   "name": "Membro 20",
+   "isChild": false
+  },
+  {
+   "id": "mrqef6my289q8",
+   "name": "Membro 21",
+   "isChild": true
+  },
+  {
+   "id": "mrqefadrgg6s5",
+   "name": "Membro 22",
+   "isChild": false
+  },
+  {
+   "id": "mrqefdmf8l6qs",
+   "name": "Membro 23",
+   "isChild": false
+  },
+  {
+   "id": "mrqefvm88nb2f",
+   "name": "Membro 24",
+   "isChild": false
+  },
+  {
+   "id": "mrqefy40z3cjb",
+   "name": "Membro 25",
+   "isChild": false
+  },
+  {
+   "id": "mrrwglpf8mlqu",
+   "name": "Membro 26",
+   "isChild": true
+  },
+  {
+   "id": "mrsaa7myrp73n",
+   "name": "Membro 27",
+   "isChild": false
+  },
+  {
+   "id": "mrsaadz9vepy8",
+   "name": "Membro 28",
+   "isChild": false
+  },
+  {
+   "id": "mrsaanuxcpa6x",
+   "name": "Membro 29",
+   "isChild": false
+  },
+  {
+   "id": "mrsaapwwf5r7x",
+   "name": "Membro 30",
+   "isChild": false
+  },
+  {
+   "id": "mrsaau8ot98pi",
+   "name": "Membro 31",
+   "isChild": true
+  },
+  {
+   "id": "mrt2uzt3l3zcn",
+   "name": "Membro 32",
+   "isChild": true
+  },
+  {
+   "id": "mrt32nkg3x7x1",
+   "name": "Membro 33",
+   "isChild": false
+  },
+  {
+   "id": "ms1q831zctfh4",
+   "name": "Membro 34",
+   "isChild": false
+  },
+  {
+   "id": "ms1q880ahx39a",
+   "name": "Membro 35",
+   "isChild": false
+  },
+  {
+   "id": "ms1xsqf8la8rw",
+   "name": "Membro 36",
+   "isChild": false
+  },
+  {
+   "id": "ms1xsxs50h1ch",
+   "name": "Membro 37",
+   "isChild": true
+  },
+  {
+   "id": "ms24xuldyk1h2",
+   "name": "Membro 38",
+   "isChild": false
+  },
+  {
+   "id": "ms24xwskz95i0",
+   "name": "Membro 39",
+   "isChild": false
+  },
+  {
+   "id": "ms24y01j3z9dt",
+   "name": "Membro 40",
+   "isChild": true
+  },
+  {
+   "id": "ms25oeq24oxmu",
+   "name": "Membro 41",
+   "isChild": false
+  },
+  {
+   "id": "ms25ol2cbyayo",
+   "name": "Membro 42",
+   "isChild": true
+  },
+  {
+   "id": "ms25osskxo80x",
+   "name": "Membro 43",
+   "isChild": true
+  },
+  {
+   "id": "ms29yhdeihs4q",
+   "name": "Membro 44",
+   "isChild": true
+  },
+  {
+   "id": "ms34h8kvt6ool",
+   "name": "Membro 45",
+   "isChild": true
+  },
+  {
+   "id": "ms34he4rdj5sf",
+   "name": "Membro 46",
+   "isChild": true
+  },
+  {
+   "id": "ms3asc4mqf96t",
+   "name": "Membro 47",
+   "isChild": true
+  },
+  {
+   "id": "ms613kmefk5hj",
+   "name": "Membro 48",
+   "isChild": false
+  },
+  {
+   "id": "ms613ng0xwozo",
+   "name": "Membro 49",
+   "isChild": true
+  },
+  {
+   "id": "ms91t3i4gaw3f",
+   "name": "Membro 50",
+   "isChild": false
+  },
+  {
+   "id": "msew3fb8jqfqe",
+   "name": "Membro 51",
+   "isChild": false
+  },
+  {
+   "id": "msew3rx5zhgi7",
+   "name": "Membro 52",
+   "isChild": false
+  },
+  {
+   "id": "msm1zclejll0l",
+   "name": "Membro 53",
+   "isChild": false
+  },
+  {
+   "id": "msmxzlrtxr1ad",
+   "name": "Membro 54",
+   "isChild": false
+  },
+  {
+   "id": "msmxzo3bhnxin",
+   "name": "Membro 55",
+   "isChild": false
+  },
+  {
+   "id": "msmxzukav51ja",
+   "name": "Membro 56",
+   "isChild": false
+  },
+  {
+   "id": "msmyn8kt1x7te",
+   "name": "Membro 57",
+   "isChild": true
+  },
+  {
+   "id": "msmynb0tonxcy",
+   "name": "Membro 58",
+   "isChild": true
+  },
+  {
+   "id": "msro687ny1rei",
+   "name": "Membro 59",
+   "isChild": false
+  }
+ ],
+ "campData": {
+  "2026-08-11": {
+   "meals": {
+    "mrqe81c1x1hut": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqe7x583i8nj": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqe89z4vifla": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqe98pofhu1x": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefadrgg6s5": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefdmf8l6qs": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrt2uzt3l3zcn": {
+     "lunch": false,
+     "dinner": false
+    },
+    "ms3asc4mqf96t": {
+     "lunch": false,
+     "dinner": false
+    },
+    "ms91t3i4gaw3f": {
+     "lunch": false,
+     "dinner": false
+    }
+   }
+  },
+  "2026-08-12": {
+   "meals": {
+    "mrqe81c1x1hut": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe7x583i8nj": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe89z4vifla": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe98pofhu1x": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqed5zzwfhcu": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefvm88nb2f": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefy40z3cjb": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrt32nkg3x7x1": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrt2uzt3l3zcn": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms1xsqf8la8rw": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms1xsxs50h1ch": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqefadrgg6s5": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefdmf8l6qs": {
+     "lunch": false,
+     "dinner": false
+    },
+    "ms3asc4mqf96t": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqe9bpcyjawg": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms613kmefk5hj": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms613ng0xwozo": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms91t3i4gaw3f": {
+     "lunch": true,
+     "dinner": true
+    }
+   }
+  },
+  "2026-08-13": {
+   "meals": {
+    "mrqe7x583i8nj": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe81c1x1hut": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe89z4vifla": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe98pofhu1x": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe9bpcyjawg": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqecamx3gzdg": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqecnhw8so35": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqecsr53ot4d": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqecy90s7zii": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqed5zzwfhcu": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqedjfqtxk91": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqedljh93rtm": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqednsq08ca7": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefvm88nb2f": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefy40z3cjb": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrt2uzt3l3zcn": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms613kmefk5hj": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms613ng0xwozo": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms1xsqf8la8rw": {
+     "lunch": true,
+     "dinner": false
+    },
+    "ms1xsxs50h1ch": {
+     "lunch": true,
+     "dinner": false
+    },
+    "ms1q831zctfh4": {
+     "lunch": false,
+     "dinner": false
+    },
+    "ms1q880ahx39a": {
+     "lunch": false,
+     "dinner": false
+    },
+    "msew3fb8jqfqe": {
+     "lunch": false,
+     "dinner": false
+    },
+    "msew3rx5zhgi7": {
+     "lunch": false,
+     "dinner": false
+    },
+    "msm1zclejll0l": {
+     "lunch": true,
+     "dinner": true
+    },
+    "msro687ny1rei": {
+     "lunch": true,
+     "dinner": true
+    }
+   }
+  },
+  "2026-08-14": {
+   "meals": {
+    "mrqe7x583i8nj": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe81c1x1hut": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe89z4vifla": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe98pofhu1x": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe9bpcyjawg": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqecamx3gzdg": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqecnhw8so35": {
+     "lunch": false,
+     "dinner": true
+    },
+    "mrqecsr53ot4d": {
+     "lunch": false,
+     "dinner": true
+    },
+    "mrqecy90s7zii": {
+     "lunch": false,
+     "dinner": true
+    },
+    "mrqed5zzwfhcu": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqedjfqtxk91": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqedljh93rtm": {
+     "lunch": false,
+     "dinner": true
+    },
+    "mrqednsq08ca7": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqeef1hhot0j": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqeet94gnpbh": {
+     "lunch": false,
+     "dinner": true
+    },
+    "mrqef41k2hwcf": {
+     "lunch": false,
+     "dinner": true
+    },
+    "mrqef6my289q8": {
+     "lunch": false,
+     "dinner": true
+    },
+    "mrqefvm88nb2f": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefy40z3cjb": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrt2uzt3l3zcn": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms613kmefk5hj": {
+     "lunch": false,
+     "dinner": false
+    },
+    "ms613ng0xwozo": {
+     "lunch": false,
+     "dinner": false
+    },
+    "ms1q831zctfh4": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms1q880ahx39a": {
+     "lunch": true,
+     "dinner": true
+    },
+    "msew3fb8jqfqe": {
+     "lunch": true,
+     "dinner": true
+    },
+    "msew3rx5zhgi7": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqecd3z3n2wv": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqecgrffyw8r": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqee0we52mps": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqee8b6s37m3": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrsaa7myrp73n": {
+     "lunch": false,
+     "dinner": true
+    },
+    "mrrwglpf8mlqu": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrsaadz9vepy8": {
+     "lunch": false,
+     "dinner": true
+    },
+    "ms34h8kvt6ool": {
+     "lunch": false,
+     "dinner": true
+    },
+    "ms34he4rdj5sf": {
+     "lunch": false,
+     "dinner": true
+    },
+    "ms24xuldyk1h2": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms24xwskz95i0": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms24y01j3z9dt": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms29yhdeihs4q": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms25oeq24oxmu": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms25ol2cbyayo": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms25osskxo80x": {
+     "lunch": true,
+     "dinner": true
+    }
+   }
+  },
+  "2026-08-15": {
+   "meals": {
+    "mrqe7x583i8nj": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe81c1x1hut": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe89z4vifla": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe98pofhu1x": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqe9bpcyjawg": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqecamx3gzdg": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqecd3z3n2wv": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqecgrffyw8r": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqecnhw8so35": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqecsr53ot4d": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqecy90s7zii": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqed5zzwfhcu": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqedjfqtxk91": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqedljh93rtm": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqednsq08ca7": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqee0we52mps": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqee8b6s37m3": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqeef1hhot0j": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqeet94gnpbh": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqef41k2hwcf": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqef6my289q8": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrqefadrgg6s5": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefdmf8l6qs": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefvm88nb2f": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefy40z3cjb": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrrwglpf8mlqu": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrsaa7myrp73n": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrsaadz9vepy8": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrt32nkg3x7x1": {
+     "lunch": false,
+     "dinner": false
+    },
+    "ms1q831zctfh4": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms1q880ahx39a": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms24y01j3z9dt": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms24xwskz95i0": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms24xuldyk1h2": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms25oeq24oxmu": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms25ol2cbyayo": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms25osskxo80x": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms29yhdeihs4q": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms34h8kvt6ool": {
+     "lunch": true,
+     "dinner": true
+    },
+    "ms34he4rdj5sf": {
+     "lunch": true,
+     "dinner": true
+    },
+    "mrt2uzt3l3zcn": {
+     "lunch": false,
+     "dinner": false
+    },
+    "msew3fb8jqfqe": {
+     "lunch": true,
+     "dinner": true
+    },
+    "msew3rx5zhgi7": {
+     "lunch": true,
+     "dinner": true
+    },
+    "msmxzlrtxr1ad": {
+     "lunch": true,
+     "dinner": true
+    },
+    "msmxzo3bhnxin": {
+     "lunch": true,
+     "dinner": true
+    },
+    "msmxzukav51ja": {
+     "lunch": false,
+     "dinner": true
+    },
+    "msmyn8kt1x7te": {
+     "lunch": true,
+     "dinner": true
+    },
+    "msmynb0tonxcy": {
+     "lunch": true,
+     "dinner": true
+    }
+   }
+  },
+  "2026-08-16": {
+   "meals": {
+    "mrqe7x583i8nj": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqe81c1x1hut": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqe89z4vifla": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqe98pofhu1x": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqecamx3gzdg": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqecd3z3n2wv": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqecgrffyw8r": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqecnhw8so35": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqecsr53ot4d": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqecy90s7zii": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqed5zzwfhcu": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqedjfqtxk91": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqedljh93rtm": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqednsq08ca7": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqee0we52mps": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqee8b6s37m3": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqeef1hhot0j": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqeet94gnpbh": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqef41k2hwcf": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqef6my289q8": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrqefadrgg6s5": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefdmf8l6qs": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefvm88nb2f": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrqefy40z3cjb": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrrwglpf8mlqu": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrsaa7myrp73n": {
+     "lunch": false,
+     "dinner": false
+    },
+    "mrsaadz9vepy8": {
+     "lunch": false,
+     "dinner": false
+    },
+    "ms1q831zctfh4": {
+     "lunch": true,
+     "dinner": false
+    },
+    "ms1q880ahx39a": {
+     "lunch": true,
+     "dinner": false
+    },
+    "ms24xuldyk1h2": {
+     "lunch": true,
+     "dinner": false
+    },
+    "ms24xwskz95i0": {
+     "lunch": true,
+     "dinner": false
+    },
+    "ms24y01j3z9dt": {
+     "lunch": true,
+     "dinner": false
+    },
+    "ms25oeq24oxmu": {
+     "lunch": true,
+     "dinner": false
+    },
+    "ms25ol2cbyayo": {
+     "lunch": true,
+     "dinner": false
+    },
+    "ms25osskxo80x": {
+     "lunch": true,
+     "dinner": false
+    },
+    "mrt2uzt3l3zcn": {
+     "lunch": true,
+     "dinner": false
+    },
+    "ms29yhdeihs4q": {
+     "lunch": true,
+     "dinner": false
+    },
+    "msew3fb8jqfqe": {
+     "lunch": true,
+     "dinner": false
+    },
+    "msew3rx5zhgi7": {
+     "lunch": true,
+     "dinner": false
+    }
+   }
+  },
+  "2026-08-10": {
+   "meals": {}
+  }
+ },
+ "purchases": [
+  {
+   "id": "msaahca35aa2w",
+   "name": "1 PROSCIUTTO",
+   "price": 49,
+   "type": "alimentare",
+   "buyer": "Membro 1",
+   "at": 1786092334477
+  },
+  {
+   "id": "msisyz4iltckl",
+   "name": "Fiorentine",
+   "price": 90,
+   "type": "alimentare",
+   "buyer": "Membro 1",
+   "at": 1786098567762,
+   "account": "sep"
+  },
+  {
+   "id": "msit86e9ffbkr",
+   "name": "Acqua tonica",
+   "price": 6,
+   "type": "bevande",
+   "buyer": "Membro 2",
+   "at": 1786098997090,
+   "account": "sep"
+  },
+  {
+   "id": "msit8lfv9hu1c",
+   "name": "Gin BullDog",
+   "price": 35,
+   "type": "bevande",
+   "buyer": "Membro 2",
+   "at": 1786099016588,
+   "account": "sep"
+  },
+  {
+   "id": "mslrks32y0547",
+   "name": "Plasticume, carta, alluminio",
+   "price": 64.2,
+   "type": "logistica",
+   "buyer": "Membro 10",
+   "at": 1786277624370
+  },
+  {
+   "id": "mslx1qma7a37t",
+   "name": "Spesa mista",
+   "price": 152,
+   "type": "alimentare",
+   "buyer": "Membro 4",
+   "at": 1786286813698
+  },
+  {
+   "id": "msmzghnhpe1ky",
+   "name": "Bibite e vino",
+   "price": 287,
+   "type": "bevande",
+   "buyer": "Membro 14",
+   "at": 1786351327329
+  },
+  {
+   "id": "msmzlbcpzc8y9",
+   "name": "Spesa al supermercato 2",
+   "price": 27.62,
+   "type": "alimentare",
+   "buyer": "Membro 4",
+   "at": 1786351552441
+  },
+  {
+   "id": "msn1a1os0fj8j",
+   "name": "Spesa al supermercato 3",
+   "price": 13,
+   "type": "alimentare",
+   "buyer": "Membro 4",
+   "at": 1786354385932
+  },
+  {
+   "id": "msn3yv9s93npu",
+   "name": "Vino 11/12",
+   "price": 40,
+   "type": "bevande",
+   "buyer": "Membro 4",
+   "at": 1786358903248,
+   "account": "sep"
+  },
+  {
+   "id": "msnavnvgobp6v",
+   "name": "Insaporitore pollo",
+   "price": 2,
+   "type": "alimentare",
+   "buyer": "Membro 1",
+   "at": 1786370511004
+  },
+  {
+   "id": "msngldd20w7ep",
+   "name": "Bombola gas",
+   "price": 25,
+   "type": "logistica",
+   "buyer": "Membro 4",
+   "at": 1786380108518
+  },
+  {
+   "id": "msd2w6k2z1vqj",
+   "name": "Sapone mani biodegradabile (1)",
+   "price": 2.5,
+   "type": "logistica",
+   "buyer": "Membro 10",
+   "at": 1786381895076
+  },
+  {
+   "id": "msikq3r9hsxbf",
+   "name": "Madama Oliva",
+   "price": 66,
+   "type": "alimentare",
+   "buyer": "Membro 7",
+   "at": 1786433162307
+  },
+  {
+   "id": "mspon3c0sdbuj",
+   "name": "Spesa al supermercato 4",
+   "price": 26,
+   "type": "alimentare",
+   "buyer": "Membro 1",
+   "at": 1786514558113,
+   "account": "sep"
+  },
+  {
+   "id": "msqb0g195tgqt",
+   "name": "Spesa al supermercato 5",
+   "price": 35,
+   "type": "alimentare",
+   "buyer": "Membro 48",
+   "at": 1786552132653,
+   "account": "sep"
+  },
+  {
+   "id": "msqb11fjondsc",
+   "name": "Scamorze",
+   "price": 43,
+   "type": "alimentare",
+   "buyer": "Membro 5",
+   "at": 1786552160383,
+   "account": "sep"
+  },
+  {
+   "id": "msqb1atl0cr0q",
+   "name": "Cicoria",
+   "price": 12,
+   "type": "alimentare",
+   "buyer": "Membro 5",
+   "at": 1786552172554
+  },
+  {
+   "id": "msqb1kvycqzk8",
+   "name": "Crostate",
+   "price": 20,
+   "type": "alimentare",
+   "buyer": "Membro 5",
+   "at": 1786552185598,
+   "account": "sep"
+  },
+  {
+   "id": "msr9boaedum5z",
+   "name": "Ghiaccio",
+   "price": 5,
+   "type": "alimentare",
+   "buyer": "Membro 10",
+   "at": 1786609763511
+  },
+  {
+   "id": "msr9e9jbcarht",
+   "name": "Carne 13: hamburger, capocollo, pancetta",
+   "price": 111.6,
+   "type": "alimentare",
+   "buyer": "Membro 11",
+   "at": 1786609884360
+  },
+  {
+   "id": "msrdmhqqv0t2q",
+   "name": "Benzina",
+   "price": 20,
+   "type": "logistica",
+   "buyer": "Membro 6",
+   "at": 1786616986706
+  },
+  {
+   "id": "msrdorj4al3nf",
+   "name": "Birra",
+   "price": 22.08,
+   "type": "bevande",
+   "buyer": "Membro 6",
+   "at": 1786617092704
+  },
+  {
+   "id": "msbnhexxbvzmr",
+   "name": "Crostata (1)",
+   "price": 32.88,
+   "type": "alimentare",
+   "buyer": "Membro 20",
+   "at": 1786624122935
+  },
+  {
+   "id": "msaahwfftczxd",
+   "name": "PANCETTA TESA CENA 15 (40)",
+   "price": 38.13,
+   "type": "alimentare",
+   "buyer": "Membro 19",
+   "at": 1786637528694
+  },
+  {
+   "id": "msaalivz0iw4u",
+   "name": "SALSICCE CENA 14 (50)",
+   "price": 54.63,
+   "type": "alimentare",
+   "buyer": "Membro 19",
+   "at": 1786637563036
+  },
+  {
+   "id": "msiks6e0pedya",
+   "name": "Guanciale sano (2)",
+   "price": 24.2,
+   "type": "alimentare",
+   "buyer": "Membro 20",
+   "at": 1786637591033
+  },
+  {
+   "id": "msrdzs4rsjdnx",
+   "name": "Frutta e verdura + odori",
+   "price": 145,
+   "type": "alimentare",
+   "buyer": "Membro 13",
+   "at": 1786617606699
+  },
+  {
+   "id": "mssiry7rq5mvy",
+   "name": "Maccaronacci 13 (x15)",
+   "price": 19,
+   "type": "alimentare",
+   "buyer": "Membro 53",
+   "at": 1786686151905,
+   "account": "sep"
+  },
+  {
+   "id": "msaaclbq7in7t",
+   "name": "ARROSTICINI CENA 15 (200)",
+   "price": 309.25,
+   "type": "alimentare",
+   "buyer": "Membro 38",
+   "at": 1786692330229
+  },
+  {
+   "id": "msaaflciu14vv",
+   "name": "POLLO CENA 14 (5)",
+   "price": 130.41,
+   "type": "alimentare",
+   "buyer": "Membro 16",
+   "at": 1786692391298
+  },
+  {
+   "id": "msaalz5s3qtoh",
+   "name": "SCAMORZE CENA 14 (40)",
+   "price": 50,
+   "type": "alimentare",
+   "buyer": "Membro 19",
+   "at": 1786694543152
+  },
+  {
+   "id": "msaahnvjhewb9",
+   "name": "STECCHETTE PECORA 15 CENA (60)",
+   "price": 85.7,
+   "type": "alimentare",
+   "buyer": "Membro 7",
+   "at": 1786695336014
+  },
+  {
+   "id": "mssoxfsetces6",
+   "name": "Pane (10 pagnotte)",
+   "price": 30.8,
+   "type": "alimentare",
+   "buyer": "Membro 13",
+   "at": 1786696439347
+  },
+  {
+   "id": "mssvxslh14pwa",
+   "name": "Rinforzi",
+   "price": 21.75,
+   "type": "alimentare",
+   "buyer": "Membro 11",
+   "at": 1786708213254
+  }
+ ],
+ "equipment": [
+  {
+   "id": "ms1y2ur9hzfxe",
+   "text": "Tavoli e panche - rimanenza scorso anno",
+   "price": 70,
+   "bought": true,
+   "buyer": "Membro 1"
+  },
+  {
+   "id": "ms368sj4b3ue3",
+   "text": "Set bbq",
+   "price": 24,
+   "bought": true,
+   "buyer": "Membro 1"
+  },
+  {
+   "id": "ms492ptdijt4h",
+   "text": "Accessori cucina Action",
+   "price": 17.42,
+   "bought": true,
+   "buyer": "Membro 2"
+  },
+  {
+   "id": "ms699rmm685ey",
+   "text": "Accessori cucina ikea",
+   "price": 27.35,
+   "bought": true,
+   "buyer": "Membro 2"
+  },
+  {
+   "id": "ms6a1hnzgh7a2",
+   "text": "Scatola posate Action",
+   "price": 3.82,
+   "bought": true,
+   "buyer": "Membro 2"
+  },
+  {
+   "id": "ms7hh7frj9107",
+   "text": "Moka grande",
+   "price": 34.89,
+   "bought": true,
+   "buyer": "Membro 2"
+  },
+  {
+   "id": "msfwu6szbgnra",
+   "text": "Prodotti lavaggio stoviglie",
+   "price": 10.36,
+   "bought": true,
+   "buyer": "Membro 1"
+  },
+  {
+   "id": "msg0tidq77z9k",
+   "text": "Treccia luci nuova",
+   "price": 20,
+   "bought": true,
+   "buyer": "Membro 2"
+  }
+ ],
+ "sepDays": [
+  "2026-08-11",
+  "2026-08-12",
+  "2026-08-13"
+ ],
+ "freeDays": [
+  "2026-08-16"
+ ]
+}

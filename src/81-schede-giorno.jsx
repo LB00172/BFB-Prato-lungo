@@ -7,7 +7,6 @@
 
 const schedaCalendario = ({
   admin,
-  calculateTotals,
   fetchWeather,
   getDayData,
   getMeal,
@@ -70,7 +69,7 @@ const schedaCalendario = ({
     {renderWeekStrip()}
 
     {/* Giorni del conto separato: le presenze di questi giorni fanno
-        cassa a parte (vedi calculateTotals). Sta chiuso: è una cosa che
+        cassa a parte (vedi conti.js). Sta chiuso: è una cosa che
         si imposta una volta, non a ogni apertura del Calendario. */}
     <div className="bg-white rounded-lg border border-[#8F9E8B]/30 shadow-sm overflow-hidden">
       <button

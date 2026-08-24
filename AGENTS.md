@@ -89,6 +89,13 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   hook alla volta. Quello che resta dentro è ciò che tocca i soldi — presenze,
   spese, sincronizzazione, conti — e si sposta con la stessa prova, non
   tagliando righe. Non è una scoperta, è la voce §14 di `ROADMAP.md`.
+- **I conti stanno in `conti.js`, fuori da `src/`.** Non e' un vezzo di
+  organizzazione: e' l'unica parte dell'app che maneggia i soldi di venti
+  persone, ed e' una funzione pura di sei cose. Da li' si prova con una prova
+  unitaria sui numeri veri del campo 2026 (`test/fixture/campo-2026.json`)
+  invece che leggendo cifre a schermo in un browser. Chi ci mette mano deve
+  farla restare pura: niente `localStorage`, niente React, niente variabili
+  globali di configurazione — quelle si passano.
 - **Gli hook non disegnano, le schede non tengono stato.** Non è uno stile: un
   hook che restituisce JSX diventa un componente, e un componente aggiunge un
   confine di riconciliazione — cambia QUANDO le cose si ridisegnano. Le due

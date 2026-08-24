@@ -19,7 +19,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 63 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 64 prove, circa 9 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -48,7 +48,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | File | Cosa contiene |
 | --- | --- |
 | `src/*.jsx` | i sorgenti, incollati **nell'ordine elencato in `build.js`**. I numeri vanno di dieci in dieci per poter infilare pezzi in mezzo |
-| `src/80-app.jsx` | `function App()`: stato, sincronizzazione, conti, gestori |
+| `src/80-app.jsx` | `function App()`: stato, sincronizzazione, gestori. I conti non stanno più qui |
 | `src/7*-usa-*.jsx` | lo **stato** uscito da `App()`: hook (`usaGioco`, `usaGalleria`) che si portano dietro i loro `useState`. Tengono stato e **non disegnano** |
 | `src/8*-schede-*.jsx` | il **disegno** delle schede, uscito da `App()`. Non sono componenti React: sono funzioni che restituiscono JSX e ricevono le dipendenze in un oggetto. Disegnano e **non tengono stato** |
 | `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneScelta` (i chip accesi/spenti) |
@@ -57,11 +57,12 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `sync-merge.js` | fusione voce per voce fra dispositivi (`rev`, `del`, orologio `hi`) |
 | `menu-spesa.js` | dal menù del giorno alle voci della spesa. Sta fuori da `src/` perché così è provabile con una prova unitaria invece di duplicare la logica nel test |
 | `magazzino-foto.js` | dove stanno le foto degli scontrini: IndexedDB, con `localStorage` come rete di sicurezza. Fuori da `src/` per lo stesso motivo |
+| `conti.js` | **i conti**: `Conti.calcola({membri, presenze, acquisti, attrezzatura, giorni separati, giorni gratis})`. Funzione pura, fuori da `src/`, provata sui numeri veri del campo 2026 |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile` |
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
-| `test/` | 8 prove unitarie + 55 end‑to‑end |
+| `test/` | 9 prove unitarie + 55 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
