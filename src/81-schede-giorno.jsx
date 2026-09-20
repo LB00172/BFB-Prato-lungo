@@ -90,7 +90,7 @@ const schedaCalendario = ({
           return (
             <label
               key={dateStr}
-              title={`${d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}: conto separato`}
+              title={`${L.data(d, 'completa')}: conto separato`}
               className={`flex flex-col items-center gap-0.5 py-1.5 rounded cursor-pointer border ${
                 on ? 'bg-[#5C4A3C]/15 border-[#5C4A3C]/50' : 'bg-[#F0F4F1]/50 border-transparent hover:bg-[#E2EAE4]'
               }`}
@@ -116,7 +116,7 @@ const schedaCalendario = ({
 
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-lg border-b border-dashed border-[#8F9E8B] pb-1">
-        {parseDate(selectedDateStr).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+        {L.data(parseDate(selectedDateStr), 'completa')}
       </h3>
 
       {/* Meteo previsto per il giorno selezionato */}
@@ -167,7 +167,7 @@ const schedaCalendario = ({
                   return (
                     <span className={`text-[9px] ${vecchia ? 'text-[#D97706] font-bold' : 'text-gray-400'}`}>
                       {weather.fetchedAt
-                        ? `${vecchia ? '⚠ Previsioni vecchie, del' : 'Previsioni del'} ${new Date(weather.fetchedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} alle ${new Date(weather.fetchedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}${vecchia ? ': altrove ne trovi di più fresche.' : ' · uguali per tutto il campo'}`
+                        ? `${vecchia ? '⚠ Previsioni vecchie, del' : 'Previsioni del'} ${L.data(new Date(weather.fetchedAt), 'breve')} alle ${L.data(new Date(weather.fetchedAt), 'ora')}${vecchia ? ': altrove ne trovi di più fresche.' : ' · uguali per tutto il campo'}`
                         : 'Previsioni non ancora scaricate.'}
                     </span>
                   );
@@ -267,7 +267,7 @@ const schedaMenu = ({
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-2">
       <div className="flex items-baseline justify-between border-b border-dashed border-[#8F9E8B] pb-1">
         <h3 className="font-rustic text-lg text-[#2D392C]">
-          Menù di {parseDate(selectedDateStr).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+          Menù di {L.data(parseDate(selectedDateStr), 'completa')}
         </h3>
       </div>
 
@@ -320,7 +320,7 @@ const schedaMenu = ({
             <h3 className="font-rustic text-lg text-[#2D392C]">Dal menù alla spesa</h3>
             <p className="text-[10px] text-gray-500 leading-snug mt-1">
               {propostaSpesa.voci.length} {propostaSpesa.voci.length === 1 ? 'voce trovata' : 'voci trovate'} nel menù di
-              {' '}{parseDate(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}.
+              {' '}{L.data(parseDate(selectedDateStr), 'lunga')}.
               Togli la spunta a quello che non serve comprare.
               {propostaSpesa.scartate > 0 && ` (${propostaSpesa.scartate} ${propostaSpesa.scartate === 1 ? 'era già' : 'erano già'} in lista.)`}
             </p>
@@ -372,7 +372,7 @@ const schedaMenu = ({
                   }`}
                 >
                   <span className="text-[11px] font-bold text-[#2D392C] shrink-0 w-16">
-                    {parseDate(ds).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' })}
+                    {L.data(parseDate(ds), 'settimanaGiorno')}
                   </span>
                   <span className={`text-[10px] truncate ${testo ? 'text-gray-600' : 'text-gray-400 italic'}`}>
                     {testo ? prima : 'da scrivere'}
@@ -448,7 +448,7 @@ const schedaPresenze = ({
                   <span className="font-bold">{o.nome || 'Persona non più in elenco'}</span>
                   {' — '}{o.pasti} {o.pasti === 1 ? 'pasto' : 'pasti'} su {o.giorni.length} {o.giorni.length === 1 ? 'giorno' : 'giorni'}
                   <span className="block text-[9px] text-gray-500">
-                    {o.giorni.slice(0, 6).map((d) => parseDate(d).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })).join(' · ')}
+                    {o.giorni.slice(0, 6).map((d) => L.data(parseDate(d), 'breve')).join(' · ')}
                     {o.giorni.length > 6 ? ' …' : ''}
                   </span>
                 </p>
@@ -489,7 +489,7 @@ const schedaPresenze = ({
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2">
         <span className="min-w-0 truncate">
-          Presenze del {parseDate(selectedDateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
+          Presenze del {L.data(parseDate(selectedDateStr), 'lunga')}
         </span>
         {giornoBloccato(selectedDateStr) && (
           <span className="ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white">🔒 Bloccate</span>
@@ -526,7 +526,7 @@ const schedaPresenze = ({
         <div className="bg-[#5C4A3C]/10 border border-[#5C4A3C]/40 rounded p-2.5">
           <p className="text-[10px] text-[#5C4A3C] leading-snug">
             <span className="font-bold">Presenze chiuse.</span> Sono state bloccate il{' '}
-            {new Date(giornoBloccato(selectedDateStr).at).toLocaleString('it-IT')} e non cambiano più:
+            {L.data(new Date(giornoBloccato(selectedDateStr).at), 'dataOra')} e non cambiano più:
             né dai tasti, né da quello che arriva dagli altri telefoni. Se un telefono prova a
             modificarle, l'app le rimette com'erano.
           </p>

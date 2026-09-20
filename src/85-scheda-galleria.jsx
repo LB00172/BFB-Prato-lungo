@@ -160,7 +160,7 @@ const schedaGalleria = ({
                           serve a nessuno e non ci sta. */}
                       <span className="didascalia">
                         <span className="nome">{soloNome(p.by)}</span>
-                        {p.at ? <span className="quando">{new Date(p.at).toLocaleDateString('it-IT')}</span> : null}
+                        {p.at ? <span className="quando">{L.data(new Date(p.at), 'numerica')}</span> : null}
                       </span>
                     </button>
                   ))}

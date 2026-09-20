@@ -4,6 +4,22 @@ const {
   useEffect,
   useRef
 } = React;
+
+// ---------- La lingua corrente ----------
+// "L" e' il traduttore in uso: L.t(chiave) per i testi, L.data(d, forma) per
+// le date. Vive qui perche' serve anche fuori da App() (il registro delle
+// modifiche formatta le date, e non e' un componente).
+//
+// LA RIASSEGNA App() A OGNI DISEGNO, dal suo stato. E' questo che la rende
+// corretta: cambiare lingua cambia uno stato di React, React ridisegna, e il
+// disegno legge il valore appena messo. Non e' "una variabile globale letta a
+// caso" — e' una variabile globale SCRITTA DAL DISEGNO, prima che le schede
+// la leggano.
+//
+// Cosa la romperebbe: trasformare una scheda in un componente memoizzato.
+// Quello salterebbe il ridisegno e resterebbe con la lingua di prima. Le
+// schede non sono componenti, ed e' anche per questo (ROADMAP.md § 14).
+let L = window.Lingue.crea(window.Lingue.PREDEFINITA);
 const {
   createRoot
 } = ReactDOM;
@@ -261,11 +277,7 @@ const descriviPath = (p, stato) => {
   };
   const giorno = d => {
     try {
-      return parseDate(d).toLocaleDateString('it-IT', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short'
-      });
+      return L.data(parseDate(d), 'settimana');
     } catch (e) {
       return d;
     }
@@ -495,13 +507,18 @@ const BRAND = {
 // esistono le Room (ROADMAP.md § 2): assegnare un compito presuppone un
 // gestore, e senza gestore assegna chiunque. In un gruppo di amici va
 // benissimo — e' come funzionava sugli appunti a mano — ma venderlo cosi' no.
+// "lingue" resta spenta finche' i dizionari non coprono tutta l'app: meta'
+// schermata in spagnolo e meta' in italiano e' peggio che non offrire la
+// scelta. La macchina pero' c'e' gia' ed e' provata (ROADMAP.md § 18).
 const FEATURES = {
   auth: false,
   rooms: false,
   equipExemption: false,
   compiti: true,
+  lingue: false,
   ...(CFG.features || {})
 };
+const LINGUA_KEY = 'cambusa_lingua';
 
 // Periodo del campo. Durante il campo l'app si apre sul giorno corrente.
 const CAMP_START = '2026-08-11';
@@ -872,6 +889,20 @@ const bottoneScelta = (forma, tono, acceso, misura, extra) => {
   const t = SCELTA_TONO[tono] || SCELTA_TONO.sezione;
   return [SCELTA_FORMA[forma] || SCELTA_FORMA.linguetta, SCELTA_TESTO[misura] || SCELTA_TESTO.minuscolo, acceso ? t.acceso : t.spento, extra || ''].filter(Boolean).join(' ');
 };
+
+// ---------- Frasi con una parte in grassetto ----------
+// Il dizionario tiene la frase intera, con la parte da evidenziare fra
+// asterischi: 'Il compito dice *chi fa cosa*, non quanto costa'. Spezzarla in
+// tre stringhe non funzionerebbe — l'ordine delle parole cambia da lingua a
+// lingua e il pezzo in mezzo finirebbe nel posto sbagliato.
+//
+// Uso: {frase('compiti.spiegazione')}
+const frase = (chiave, ...resto) => L.pezzi(chiave, ...resto).map((p, i) => p.grassetto ? /*#__PURE__*/React.createElement("span", {
+  key: i,
+  className: "font-bold"
+}, p.testo) : /*#__PURE__*/React.createElement(React.Fragment, {
+  key: i
+}, p.testo));
 // ============================================================================
 //  MINI GIOCO "Aiuta Bandy" — snake in canvas, tutto offline.
 //  La canna cresce ogni volta che raccoglie Bandy. Sfondo: bosco visto
@@ -2511,7 +2542,7 @@ const usaGalleria = ({
         foto.push({
           dataUrl: full,
           // Solo il nome, come sotto le polaroid dell'album.
-          didascalia: [scelte[i].by ? soloNome(scelte[i].by) : '', scelte[i].at ? new Date(scelte[i].at).toLocaleDateString('it-IT') : ''].filter(Boolean).join(' · ')
+          didascalia: [scelte[i].by ? soloNome(scelte[i].by) : '', scelte[i].at ? L.data(new Date(scelte[i].at), 'numerica') : ''].filter(Boolean).join(' · ')
         });
       }
       if (foto.length === 0) {
@@ -2799,6 +2830,16 @@ const usaScontrini = ({
   };
 };
 function App() {
+  // ---------- La lingua ----------
+  // Dietro FEATURES.lingue finche' i dizionari non sono completi: mostrare
+  // meta' app in spagnolo e meta' in italiano e' peggio che non offrirla.
+  const [lingua, setLingua] = useState(() => {
+    const salvata = localStorage.getItem(LINGUA_KEY);
+    return salvata && window.Lingue.LINGUE[salvata] ? salvata : window.Lingue.PREDEFINITA;
+  });
+  // Si riassegna QUI, prima di qualunque disegno: e' cio' che fa vedere la
+  // lingua nuova senza ricaricare (vedi il commento su "L" in 10-fondamenta).
+  L = window.Lingue.crea(FEATURES.lingue ? lingua : window.Lingue.PREDEFINITA);
   const [locked, setLocked] = useState(() => !isUnlocked());
   const [lockReason, setLockReason] = useState('');
   const [showSplash, setShowSplash] = useState(true);
@@ -3505,8 +3546,8 @@ function App() {
   // cosa è successo, senza doverlo leggere sullo schermo del telefono.
   const esportaRegistro = () => {
     const st = syncStateRef.current;
-    const righe = logLeggi().map(r => [new Date(r.at).toLocaleString('it-IT'), r.o === 'io' ? 'questo telefono' : 'sincronizzazione', r.k === 'd' ? 'cancellata' : 'modificata', sezioneDiPath(r.p), descriviPath(r.p, st), r.p].join('\t'));
-    const testo = `Registro modifiche — ${BRAND.appTitle}\nGenerato il ${new Date().toLocaleString('it-IT')}\n\n` + 'Data e ora\tOrigine\tAzione\tSezione\tVoce\tPercorso\n' + righe.join('\n') + '\n';
+    const righe = logLeggi().map(r => [L.data(new Date(r.at), 'dataOra'), r.o === 'io' ? 'questo telefono' : 'sincronizzazione', r.k === 'd' ? 'cancellata' : 'modificata', sezioneDiPath(r.p), descriviPath(r.p, st), r.p].join('\t'));
+    const testo = `Registro modifiche — ${BRAND.appTitle}\nGenerato il ${L.data(new Date(), 'dataOra')}\n\n` + 'Data e ora\tOrigine\tAzione\tSezione\tVoce\tPercorso\n' + righe.join('\n') + '\n';
     const blob = new Blob([testo], {
       type: 'text/plain;charset=utf-8'
     });
@@ -3531,7 +3572,7 @@ function App() {
       window.alert('Non c\'è nessuna copia di scorta da ripristinare.');
       return;
     }
-    const quando = new Date(r.at).toLocaleString('it-IT');
+    const quando = L.data(new Date(r.at), 'dataOra');
     if (!window.confirm(`Annullare la sincronizzazione del ${quando}?\n\n` + `${r.perse === 1 ? 'Tornerà 1 voce che era sparita' : `Torneranno ${r.perse} voci che erano sparite`}, e la copia di prima verrà ` + 'ripubblicata su TUTTI i dispositivi.\n\n' + 'Le modifiche fatte dopo, da chiunque, restano.')) return;
     const s = r.state;
     setMembers(Array.isArray(s.members) ? s.members : []);
@@ -4353,11 +4394,7 @@ function App() {
   };
 
   // Nome del giorno per i messaggi di conferma.
-  const nomeGiorno = ds => parseDate(ds).toLocaleDateString('it-IT', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  });
+  const nomeGiorno = ds => L.data(parseDate(ds), 'completa');
 
   // "Tutti a pranzo/cena" cambia le presenze di TUTTI in un colpo solo, e la
   // modifica arriva su ogni telefono: prima di farlo si chiede.
@@ -4524,7 +4561,7 @@ function App() {
   };
   const removeCompito = id => {
     const c = compiti.find(x => x.id === id);
-    if (c && !window.confirm(`Togliere il compito "${c.testo}"?`)) return;
+    if (c && !window.confirm(L.t('compiti.confermaTogli', c.testo))) return;
     setCompiti(prev => prev.filter(x => x.id !== id));
   };
 
@@ -5098,9 +5135,7 @@ function App() {
     const dateStr = toDateStr(d);
     const isSelected = dateStr === selectedDateStr;
     const isCampPeriod = dateStr >= CAMP_START && dateStr <= CAMP_END;
-    const label = d.toLocaleDateString('it-IT', {
-      weekday: 'short'
-    });
+    const label = L.data(d, 'settimanaSola');
     return /*#__PURE__*/React.createElement("button", {
       key: dateStr,
       onClick: () => {
@@ -5414,7 +5449,7 @@ function App() {
         // tre giorni prima azzerava il campo per tutti senza sapere né la data del
         // file né quanto stava buttando via.
         const quando = d.exportedAt ? new Date(d.exportedAt) : null;
-        const eta = quando && !isNaN(quando.getTime()) ? `Backup del ${quando.toLocaleString('it-IT')}` : 'Backup senza data';
+        const eta = quando && !isNaN(quando.getTime()) ? `Backup del ${L.data(quando, 'dataOra')}` : 'Backup senza data';
         const dentro = `Contiene ${(d.members || []).length} membri, ${(d.purchases || []).length} spese, ` + `${Object.keys(d.campData || {}).length} giorni.`;
         const perse = perditeSeApplico(d);
         if (!window.confirm(`${eta}.\n${dentro}\n\n${avvisoPerdite(perse)}${avvisoBlocchi(d)}\n\nImportare?`)) return;
@@ -5712,22 +5747,25 @@ function App() {
       className: "absolute bottom-4 left-0 right-0 text-center text-[9px] tracking-wide text-[#8F9E8B]/70 px-6"
     }, BRAND.credits));
   }
+
+  // I titoli delle aree passano dal dizionario. Si ricalcolano a ogni disegno
+  // perche' "L" e' stata appena riassegnata: cambiare lingua li cambia subito.
   const tabs = {
-    calendario: 'Calendario',
-    menu: 'Menù',
-    membri: 'Membri',
-    presenze: 'Presenze',
-    spesa: 'Spese Totali',
-    compiti: 'Chi fa cosa',
-    lista: 'Lista della Spesa',
-    attrezzatura: 'Attrezzatura',
-    regole: 'Regole',
-    dotazioni: 'Dotazioni personali',
-    galleria: 'Galleria',
-    archivio: 'Archivio',
-    gioco: 'Aiuta Bandy',
-    guida: 'Come funziona',
-    impostazioni: 'Impostazioni'
+    calendario: L.t('area.calendario'),
+    menu: L.t('area.menu'),
+    membri: L.t('area.membri'),
+    presenze: L.t('area.presenze'),
+    spesa: L.t('area.spesa'),
+    compiti: L.t('area.compiti'),
+    lista: L.t('area.lista'),
+    attrezzatura: L.t('area.attrezzatura'),
+    regole: L.t('area.regole'),
+    dotazioni: L.t('area.dotazioni'),
+    galleria: L.t('area.galleria'),
+    archivio: L.t('area.archivio'),
+    gioco: L.t('area.gioco'),
+    guida: L.t('area.guida'),
+    impostazioni: L.t('area.impostazioni')
   };
 
   // Icona per ogni area: nel menu aiuta a trovare la voce senza leggerle tutte.
@@ -5752,19 +5790,19 @@ function App() {
   // Il menu raggruppa le aree per momento d'uso: prima quello che si tocca
   // ogni giorno, poi i soldi, poi le cose del gruppo, in fondo il resto.
   const MENU_GROUPS = [{
-    title: 'Pianificazione',
+    title: L.t('menu.pianificazione'),
     items: ['calendario', 'menu', 'presenze']
   },
   // "Chi fa cosa" viene PRIMA della lista, ed e' l'ordine dei fatti: ci si
   // divide i compiti, poi si compra, poi si registra la spesa.
   {
-    title: 'Spese',
+    title: L.t('menu.spese'),
     items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa']
   }, {
-    title: 'Il gruppo',
+    title: L.t('menu.gruppo'),
     items: ['membri', 'regole', 'dotazioni', 'galleria']
   }, {
-    title: 'Altro',
+    title: L.t('menu.altro'),
     items: ['gioco', 'archivio', 'guida', 'impostazioni']
   }];
 
@@ -6082,12 +6120,7 @@ function App() {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Qualcuno ha appena cancellato ", lostSync.n, " voci", lostSync.quando ? ` (${new Date(lostSync.quando).toLocaleString('it-IT', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: 'numeric',
-    month: 'short'
-  })})` : '', "."), lostSync.che ? ` ${lostSync.che}.` : '', ' ', "Se non \xE8 stato qualcuno di voi, annulla: torna tutto com'era, su tutti i telefoni."), /*#__PURE__*/React.createElement("div", {
+  }, "Qualcuno ha appena cancellato ", lostSync.n, " voci", lostSync.quando ? ` (${L.data(new Date(lostSync.quando), 'dataOraBreve')})` : '', "."), lostSync.che ? ` ${lostSync.che}.` : '', ' ', "Se non \xE8 stato qualcuno di voi, annulla: torna tutto com'era, su tutti i telefoni."), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mt-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: annullaSync,
@@ -6355,6 +6388,7 @@ function App() {
     goTo,
     isDark,
     isOnline,
+    lingua,
     lockNow,
     logOpen,
     members,
@@ -6369,6 +6403,7 @@ function App() {
     setBloccoOpen,
     setDatiOpen,
     setDiagTick,
+    setLingua,
     setLogOpen,
     setLostSync,
     setPhotoCap,
@@ -6568,16 +6603,9 @@ function App() {
   }, "Copie automatiche: due al giorno sul telefono (una dopo mezzanotte e una dopo mezzogiorno, alla prima apertura), pi\xF9 una al giorno nel cloud. Quelle ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
   }, "sul telefono"), " ci sono anche senza linea."), snapList.map(s => {
-    const giorno = parseDate(s.id.slice(0, 10)).toLocaleDateString('it-IT', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'long'
-    });
+    const giorno = L.data(parseDate(s.id.slice(0, 10)), 'settimanaLunga');
     const fascia = s.id.slice(11) === '00' ? 'mattina' : s.id.slice(11) === '12' ? 'pomeriggio' : '';
-    const ora = s.at ? new Date(s.at).toLocaleTimeString('it-IT', {
-      hour: '2-digit',
-      minute: '2-digit'
-    }) : '';
+    const ora = s.at ? L.data(new Date(s.at), 'ora') : '';
     return /*#__PURE__*/React.createElement("button", {
       key: s.dove + s.id,
       onClick: () => restoreSnapshot(s),
@@ -6661,7 +6689,7 @@ function App() {
     className: "shrink-0 w-full max-w-md flex items-center justify-between gap-3 pt-3"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] text-white/70 truncate"
-  }, viewPhoto.by || 'anonimo', viewPhoto.at ? ` · ${new Date(viewPhoto.at).toLocaleDateString('it-IT')}` : ''), /*#__PURE__*/React.createElement("span", {
+  }, viewPhoto.by || 'anonimo', viewPhoto.at ? ` · ${L.data(new Date(viewPhoto.at), 'numerica')}` : ''), /*#__PURE__*/React.createElement("span", {
     className: "flex items-center gap-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => removePhoto(viewPhoto),
@@ -6757,11 +6785,7 @@ const schedaCalendario = ({
   const on = sepDays.includes(dateStr);
   return /*#__PURE__*/React.createElement("label", {
     key: dateStr,
-    title: `${d.toLocaleDateString('it-IT', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    })}: conto separato`,
+    title: `${L.data(d, 'completa')}: conto separato`,
     className: `flex flex-col items-center gap-0.5 py-1.5 rounded cursor-pointer border ${on ? 'bg-[#5C4A3C]/15 border-[#5C4A3C]/50' : 'bg-[#F0F4F1]/50 border-transparent hover:bg-[#E2EAE4]'}`
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
@@ -6779,11 +6803,7 @@ const schedaCalendario = ({
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-dashed border-[#8F9E8B] pb-1"
-}, parseDate(selectedDateStr).toLocaleDateString('it-IT', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long'
-})), (() => {
+}, L.data(parseDate(selectedDateStr), 'completa')), (() => {
   const loc = window.CAMP_LOCATION;
   const locOk = loc && typeof loc.lat === 'number' && typeof loc.lon === 'number';
   const wx = weather.byDate[selectedDateStr];
@@ -6824,13 +6844,7 @@ const schedaCalendario = ({
     const vecchia = weather.fetchedAt && Date.now() - weather.fetchedAt > METEO_VECCHIO;
     return /*#__PURE__*/React.createElement("span", {
       className: `text-[9px] ${vecchia ? 'text-[#D97706] font-bold' : 'text-gray-400'}`
-    }, weather.fetchedAt ? `${vecchia ? '⚠ Previsioni vecchie, del' : 'Previsioni del'} ${new Date(weather.fetchedAt).toLocaleDateString('it-IT', {
-      day: 'numeric',
-      month: 'short'
-    })} alle ${new Date(weather.fetchedAt).toLocaleTimeString('it-IT', {
-      hour: '2-digit',
-      minute: '2-digit'
-    })}${vecchia ? ': altrove ne trovi di più fresche.' : ' · uguali per tutto il campo'}` : 'Previsioni non ancora scaricate.');
+    }, weather.fetchedAt ? `${vecchia ? '⚠ Previsioni vecchie, del' : 'Previsioni del'} ${L.data(new Date(weather.fetchedAt), 'breve')} alle ${L.data(new Date(weather.fetchedAt), 'ora')}${vecchia ? ': altrove ne trovi di più fresche.' : ' · uguali per tutto il campo'}` : 'Previsioni non ancora scaricate.');
   })(), /*#__PURE__*/React.createElement("button", {
     onClick: () => fetchWeather(true),
     disabled: !isOnline || wxBusy,
@@ -6898,11 +6912,7 @@ const schedaMenu = ({
   className: "flex items-baseline justify-between border-b border-dashed border-[#8F9E8B] pb-1"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg text-[#2D392C]"
-}, "Men\xF9 di ", parseDate(selectedDateStr).toLocaleDateString('it-IT', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long'
-}))), (() => {
+}, "Men\xF9 di ", L.data(parseDate(selectedDateStr), 'completa'))), (() => {
   const lunch = members.filter(m => getMeal(selectedDateStr, m.id).lunch).length;
   const dinner = members.filter(m => getMeal(selectedDateStr, m.id).dinner).length;
   return /*#__PURE__*/React.createElement("div", {
@@ -6946,10 +6956,7 @@ const schedaMenu = ({
   className: "font-rustic text-lg text-[#2D392C]"
 }, "Dal men\xF9 alla spesa"), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug mt-1"
-}, propostaSpesa.voci.length, " ", propostaSpesa.voci.length === 1 ? 'voce trovata' : 'voci trovate', " nel men\xF9 di", ' ', parseDate(selectedDateStr).toLocaleDateString('it-IT', {
-  day: 'numeric',
-  month: 'long'
-}), ". Togli la spunta a quello che non serve comprare.", propostaSpesa.scartate > 0 && ` (${propostaSpesa.scartate} ${propostaSpesa.scartate === 1 ? 'era già' : 'erano già'} in lista.)`)), /*#__PURE__*/React.createElement("ul", {
+}, propostaSpesa.voci.length, " ", propostaSpesa.voci.length === 1 ? 'voce trovata' : 'voci trovate', " nel men\xF9 di", ' ', L.data(parseDate(selectedDateStr), 'lunga'), ". Togli la spunta a quello che non serve comprare.", propostaSpesa.scartate > 0 && ` (${propostaSpesa.scartate} ${propostaSpesa.scartate === 1 ? 'era già' : 'erano già'} in lista.)`)), /*#__PURE__*/React.createElement("ul", {
   className: "overflow-y-auto divide-y divide-[#8F9E8B]/15 px-4"
 }, propostaSpesa.voci.map((v, i) => /*#__PURE__*/React.createElement("li", {
   key: i
@@ -7002,10 +7009,7 @@ const schedaMenu = ({
       className: `w-full text-left flex items-center gap-2 px-3 py-2 rounded border transition-colors ${ds === selectedDateStr ? 'bg-[#5C4A3C]/15 border-[#5C4A3C]/50' : 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20 hover:bg-[#E2EAE4]'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-bold text-[#2D392C] shrink-0 w-16"
-    }, parseDate(ds).toLocaleDateString('it-IT', {
-      weekday: 'short',
-      day: 'numeric'
-    })), /*#__PURE__*/React.createElement("span", {
+    }, L.data(parseDate(ds), 'settimanaGiorno')), /*#__PURE__*/React.createElement("span", {
       className: `text-[10px] truncate ${testo ? 'text-gray-600' : 'text-gray-400 italic'}`
     }, testo ? prima : 'da scrivere'), testo && /*#__PURE__*/React.createElement("span", {
       className: "ml-auto text-[10px] shrink-0"
@@ -7078,10 +7082,7 @@ const schedaPresenze = ({
     className: "font-bold"
   }, o.nome || 'Persona non più in elenco'), ' — ', o.pasti, " ", o.pasti === 1 ? 'pasto' : 'pasti', " su ", o.giorni.length, " ", o.giorni.length === 1 ? 'giorno' : 'giorni', /*#__PURE__*/React.createElement("span", {
     className: "block text-[9px] text-gray-500"
-  }, o.giorni.slice(0, 6).map(d => parseDate(d).toLocaleDateString('it-IT', {
-    day: 'numeric',
-    month: 'short'
-  })).join(' · '), o.giorni.length > 6 ? ' …' : '')), /*#__PURE__*/React.createElement("div", {
+  }, o.giorni.slice(0, 6).map(d => L.data(parseDate(d), 'breve')).join(' · '), o.giorni.length > 6 ? ' …' : '')), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("select", {
     value: orfanoScelte[o.id] || '',
@@ -7112,10 +7113,7 @@ const schedaPresenze = ({
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2"
 }, /*#__PURE__*/React.createElement("span", {
   className: "min-w-0 truncate"
-}, "Presenze del ", parseDate(selectedDateStr).toLocaleDateString('it-IT', {
-  day: 'numeric',
-  month: 'long'
-})), giornoBloccato(selectedDateStr) && /*#__PURE__*/React.createElement("span", {
+}, "Presenze del ", L.data(parseDate(selectedDateStr), 'lunga')), giornoBloccato(selectedDateStr) && /*#__PURE__*/React.createElement("span", {
   className: "ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white"
 }, "\uD83D\uDD12 Bloccate")), giornoGratis(selectedDateStr) && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C]/10 border border-[#2D392C]/35 rounded p-2.5"
@@ -7133,7 +7131,7 @@ const schedaPresenze = ({
   className: "text-[10px] text-[#5C4A3C] leading-snug"
 }, /*#__PURE__*/React.createElement("span", {
   className: "font-bold"
-}, "Presenze chiuse."), " Sono state bloccate il", ' ', new Date(giornoBloccato(selectedDateStr).at).toLocaleString('it-IT'), " e non cambiano pi\xF9: n\xE9 dai tasti, n\xE9 da quello che arriva dagli altri telefoni. Se un telefono prova a modificarle, l'app le rimette com'erano.")), members.length === 0 ? /*#__PURE__*/React.createElement("p", {
+}, "Presenze chiuse."), " Sono state bloccate il", ' ', L.data(new Date(giornoBloccato(selectedDateStr).at), 'dataOra'), " e non cambiano pi\xF9: n\xE9 dai tasti, n\xE9 da quello che arriva dagli altri telefoni. Se un telefono prova a modificarle, l'app le rimette com'erano.")), members.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
 }, "Aggiungi prima i membri nella scheda \"Membri\".") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
   className: `bg-[#F0F4F1]/60 rounded border border-[#8F9E8B]/30 overflow-hidden ${giornoBloccato(selectedDateStr) ? 'opacity-50 pointer-events-none' : ''}`
@@ -7436,7 +7434,7 @@ const schedaSpesa = ({
   className: "text-[10px] text-gray-500 leading-snug"
 }, "Conti chiusi il ", /*#__PURE__*/React.createElement("span", {
   className: "font-bold"
-}, new Date(bloccoConti().at).toLocaleString('it-IT')), ". Spese e attrezzatura sono congelate: gli importi di \"chi paga chi\" non cambiano pi\xF9, quindi i rimborsi gi\xE0 segnati come saldati restano validi. Quello che arriva dagli altri telefoni viene messo da parte e segnalato qui sopra."), /*#__PURE__*/React.createElement("button", {
+}, L.data(new Date(bloccoConti().at), 'dataOra')), ". Spese e attrezzatura sono congelate: gli importi di \"chi paga chi\" non cambiano pi\xF9, quindi i rimborsi gi\xE0 segnati come saldati restano validi. Quello che arriva dagli altri telefoni viene messo da parte e segnalato qui sopra."), /*#__PURE__*/React.createElement("button", {
   onClick: riapriConti,
   className: bottone('secondario', 'normale', 'w-full')
 }, "\uD83D\uDD13 Riapri i conti")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
@@ -7514,7 +7512,7 @@ const schedaSpesa = ({
   className: bottone('primario', 'normale')
 }, "Connetti")), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between text-[10px] text-gray-500"
-}, /*#__PURE__*/React.createElement("span", null, cloud.status === 'connecting' && 'Connessione in corso…', cloud.status === 'saving' && 'Salvataggio…', cloud.status === 'connected' && (cloud.lastSync ? `Ultima sync: ${new Date(cloud.lastSync).toLocaleTimeString('it-IT')}` : 'In ascolto…'), cloud.status === 'error' && /*#__PURE__*/React.createElement("span", {
+}, /*#__PURE__*/React.createElement("span", null, cloud.status === 'connecting' && 'Connessione in corso…', cloud.status === 'saving' && 'Salvataggio…', cloud.status === 'connected' && (cloud.lastSync ? `Ultima sync: ${L.data(new Date(cloud.lastSync), 'oraPiena')}` : 'In ascolto…'), cloud.status === 'error' && /*#__PURE__*/React.createElement("span", {
   className: "text-red-700"
 }, "Errore: ", cloud.error), cloud.status === 'idle' && (localStorage.getItem('cambusa_sync_optout') === '1' ? 'Sincronizzazione disattivata: premi Connetti per riattivarla.' : 'In attesa di connessione automatica…')), !isOnline && /*#__PURE__*/React.createElement("span", {
   className: "text-[#D97706] font-bold"
@@ -7819,13 +7817,7 @@ const schedaLista = ({
     className: "text-[#5C4A3C] font-bold"
   }, p.buyer) : /*#__PURE__*/React.createElement("span", {
     className: "italic"
-  }, "acquirente non indicato"), p.at && ` · ${new Date(p.at).toLocaleDateString('it-IT', {
-    day: 'numeric',
-    month: 'short'
-  })} ${new Date(p.at).toLocaleTimeString('it-IT', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })}`)), receipts[p.id] ? /*#__PURE__*/React.createElement("button", {
+  }, "acquirente non indicato"), p.at && ` · ${L.data(new Date(p.at), 'breve')} ${L.data(new Date(p.at), 'ora')}`)), receipts[p.id] ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[p.id]),
     "aria-label": "Vedi scontrino",
     className: bottoneIcona('pieno', 'shrink-0')
@@ -8220,7 +8212,7 @@ const schedaArchivio = ({
   className: "font-rustic text-base text-[#2D392C] truncate"
 }, a.name), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500"
-}, a.from === a.to ? a.from : `${a.from} → ${a.to}`, " \xB7 chiuso il ", new Date(a.closedAt).toLocaleDateString('it-IT'))), /*#__PURE__*/React.createElement("span", {
+}, a.from === a.to ? a.from : `${a.from} → ${a.to}`, " \xB7 chiuso il ", L.data(new Date(a.closedAt), 'numerica'))), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic font-bold text-[#2D392C] shrink-0"
 }, money(a.totals && a.totals.overall || 0), " \u20AC")), /*#__PURE__*/React.createElement("div", {
   className: "flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500"
@@ -8535,7 +8527,7 @@ const schedaGalleria = ({
   className: "nome"
 }, soloNome(p.by)), p.at ? /*#__PURE__*/React.createElement("span", {
   className: "quando"
-}, new Date(p.at).toLocaleDateString('it-IT')) : null))))))), /*#__PURE__*/React.createElement("div", {
+}, L.data(new Date(p.at), 'numerica')) : null))))))), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-center gap-4 mt-2"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => sfoglia(-1),
@@ -8648,6 +8640,8 @@ const schedaImpostazioni = ({
   swVersion,
   syncStateRef,
   tecnicaOpen,
+  lingua,
+  setLingua,
   theme,
   toggleAskAlways,
   wipeLocal
@@ -8684,7 +8678,22 @@ const schedaImpostazioni = ({
   className: "text-[10px] text-[#5C4A3C] leading-snug mt-0.5"
 }, c.no))))), readyOk && /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic"
-}, "Questo telefono funziona anche senza linea. Ricontrolla il giorno della partenza."))), /*#__PURE__*/React.createElement("div", {
+}, "Questo telefono funziona anche senza linea. Ricontrolla il giorno della partenza."))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
+  className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+}, /*#__PURE__*/React.createElement("h3", {
+  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+}, L.t('lingua.titolo')), /*#__PURE__*/React.createElement("div", {
+  className: "grid grid-cols-3 gap-2"
+}, Object.keys(window.Lingue.LINGUE).map(k => /*#__PURE__*/React.createElement("button", {
+  key: k,
+  onClick: () => {
+    setLingua(k);
+    scriviLocale(LINGUA_KEY, k);
+  },
+  className: bottoneScelta('linguetta', 'sezione', lingua === k, 'minuscolo')
+}, window.Lingue.LINGUE[k].nome))), /*#__PURE__*/React.createElement("p", {
+  className: "text-[10px] text-gray-500 leading-snug"
+}, L.t('lingua.nota'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
@@ -8778,9 +8787,9 @@ const schedaImpostazioni = ({
     className: "text-[10px] text-[#5C4A3C] leading-snug"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "Rete di sicurezza."), " Il ", new Date(scorta.at).toLocaleString('it-IT'), " una sincronizzazione ha tolto ", scorta.perse === 1 ? 'una voce' : `${scorta.perse} voci`, " da questo telefono, e l'app ha messo da parte una copia di com'era prima.", scorta.quando ? /*#__PURE__*/React.createElement(React.Fragment, null, " La cancellazione \xE8 stata fatta il ", /*#__PURE__*/React.createElement("span", {
+  }, "Rete di sicurezza."), " Il ", L.data(new Date(scorta.at), 'dataOra'), " una sincronizzazione ha tolto ", scorta.perse === 1 ? 'una voce' : `${scorta.perse} voci`, " da questo telefono, e l'app ha messo da parte una copia di com'era prima.", scorta.quando ? /*#__PURE__*/React.createElement(React.Fragment, null, " La cancellazione \xE8 stata fatta il ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, new Date(scorta.quando).toLocaleString('it-IT')), Date.now() - scorta.quando > PERDITA_RECENTE ? /*#__PURE__*/React.createElement(React.Fragment, null, " \u2014 non adesso: questo telefono era indietro e l'ha saputo solo ora.") : '.') : null), /*#__PURE__*/React.createElement("p", {
+  }, L.data(new Date(scorta.quando), 'dataOra')), Date.now() - scorta.quando > PERDITA_RECENTE ? /*#__PURE__*/React.createElement(React.Fragment, null, " \u2014 non adesso: questo telefono era indietro e l'ha saputo solo ora.") : '.') : null), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-[#5C4A3C] leading-snug"
   }, "Annullando torna ", scorta.perse === 1 ? 'quella voce' : 'quello che è sparito', scorta.paths && scorta.paths.length ? /*#__PURE__*/React.createElement(React.Fragment, null, " \u2014 ", /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
@@ -8809,13 +8818,7 @@ const schedaImpostazioni = ({
     className: "text-[#2D392C] leading-snug"
   }, descriviPath(l.p, st)), /*#__PURE__*/React.createElement("span", {
     className: "text-gray-500 shrink-0"
-  }, new Date(l.at).toLocaleDateString('it-IT', {
-    day: 'numeric',
-    month: 'short'
-  }), ' ', new Date(l.at).toLocaleTimeString('it-IT', {
-    hour: '2-digit',
-    minute: '2-digit'
-  }))))), lapidi.length > 12 && /*#__PURE__*/React.createElement("p", {
+  }, L.data(new Date(l.at), 'breve'), ' ', L.data(new Date(l.at), 'ora'))))), lapidi.length > 12 && /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-1"
   }, "\u2026e altre ", lapidi.length - 12, ".")), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic leading-snug"
@@ -8851,11 +8854,7 @@ const schedaImpostazioni = ({
   // Raggruppate per giorno: leggere 400 righe di fila è inutile.
   const perGiorno = [];
   reg.forEach(r => {
-    const g = new Date(r.at).toLocaleDateString('it-IT', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    });
+    const g = L.data(new Date(r.at), 'completa');
     const ultimo = perGiorno[perGiorno.length - 1];
     if (ultimo && ultimo.giorno === g) ultimo.voci.push(r);else perGiorno.push({
       giorno: g,
@@ -8877,10 +8876,7 @@ const schedaImpostazioni = ({
     className: "flex items-start gap-2 text-[10px] bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-gray-500 shrink-0 w-10"
-  }, new Date(r.at).toLocaleTimeString('it-IT', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })), /*#__PURE__*/React.createElement("span", {
+  }, L.data(new Date(r.at), 'ora')), /*#__PURE__*/React.createElement("span", {
     className: `shrink-0 w-3 text-center ${r.k === 'd' ? 'text-red-700' : 'text-[#2D392C]'}`,
     title: r.k === 'd' ? 'cancellata' : 'modificata'
   }, r.k === 'd' ? '−' : '+'), /*#__PURE__*/React.createElement("span", {
@@ -9096,7 +9092,7 @@ const schedaCompiti = ({
     className: "flex items-start gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleCompito(c.id),
-    "aria-label": c.fatto ? 'Segna come da fare' : 'Segna come fatto',
+    "aria-label": L.t(c.fatto ? 'compiti.segnaDaFare' : 'compiti.segnaFatto'),
     className: bottoneScelta('casella', 'casella', c.fatto, 'simbolo', 'mt-0.5')
   }, "\u2713"), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-grow space-y-2"
@@ -9108,12 +9104,12 @@ const schedaCompiti = ({
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[9px] uppercase font-bold text-[#8F9E8B] shrink-0"
-  }, "a chi"), renderBuyerSelect(c.chi, v => setCompitoCampo(c.id, 'chi', v), 'text-xs p-1.5')), c.fatto && /*#__PURE__*/React.createElement("button", {
+  }, L.t('compiti.aChi')), renderBuyerSelect(c.chi, v => setCompitoCampo(c.id, 'chi', v), 'text-xs p-1.5')), c.fatto && /*#__PURE__*/React.createElement("button", {
     onClick: () => daCompitoASpesa(c),
     className: bottone('bruno', 'minuscolo')
-  }, "\uD83D\uDCB6 Registra la spesa")), /*#__PURE__*/React.createElement("button", {
+  }, "\uD83D\uDCB6 ", L.t('compiti.registraSpesa'))), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeCompito(c.id),
-    "aria-label": "Rimuovi",
+    "aria-label": L.t('compiti.rimuovi'),
     className: bottoneIcona('distruttivo', 'shrink-0')
   }, "\xD7")));
   return /*#__PURE__*/React.createElement("div", {
@@ -9122,43 +9118,41 @@ const schedaCompiti = ({
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-  }, "Assegna un compito"), /*#__PURE__*/React.createElement("input", {
+  }, L.t('compiti.assegnaTitolo')), /*#__PURE__*/React.createElement("input", {
     value: nuovoCompito,
     onChange: e => setNuovoCompito(e.target.value),
     onKeyDown: e => {
       if (e.key === 'Enter') addCompito();
     },
-    placeholder: "Es. Prendere gli arrosticini, prenotare il rifugio\u2026",
+    placeholder: L.t('compiti.cosa'),
     className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
   }), renderBuyerSelect(nuovoCompitoChi, setNuovoCompitoChi), /*#__PURE__*/React.createElement("button", {
     onClick: addCompito,
     disabled: !nuovoCompito.trim(),
     className: bottone('primario', 'grande', 'w-full')
-  }, "Assegna"), /*#__PURE__*/React.createElement("p", {
+  }, L.t('compiti.assegna')), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic leading-snug"
-  }, "Il compito dice ", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "chi fa cosa"), ", non quanto costa: il prezzo si scopre alla cassa. Quando \xE8 fatto, da qui si registra la spesa \u2014 ma solo se ce n'\xE8 una.")), /*#__PURE__*/React.createElement("div", {
+  }, frase('compiti.spiegazione'))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between px-4 py-3 border-b border-[#8F9E8B]/40"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C]"
-  }, "Da fare"), daFare.length > 0 && /*#__PURE__*/React.createElement("span", {
+  }, L.t('compiti.daFare')), daFare.length > 0 && /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C]"
   }, daFare.length)), daFare.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "px-4 py-6 text-center text-xs text-gray-400 italic"
-  }, compiti.length === 0 ? 'Nessun compito assegnato. Serve a dividersi le cose prima di partire.' : 'Tutto fatto.') : /*#__PURE__*/React.createElement("ul", null, daFare.map(riga))), fatti.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, compiti.length === 0 ? L.t('compiti.vuoto') : L.t('compiti.tuttoFatto')) : /*#__PURE__*/React.createElement("ul", null, daFare.map(riga))), fatti.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between px-4 py-3 border-b border-[#8F9E8B]/40"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C]"
-  }, "Fatti"), /*#__PURE__*/React.createElement("span", {
+  }, L.t('compiti.fatti')), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C]"
   }, fatti.length)), /*#__PURE__*/React.createElement("ul", null, fatti.map(riga))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-[#D97706] italic leading-snug px-1"
-  }, "Non c'\xE8 ancora nessuno fra i Membri: i compiti si possono scrivere, ma non assegnare."));
+  }, L.t('compiti.senzaMembri')));
 };
 const root = createRoot(document.getElementById('root'));
 root.render(/*#__PURE__*/React.createElement(App, null));

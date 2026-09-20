@@ -301,7 +301,7 @@ const schedaSpesa = ({
         {bloccoConti() ? (
           <>
             <p className="text-[10px] text-gray-500 leading-snug">
-              Conti chiusi il <span className="font-bold">{new Date(bloccoConti().at).toLocaleString('it-IT')}</span>.
+              Conti chiusi il <span className="font-bold">{L.data(new Date(bloccoConti().at), 'dataOra')}</span>.
               Spese e attrezzatura sono congelate: gli importi di "chi paga chi" non cambiano più, quindi i
               rimborsi già segnati come saldati restano validi. Quello che arriva dagli altri telefoni viene
               messo da parte e segnalato qui sopra.
@@ -412,7 +412,7 @@ const schedaSpesa = ({
             <span>
               {cloud.status === 'connecting' && 'Connessione in corso…'}
               {cloud.status === 'saving' && 'Salvataggio…'}
-              {cloud.status === 'connected' && (cloud.lastSync ? `Ultima sync: ${new Date(cloud.lastSync).toLocaleTimeString('it-IT')}` : 'In ascolto…')}
+              {cloud.status === 'connected' && (cloud.lastSync ? `Ultima sync: ${L.data(new Date(cloud.lastSync), 'oraPiena')}` : 'In ascolto…')}
               {cloud.status === 'error' && <span className="text-red-700">Errore: {cloud.error}</span>}
               {cloud.status === 'idle' && (localStorage.getItem('cambusa_sync_optout') === '1'
                 ? 'Sincronizzazione disattivata: premi Connetti per riattivarla.'
@@ -781,7 +781,7 @@ const schedaLista = ({
                   {p.fromList && <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]">acquistata</span>}
                   <span className="text-[9px] text-gray-400 basis-full">
                     {p.buyer ? <span className="text-[#5C4A3C] font-bold">{p.buyer}</span> : <span className="italic">acquirente non indicato</span>}
-                    {p.at && ` · ${new Date(p.at).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} ${new Date(p.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`}
+                    {p.at && ` · ${L.data(new Date(p.at), 'breve')} ${L.data(new Date(p.at), 'ora')}`}
                   </span>
                 </div>
                 {receipts[p.id] ? (

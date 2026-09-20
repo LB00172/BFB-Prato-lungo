@@ -34,7 +34,7 @@ const schedaCompiti = ({
       <div className="flex items-start gap-2">
         <button
           onClick={() => toggleCompito(c.id)}
-          aria-label={c.fatto ? 'Segna come da fare' : 'Segna come fatto'}
+          aria-label={L.t(c.fatto ? 'compiti.segnaDaFare' : 'compiti.segnaFatto')}
           className={bottoneScelta('casella', 'casella', c.fatto, 'simbolo', 'mt-0.5')}
         >
           ✓
@@ -50,16 +50,16 @@ const schedaCompiti = ({
             }`}
           />
           <div className="flex items-center gap-2">
-            <span className="text-[9px] uppercase font-bold text-[#8F9E8B] shrink-0">a chi</span>
+            <span className="text-[9px] uppercase font-bold text-[#8F9E8B] shrink-0">{L.t('compiti.aChi')}</span>
             {renderBuyerSelect(c.chi, (v) => setCompitoCampo(c.id, 'chi', v), 'text-xs p-1.5')}
           </div>
           {c.fatto && (
             <button onClick={() => daCompitoASpesa(c)} className={bottone('bruno', 'minuscolo')}>
-              💶 Registra la spesa
+              💶 {L.t('compiti.registraSpesa')}
             </button>
           )}
         </div>
-        <button onClick={() => removeCompito(c.id)} aria-label="Rimuovi" className={bottoneIcona('distruttivo', 'shrink-0')}>&times;</button>
+        <button onClick={() => removeCompito(c.id)} aria-label={L.t('compiti.rimuovi')} className={bottoneIcona('distruttivo', 'shrink-0')}>&times;</button>
       </div>
     </li>
   );
@@ -68,35 +68,32 @@ const schedaCompiti = ({
     <div className="space-y-4">
       {/* Assegnare */}
       <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-        <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Assegna un compito</h3>
+        <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('compiti.assegnaTitolo')}</h3>
         <input
           value={nuovoCompito}
           onChange={(e) => setNuovoCompito(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') addCompito(); }}
-          placeholder="Es. Prendere gli arrosticini, prenotare il rifugio…"
+          placeholder={L.t('compiti.cosa')}
           className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
         />
         {renderBuyerSelect(nuovoCompitoChi, setNuovoCompitoChi)}
         <button onClick={addCompito} disabled={!nuovoCompito.trim()} className={bottone('primario', 'grande', 'w-full')}>
-          Assegna
+          {L.t('compiti.assegna')}
         </button>
-        <p className="text-[9px] text-gray-400 italic leading-snug">
-          Il compito dice <span className="font-bold">chi fa cosa</span>, non quanto costa: il prezzo si
-          scopre alla cassa. Quando è fatto, da qui si registra la spesa — ma solo se ce n'è una.
-        </p>
+        <p className="text-[9px] text-gray-400 italic leading-snug">{frase('compiti.spiegazione')}</p>
       </div>
 
       {/* Da fare */}
       <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#8F9E8B]/40">
-          <h3 className="font-rustic text-lg text-[#2D392C]">Da fare</h3>
+          <h3 className="font-rustic text-lg text-[#2D392C]">{L.t('compiti.daFare')}</h3>
           {daFare.length > 0 && <span className="font-rustic font-bold text-[#2D392C]">{daFare.length}</span>}
         </div>
         {daFare.length === 0 ? (
           <p className="px-4 py-6 text-center text-xs text-gray-400 italic">
             {compiti.length === 0
-              ? 'Nessun compito assegnato. Serve a dividersi le cose prima di partire.'
-              : 'Tutto fatto.'}
+              ? L.t('compiti.vuoto')
+              : L.t('compiti.tuttoFatto')}
           </p>
         ) : (
           <ul>{daFare.map(riga)}</ul>
@@ -107,7 +104,7 @@ const schedaCompiti = ({
       {fatti.length > 0 && (
         <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#8F9E8B]/40">
-            <h3 className="font-rustic text-lg text-[#2D392C]">Fatti</h3>
+            <h3 className="font-rustic text-lg text-[#2D392C]">{L.t('compiti.fatti')}</h3>
             <span className="font-rustic font-bold text-[#2D392C]">{fatti.length}</span>
           </div>
           <ul>{fatti.map(riga)}</ul>
@@ -115,9 +112,7 @@ const schedaCompiti = ({
       )}
 
       {members.length === 0 && (
-        <p className="text-[10px] text-[#D97706] italic leading-snug px-1">
-          Non c'è ancora nessuno fra i Membri: i compiti si possono scrivere, ma non assegnare.
-        </p>
+        <p className="text-[10px] text-[#D97706] italic leading-snug px-1">{L.t('compiti.senzaMembri')}</p>
       )}
     </div>
   );

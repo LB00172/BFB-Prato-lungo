@@ -174,7 +174,7 @@ const usaGalleria = ({ activeTab, cloudConnesso, campData }) => {
         foto.push({
           dataUrl: full,
           // Solo il nome, come sotto le polaroid dell'album.
-          didascalia: [scelte[i].by ? soloNome(scelte[i].by) : '', scelte[i].at ? new Date(scelte[i].at).toLocaleDateString('it-IT') : '']
+          didascalia: [scelte[i].by ? soloNome(scelte[i].by) : '', scelte[i].at ? L.data(new Date(scelte[i].at), 'numerica') : '']
             .filter(Boolean).join(' · '),
         });
       }

@@ -1,4 +1,21 @@
 const { useState, useEffect, useRef } = React;
+
+// ---------- La lingua corrente ----------
+// "L" e' il traduttore in uso: L.t(chiave) per i testi, L.data(d, forma) per
+// le date. Vive qui perche' serve anche fuori da App() (il registro delle
+// modifiche formatta le date, e non e' un componente).
+//
+// LA RIASSEGNA App() A OGNI DISEGNO, dal suo stato. E' questo che la rende
+// corretta: cambiare lingua cambia uno stato di React, React ridisegna, e il
+// disegno legge il valore appena messo. Non e' "una variabile globale letta a
+// caso" — e' una variabile globale SCRITTA DAL DISEGNO, prima che le schede
+// la leggano.
+//
+// Cosa la romperebbe: trasformare una scheda in un componente memoizzato.
+// Quello salterebbe il ridisegno e resterebbe con la lingua di prima. Le
+// schede non sono componenti, ed e' anche per questo (ROADMAP.md § 14).
+let L = window.Lingue.crea(window.Lingue.PREDEFINITA);
+
 const { createRoot } = ReactDOM;
 
 // ---------- Utility ----------
@@ -207,7 +224,7 @@ const descriviPath = (p, stato) => {
     return m ? m.name : 'una persona non più in elenco';
   };
   const giorno = (d) => {
-    try { return parseDate(d).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }); }
+    try { return L.data(parseDate(d), 'settimana'); }
     catch (e) { return d; }
   };
   const voce = (lista, id, etichetta) => {

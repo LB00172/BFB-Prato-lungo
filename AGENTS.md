@@ -90,7 +90,8 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   presenze, spese e sincronizzazione, e si sposta con le stesse prove — non
   tagliando righe. Non è una scoperta, è la voce §14 di `ROADMAP.md`.
 - **Le regole stanno fuori da `src/`: `conti.js` (i conti), `presenze.js`
-  (giorno, pasto, blocco, orfane), `allarmi.js` (quando svegliare qualcuno).** Non e' un vezzo di
+  (giorno, pasto, blocco, orfane), `allarmi.js` (quando svegliare qualcuno),
+  `lingue.js` (dizionario, plurali, date).** Non e' un vezzo di
   organizzazione: e' l'unica parte dell'app che maneggia i soldi di venti
   persone, ed e' una funzione pura di sei cose. Da li' si prova con una prova
   unitaria sui numeri veri del campo 2026 (`test/fixture/campo-2026.json`)
@@ -114,7 +115,11 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   di rete a runtime, niente script di terze parti, niente CDN aggiuntivi,
   niente telemetria.
 - **Italiano** nel codice, nei commenti e nei messaggi di commit. Per
-  l'interfaccia vedi sopra: si scrive in italiano, ma passando dal dizionario.
+  l'interfaccia si scrive in italiano, ma passando da `lingue.js`: `L.t()`,
+  `frase()`, `L.data()`. **Nessun `'it-IT'` scritto a mano** — ce n'erano 32
+  sparsi in otto file, adesso sono zero e c'e' una prova che li conta.
+  `FEATURES.lingue` e' spenta finche' i dizionari non coprono tutta l'app:
+  non e' un difetto, e' una scelta.
 - **Nessun `localStorage.setItem` fuori da `salvaLocale`.** Un'eccezione dentro
   un `useEffect` smonta React e l'app sparisce. E niente immagini là dentro:
   quelle vanno nel magazzino.

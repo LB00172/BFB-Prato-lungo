@@ -44,6 +44,8 @@ const schedaImpostazioni = ({
   swVersion,
   syncStateRef,
   tecnicaOpen,
+  lingua,
+  setLingua,
   theme,
   toggleAskAlways,
   wipeLocal,
@@ -89,6 +91,27 @@ const schedaImpostazioni = ({
         </>
       )}
     </div>
+
+    {/* Lingua. Dietro FEATURES.lingue: finche' i dizionari non coprono tutta
+        l'app, offrire la scelta vorrebbe dire mostrare meta' schermata in una
+        lingua e meta' nell'altra. */}
+    {FEATURES.lingue && (
+    <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('lingua.titolo')}</h3>
+      <div className="grid grid-cols-3 gap-2">
+        {Object.keys(window.Lingue.LINGUE).map((k) => (
+          <button
+            key={k}
+            onClick={() => { setLingua(k); scriviLocale(LINGUA_KEY, k); }}
+            className={bottoneScelta('linguetta', 'sezione', lingua === k, 'minuscolo')}
+          >
+            {window.Lingue.LINGUE[k].nome}
+          </button>
+        ))}
+      </div>
+      <p className="text-[10px] text-gray-500 leading-snug">{L.t('lingua.nota')}</p>
+    </div>
+    )}
 
     {/* Aspetto */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
@@ -218,11 +241,11 @@ const schedaImpostazioni = ({
             {scorta && scorta.state && (
               <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 space-y-2">
                 <p className="text-[10px] text-[#5C4A3C] leading-snug">
-                  <span className="font-bold">Rete di sicurezza.</span> Il {new Date(scorta.at).toLocaleString('it-IT')} una
+                  <span className="font-bold">Rete di sicurezza.</span> Il {L.data(new Date(scorta.at), 'dataOra')} una
                   sincronizzazione ha tolto {scorta.perse === 1 ? 'una voce' : `${scorta.perse} voci`} da questo telefono, e
                   l'app ha messo da parte una copia di com'era prima.
                   {scorta.quando ? (
-                    <> La cancellazione è stata fatta il <span className="font-bold">{new Date(scorta.quando).toLocaleString('it-IT')}</span>
+                    <> La cancellazione è stata fatta il <span className="font-bold">{L.data(new Date(scorta.quando), 'dataOra')}</span>
                       {Date.now() - scorta.quando > PERDITA_RECENTE
                         ? <> — non adesso: questo telefono era indietro e l'ha saputo solo ora.</>
                         : '.'}
@@ -257,8 +280,8 @@ const schedaImpostazioni = ({
                     <li key={l.p} className="flex items-start justify-between gap-2 text-[10px] bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20">
                       <span className="text-[#2D392C] leading-snug">{descriviPath(l.p, st)}</span>
                       <span className="text-gray-500 shrink-0">
-                        {new Date(l.at).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
-                        {' '}{new Date(l.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                        {L.data(new Date(l.at), 'breve')}
+                        {' '}{L.data(new Date(l.at), 'ora')}
                       </span>
                     </li>
                   ))}
@@ -308,7 +331,7 @@ const schedaImpostazioni = ({
           // Raggruppate per giorno: leggere 400 righe di fila è inutile.
           const perGiorno = [];
           reg.forEach((r) => {
-            const g = new Date(r.at).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+            const g = L.data(new Date(r.at), 'completa');
             const ultimo = perGiorno[perGiorno.length - 1];
             if (ultimo && ultimo.giorno === g) ultimo.voci.push(r);
             else perGiorno.push({ giorno: g, voci: [r] });
@@ -327,7 +350,7 @@ const schedaImpostazioni = ({
                       {gruppo.voci.map((r, i) => (
                         <li key={r.p + r.at + i} className="flex items-start gap-2 text-[10px] bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20">
                           <span className="text-gray-500 shrink-0 w-10">
-                            {new Date(r.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                            {L.data(new Date(r.at), 'ora')}
                           </span>
                           <span className={`shrink-0 w-3 text-center ${r.k === 'd' ? 'text-red-700' : 'text-[#2D392C]'}`} title={r.k === 'd' ? 'cancellata' : 'modificata'}>
                             {r.k === 'd' ? '−' : '+'}

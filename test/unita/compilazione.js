@@ -222,6 +222,15 @@ const totaleAMano = Object.values(aMano).reduce((a, b) => a + b, 0);
 ok(`i bottoni scritti a mano restano ${totaleAMano}, quelli censiti`
   + (scostamenti.length ? ' — CAMBIATI: ' + scostamenti.join(', ') : ''), scostamenti.length === 0);
 
+// Le date passano tutte da L.data(): un 'it-IT' scritto a mano e' una data
+// che resta italiana quando l'app parla spagnolo, e non se ne accorge nessuno
+// finche' qualcuno non guarda quella schermata in quella lingua. Ce n'erano 32
+// sparsi in otto file (ROADMAP.md § 18).
+const conDateAMano = SORGENTI.filter((f) => /'it-IT'|"it-IT"/.test(leggi(f)));
+ok('nessuna data scritta a mano nei sorgenti'
+  + (conDateAMano.length ? ' — CE NE SONO IN: ' + conDateAMano.join(', ') : ''),
+  conDateAMano.length === 0);
+
 // Il nome della cache del service worker cambia a ogni build: se resta
 // indietro, i telefoni non ricevono l'aggiornamento.
 const sw = fs.readFileSync(path.join(RADICE, 'sw.js'), 'utf8');

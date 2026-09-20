@@ -1465,7 +1465,7 @@ assegnando, non solo **a chi**.
 
 ---
 
-## 18. Più lingue (IT, ES, FR, poi EN, DE)
+## 18. Più lingue — la macchina c'è (20 settembre 2026)
 
 **Decisione presa, e cambia un intento iniziale.** L'app era stata scritta in
 italiano e basta, per una ragione buona: la usavano venti amici italiani. Il
@@ -1512,6 +1512,97 @@ accorga** che manca una stringa, e la mostri vuota in mezzo a una schermata.
 - **Le costanti che non si traducono**: le regole del campo (§ 40) sono un
   testo verbatim di Lorenzo. Nella versione pubblica non esistono proprio —
   sono contenuto della room, non dell'app.
+
+### Com'è venuta, e due premesse che erano sbagliate
+
+`lingue.js`, fuori da `src/` come `conti.js`: dizionario, plurali, date e la
+regola che si prova. `test/unita/lingue.js` (44 verifiche) e
+`test/e2e/lingue.js` (17).
+
+**Prima premessa sbagliata: «le date sono già centralizzate in
+`src/30-tema-e-formati.jsx`, è un punto solo».** Non era vero. Erano **32
+`'it-IT'` sparsi in otto sorgenti**, in **dodici forme diverse**. Adesso le
+dodici forme hanno un nome (`completa`, `breve`, `ora`, `dataOra`…) e i 32
+punti passano da `L.data(d, forma)`. Il DOM è rimasto identico al carattere su
+tutte e diciassette le schermate, quindi lo spostamento non ha cambiato niente
+per nessuno — ma senza guardare prima, il piano avrebbe sottostimato il lavoro.
+
+**Seconda premessa sbagliata: «il lavoro grosso è passare `t` a quattordici
+schede».** Non serve. Le schede leggono già dal loro ambito `bottone`,
+`money`, `FEATURES`: `L` è la stessa cosa. Vive in `10-fondamenta.jsx` e
+**la riassegna `App()` a ogni disegno**, dal suo stato — non è «una variabile
+globale letta a caso», è una variabile globale *scritta dal disegno prima che
+le schede la leggano*. Cambiare lingua cambia uno stato di React, React
+ridisegna, e il disegno vede il valore appena messo. Costo: zero dipendenze
+nuove in quattordici file.
+
+Cosa la romperebbe, ed è scritto nel codice: trasformare una scheda in un
+componente memoizzato. Quello salterebbe il ridisegno. Le schede non sono
+componenti, ed è anche per questo (§ 14).
+
+### L'enfasi dentro una frase
+
+Una frase lunga ha spesso una parte in grassetto, e spezzarla in tre stringhe
+non funziona: l'ordine delle parole cambia da lingua a lingua e il pezzo in
+mezzo finisce nel posto sbagliato. La frase resta **intera** nel dizionario,
+con la parte da evidenziare fra asterischi:
+
+    'Il compito dice *chi fa cosa*, non quanto costa'
+
+La regola che la spezza sta in `lingue.js` (pura, provata); il disegno sta in
+`src/50-interfaccia.jsx` (`frase('compiti.spiegazione')`). È lo stesso taglio
+di sempre: la regola fuori, il JSX dentro.
+
+### Cosa è tradotto, e cosa no
+
+**Tradotto:** i titoli delle quindici aree, i quattro gruppi del menu, tutta
+la scheda «Chi fa cosa», il selettore della lingua. **35 chiavi**, in italiano,
+spagnolo e francese.
+
+**Non tradotto:** tutto il resto — restano **circa 1.050 testi** contati nei
+sorgenti. Per questo `FEATURES.lingue` è **spenta**: mezza schermata in
+spagnolo e mezza in italiano è peggio che non offrire la scelta. Accesa, la
+prova end-to-end verifica che toccando «Español» lo schermo cambi **senza
+riaprire l'app**, che le date seguano la lingua, che la scelta resista al
+riavvio, e che quello che scrive l'utente **non** venga tradotto.
+
+### La prova che protegge il resto del lavoro
+
+Il rischio non è tradurre male — quello si vede. È che manchi una stringa e il
+meccanismo non se ne accorga: a schermo resta uno spazio bianco, e uno spazio
+bianco non lo segnala nessuno. La regola va in **due direzioni**: ogni chiave
+italiana esiste nelle altre lingue, e nessuna lingua ha chiavi che l'italiano
+non ha — una chiave che avanza è una traduzione che nessuno mostrerà mai.
+
+Ci sono altri tre controlli che sembrano paranoia e non lo sono: nessuna
+traduzione **vuota**, nessuna voce **rimasta in italiano** (una chiave copiata
+e non tradotta passa tutti gli altri controlli), e i **plurali che restano
+funzioni** — se uno diventa una stringa, il numero sparisce.
+
+Sette sabotaggi, sette rossi. Più tre sulla prova end-to-end, fra cui quello
+che conta: **`L` che non si riassegna** — la lingua smette di cambiare senza
+ricaricare, ed è esattamente il difetto che il § 18 nominava prima di scrivere
+una riga.
+
+### Un difetto trovato dalla prova
+
+`new Date(null)` **non** è una data non valida: è il primo gennaio 1970. Una
+data assente sarebbe comparsa a schermo come «giovedì 1 gennaio» — una bugia
+con l'aria di un dato. Adesso resta vuota.
+
+### Quanto resta
+
+| | |
+| --- | --- |
+| chiavi nel dizionario | 35 |
+| testi ancora da portare nel dizionario | ~1.050 |
+| date centralizzate | 32 su 32 |
+
+Il lavoro che resta è **meccanico e a fette**: una scheda alla volta, con la
+prova unitaria che diventa rossa appena una traduzione manca. Le misure di
+testo del § 13 si fanno nello stesso passaggio, perché sono gli stessi file.
+Quando i dizionari coprono tutto, si accende `FEATURES.lingue` — e solo
+allora ha senso il § 3 (Google Play).
 
 ### Quanto costa davvero
 

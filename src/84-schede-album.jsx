@@ -33,7 +33,7 @@ const schedaArchivio = ({
                 <div className="min-w-0">
                   <p className="font-rustic text-base text-[#2D392C] truncate">{a.name}</p>
                   <p className="text-[10px] text-gray-500">
-                    {a.from === a.to ? a.from : `${a.from} → ${a.to}`} · chiuso il {new Date(a.closedAt).toLocaleDateString('it-IT')}
+                    {a.from === a.to ? a.from : `${a.from} → ${a.to}`} · chiuso il {L.data(new Date(a.closedAt), 'numerica')}
                   </p>
                 </div>
                 <span className="font-rustic font-bold text-[#2D392C] shrink-0">{money((a.totals && a.totals.overall) || 0)} €</span>

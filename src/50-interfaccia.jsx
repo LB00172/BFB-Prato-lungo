@@ -177,3 +177,16 @@ const bottoneScelta = (forma, tono, acceso, misura, extra) => {
     extra || '',
   ].filter(Boolean).join(' ');
 };
+
+// ---------- Frasi con una parte in grassetto ----------
+// Il dizionario tiene la frase intera, con la parte da evidenziare fra
+// asterischi: 'Il compito dice *chi fa cosa*, non quanto costa'. Spezzarla in
+// tre stringhe non funzionerebbe — l'ordine delle parole cambia da lingua a
+// lingua e il pezzo in mezzo finirebbe nel posto sbagliato.
+//
+// Uso: {frase('compiti.spiegazione')}
+const frase = (chiave, ...resto) => L.pezzi(chiave, ...resto).map((p, i) => (
+  p.grassetto
+    ? <span key={i} className="font-bold">{p.testo}</span>
+    : <React.Fragment key={i}>{p.testo}</React.Fragment>
+));

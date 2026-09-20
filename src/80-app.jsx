@@ -1,4 +1,15 @@
 function App() {
+  // ---------- La lingua ----------
+  // Dietro FEATURES.lingue finche' i dizionari non sono completi: mostrare
+  // meta' app in spagnolo e meta' in italiano e' peggio che non offrirla.
+  const [lingua, setLingua] = useState(() => {
+    const salvata = localStorage.getItem(LINGUA_KEY);
+    return salvata && window.Lingue.LINGUE[salvata] ? salvata : window.Lingue.PREDEFINITA;
+  });
+  // Si riassegna QUI, prima di qualunque disegno: e' cio' che fa vedere la
+  // lingua nuova senza ricaricare (vedi il commento su "L" in 10-fondamenta).
+  L = window.Lingue.crea(FEATURES.lingue ? lingua : window.Lingue.PREDEFINITA);
+
   const [locked, setLocked] = useState(() => !isUnlocked());
   const [lockReason, setLockReason] = useState('');
   const [showSplash, setShowSplash] = useState(true);
@@ -615,14 +626,14 @@ function App() {
   const esportaRegistro = () => {
     const st = syncStateRef.current;
     const righe = logLeggi().map((r) => [
-      new Date(r.at).toLocaleString('it-IT'),
+      L.data(new Date(r.at), 'dataOra'),
       r.o === 'io' ? 'questo telefono' : 'sincronizzazione',
       r.k === 'd' ? 'cancellata' : 'modificata',
       sezioneDiPath(r.p),
       descriviPath(r.p, st),
       r.p,
     ].join('\t'));
-    const testo = `Registro modifiche — ${BRAND.appTitle}\nGenerato il ${new Date().toLocaleString('it-IT')}\n\n` +
+    const testo = `Registro modifiche — ${BRAND.appTitle}\nGenerato il ${L.data(new Date(), 'dataOra')}\n\n` +
       'Data e ora\tOrigine\tAzione\tSezione\tVoce\tPercorso\n' + righe.join('\n') + '\n';
     const blob = new Blob([testo], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -643,7 +654,7 @@ function App() {
   const annullaSync = () => {
     const r = load(RESCUE_KEY, null);
     if (!r || !r.state) { window.alert('Non c\'è nessuna copia di scorta da ripristinare.'); return; }
-    const quando = new Date(r.at).toLocaleString('it-IT');
+    const quando = L.data(new Date(r.at), 'dataOra');
     if (!window.confirm(
       `Annullare la sincronizzazione del ${quando}?\n\n` +
       `${r.perse === 1 ? 'Tornerà 1 voce che era sparita' : `Torneranno ${r.perse} voci che erano sparite`}, e la copia di prima verrà ` +
@@ -1369,7 +1380,7 @@ function App() {
   };
 
   // Nome del giorno per i messaggi di conferma.
-  const nomeGiorno = (ds) => parseDate(ds).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+  const nomeGiorno = (ds) => L.data(parseDate(ds), 'completa');
 
   // "Tutti a pranzo/cena" cambia le presenze di TUTTI in un colpo solo, e la
   // modifica arriva su ogni telefono: prima di farlo si chiede.
@@ -1509,7 +1520,7 @@ function App() {
 
   const removeCompito = (id) => {
     const c = compiti.find((x) => x.id === id);
-    if (c && !window.confirm(`Togliere il compito "${c.testo}"?`)) return;
+    if (c && !window.confirm(L.t('compiti.confermaTogli', c.testo))) return;
     setCompiti((prev) => prev.filter((x) => x.id !== id));
   };
 
@@ -1938,7 +1949,7 @@ function App() {
           const dateStr = toDateStr(d);
           const isSelected = dateStr === selectedDateStr;
           const isCampPeriod = dateStr >= CAMP_START && dateStr <= CAMP_END;
-          const label = d.toLocaleDateString('it-IT', { weekday: 'short' });
+          const label = L.data(d, 'settimanaSola');
           return (
             <button
               key={dateStr}
@@ -2282,7 +2293,7 @@ function App() {
         // file né quanto stava buttando via.
         const quando = d.exportedAt ? new Date(d.exportedAt) : null;
         const eta = quando && !isNaN(quando.getTime())
-          ? `Backup del ${quando.toLocaleString('it-IT')}`
+          ? `Backup del ${L.data(quando, 'dataOra')}`
           : 'Backup senza data';
         const dentro = `Contiene ${(d.members || []).length} membri, ${(d.purchases || []).length} spese, ` +
           `${Object.keys(d.campData || {}).length} giorni.`;
@@ -2555,22 +2566,24 @@ function App() {
     );
   }
 
+  // I titoli delle aree passano dal dizionario. Si ricalcolano a ogni disegno
+  // perche' "L" e' stata appena riassegnata: cambiare lingua li cambia subito.
   const tabs = {
-    calendario: 'Calendario',
-    menu: 'Menù',
-    membri: 'Membri',
-    presenze: 'Presenze',
-    spesa: 'Spese Totali',
-    compiti: 'Chi fa cosa',
-    lista: 'Lista della Spesa',
-    attrezzatura: 'Attrezzatura',
-    regole: 'Regole',
-    dotazioni: 'Dotazioni personali',
-    galleria: 'Galleria',
-    archivio: 'Archivio',
-    gioco: 'Aiuta Bandy',
-    guida: 'Come funziona',
-    impostazioni: 'Impostazioni',
+    calendario: L.t('area.calendario'),
+    menu: L.t('area.menu'),
+    membri: L.t('area.membri'),
+    presenze: L.t('area.presenze'),
+    spesa: L.t('area.spesa'),
+    compiti: L.t('area.compiti'),
+    lista: L.t('area.lista'),
+    attrezzatura: L.t('area.attrezzatura'),
+    regole: L.t('area.regole'),
+    dotazioni: L.t('area.dotazioni'),
+    galleria: L.t('area.galleria'),
+    archivio: L.t('area.archivio'),
+    gioco: L.t('area.gioco'),
+    guida: L.t('area.guida'),
+    impostazioni: L.t('area.impostazioni'),
   };
 
   // Icona per ogni area: nel menu aiuta a trovare la voce senza leggerle tutte.
@@ -2584,12 +2597,12 @@ function App() {
   // Il menu raggruppa le aree per momento d'uso: prima quello che si tocca
   // ogni giorno, poi i soldi, poi le cose del gruppo, in fondo il resto.
   const MENU_GROUPS = [
-    { title: 'Pianificazione', items: ['calendario', 'menu', 'presenze'] },
+    { title: L.t('menu.pianificazione'), items: ['calendario', 'menu', 'presenze'] },
     // "Chi fa cosa" viene PRIMA della lista, ed e' l'ordine dei fatti: ci si
     // divide i compiti, poi si compra, poi si registra la spesa.
-    { title: 'Spese', items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa'] },
-    { title: 'Il gruppo', items: ['membri', 'regole', 'dotazioni', 'galleria'] },
-    { title: 'Altro', items: ['gioco', 'archivio', 'guida', 'impostazioni'] },
+    { title: L.t('menu.spese'), items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa'] },
+    { title: L.t('menu.gruppo'), items: ['membri', 'regole', 'dotazioni', 'galleria'] },
+    { title: L.t('menu.altro'), items: ['gioco', 'archivio', 'guida', 'impostazioni'] },
   ];
 
   // Acquirente: si sceglie dai membri, non si scrive. Un nome digitato a mano
@@ -2896,7 +2909,7 @@ function App() {
               <p className="text-[11px] text-[#5C4A3C] leading-snug">
                 <span className="font-bold">
                   Qualcuno ha appena cancellato {lostSync.n} voci
-                  {lostSync.quando ? ` (${new Date(lostSync.quando).toLocaleString('it-IT', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })})` : ''}.
+                  {lostSync.quando ? ` (${L.data(new Date(lostSync.quando), 'dataOraBreve')})` : ''}.
                 </span>
                 {lostSync.che ? ` ${lostSync.che}.` : ''}
                 {' '}Se non è stato qualcuno di voi, annulla: torna tutto com'era, su tutti i telefoni.
@@ -2986,7 +2999,7 @@ function App() {
 
         {/* ---------- IMPOSTAZIONI ---------- */}
         {activeTab === 'impostazioni' && schedaImpostazioni({
-          admin, adminErr, adminPwd, annullaSync, askAlways, bloccoOpen, campData, campoInCorso, cloud, datiOpen, diagTick, entraAdmin, esciAdmin, esportaRegistro, exportData, fotoDove, goTo, isDark, isOnline, lockNow, logOpen, members, metaRef, photoCap, purchases, readyChecks, readyOk, receipts, setAdminErr, setAdminPwd, setBloccoOpen, setDatiOpen, setDiagTick, setLogOpen, setLostSync, setPhotoCap, setTecnicaOpen, setTheme, swVersion, syncStateRef, tecnicaOpen, theme, toggleAskAlways, wipeLocal,
+          admin, adminErr, adminPwd, annullaSync, askAlways, bloccoOpen, campData, campoInCorso, cloud, datiOpen, diagTick, entraAdmin, esciAdmin, esportaRegistro, exportData, fotoDove, goTo, isDark, isOnline, lingua, lockNow, logOpen, members, metaRef, photoCap, purchases, readyChecks, readyOk, receipts, setAdminErr, setAdminPwd, setBloccoOpen, setDatiOpen, setDiagTick, setLingua, setLogOpen, setLostSync, setPhotoCap, setTecnicaOpen, setTheme, swVersion, syncStateRef, tecnicaOpen, theme, toggleAskAlways, wipeLocal,
         })}
       </main>
 
@@ -3181,9 +3194,9 @@ function App() {
               Quelle <span className="font-bold">sul telefono</span> ci sono anche senza linea.
             </p>
             {snapList.map((s) => {
-              const giorno = parseDate(s.id.slice(0, 10)).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' });
+              const giorno = L.data(parseDate(s.id.slice(0, 10)), 'settimanaLunga');
               const fascia = s.id.slice(11) === '00' ? 'mattina' : s.id.slice(11) === '12' ? 'pomeriggio' : '';
-              const ora = s.at ? new Date(s.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
+              const ora = s.at ? L.data(new Date(s.at), 'ora') : '';
               return (
                 <button
                   key={s.dove + s.id}
@@ -3262,7 +3275,7 @@ function App() {
           <div className="shrink-0 w-full max-w-md flex items-center justify-between gap-3 pt-3">
             <span className="text-[11px] text-white/70 truncate">
               {viewPhoto.by || 'anonimo'}
-              {viewPhoto.at ? ` · ${new Date(viewPhoto.at).toLocaleDateString('it-IT')}` : ''}
+              {viewPhoto.at ? ` · ${L.data(new Date(viewPhoto.at), 'numerica')}` : ''}
             </span>
             <span className="flex items-center gap-2 shrink-0">
               <button
