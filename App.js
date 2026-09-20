@@ -3712,10 +3712,9 @@ function App() {
   }, [cloud.connected, cloud.empty]);
 
   // ---------- Dati per giorno ----------
-  const getDayData = dateStr => ({
-    ...initialDayState(),
-    ...(campData[dateStr] || {})
-  });
+  // Le regole pure delle presenze stanno in presenze.js: qui restano i
+  // gestori, che sono l'unica parte che tocca lo stato.
+  const getDayData = dateStr => Presenze.giorno(campData, dateStr);
   const updateDayData = (dateStr, field, value) => {
     setCampData(prev => ({
       ...prev,
@@ -3734,47 +3733,13 @@ function App() {
   // arrivano allo stesso risultato. Se un aggiornamento in arrivo cambia i
   // pasti di un giorno bloccato, l'app li rimette com'erano e ripubblica la
   // correzione, così il blocco vale davvero ovunque e non solo qui.
-  const giornoBloccato = dateStr => {
-    const b = (campData[dateStr] || {}).bloccato;
-    return b && typeof b === 'object' ? b : null;
-  };
-
-  // Rimette a posto i pasti dei giorni bloccati. Restituisce lo stesso oggetto
-  // se non c'era niente da correggere, così non si scatenano giri a vuoto.
-  const applicaBlocchi = cd => {
-    let toccato = false;
-    const out = {};
-    Object.keys(cd || {}).forEach(d => {
-      const day = cd[d];
-      out[d] = day;
-      const b = day && day.bloccato;
-      if (!b || typeof b !== 'object' || !b.meals) return;
-      if (JSON.stringify(day.meals || {}) === JSON.stringify(b.meals)) return;
-      out[d] = {
-        ...day,
-        meals: {
-          ...b.meals
-        }
-      };
-      toccato = true;
-    });
-    return toccato ? out : cd;
-  };
+  const giornoBloccato = dateStr => Presenze.blocco(campData, dateStr);
+  const applicaBlocchi = cd => Presenze.applicaBlocchi(cd);
 
   // Applica una nuova mappa di pasti tenendo allineata la copia bloccata:
   // le riparazioni d'identità (doppioni, presenze orfane) devono valere anche
   // sui giorni chiusi, altrimenti quelle presenze sparirebbero dai conti.
-  const conBlocco = (day, meals) => day.bloccato && typeof day.bloccato === 'object' ? {
-    ...day,
-    meals,
-    bloccato: {
-      ...day.bloccato,
-      meals
-    }
-  } : {
-    ...day,
-    meals
-  };
+  const conBlocco = (day, meals) => Presenze.conBlocco(day, meals);
 
   // ---------- Il blocco protegge il giorno, non solo la sua riga ----------
   // Le quote non escono dai pasti: escono da pasti PER membri. Congelare i
@@ -3782,11 +3747,7 @@ function App() {
   // giorno non cambia e poi lasciarlo cambiare lo stesso — basta eliminare una
   // persona, o dichiararla bambina, e le quote di quel giorno si riscrivono
   // tutte. Il blocco, per valere qualcosa, deve fermare anche questo.
-  const giorniBloccatiDi = id => Object.keys(campData).filter(d => {
-    const b = (campData[d] || {}).bloccato;
-    const v = b && typeof b === 'object' && b.meals && b.meals[String(id)];
-    return !!(v && (v.lunch || v.dinner));
-  }).sort();
+  const giorniBloccatiDi = id => Presenze.giorniBloccatiDi(campData, id);
 
   // Guardia per i tasti che toccano un membro: dice di no e spiega quali
   // giorni lo trattengono.
@@ -4085,13 +4046,7 @@ function App() {
     window.alert(`I conti del campo sono chiusi: ${azione} non è possibile.\n\n` + 'Serve per non far cambiare gli importi dei rimborsi già in corso. ' + 'Per modificare, riapri i conti da Spese Totali → Dati (modalità tecnica).');
     return true;
   };
-  const getMeal = (dateStr, memberId) => {
-    const day = campData[dateStr];
-    return day && day.meals && day.meals[memberId] || {
-      lunch: false,
-      dinner: false
-    };
-  };
+  const getMeal = (dateStr, memberId) => Presenze.pasto(campData, dateStr, memberId);
   const toggleMeal = (dateStr, memberId, mealType) => {
     if (giornoBloccato(dateStr)) return;
     setCampData(prev => {
@@ -4158,29 +4113,7 @@ function App() {
   // vecchio, spariscono dall'elenco e dai conti senza che nessuno se ne accorga.
   // È esattamente il modo in cui i pasti "svaniscono" pur avendo l'elenco
   // membri giusto. Qui si trovano e si riattaccano alla persona giusta.
-  const presenzeOrfane = () => {
-    const vivi = new Set(members.map(m => m.id));
-    const ex = exMembri();
-    const per = new Map();
-    Object.keys(campData).forEach(d => {
-      const meals = campData[d] && campData[d].meals || {};
-      Object.keys(meals).forEach(id => {
-        if (vivi.has(id)) return;
-        const v = meals[id];
-        if (!v || !v.lunch && !v.dinner) return; // voce a zero: non è una presenza
-        const cur = per.get(id) || {
-          id,
-          nome: ex[id] || '',
-          pasti: 0,
-          giorni: []
-        };
-        cur.pasti += (v.lunch ? 1 : 0) + (v.dinner ? 1 : 0);
-        cur.giorni.push(d);
-        per.set(id, cur);
-      });
-    });
-    return [...per.values()].sort((a, b) => b.pasti - a.pasti);
-  };
+  const presenzeOrfane = () => Presenze.orfane(campData, members, exMembri());
   const riassegnaOrfane = (orfano, nuovoId) => {
     const dest = members.find(m => m.id === nuovoId);
     if (!dest) {

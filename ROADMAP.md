@@ -1031,14 +1031,36 @@ modo**, e il § 14 fin qui ha insegnato a distinguere due casi:
   ingressi, e una prova unitaria sui numeri veri che vale più di qualunque
   prova a schermo.
 
-**Le presenze sono il secondo caso, non il primo.** Un `usaPresenze` che si
-porti dietro lo stato riceverebbe `campData`, `members`, `blocchi`, `freeDays`,
-`sepDays` e i loro cinque setter — dodici dipendenze per togliere quattro
-variabili di stato. Non ha staccato niente. Quello che invece si stacca bene è
-la parte **pura**: `presenzeOrfane`, `giornoBloccato`, `giornoGratis`,
-`getMeal`, `getDayData` sono funzioni di (presenze, membri, blocchi, giorni
-gratis) e basta. Vanno in un `presenze.js` accanto a `conti.js`, provate sui
-dati veri del campo — dove fra l'altro ci sono presenze orfane vere.
+### Quinto taglio: le regole delle presenze (20 settembre 2026)
+
+**`presenze.js`, 123 righe**, accanto a `conti.js`. Era la prova che la scelta
+del *modo* conta più della fatica: un `usaPresenze` che si portasse dietro lo
+stato avrebbe ricevuto `campData`, `members`, `blocchi`, `freeDays`, `sepDays`
+e i loro cinque setter — **dodici dipendenze per togliere quattro variabili**.
+Non avrebbe staccato niente.
+
+Quello che si stacca bene è la parte **pura**, e sono le regole da cui
+dipendono le quote: `giorno`, `pasto`, `blocco`, `applicaBlocchi`, `conBlocco`,
+`giorniBloccatiDi`, `orfane`. In `App()` restano i gestori — i tasti, i modali,
+le conferme — che ora rinviano lì. `80-app.jsx` scende a **3.237 righe**.
+
+**`test/unita/presenze.js`, 26 verifiche, due fonti e due mestieri:**
+
+- il **campo vero** prova che su dati sani non si inventa niente — zero
+  presenze orfane, e 413 pasti letti identici a quelli nei dati. Un falso
+  allarme qui manderebbe venti persone a cercare un problema che non c'è;
+- i **guasti costruiti a mano** provano quello che nel 2026, per fortuna, non
+  è capitato: un id rimasto orfano dopo un'eliminazione, una voce a zero che
+  non è una presenza, un blocco scritto male, una riparazione d'identità su un
+  giorno chiuso.
+
+Sei sabotaggi, sei rossi. Il più istruttivo: `applicaBlocchi` deve restituire
+**lo stesso oggetto** quando non c'è niente da correggere — uno nuovo a ogni
+giro farebbe ripartire all'infinito gli effetti che lo guardano.
+
+E una correzione alla prova stessa: rompendo `conBlocco` moriva con un
+`TypeError` invece di dire quale regola si era rotta. Adesso legge in modo
+difensivo e il guasto ha un nome.
 
 **L'archivio no, in nessuno dei due modi.** Sembrava il candidato più facile —
 «legge tutto ma è letto da poco» — e invece è il peggiore: `closeCamp` e
@@ -1048,6 +1070,16 @@ setter non ha staccato niente, ha solo spostato le righe.
 **La sincronizzazione per ultima**, quando tutto il resto è fuori: è l'unica
 parte che ha già cancellato il lavoro di qualcuno una volta, e la si tocca
 quando attorno c'è meno roba possibile.
+
+### Dove siamo
+
+| | righe |
+| --- | --- |
+| all'inizio, un file solo | 8.080 |
+| `src/80-app.jsx` oggi | **3.237** |
+| fuori: `conti.js` + `presenze.js` | 507 |
+| hook: gioco, galleria, scontrini | 452 |
+| schede | 2.861 |
 
 Da rifare quando si tocca: le **verifiche su iPhone** (§ 10), perche' un
 sorgente nuovo cambia `App.js` e quindi `CACHE_NAME`.
