@@ -7,6 +7,38 @@ const { apri, ok, fine, attendi } = require('../lib/app');
 const GIORNO = 24 * 60 * 60 * 1000;
 const ds = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+// I giorni che il bollettino finto deve coprire.
+//
+// Il Calendario apre sul giorno di inizio campo, non su oggi: con una finestra
+// "oggi piu' o meno trenta giorni" la prova funzionava finche' il campo era
+// vicino, e dal 10 settembre 2026 ha cominciato a fallire da sola — undici
+// verifiche rosse per un motivo che col meteo non c'entrava niente. Una prova
+// che scade col calendario non e' una rete di sicurezza: e' una sveglia che
+// suona a caso.
+//
+// Le date del campo si leggono dal sorgente invece di riscriverle: se un anno
+// cambiano, la prova le segue.
+const CONF = require('fs').readFileSync(
+  require('path').resolve(__dirname, '..', '..', 'src', '40-configurazione.jsx'), 'utf8');
+const dataDi = (nome) => {
+  const m = CONF.match(new RegExp('const ' + nome + " = '(\\d{4}-\\d{2}-\\d{2})'"));
+  if (!m) throw new Error('non trovo ' + nome + ' in src/40-configurazione.jsx');
+  const [a, me, g] = m[1].split('-').map(Number);
+  return new Date(a, me - 1, g).getTime();
+};
+const INIZIO = dataDi('CAMP_START');
+const FINE = dataDi('CAMP_END');
+const oggi = Date.now();
+// Dal piu' indietro fra "un mese fa" e "il giorno prima del campo", al piu'
+// avanti fra "fra un mese" e "il giorno dopo il campo".
+const DA = Math.min(oggi - 30 * GIORNO, INIZIO - GIORNO);
+const A = Math.max(oggi + 30 * GIORNO, FINE + GIORNO);
+const giorniCoperti = () => {
+  const out = [];
+  for (let t = DA; t <= A; t += GIORNO) out.push(ds(new Date(t)));
+  return out;
+};
+
 // Bollettino finto con tutti i giorni uguali: cosi' la verifica sull'interfaccia
 // non dipende da quale giorno risulti selezionato. La finestra e' larga (dal
 // mese scorso al mese prossimo) perche' il Calendario apre sul giorno di inizio
@@ -20,8 +52,7 @@ function bollettino(tmax, tmin, code, rain, opz) {
   const time = [], weather_code = [], temperature_2m_max = [], temperature_2m_min = [], precipitation_probability_max = [];
   const precipitation_sum = [], precipitation_hours = [], precipitation_probability_mean = [];
   const hTime = [], hCode = [], hProb = [];
-  for (let i = -30; i <= 30; i++) {
-    const g = ds(new Date(Date.now() + i * GIORNO));
+  giorniCoperti().forEach((g) => {
     time.push(g);
     weather_code.push(code); temperature_2m_max.push(tmax);
     temperature_2m_min.push(tmin); precipitation_probability_max.push(rain);
@@ -32,7 +63,7 @@ function bollettino(tmax, tmin, code, rain, opz) {
       hTime.push(g + 'T' + String(h).padStart(2, '0') + ':00');
       hCode.push(orario(h)); hProb.push(rain);
     }
-  }
+  });
   // "elevation" e' la quota che il modello ha usato davvero: e' il modo di
   // accorgersi che si sta guardando il meteo del paese invece che del prato.
   return {
@@ -47,9 +78,9 @@ function bollettino(tmax, tmin, code, rain, opz) {
 // si riconosce a colpo d'occhio se rimane appiccicata allo schermo.
 function inCache(quando) {
   const byDate = {};
-  for (let i = -30; i <= 30; i++) {
-    byDate[ds(new Date(Date.now() + i * GIORNO))] = { code: 0, tmax: 99, tmin: 88, rain: 3 };
-  }
+  giorniCoperti().forEach((g) => {
+    byDate[g] = { code: 0, tmax: 99, tmin: 88, rain: 3 };
+  });
   return { fetchedAt: quando, stampa: quando, byDate, lat: 42.059, lon: 13.1 };
 }
 

@@ -33,6 +33,7 @@ const SORGENTI = [
   // PRIMA di 80-app.jsx perche' App() li chiama mentre si disegna, non dopo.
   '75-usa-gioco.jsx',        // "Aiuta Bandy": stato, classifica, partite
   '76-usa-galleria.jsx',     // foto del campo: ascolto, caricamento, album, PDF ricordo
+  '77-usa-scontrini.jsx',    // foto degli scontrini: magazzino, migrazione, potatura
   '80-app.jsx',              // function App(): stato, sincronizzazione, conti, gestori
   // Le schede: disegno uscito da App(), un file per area. Stanno DOPO
   // 80-app.jsx e va bene: sono `const` che App() chiama solo al disegno,

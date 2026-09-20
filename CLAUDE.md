@@ -49,7 +49,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | --- | --- |
 | `src/*.jsx` | i sorgenti, incollati **nell'ordine elencato in `build.js`**. I numeri vanno di dieci in dieci per poter infilare pezzi in mezzo |
 | `src/80-app.jsx` | `function App()`: stato, sincronizzazione, gestori. I conti non stanno più qui |
-| `src/7*-usa-*.jsx` | lo **stato** uscito da `App()`: hook (`usaGioco`, `usaGalleria`) che si portano dietro i loro `useState`. Tengono stato e **non disegnano** |
+| `src/7*-usa-*.jsx` | lo **stato** uscito da `App()`: hook (`usaGioco`, `usaGalleria`, `usaScontrini`) che si portano dietro i loro `useState`. Tengono stato e **non disegnano** |
 | `src/8*-schede-*.jsx` | il **disegno** delle schede, uscito da `App()`. Non sono componenti React: sono funzioni che restituiscono JSX e ricevono le dipendenze in un oggetto. Disegnano e **non tengono stato** |
 | `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneScelta` (i chip accesi/spenti) |
 | `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
@@ -88,15 +88,27 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   la scheda «Da acquistare» era vuota perché nessuno scrive due volte. La
   tabella non è servita. Lo stesso è capitato al §11, sopravvalutato finché non
   ho letto `firebase-sync.js` riga per riga.
+- **Una prova che dipende da "oggi" scade da sola.** `e2e/meteo` costruiva il
+  bollettino finto su «oggi ±30 giorni», ma il Calendario apre sul giorno di
+  inizio campo: a settembre 2026 sono diventate undici verifiche rosse senza
+  che nessuno avesse toccato il meteo. Se una prova ha bisogno di una data,
+  la prende dal campo (`CAMP_START`/`CAMP_END` in `src/40-configurazione.jsx`),
+  non dall'orologio.
 - **Un controllo che chiede dei dati non vale quando i dati non ci sono.**
   «Pronto per il campo» chiedeva dei membri, ma chiudere il campo azzera le
   liste: l'avviso restava per sempre su un telefono che stava benissimo. Ogni
   avviso va chiesto anche al contrario — *quando NON deve comparire?*
 - **Le foto degli scontrini NON sono in `localStorage`.** Stanno nel magazzino
-  (`magazzino-foto.js`, IndexedDB) e arrivano **dopo** il primo disegno. Chi
-  scrive un effetto che le guarda deve metterle fra le dipendenze, altrimenti
-  al primo giro non c'è ancora niente: è così che la potatura delle foto
-  orfane era smessa di funzionare senza che si vedesse.
+  (`magazzino-foto.js`, IndexedDB), le governa `src/77-usa-scontrini.jsx`, e
+  arrivano **dopo** il primo disegno. Chi scrive un effetto che le guarda deve
+  metterle fra le dipendenze, altrimenti al primo giro non c'è ancora niente:
+  è così che la potatura delle foto orfane era smessa di funzionare senza che
+  si vedesse.
+- **Non tutto si stacca allo stesso modo.** Stato isolato (gioco, galleria,
+  scontrini) → hook in `src/7*-usa-*.jsx`, e si prova col DOM identico. Logica
+  pura (i conti) → file fuori da `src/`, e si prova coi numeri veri. Scegliere
+  il modo sbagliato produce un hook con venti dipendenze, che non ha staccato
+  niente: ha solo spostato le righe.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.

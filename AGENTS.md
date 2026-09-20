@@ -83,11 +83,11 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 - **Le regole Firestore a utente condiviso sono il modello scelto** per un campo
   solo. L'isolamento fra campi diversi è previsto per la versione pubblica —
   vedi `ROADMAP.md`, non è una svista.
-- **`src/80-app.jsx` è ancora un file da ~3.700 righe.** Lo sappiamo: era un
-  file solo da 8.080. Il disegno delle schede è uscito in `src/8*-schede-*.jsx`
-  e lo stato sta uscendo in `src/7*-usa-*.jsx` (`usaGioco`, `usaGalleria`), un
-  hook alla volta. Quello che resta dentro è ciò che tocca i soldi — presenze,
-  spese, sincronizzazione, conti — e si sposta con la stessa prova, non
+- **`src/80-app.jsx` è ancora un file da ~3.300 righe.** Lo sappiamo: era un
+  file solo da 8.080. Il disegno delle schede è uscito in `src/8*-schede-*.jsx`,
+  lo stato sta uscendo in `src/7*-usa-*.jsx` (`usaGioco`, `usaGalleria`,
+  `usaScontrini`) e i conti sono in `conti.js`. Quello che resta dentro è
+  presenze, spese e sincronizzazione, e si sposta con le stesse prove — non
   tagliando righe. Non è una scoperta, è la voce §14 di `ROADMAP.md`.
 - **I conti stanno in `conti.js`, fuori da `src/`.** Non e' un vezzo di
   organizzazione: e' l'unica parte dell'app che maneggia i soldi di venti

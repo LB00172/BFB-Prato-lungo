@@ -2613,6 +2613,170 @@ const usaGalleria = ({
     soloNome
   };
 };
+// ---------- Le foto degli scontrini ----------
+//
+// Terzo pezzo di stato che esce da App() (ROADMAP.md § 14), e il naturale
+// seguito del § 19: le foto non stanno piu' in localStorage ma nel magazzino
+// (IndexedDB), e tutto quello che serve a farle vivere — la migrazione dalla
+// vecchia chiave, la scrittura del solo cambiamento, la potatura delle
+// orfane, l'arrivo dal cloud, lo scatto — era sparso in mezzo ai conti.
+//
+// Riceve le tre liste che POSSONO avere uno scontrino. Servono a una cosa
+// sola: sapere quali foto non appartengono piu' a niente. Se se ne dimentica
+// una, le foto di quelle voci spariscono al primo giro — ed e' capitato.
+const usaScontrini = ({
+  purchases,
+  toBuy,
+  equipment
+}) => {
+  // Parte VUOTA e si riempie subito dopo, perche' il magazzino si legge in
+  // modo asincrono. Prima si partiva da localStorage, che si legge di colpo:
+  // comodo, ma erano 3,18 MB di foto dentro i 5 disponibili, e i conti
+  // rischiavano di non avere piu' posto dove salvarsi.
+  const [receipts, setReceipts] = useState({});
+  const receiptsRef = useRef({});
+  // Cosa risulta gia' scritto nel magazzino: serve a scrivere SOLO le foto
+  // nuove invece di riversare ogni volta l'intera mappa.
+  const receiptsSalvatiRef = useRef({});
+  // Le scritture nel magazzino si mettono in fila. Due in volo insieme
+  // vedrebbero lo stesso punto di partenza: aggiungi una foto e cancellala
+  // subito dopo, e la cancellazione parte da uno stato in cui quella foto non
+  // c'era ancora — resta nel magazzino per sempre.
+  const codaMagazzinoRef = useRef(Promise.resolve());
+  // Dove sono finite davvero le foto: nel magazzino o, se quello non e'
+  // disponibile, nella memoria del telefono come prima. In modalita' tecnica
+  // va detto, perche' cambia quanto spazio resta ai conti.
+  const [fotoDove, setFotoDove] = useState('magazzino');
+  // Foto scontrino in attesa di Salva, e foto aperta a schermo intero.
+  const [pReceipt, setPReceipt] = useState(null);
+  const [viewReceipt, setViewReceipt] = useState(null);
+
+  // All'avvio: si sposta la vecchia chiave di localStorage nel magazzino (una
+  // volta sola, e solo se le foto si rileggono identiche) e si carica quello
+  // che c'e'. Le foto gia' arrivate dal cloud nel frattempo hanno la
+  // precedenza: sono le stesse, ma non ha senso sovrascriverle all'indietro.
+  useEffect(() => {
+    const MF = window.MagazzinoFoto;
+    if (!MF) return;
+    let vivo = true;
+    codaMagazzinoRef.current = codaMagazzinoRef.current.then(() => MF.migra()).then(esito => {
+      if (!vivo) return;
+      receiptsSalvatiRef.current = esito.mappa || {};
+      setReceipts(prev => ({
+        ...(esito.mappa || {}),
+        ...prev
+      }));
+      setFotoDove(esito.ripiego || !MF.disponibile() ? 'memoria del telefono' : 'magazzino');
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+  useEffect(() => {
+    receiptsRef.current = receipts;
+    const MF = window.MagazzinoFoto;
+    if (!MF) return;
+    codaMagazzinoRef.current = codaMagazzinoRef.current
+    // Il punto di partenza si legge quando tocca a noi, non quando ci si
+    // mette in coda: chi ci precede lo ha appena spostato.
+    .then(() => MF.applica(receiptsSalvatiRef.current, receipts)).then(esito => {
+      // Il segnaposto si sposta SOLO a scrittura riuscita: segnarlo prima
+      // vorrebbe dire che una scrittura fallita non viene piu' ritentata —
+      // lo stesso errore gia' fatto con lastPushedJson in firebase-sync.js.
+      if (esito.salvato) receiptsSalvatiRef.current = receipts;
+      if (esito.ripiego) setFotoDove('memoria del telefono');
+    })
+    // Una scrittura andata male non deve rompere la fila: chi viene dopo
+    // riparte dall'ultimo punto di partenza buono e riprova.
+    .catch(() => {/* si riprova al prossimo cambiamento */});
+  }, [receipts]);
+
+  // Pulizia: elimina le foto locali di voci che non esistono più (es. acquisto
+  // cancellato da un altro dispositivo). Vanno considerate TUTTE le liste che
+  // possono avere uno scontrino, altrimenti si perdono le foto delle voci
+  // ancora da acquistare o dell'attrezzatura.
+  useEffect(() => {
+    setReceipts(prev => {
+      const ids = new Set([...purchases.map(p => p.id), ...toBuy.map(t => t.id), ...equipment.map(e => e.id)]);
+      const keys = Object.keys(prev);
+      if (keys.every(k => ids.has(k))) return prev;
+      const copy = {};
+      keys.forEach(k => {
+        if (ids.has(k)) copy[k] = prev[k];
+      });
+      return copy;
+    });
+    // "receipts" fra le dipendenze e' voluto: le foto arrivano dal magazzino
+    // DOPO il primo disegno, quindi al primo giro non c'e' ancora niente da
+    // potare. Senza, la foto di una spesa cancellata altrove resterebbe nel
+    // magazzino per sempre. Non fa cicli: quando non c'e' niente da togliere
+    // la funzione restituisce lo stesso oggetto di prima.
+  }, [purchases, toBuy, equipment, receipts]);
+
+  // Foto scontrini in arrivo dal cloud: merge con le locali, e upload di
+  // quelle presenti solo in locale (es. scattate prima della connessione).
+  // Si aggancia una volta sola all'avvio, quindi legge dal riferimento e non
+  // dallo stato: lo stato che vedrebbe sarebbe quello del primo disegno.
+  const handleCloudReceipts = cloudMap => {
+    const local = receiptsRef.current;
+    const CS = window.CloudSync;
+    Object.keys(local).forEach(id => {
+      if (!cloudMap[id] && CS && CS.isConnected()) CS.putReceipt(id, local[id]);
+    });
+    setReceipts(prev => ({
+      ...prev,
+      ...cloudMap
+    }));
+  };
+
+  // Allega una foto scontrino a un id qualsiasi (voce da acquistare o acquisto
+  // già registrato: le foto sono indicizzate per id).
+  const attachReceiptTo = async (e, id) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      let dataUrl = await compressImage(file, 1000, 0.6);
+      if (dataUrl.length > 900000) dataUrl = await compressImage(file, 800, 0.4);
+      setReceipts(prev => ({
+        ...prev,
+        [id]: dataUrl
+      }));
+      if (window.CloudSync) window.CloudSync.putReceipt(id, dataUrl);
+    } catch (err) {
+      window.alert('Impossibile leggere la foto. Riprova.');
+    }
+  };
+
+  // La foto scattata nella maschera di registrazione: resta in attesa finche'
+  // non si preme Salva, perche' prima l'acquisto non ha ancora un id.
+  const onReceiptFile = async e => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      // Comprimi; se ancora troppo grande per un documento Firestore (1MB),
+      // ricomprimi più aggressivamente.
+      let dataUrl = await compressImage(file, 1000, 0.6);
+      if (dataUrl.length > 900000) dataUrl = await compressImage(file, 800, 0.4);
+      setPReceipt(dataUrl);
+    } catch (err) {
+      window.alert('Impossibile leggere la foto. Riprova.');
+    }
+  };
+  return {
+    receipts,
+    setReceipts,
+    fotoDove,
+    pReceipt,
+    setPReceipt,
+    viewReceipt,
+    setViewReceipt,
+    handleCloudReceipts,
+    attachReceiptTo,
+    onReceiptFile
+  };
+};
 function App() {
   const [locked, setLocked] = useState(() => !isUnlocked());
   const [lockReason, setLockReason] = useState('');
@@ -2656,8 +2820,6 @@ function App() {
   const [pType, setPType] = useState('alimentare');
   const [pBuyer, setPBuyer] = useState('');
   const [pAccount, setPAccount] = useState('comune'); // conto della spesa in corso
-  const [pReceipt, setPReceipt] = useState(null); // foto scontrino in attesa di Salva
-  const [viewReceipt, setViewReceipt] = useState(null); // foto aperta a schermo intero
   const [snapList, setSnapList] = useState(null); // elenco snapshot per il ripristino
   // Giorno dell'ultimo backup su file (o del "ho già fatto"): serve al promemoria.
   const [backupOggi, setBackupOggi] = useState(() => localStorage.getItem(BACKUP_KEY) || '');
@@ -2676,25 +2838,6 @@ function App() {
     byDate: {}
   }));
 
-  // Foto scontrini: sincronizzate via Firestore (sotto-collezione dedicata,
-  // un documento per foto) + copia locale nel magazzino (IndexedDB).
-  //
-  // Parte VUOTA e si riempie subito dopo, perche' il magazzino si legge in
-  // modo asincrono. Prima si partiva da localStorage, che si legge di colpo:
-  // comodo, ma erano 3,18 MB di foto dentro i 5 disponibili, e i conti
-  // rischiavano di non avere piu' posto dove salvarsi (ROADMAP.md § 19).
-  const [receipts, setReceipts] = useState({});
-  const receiptsRef = useRef({});
-  // Cosa risulta gia' scritto nel magazzino: serve a scrivere SOLO le foto
-  // nuove invece di riversare ogni volta l'intera mappa.
-  const receiptsSalvatiRef = useRef({});
-  // Le scritture nel magazzino si mettono in fila. Due in volo insieme
-  // vedrebbero lo stesso punto di partenza: aggiungi una foto e cancellala
-  // subito dopo, e la cancellazione parte da uno stato in cui quella foto non
-  // c'era ancora — resta nel magazzino per sempre, che e' proprio il problema
-  // che questa sezione doveva chiudere.
-  const codaMagazzinoRef = useRef(Promise.resolve());
-
   // Dotazioni aggiuntive (box editabile), condivise via sync.
   const [gear, setGear] = useState(() => load('cambusa_gear', []));
   const [newGearText, setNewGearText] = useState('');
@@ -2707,6 +2850,29 @@ function App() {
   // passa nella cronologia (diventa un acquisto con lo stesso id, così l'even-
   // tuale foto dello scontrino resta collegata).
   const [toBuy, setToBuy] = useState(() => load('cambusa_tobuy', []));
+
+  // ---------- Foto degli scontrini ----------
+  // Stato, magazzino, migrazione, potatura e scatto stanno in
+  // src/77-usa-scontrini.jsx. Le tre liste che si passano sono quelle che
+  // possono avere uno scontrino: servono a sapere quali foto non
+  // appartengono piu' a niente.
+  const {
+    receipts,
+    setReceipts,
+    fotoDove,
+    pReceipt,
+    setPReceipt,
+    viewReceipt,
+    setViewReceipt,
+    handleCloudReceipts,
+    attachReceiptTo,
+    onReceiptFile
+  } = usaScontrini({
+    purchases,
+    toBuy,
+    equipment
+  });
+
   // Conto separato: giorni le cui presenze fanno cassa a parte. Il cibo e le
   // bevande marcati "separato" si dividono solo sui pasti di questi giorni;
   // gli altri giorni restano nel conto comune. Vuoto = tutto in comune.
@@ -2941,10 +3107,6 @@ function App() {
   // alla riapertura le modifiche di questo telefono risulterebbero "senza
   // data" e perderebbero ogni confronto. È un guasto silenzioso: va detto.
   const [spazioPieno, setSpazioPieno] = useState(false);
-  // Dove sono finite davvero le foto: nel magazzino (IndexedDB) o, se quello
-  // non e' disponibile, nella memoria del telefono come prima. In modalita'
-  // tecnica va detto, perche' cambia quanto spazio resta ai conti.
-  const [fotoDove, setFotoDove] = useState('magazzino');
   // La cronologia è il pezzo di localStorage che NON si può perdere: senza,
   // questo telefono riparte "senza date" e qualsiasi cancellazione altrui gli
   // porta via delle voci. Vale più di tutto il resto che sta lì dentro, quindi
@@ -3139,67 +3301,6 @@ function App() {
     weatherRef.current = next;
     setWeather(next);
   };
-  // All'avvio: si sposta la vecchia chiave di localStorage nel magazzino (una
-  // volta sola, e solo se le foto si rileggono identiche) e si carica quello
-  // che c'e'. Le foto gia' arrivate dal cloud nel frattempo hanno la
-  // precedenza: sono le stesse, ma non ha senso sovrascriverle all'indietro.
-  useEffect(() => {
-    const MF = window.MagazzinoFoto;
-    if (!MF) return;
-    let vivo = true;
-    codaMagazzinoRef.current = codaMagazzinoRef.current.then(() => MF.migra()).then(esito => {
-      if (!vivo) return;
-      receiptsSalvatiRef.current = esito.mappa || {};
-      setReceipts(prev => ({
-        ...(esito.mappa || {}),
-        ...prev
-      }));
-      setFotoDove(esito.ripiego || !MF.disponibile() ? 'memoria del telefono' : 'magazzino');
-    });
-    return () => {
-      vivo = false;
-    };
-  }, []);
-  useEffect(() => {
-    receiptsRef.current = receipts;
-    const MF = window.MagazzinoFoto;
-    if (!MF) return;
-    codaMagazzinoRef.current = codaMagazzinoRef.current
-    // Il punto di partenza si legge quando tocca a noi, non quando ci si
-    // mette in coda: chi ci precede lo ha appena spostato.
-    .then(() => MF.applica(receiptsSalvatiRef.current, receipts)).then(esito => {
-      // Il segnaposto si sposta SOLO a scrittura riuscita: segnarlo prima
-      // vorrebbe dire che una scrittura fallita non viene piu' ritentata —
-      // lo stesso errore gia' fatto con lastPushedJson in firebase-sync.js.
-      if (esito.salvato) receiptsSalvatiRef.current = receipts;
-      if (esito.ripiego) setFotoDove('memoria del telefono');
-    })
-    // Una scrittura andata male non deve rompere la fila: chi viene dopo
-    // riparte dall'ultimo punto di partenza buono e riprova.
-    .catch(() => {/* si riprova al prossimo cambiamento */});
-  }, [receipts]);
-
-  // Pulizia: elimina le foto locali di voci che non esistono più (es. acquisto
-  // cancellato da un altro dispositivo). Vanno considerate TUTTE le liste che
-  // possono avere uno scontrino, altrimenti si perdono le foto delle voci
-  // ancora da acquistare o dell'attrezzatura.
-  useEffect(() => {
-    setReceipts(prev => {
-      const ids = new Set([...purchases.map(p => p.id), ...toBuy.map(t => t.id), ...equipment.map(e => e.id)]);
-      const keys = Object.keys(prev);
-      if (keys.every(k => ids.has(k))) return prev;
-      const copy = {};
-      keys.forEach(k => {
-        if (ids.has(k)) copy[k] = prev[k];
-      });
-      return copy;
-    });
-    // "receipts" fra le dipendenze e' voluto: le foto adesso arrivano dal
-    // magazzino DOPO il primo disegno, quindi al primo giro non c'e' ancora
-    // niente da potare. Senza, la foto di una spesa cancellata altrove
-    // resterebbe nel magazzino per sempre. Non fa cicli: quando non c'e'
-    // niente da togliere la funzione restituisce lo stesso oggetto di prima.
-  }, [purchases, toBuy, equipment, receipts]);
   useEffect(() => {
     const on = () => {
       setIsOnline(true);
@@ -3456,20 +3557,6 @@ function App() {
     // Scelta esplicita: niente riconnessione automatica finché non si riattiva.
     scriviLocale('cambusa_sync_optout', '1');
     if (window.CloudSync) window.CloudSync.disconnect();
-  };
-
-  // Foto scontrini in arrivo dal cloud: merge con le locali, e upload di
-  // quelle presenti solo in locale (es. scattate prima della connessione).
-  const handleCloudReceipts = cloudMap => {
-    const local = receiptsRef.current;
-    const CS = window.CloudSync;
-    Object.keys(local).forEach(id => {
-      if (!cloudMap[id] && CS && CS.isConnected()) CS.putReceipt(id, local[id]);
-    });
-    setReceipts(prev => ({
-      ...prev,
-      ...cloudMap
-    }));
   };
 
   // All'avvio: aggancia lo stato e si connette DA SOLO col codice campo
@@ -4529,26 +4616,6 @@ function App() {
     if (window.CloudSync) window.CloudSync.deleteReceipt(id);
   };
 
-  // Foto scontrino allegata direttamente alla voce da acquistare.
-  // Allega una foto scontrino a un id qualsiasi (voce da acquistare o acquisto
-  // già registrato: le foto sono indicizzate per id).
-  const attachReceiptTo = async (e, id) => {
-    const file = e.target.files && e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    try {
-      let dataUrl = await compressImage(file, 1000, 0.6);
-      if (dataUrl.length > 900000) dataUrl = await compressImage(file, 800, 0.4);
-      setReceipts(prev => ({
-        ...prev,
-        [id]: dataUrl
-      }));
-      if (window.CloudSync) window.CloudSync.putReceipt(id, dataUrl);
-    } catch (err) {
-      window.alert('Impossibile leggere la foto. Riprova.');
-    }
-  };
-
   // Conferma acquisto: la voce esce dalla lista ed entra nella cronologia
   // mantenendo lo stesso id (così la foto scontrino resta collegata).
   const confirmBuy = () => {
@@ -4691,20 +4758,6 @@ function App() {
       return copy;
     });
     if (window.CloudSync) window.CloudSync.deleteReceipt(id);
-  };
-  const onReceiptFile = async e => {
-    const file = e.target.files && e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    try {
-      // Comprimi; se ancora troppo grande per un documento Firestore (1MB),
-      // ricomprimi più aggressivamente.
-      let dataUrl = await compressImage(file, 1000, 0.6);
-      if (dataUrl.length > 900000) dataUrl = await compressImage(file, 800, 0.4);
-      setPReceipt(dataUrl);
-    } catch (err) {
-      window.alert('Impossibile leggere la foto. Riprova.');
-    }
   };
 
   // ---------- Ripristino di emergenza (snapshot giornalieri) ----------

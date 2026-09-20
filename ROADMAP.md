@@ -1002,24 +1002,52 @@ non è il totale dei bonifici, è la **posizione** di ognuno — e infatti nessu
 si sposta di più di un arrotondamento. La prova adesso dice quella, che è la
 cosa vera.
 
-### Quello che resta
+### Quarto taglio: gli scontrini (20 settembre 2026)
 
-Dentro `80-app.jsx` restano stato, effetti e gestori delle aree che toccano i
-soldi: presenze, spese, sincronizzazione. Vanno staccati uno alla volta con la
-prova del DOM identico, dal più isolato al più intrecciato:
+**`77-usa-scontrini.jsx`, 147 righe.** È il seguito naturale del § 19: le foto
+non stanno più in `localStorage` ma nel magazzino, e tutto quello che serve a
+farle vivere — la migrazione dalla vecchia chiave, la scrittura del solo
+cambiamento, la fila delle scritture, la potatura delle orfane, l'arrivo dal
+cloud, lo scatto — era sparso in mezzo ai conti.
 
-1. **`usaListaSpesa`** — voci da acquistare, acquisti, scontrini, il ponte dal
-   menù (§ 12);
-2. **`usaPresenze`** — presenze e blocchi dei giorni;
-3. **`usaSincronizzazione`** — l'ascolto del cloud, la fusione, la diagnostica:
-   per ultimo, perché è l'unica parte che ha già cancellato il lavoro di
-   qualcuno una volta.
+Riceve **tre cose**: le tre liste che possono avere uno scontrino (acquisti,
+da acquistare, attrezzatura). Servono a una sola domanda — *quali foto non
+appartengono più a niente* — e se se ne dimentica una, le foto di quelle voci
+spariscono al primo giro. È già successo.
 
-**L'archivio no.** Sembrava il candidato più facile — «legge tutto ma è letto da
-poco» — e invece è il peggiore: `closeCamp` e `importData` *scrivono* dodici
-stati diversi, quindi l'hook riceverebbe venti setter e non ridurrebbe niente.
-Un hook che si porta dietro venti dipendenze non ha staccato niente, ha solo
-spostato le righe.
+`80-app.jsx` scende a **3.279 righe**. DOM identico al carattere su tutte e
+sedici le schermate; e siccome il confronto del DOM non scatta fotografie, ho
+rifatto anche le cinque prove che le foto le toccano davvero
+(`magazzino-foto`, `scontrino`, `galleria`, `chiusura`, `tenuta`).
+
+### Quello che resta, e perché non è più una fila
+
+Restano le aree che toccano i soldi. Ma **non tutte si staccano allo stesso
+modo**, e il § 14 fin qui ha insegnato a distinguere due casi:
+
+- **Stato isolato → hook.** Gioco, galleria, scontrini: poche dipendenze in
+  ingresso, molto stato in uscita. Si dimostra col DOM identico.
+- **Logica pura → file fuori da `src/`.** I conti: nessuno stato, sei
+  ingressi, e una prova unitaria sui numeri veri che vale più di qualunque
+  prova a schermo.
+
+**Le presenze sono il secondo caso, non il primo.** Un `usaPresenze` che si
+porti dietro lo stato riceverebbe `campData`, `members`, `blocchi`, `freeDays`,
+`sepDays` e i loro cinque setter — dodici dipendenze per togliere quattro
+variabili di stato. Non ha staccato niente. Quello che invece si stacca bene è
+la parte **pura**: `presenzeOrfane`, `giornoBloccato`, `giornoGratis`,
+`getMeal`, `getDayData` sono funzioni di (presenze, membri, blocchi, giorni
+gratis) e basta. Vanno in un `presenze.js` accanto a `conti.js`, provate sui
+dati veri del campo — dove fra l'altro ci sono presenze orfane vere.
+
+**L'archivio no, in nessuno dei due modi.** Sembrava il candidato più facile —
+«legge tutto ma è letto da poco» — e invece è il peggiore: `closeCamp` e
+`importData` *scrivono* dodici stati diversi. Un hook che si porta dietro venti
+setter non ha staccato niente, ha solo spostato le righe.
+
+**La sincronizzazione per ultima**, quando tutto il resto è fuori: è l'unica
+parte che ha già cancellato il lavoro di qualcuno una volta, e la si tocca
+quando attorno c'è meno roba possibile.
 
 Da rifare quando si tocca: le **verifiche su iPhone** (§ 10), perche' un
 sorgente nuovo cambia `App.js` e quindi `CACHE_NAME`.
