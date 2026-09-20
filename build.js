@@ -44,6 +44,7 @@ const SORGENTI = [
   '84-schede-album.jsx',    // Archivio, Aiuta Bandy, Come funziona
   '85-scheda-galleria.jsx', // Galleria
   '86-scheda-impostazioni.jsx', // Impostazioni
+  '87-scheda-compiti.jsx',  // Chi fa cosa: compiti assegnati (FEATURES.compiti)
   '90-avvio.jsx',            // il mount di React
 ];
 

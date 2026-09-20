@@ -36,13 +36,17 @@ const semina = () => {
   set('cambusa_freedays', ['2026-08-14']);
   set('cambusa_settled', []);
   set('cambusa_gear', [{ id: 'g1', text: 'Pentolone', have: true }]);
+  set('cambusa_compiti', [
+    { id: 'k1', testo: 'Prendere gli arrosticini', chi: 'Bruno', fatto: false },
+    { id: 'k2', testo: 'Prenotare il rifugio', chi: 'Alice', fatto: true },
+  ]);
 };
 
 // Ogni voce: [menu, sottoscheda]. Le sottoschede sono i bottoni interni.
 const SCHERMATE = [
   ['Calendario', null], ['Menù', null], ['Membri', null], ['Presenze', null],
   ['Spese Totali', 'Totali'], ['Spese Totali', 'Quote'], ['Spese Totali', 'Saldi'], ['Spese Totali', 'Dati'],
-  ['Lista della Spesa', null], ['Attrezzatura', null], ['Dotazioni personali', null],
+  ['Chi fa cosa', null], ['Lista della Spesa', null], ['Attrezzatura', null], ['Dotazioni personali', null],
   ['Regole', null], ['Galleria', null], ['Archivio', null], ['Come funziona', null], ['Impostazioni', null],
 ];
 

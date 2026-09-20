@@ -881,9 +881,9 @@ const schedaAttrezzatura = ({
                 <button
                   onClick={() => toggleEquipBought(e.id)}
                   aria-label={e.bought ? 'Segna da comprare' : 'Segna acquistato'}
-                  className={`w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold mt-0.5 ${e.bought ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B]'}`}
+                  className={bottoneScelta('casella', 'casella', e.bought, 'simbolo', 'mt-0.5')}
                 >
-                  {e.bought ? '✓' : ''}
+                  ✓
                 </button>
                 <div className="flex-grow min-w-0">
                   <div className={`text-sm leading-snug break-words ${e.bought ? 'line-through text-gray-500' : 'text-[#2D392C]'}`}>{e.text}</div>

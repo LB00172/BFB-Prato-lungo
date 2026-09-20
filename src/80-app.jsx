@@ -88,6 +88,12 @@ function App() {
   // Blocchi: voci che congelano una parte dei dati. Per ora una sola, "conti",
   // che chiude la contabilità a fine campo. Si sincronizza come le altre liste.
   const [blocchi, setBlocchi] = useState(() => load('cambusa_blocchi', []));
+  // Compiti assegnati: { id, testo, chi, fatto }. Chi fa cosa, deciso PRIMA
+  // che la spesa esista. Non entrano nei conti: nei conti entra la spesa che
+  // ne nasce, se ne nasce una (ROADMAP.md § 17).
+  const [compiti, setCompiti] = useState(() => load('cambusa_compiti', []));
+  const [nuovoCompito, setNuovoCompito] = useState('');
+  const [nuovoCompitoChi, setNuovoCompitoChi] = useState('');
   // Modifiche arrivate dagli altri DOPO la chiusura dei conti e respinte: non
   // si buttano in silenzio, si mettono da parte e si dicono.
   const [respinte, setRespinte] = useState([]);
@@ -246,7 +252,7 @@ function App() {
   // Stato sincronizzato sempre aggiornato: serve alla fusione, che deve
   // partire dai dati di ADESSO e non da quelli di quando ci si è connessi.
   const syncStateRef = useRef(null);
-  syncStateRef.current = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi };
+  syncStateRef.current = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi, compiti };
 
   // Cronologia delle modifiche (data di ultima modifica/cancellazione per ogni
   // voce). Al primo avvio i dati già presenti restano "senza data": qualsiasi
@@ -331,6 +337,7 @@ function App() {
   useEffect(() => salvaLocale('cambusa_sepdays', sepDays), [sepDays]);
   useEffect(() => salvaLocale('cambusa_freedays', freeDays), [freeDays]);
   useEffect(() => salvaLocale('cambusa_blocchi', blocchi), [blocchi]);
+  useEffect(() => salvaLocale('cambusa_compiti', compiti), [compiti]);
   useEffect(() => salvaLocale('cambusa_weather', weather), [weather]);
   useEffect(() => {
     try { localStorage.setItem('cambusa_archives', JSON.stringify(archives)); }
@@ -561,6 +568,7 @@ function App() {
     setSepDays(giorni.sepDays);
     setFreeDays(giorni.freeDays);
     setBlocchi(res.state.blocchi);
+    setCompiti(res.state.compiti || []);
     saveMeta(res.meta);
     setTimeout(() => { suppressPushRef.current = false; }, 0);
   };
@@ -1480,6 +1488,57 @@ function App() {
     setNewBuyQty('');
   };
 
+  // ---------- Compiti assegnati ----------
+  // Chi fa cosa, deciso PRIMA che la spesa esista. Al campo 2026 queste righe
+  // stavano negli appunti del giorno ("Arrosticini Eleonora", "Pecora/Ugo"):
+  // erano compiti concordati, e le spese che ne sono nate stanno gia' in
+  // purchases — ma le due cose non si toccavano, e nessuno sapeva quale
+  // compito fosse ancora scoperto.
+  //
+  // I compiti NON entrano nei conti. Nei conti entra la spesa che ne nasce,
+  // e solo se qualcuno la registra: un compito fatto senza spesa e' una cosa
+  // che si e' fatta, non un euro che qualcuno deve.
+  const addCompito = () => {
+    const testo = nuovoCompito.trim();
+    if (!testo) return;
+    setCompiti((prev) => [...prev, { id: uid(), testo, chi: nuovoCompitoChi.trim(), fatto: false }]);
+    setNuovoCompito('');
+    // "chi" NON si azzera: assegnando piu' cose alla stessa persona si
+    // scrivono di fila senza risceglierla ogni volta.
+  };
+
+  const removeCompito = (id) => {
+    const c = compiti.find((x) => x.id === id);
+    if (c && !window.confirm(`Togliere il compito "${c.testo}"?`)) return;
+    setCompiti((prev) => prev.filter((x) => x.id !== id));
+  };
+
+  // Due soli stati, da fare e fatto. Un terzo ("in corso") e' la casella che
+  // in ogni gestionale nessuno aggiorna mai.
+  const toggleCompito = (id) => {
+    setCompiti((prev) => prev.map((x) => (x.id === id ? { ...x, fatto: !x.fatto } : x)));
+  };
+
+  const setCompitoCampo = (id, campo, valore) => {
+    setCompiti((prev) => prev.map((x) => (x.id === id ? { ...x, [campo]: valore } : x)));
+  };
+
+  // Dal compito alla spesa: facoltativo e a posteriori. Si apre la maschera
+  // della Lista gia' compilata con il testo e con chi l'ha eseguito — il
+  // prezzo no, quello si scopre alla cassa. Se non si fa, il compito resta
+  // fatto lo stesso: registrare la spesa e' un'altra cosa.
+  const daCompitoASpesa = (c) => {
+    if (contiChiusi('registrare una spesa')) return;
+    setPName(c.testo);
+    setPBuyer(c.chi || '');
+    setPPrice('');
+    setPType('alimentare');
+    setPAccount('comune');
+    setManualOpen(true);
+    setListaSection('acquistato');
+    goTo('lista');
+  };
+
   // ---------- Dal menù alla lista della spesa ----------
   // Il menù è già la spesa: al campo 2026 le quantità stavano lì e la scheda
   // "Da acquistare" aveva cinque voci. Qui si propongono le righe del menù del
@@ -2180,7 +2239,7 @@ function App() {
   const exportData = () => {
     downloadJson(`bandone-backup-${toDateStr(new Date())}.json`, {
       version: 6, exportedAt: new Date().toISOString(),
-      members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi, receipts,
+      members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi, compiti, receipts,
     });
     // Serve al promemoria serale per sapere che oggi è già stato fatto.
     try { localStorage.setItem(BACKUP_KEY, toDateStr(new Date())); } catch (e) { /* niente */ }
@@ -2240,6 +2299,7 @@ function App() {
         if (Array.isArray(d.sepDays)) setSepDays(d.sepDays);
         if (Array.isArray(d.freeDays)) setFreeDays(d.freeDays);
         if (Array.isArray(d.blocchi)) setBlocchi(d.blocchi);
+        if (Array.isArray(d.compiti)) setCompiti(d.compiti);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
@@ -2336,6 +2396,7 @@ function App() {
     setGear([]);
     setSettled([]);
     setBlocchi([]);
+    setCompiti([]);
     setReceipts({});
     setBuying(null);
     setSelectedDateStr(defaultDateStr());
@@ -2500,6 +2561,7 @@ function App() {
     membri: 'Membri',
     presenze: 'Presenze',
     spesa: 'Spese Totali',
+    compiti: 'Chi fa cosa',
     lista: 'Lista della Spesa',
     attrezzatura: 'Attrezzatura',
     regole: 'Regole',
@@ -2514,7 +2576,7 @@ function App() {
   // Icona per ogni area: nel menu aiuta a trovare la voce senza leggerle tutte.
   const TAB_ICONS = {
     calendario: '📅', menu: '🍝', presenze: '🍽️',
-    lista: '🧾', attrezzatura: '🪛', spesa: '💶',
+    compiti: '✅', lista: '🧾', attrezzatura: '🪛', spesa: '💶',
     membri: '👥', regole: '📜', dotazioni: '🎒', galleria: '📸',
     gioco: '🎮', archivio: '🗄️', guida: '❓', impostazioni: '⚙️',
   };
@@ -2523,7 +2585,9 @@ function App() {
   // ogni giorno, poi i soldi, poi le cose del gruppo, in fondo il resto.
   const MENU_GROUPS = [
     { title: 'Pianificazione', items: ['calendario', 'menu', 'presenze'] },
-    { title: 'Spese', items: ['lista', 'attrezzatura', 'spesa'] },
+    // "Chi fa cosa" viene PRIMA della lista, ed e' l'ordine dei fatti: ci si
+    // divide i compiti, poi si compra, poi si registra la spesa.
+    { title: 'Spese', items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa'] },
     { title: 'Il gruppo', items: ['membri', 'regole', 'dotazioni', 'galleria'] },
     { title: 'Altro', items: ['gioco', 'archivio', 'guida', 'impostazioni'] },
   ];
@@ -2559,6 +2623,7 @@ function App() {
     { k: 'menu', icon: '🍝', title: 'Menù', body: 'Scheda a parte per scrivere cosa si mangia, giorno per giorno. In alto c\'è la stessa striscia dei giorni del Calendario: il giorno scelto è lo stesso nelle due schede, quindi puoi passare dall\'una all\'altra senza ricercarlo. Sotto vedi quanti pasti preparare a pranzo e a cena, e il foglio a righe dove scrivere una pietanza per riga. In fondo l\'elenco dei giorni del campo con la prima riga del menù già scritto: si vede a colpo d\'occhio cosa manca. Tutto si sincronizza: chi cucina lo trova già pronto.' },
     { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e la tendina dell\'acquirente quando registri una spesa: i nomi non si scrivono a mano, si scelgono, così un refuso non può creare una persona fantasma nei saldi. La "i" accanto al nome apre PayPal e IBAN: chi li compila se li vede comparire nei Saldi, accanto al rimborso che deve ricevere, con il tasto per copiarli.' },
     { k: 'presenze', icon: '🍽️', title: 'Presenze', body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta apri "Segna in blocco": ci sono "Tutti a pranzo", "Tutti a cena" e "Copia da ieri". Stanno chiusi e chiedono conferma, perché cambiano le presenze di tutti su tutti i telefoni in un colpo solo; il conteggio del giorno si legge sulla riga anche da chiusa. Se qualcuno viene eliminato dai Membri e poi riaggiunto, l\'app lo tratta come una persona nuova e i pasti segnati prima restano attaccati alla vecchia: in quel caso compare un avviso arancione che ti fa riassegnare quelle presenze alla persona giusta, invece di lasciarle sparire dai conti. Durante il campo l\'app si apre già sulla data di oggi.' },
+    { k: 'compiti', icon: '✅', title: 'Chi fa cosa', body: 'Chi si prende quale incarico, deciso PRIMA di partire: "prendere gli arrosticini", "prenotare il rifugio", "ritirare la carne". Si scrive quello che serve — il testo è libero — e si sceglie a chi tocca dall\'elenco dei membri. Due soli stati: da fare e fatto. Un compito NON è una spesa e non tocca i conti: quando è stato fatto, dal tasto "Registra la spesa" si apre la Lista già compilata con il nome e con chi l\'ha eseguito, ma il prezzo si scrive lì perché alla cassa non si sapeva ancora. Se una spesa non c\'è (hai prenotato e basta), il compito resta fatto e nei conti non entra niente.' },
     { k: 'lista', icon: '🧾', title: 'Lista della Spesa', body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; il tasto "Segna come acquistata" apre una maschera che chiede prezzo, acquirente, tipologia e la foto dello scontrino, e sposta la voce in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.' },
     { k: 'attrezzatura', icon: '🪛', title: 'Attrezzatura', body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. Con l\'icona 📷 alleghi lo scontrino, anche in un secondo momento. In fondo vedi il totale previsto e quello effettivamente acquistato; se indichi l\'acquirente, gli verrà rimborsata.' },
     { k: 'spesa', icon: '💶', title: 'Spese Totali', body: 'Quattro sotto-sezioni. Totali: quanto si è speso per cibo, bevande, logistica e attrezzatura. Quote: quanto costa a testa. Saldi: chi deve dare o ricevere. Dati: backup e sincronizzazione. I totali non si scrivono a mano, nascono dalla Lista della Spesa e dall\'attrezzatura acquistata.' },
@@ -2858,6 +2923,12 @@ function App() {
         {/* ---------- MENÙ ---------- */}
         {activeTab === 'menu' && schedaMenu({
           confermaPropostaSpesa, getDayData, getMeal, members, proponiDalMenu, propostaSpesa, renderWeekStrip, selectedDateStr, setCurrentDate, setPropostaSpesa, setSelectedDateStr, toBuy, updateDayData,
+        })}
+
+        {/* ---------- CHI FA COSA ---------- */}
+        {activeTab === 'compiti' && FEATURES.compiti && schedaCompiti({
+          addCompito, compiti, daCompitoASpesa, members, nuovoCompito, nuovoCompitoChi,
+          removeCompito, renderBuyerSelect, setCompitoCampo, setNuovoCompito, setNuovoCompitoChi, toggleCompito,
         })}
 
         {/* ---------- MEMBRI ---------- */}

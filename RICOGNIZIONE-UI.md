@@ -114,8 +114,8 @@ sole correzioni previste, entrambe applicate.
 | Ruoli | `primario`, `bruno`, `secondario`, `testuale`, `distruttivo`, `avviso`, `whatsapp` |
 | Misure | `minuscolo`, `piccolo`, `normale`, `grande` |
 | Toni delle icone | `neutro`, `distruttivo`, `pieno`, `tenue` |
-| Forme dei chip | `linguetta`, `interruttore`, `spunta`, `pillola`, `giunta`, `etichetta` |
-| Toni dei chip | `sezione`, `bordato`, `pranzo`, `cena`, `tenue`, `piatto`, `ambra` |
+| Forme dei chip | `linguetta`, `interruttore`, `spunta`, `pillola`, `giunta`, `etichetta`, `casella` |
+| Toni dei chip | `sezione`, `bordato`, `pranzo`, `cena`, `tenue`, `piatto`, `ambra`, `casella` |
 | Migrati | **102 bottoni su 124** |
 
 ### Le quattro decisioni prese guardando il codice

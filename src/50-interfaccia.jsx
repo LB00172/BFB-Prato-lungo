@@ -103,6 +103,11 @@ const SCELTA_FORMA = {
   giunta: 'px-2.5 py-1.5 font-bold uppercase',
   // Etichetta: dice cos'e' una cosa (adulto/bambino), non cosa succede.
   etichetta: 'px-2 py-1 rounded font-bold uppercase',
+  // Casella: la spunta quadrata di una lista di cose da fare. Non e' un chip
+  // con dentro una parola — e' un quadrato con dentro un segno — ma il
+  // meccanismo e' lo stesso: acceso o spento, e si tocca per cambiare.
+  // E' entrata nel vocabolario quando e' comparsa la seconda volta.
+  casella: 'w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold',
 };
 
 const SCELTA_TONO = {
@@ -135,6 +140,13 @@ const SCELTA_TONO = {
     acceso: 'bg-[#2D392C] text-white',
     spento: 'bg-white text-[#2D392C]',
   },
+  // Spunta: da spenta e' un quadrato vuoto col filo sage. Il segno di spunta
+  // c'e' sempre ma e' trasparente: cosi' la casella non cambia dimensione
+  // quando la si tocca, e la riga non salta.
+  casella: {
+    acceso: 'bg-[#2D392C] border-[#2D392C] text-white',
+    spento: 'bg-white border-[#8F9E8B] text-transparent',
+  },
   // Ambra: il colore con cui l'app segna le cose fuori dai conti. Un bambino
   // non paga, e quel chip lo dice con lo stesso colore degli avvisi.
   ambra: {
@@ -143,12 +155,16 @@ const SCELTA_TONO = {
   },
 };
 
-// Quattro misure di testo, le stesse che c'erano gia'.
+// Le misure di testo, le stesse che c'erano gia'.
 const SCELTA_TESTO = {
   minimo: 'text-[9px]',
   minuscolo: 'text-[10px]',
   piccolo: 'text-[11px]',
   normale: 'text-xs',
+  // Per i chip che contengono un SEGNO invece di una parola: una spunta non
+  // e' un'etichetta minuta, e rimpicciolirla dentro un quadrato da 24 px la
+  // fa sembrare sbiadita.
+  simbolo: 'text-base',
 };
 
 // Uso: className={bottoneScelta('linguetta', 'sezione', spesaSection === k, 'minuscolo')}

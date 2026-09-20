@@ -11,7 +11,11 @@ const BRAND = {
   credits: 'Web app prodotta da Lorenzo Ballerini · Tutti i diritti riservati © 2026',
   ...(CFG.brand || {}),
 };
-const FEATURES = { auth: false, rooms: false, equipExemption: false, ...(CFG.features || {}) };
+// "compiti" e' acceso qui e spento sulla versione pubblica finche' non
+// esistono le Room (ROADMAP.md § 2): assegnare un compito presuppone un
+// gestore, e senza gestore assegna chiunque. In un gruppo di amici va
+// benissimo — e' come funzionava sugli appunti a mano — ma venderlo cosi' no.
+const FEATURES = { auth: false, rooms: false, equipExemption: false, compiti: true, ...(CFG.features || {}) };
 
 // Periodo del campo. Durante il campo l'app si apre sul giorno corrente.
 const CAMP_START = '2026-08-11';

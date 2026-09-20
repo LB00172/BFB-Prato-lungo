@@ -151,7 +151,7 @@ ok('ogni bottone chiede un ruolo e una misura che esistono'
 // I bottoni ancora scritti a mano, contati. Non e' un divieto: e' un
 // inventario che non deve crescere da solo.
 //
-// Ventidue su 134 non passano dal vocabolario, e non e' una dimenticanza.
+// Ventuno su 140 non passano dal vocabolario, e non e' una dimenticanza.
 // Sono forme che un vocabolario di bottoni non descrive: la casella di un
 // giorno sul calendario (tre stati), le voci del menu di navigazione, le
 // caselle di spunta quadrate, le frecce tonde dell'album, le mattonelle
@@ -166,10 +166,14 @@ ok('ogni bottone chiede un ruolo e una misura che esistono'
 const A_MANO_ATTESI = {
   '80-app.jsx': 7,
   '81-schede-giorno.jsx': 3,
-  '82-schede-conti.jsx': 3,
+  '82-schede-conti.jsx': 2,
   '83-schede-gruppo.jsx': 2,
   '84-schede-album.jsx': 3,
   '85-scheda-galleria.jsx': 4,
+  // "Chi fa cosa" non ne ha nessuno: e' nata dopo il vocabolario, e la sua
+  // casella di spunta ha fatto entrare nel vocabolario la forma "casella" —
+  // che esisteva gia' nell'attrezzatura, scritta a mano.
+  '87-scheda-compiti.jsx': 0,
 };
 
 // Legge la className di un <button>, comprese quelle scritte fra graffe.

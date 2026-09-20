@@ -35,6 +35,10 @@
     // regole senza bisogno di casi speciali: chi chiude per ultimo vince, e
     // tutti i telefoni arrivano allo stesso risultato.
     ['z', 'blocchi'],
+    // Compiti assegnati: chi fa cosa. E' una lista con un id come le altre,
+    // quindi si fonde voce per voce senza niente di nuovo — due persone che
+    // assegnano compiti diversi mentre sono offline non si sovrascrivono.
+    ['k', 'compiti'],
   ];
 
   // Insiemi di chiavi (niente id: la chiave e' il valore stesso).

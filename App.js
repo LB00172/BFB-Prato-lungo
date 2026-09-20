@@ -491,10 +491,15 @@ const BRAND = {
   credits: 'Web app prodotta da Lorenzo Ballerini · Tutti i diritti riservati © 2026',
   ...(CFG.brand || {})
 };
+// "compiti" e' acceso qui e spento sulla versione pubblica finche' non
+// esistono le Room (ROADMAP.md § 2): assegnare un compito presuppone un
+// gestore, e senza gestore assegna chiunque. In un gruppo di amici va
+// benissimo — e' come funzionava sugli appunti a mano — ma venderlo cosi' no.
 const FEATURES = {
   auth: false,
   rooms: false,
   equipExemption: false,
+  compiti: true,
   ...(CFG.features || {})
 };
 
@@ -798,7 +803,12 @@ const SCELTA_FORMA = {
   // propri: glieli da' il contenitore, altrimenti si vedono due bordi.
   giunta: 'px-2.5 py-1.5 font-bold uppercase',
   // Etichetta: dice cos'e' una cosa (adulto/bambino), non cosa succede.
-  etichetta: 'px-2 py-1 rounded font-bold uppercase'
+  etichetta: 'px-2 py-1 rounded font-bold uppercase',
+  // Casella: la spunta quadrata di una lista di cose da fare. Non e' un chip
+  // con dentro una parola — e' un quadrato con dentro un segno — ma il
+  // meccanismo e' lo stesso: acceso o spento, e si tocca per cambiare.
+  // E' entrata nel vocabolario quando e' comparsa la seconda volta.
+  casella: 'w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold'
 };
 const SCELTA_TONO = {
   // Da acceso il bordo sotto e' bruno, non verde: e' quello che fa sembrare
@@ -830,6 +840,13 @@ const SCELTA_TONO = {
     acceso: 'bg-[#2D392C] text-white',
     spento: 'bg-white text-[#2D392C]'
   },
+  // Spunta: da spenta e' un quadrato vuoto col filo sage. Il segno di spunta
+  // c'e' sempre ma e' trasparente: cosi' la casella non cambia dimensione
+  // quando la si tocca, e la riga non salta.
+  casella: {
+    acceso: 'bg-[#2D392C] border-[#2D392C] text-white',
+    spento: 'bg-white border-[#8F9E8B] text-transparent'
+  },
   // Ambra: il colore con cui l'app segna le cose fuori dai conti. Un bambino
   // non paga, e quel chip lo dice con lo stesso colore degli avvisi.
   ambra: {
@@ -838,12 +855,16 @@ const SCELTA_TONO = {
   }
 };
 
-// Quattro misure di testo, le stesse che c'erano gia'.
+// Le misure di testo, le stesse che c'erano gia'.
 const SCELTA_TESTO = {
   minimo: 'text-[9px]',
   minuscolo: 'text-[10px]',
   piccolo: 'text-[11px]',
-  normale: 'text-xs'
+  normale: 'text-xs',
+  // Per i chip che contengono un SEGNO invece di una parola: una spunta non
+  // e' un'etichetta minuta, e rimpicciolirla dentro un quadrato da 24 px la
+  // fa sembrare sbiadita.
+  simbolo: 'text-base'
 };
 
 // Uso: className={bottoneScelta('linguetta', 'sezione', spesaSection === k, 'minuscolo')}
@@ -2885,6 +2906,12 @@ function App() {
   // Blocchi: voci che congelano una parte dei dati. Per ora una sola, "conti",
   // che chiude la contabilità a fine campo. Si sincronizza come le altre liste.
   const [blocchi, setBlocchi] = useState(() => load('cambusa_blocchi', []));
+  // Compiti assegnati: { id, testo, chi, fatto }. Chi fa cosa, deciso PRIMA
+  // che la spesa esista. Non entrano nei conti: nei conti entra la spesa che
+  // ne nasce, se ne nasce una (ROADMAP.md § 17).
+  const [compiti, setCompiti] = useState(() => load('cambusa_compiti', []));
+  const [nuovoCompito, setNuovoCompito] = useState('');
+  const [nuovoCompitoChi, setNuovoCompitoChi] = useState('');
   // Modifiche arrivate dagli altri DOPO la chiusura dei conti e respinte: non
   // si buttano in silenzio, si mettono da parte e si dicono.
   const [respinte, setRespinte] = useState([]);
@@ -3074,7 +3101,8 @@ function App() {
     toBuy,
     sepDays,
     freeDays,
-    blocchi
+    blocchi,
+    compiti
   };
 
   // Cronologia delle modifiche (data di ultima modifica/cancellazione per ogni
@@ -3188,6 +3216,7 @@ function App() {
   useEffect(() => salvaLocale('cambusa_sepdays', sepDays), [sepDays]);
   useEffect(() => salvaLocale('cambusa_freedays', freeDays), [freeDays]);
   useEffect(() => salvaLocale('cambusa_blocchi', blocchi), [blocchi]);
+  useEffect(() => salvaLocale('cambusa_compiti', compiti), [compiti]);
   useEffect(() => salvaLocale('cambusa_weather', weather), [weather]);
   useEffect(() => {
     try {
@@ -3427,6 +3456,7 @@ function App() {
     setSepDays(giorni.sepDays);
     setFreeDays(giorni.freeDays);
     setBlocchi(res.state.blocchi);
+    setCompiti(res.state.compiti || []);
     saveMeta(res.meta);
     setTimeout(() => {
       suppressPushRef.current = false;
@@ -4469,6 +4499,66 @@ function App() {
     setNewBuyQty('');
   };
 
+  // ---------- Compiti assegnati ----------
+  // Chi fa cosa, deciso PRIMA che la spesa esista. Al campo 2026 queste righe
+  // stavano negli appunti del giorno ("Arrosticini Eleonora", "Pecora/Ugo"):
+  // erano compiti concordati, e le spese che ne sono nate stanno gia' in
+  // purchases — ma le due cose non si toccavano, e nessuno sapeva quale
+  // compito fosse ancora scoperto.
+  //
+  // I compiti NON entrano nei conti. Nei conti entra la spesa che ne nasce,
+  // e solo se qualcuno la registra: un compito fatto senza spesa e' una cosa
+  // che si e' fatta, non un euro che qualcuno deve.
+  const addCompito = () => {
+    const testo = nuovoCompito.trim();
+    if (!testo) return;
+    setCompiti(prev => [...prev, {
+      id: uid(),
+      testo,
+      chi: nuovoCompitoChi.trim(),
+      fatto: false
+    }]);
+    setNuovoCompito('');
+    // "chi" NON si azzera: assegnando piu' cose alla stessa persona si
+    // scrivono di fila senza risceglierla ogni volta.
+  };
+  const removeCompito = id => {
+    const c = compiti.find(x => x.id === id);
+    if (c && !window.confirm(`Togliere il compito "${c.testo}"?`)) return;
+    setCompiti(prev => prev.filter(x => x.id !== id));
+  };
+
+  // Due soli stati, da fare e fatto. Un terzo ("in corso") e' la casella che
+  // in ogni gestionale nessuno aggiorna mai.
+  const toggleCompito = id => {
+    setCompiti(prev => prev.map(x => x.id === id ? {
+      ...x,
+      fatto: !x.fatto
+    } : x));
+  };
+  const setCompitoCampo = (id, campo, valore) => {
+    setCompiti(prev => prev.map(x => x.id === id ? {
+      ...x,
+      [campo]: valore
+    } : x));
+  };
+
+  // Dal compito alla spesa: facoltativo e a posteriori. Si apre la maschera
+  // della Lista gia' compilata con il testo e con chi l'ha eseguito — il
+  // prezzo no, quello si scopre alla cassa. Se non si fa, il compito resta
+  // fatto lo stesso: registrare la spesa e' un'altra cosa.
+  const daCompitoASpesa = c => {
+    if (contiChiusi('registrare una spesa')) return;
+    setPName(c.testo);
+    setPBuyer(c.chi || '');
+    setPPrice('');
+    setPType('alimentare');
+    setPAccount('comune');
+    setManualOpen(true);
+    setListaSection('acquistato');
+    goTo('lista');
+  };
+
   // ---------- Dal menù alla lista della spesa ----------
   // Il menù è già la spesa: al campo 2026 le quantità stavano lì e la scheda
   // "Da acquistare" aveva cinque voci. Qui si propongono le righe del menù del
@@ -5280,6 +5370,7 @@ function App() {
       sepDays,
       freeDays,
       blocchi,
+      compiti,
       receipts
     });
     // Serve al promemoria serale per sapere che oggi è già stato fatto.
@@ -5338,6 +5429,7 @@ function App() {
         if (Array.isArray(d.sepDays)) setSepDays(d.sepDays);
         if (Array.isArray(d.freeDays)) setFreeDays(d.freeDays);
         if (Array.isArray(d.blocchi)) setBlocchi(d.blocchi);
+        if (Array.isArray(d.compiti)) setCompiti(d.compiti);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert('File non valido: non è un backup leggibile.');
@@ -5440,6 +5532,7 @@ function App() {
     setGear([]);
     setSettled([]);
     setBlocchi([]);
+    setCompiti([]);
     setReceipts({});
     setBuying(null);
     setSelectedDateStr(defaultDateStr());
@@ -5625,6 +5718,7 @@ function App() {
     membri: 'Membri',
     presenze: 'Presenze',
     spesa: 'Spese Totali',
+    compiti: 'Chi fa cosa',
     lista: 'Lista della Spesa',
     attrezzatura: 'Attrezzatura',
     regole: 'Regole',
@@ -5641,6 +5735,7 @@ function App() {
     calendario: '📅',
     menu: '🍝',
     presenze: '🍽️',
+    compiti: '✅',
     lista: '🧾',
     attrezzatura: '🪛',
     spesa: '💶',
@@ -5659,9 +5754,12 @@ function App() {
   const MENU_GROUPS = [{
     title: 'Pianificazione',
     items: ['calendario', 'menu', 'presenze']
-  }, {
+  },
+  // "Chi fa cosa" viene PRIMA della lista, ed e' l'ordine dei fatti: ci si
+  // divide i compiti, poi si compra, poi si registra la spesa.
+  {
     title: 'Spese',
-    items: ['lista', 'attrezzatura', 'spesa']
+    items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa']
   }, {
     title: 'Il gruppo',
     items: ['membri', 'regole', 'dotazioni', 'galleria']
@@ -5712,6 +5810,11 @@ function App() {
     icon: '🍽️',
     title: 'Presenze',
     body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta apri "Segna in blocco": ci sono "Tutti a pranzo", "Tutti a cena" e "Copia da ieri". Stanno chiusi e chiedono conferma, perché cambiano le presenze di tutti su tutti i telefoni in un colpo solo; il conteggio del giorno si legge sulla riga anche da chiusa. Se qualcuno viene eliminato dai Membri e poi riaggiunto, l\'app lo tratta come una persona nuova e i pasti segnati prima restano attaccati alla vecchia: in quel caso compare un avviso arancione che ti fa riassegnare quelle presenze alla persona giusta, invece di lasciarle sparire dai conti. Durante il campo l\'app si apre già sulla data di oggi.'
+  }, {
+    k: 'compiti',
+    icon: '✅',
+    title: 'Chi fa cosa',
+    body: 'Chi si prende quale incarico, deciso PRIMA di partire: "prendere gli arrosticini", "prenotare il rifugio", "ritirare la carne". Si scrive quello che serve — il testo è libero — e si sceglie a chi tocca dall\'elenco dei membri. Due soli stati: da fare e fatto. Un compito NON è una spesa e non tocca i conti: quando è stato fatto, dal tasto "Registra la spesa" si apre la Lista già compilata con il nome e con chi l\'ha eseguito, ma il prezzo si scrive lì perché alla cassa non si sapeva ancora. Se una spesa non c\'è (hai prenotato e basta), il compito resta fatto e nei conti non entra niente.'
   }, {
     k: 'lista',
     icon: '🧾',
@@ -6029,6 +6132,19 @@ function App() {
     setSelectedDateStr,
     toBuy,
     updateDayData
+  }), activeTab === 'compiti' && FEATURES.compiti && schedaCompiti({
+    addCompito,
+    compiti,
+    daCompitoASpesa,
+    members,
+    nuovoCompito,
+    nuovoCompitoChi,
+    removeCompito,
+    renderBuyerSelect,
+    setCompitoCampo,
+    setNuovoCompito,
+    setNuovoCompitoChi,
+    toggleCompito
   }), activeTab === 'membri' && schedaMembri({
     addMember,
     infoMember,
@@ -7810,8 +7926,8 @@ const schedaAttrezzatura = ({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleEquipBought(e.id),
     "aria-label": e.bought ? 'Segna da comprare' : 'Segna acquistato',
-    className: `w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold mt-0.5 ${e.bought ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B]'}`
-  }, e.bought ? '✓' : ''), /*#__PURE__*/React.createElement("div", {
+    className: bottoneScelta('casella', 'casella', e.bought, 'simbolo', 'mt-0.5')
+  }, "\u2713"), /*#__PURE__*/React.createElement("div", {
     className: "flex-grow min-w-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: `text-sm leading-snug break-words ${e.bought ? 'line-through text-gray-500' : 'text-[#2D392C]'}`
@@ -8943,5 +9059,106 @@ const schedaImpostazioni = ({
 }, "L'app si aggiorna da sola: se non vedi una novit\xE0, chiudila e riaprila."), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-[#8F9E8B]/80 pt-1"
 }, BRAND.credits)));
+// ---------- Scheda "Chi fa cosa": i compiti assegnati ----------
+//
+// Uscita da App() come le altre: e' una funzione che restituisce JSX, non un
+// componente React, e riceve le dipendenze in un oggetto.
+//
+// Cosa fa, e cosa NON fa. Assegna un compito a una persona: "prendi gli
+// arrosticini", "prenota il rifugio", "ritira la carne". Il testo e' libero
+// apposta — al campo servono cose che oggi non sappiamo prevedere, e un
+// elenco chiuso di tipi costringe a scrivere tutto in "altro".
+//
+// I compiti NON entrano nei conti. Nei conti entra la spesa che ne nasce, e
+// solo se qualcuno la registra. Il legame fra le due cose esiste ed e' un
+// tasto — "Registra la spesa" — ma e' facoltativo e viene dopo: quando si
+// assegna il compito il prezzo non si sa ancora.
+const schedaCompiti = ({
+  addCompito,
+  compiti,
+  daCompitoASpesa,
+  members,
+  nuovoCompito,
+  nuovoCompitoChi,
+  removeCompito,
+  renderBuyerSelect,
+  setCompitoCampo,
+  setNuovoCompito,
+  setNuovoCompitoChi,
+  toggleCompito
+}) => {
+  const daFare = compiti.filter(c => !c.fatto);
+  const fatti = compiti.filter(c => c.fatto);
+  const riga = c => /*#__PURE__*/React.createElement("li", {
+    key: c.id,
+    className: "p-3 border-b border-[#8F9E8B]/20 last:border-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => toggleCompito(c.id),
+    "aria-label": c.fatto ? 'Segna come da fare' : 'Segna come fatto',
+    className: bottoneScelta('casella', 'casella', c.fatto, 'simbolo', 'mt-0.5')
+  }, "\u2713"), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-grow space-y-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    value: c.testo,
+    onChange: e => setCompitoCampo(c.id, 'testo', e.target.value),
+    className: `w-full bg-transparent text-sm text-[#2D392C] focus:outline-none border-b border-transparent focus:border-[#8F9E8B]/40 ${c.fatto ? 'line-through text-gray-400' : ''}`
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] uppercase font-bold text-[#8F9E8B] shrink-0"
+  }, "a chi"), renderBuyerSelect(c.chi, v => setCompitoCampo(c.id, 'chi', v), 'text-xs p-1.5')), c.fatto && /*#__PURE__*/React.createElement("button", {
+    onClick: () => daCompitoASpesa(c),
+    className: bottone('bruno', 'minuscolo')
+  }, "\uD83D\uDCB6 Registra la spesa")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeCompito(c.id),
+    "aria-label": "Rimuovi",
+    className: bottoneIcona('distruttivo', 'shrink-0')
+  }, "\xD7")));
+  return /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  }, "Assegna un compito"), /*#__PURE__*/React.createElement("input", {
+    value: nuovoCompito,
+    onChange: e => setNuovoCompito(e.target.value),
+    onKeyDown: e => {
+      if (e.key === 'Enter') addCompito();
+    },
+    placeholder: "Es. Prendere gli arrosticini, prenotare il rifugio\u2026",
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  }), renderBuyerSelect(nuovoCompitoChi, setNuovoCompitoChi), /*#__PURE__*/React.createElement("button", {
+    onClick: addCompito,
+    disabled: !nuovoCompito.trim(),
+    className: bottone('primario', 'grande', 'w-full')
+  }, "Assegna"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-gray-400 italic leading-snug"
+  }, "Il compito dice ", /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "chi fa cosa"), ", non quanto costa: il prezzo si scopre alla cassa. Quando \xE8 fatto, da qui si registra la spesa \u2014 ma solo se ce n'\xE8 una.")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between px-4 py-3 border-b border-[#8F9E8B]/40"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg text-[#2D392C]"
+  }, "Da fare"), daFare.length > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic font-bold text-[#2D392C]"
+  }, daFare.length)), daFare.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "px-4 py-6 text-center text-xs text-gray-400 italic"
+  }, compiti.length === 0 ? 'Nessun compito assegnato. Serve a dividersi le cose prima di partire.' : 'Tutto fatto.') : /*#__PURE__*/React.createElement("ul", null, daFare.map(riga))), fatti.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between px-4 py-3 border-b border-[#8F9E8B]/40"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-lg text-[#2D392C]"
+  }, "Fatti"), /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic font-bold text-[#2D392C]"
+  }, fatti.length)), /*#__PURE__*/React.createElement("ul", null, fatti.map(riga))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-[#D97706] italic leading-snug px-1"
+  }, "Non c'\xE8 ancora nessuno fra i Membri: i compiti si possono scrivere, ma non assegnare."));
+};
 const root = createRoot(document.getElementById('root'));
 root.render(/*#__PURE__*/React.createElement(App, null));

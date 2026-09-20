@@ -27,9 +27,9 @@ cosa blocca cosa.
 | — | § 11 Coda foto | **chiusa**: la galleria resta online (§ 15-bis.4), e il messaggio ora dice anche cosa si perde chiudendo l'app |
 | — | § 19 Immagini fuori da `localStorage` | **fatto** il 23 agosto: le foto stanno in IndexedDB, `localStorage` è tornato da 3 MB a 2 KB |
 | — | § 13 Vocabolario dell'interfaccia | **bottoni fatti** il 23 agosto: 102 su 124, più il sesto ruolo (chip di scelta). Restano le misure di testo, che si fanno col § 18 |
-| 1 | § 14 Spezzare i sorgenti | disegno fuori, gioco e galleria fuori; restano le aree che toccano i soldi e i conti, che vanno in un file provabile |
-| 2 | § 17 Compiti assegnati | Al campo li scrivevano negli appunti a mano: il bisogno è dimostrato, come per il § 12. Dietro bandiera, il gestore arriva col § 2 |
-| 3 | § 18 Più lingue | Ha bisogno del § 14 (le schede ricevono `t` come dipendenza) e deve precedere il § 3, o si rifanno le schede degli store. **Si porta dietro le misure di testo del § 13**: stessi file |
+| — | § 14 Spezzare i sorgenti | **a buon punto** il 20 settembre: disegno, stato isolato e tutte le regole che decidono qualcosa sono fuori e provate senza browser. Resta il collegamento della sincronizzazione, che si sposta col § 2 |
+| — | § 17 Compiti assegnati | **fatto** il 20 settembre: scheda «Chi fa cosa», dietro `FEATURES.compiti`. Il gestore della Room arriva col § 2 |
+| 1 | § 18 Più lingue | Ha bisogno del § 14 (le schede ricevono `t` come dipendenza) e deve precedere il § 3, o si rifanno le schede degli store. **Si porta dietro le misure di testo del § 13**: stessi file |
 
 **Poi — la versione pubblica, che è una catena:**
 
@@ -1335,7 +1335,7 @@ Numeri veri di chiusura, utili a dimensionare la versione pubblica:
 ---
 
 
-## 17. Compiti assegnati (la scheda «Chi fa cosa»)
+## 17. Compiti assegnati — fatto (20 settembre 2026)
 
 **Il bisogno è dimostrato, come per il § 12.** Negli `appunti` del campo 2026 si
 legge, scritto a mano in un campo libero:
@@ -1393,6 +1393,50 @@ tutto in «altro».
   `LISTS` di `sync-merge.js` e si fonde voce per voce come `toBuy`. Nessun
   meccanismo nuovo.
 
+### Com'è venuta
+
+`src/87-scheda-compiti.jsx`, voce **«Chi fa cosa»** nel menu — e sta **prima
+della Lista della Spesa**, che è l'ordine dei fatti: ci si divide i compiti,
+poi si compra, poi si registra la spesa.
+
+- **Testo libero**, modificabile anche dopo: un compito si precisa strada
+  facendo («carne» diventa «carne: 3 kg»).
+- **Si assegna dalla tendina dei membri**, la stessa degli acquirenti. La
+  persona **non si azzera** dopo l'assegnazione: assegnandone tre alla stessa
+  si scrivono di fila senza risceglierla ogni volta.
+- **Due stati**, da fare e fatto, in due sezioni separate.
+- **Il ponte verso la spesa** è un tasto che compare solo sui compiti fatti:
+  apre la Lista già compilata col nome e con chi l'ha eseguito, **e col prezzo
+  vuoto** — alla cassa non si sapeva ancora. Se la spesa non c'è (hai prenotato
+  e basta), il compito resta fatto e nei conti non entra niente.
+- **Si sincronizza come tutto il resto**: è entrata in `LISTS` di
+  `sync-merge.js` (`['k', 'compiti']`), quindi si fonde voce per voce. Due
+  persone che assegnano compiti diversi mentre sono offline non si
+  sovrascrivono. Nessun meccanismo nuovo.
+
+**`test/e2e/compiti.js`, 27 verifiche.** La prima e la più importante:
+assegnare un compito **non muove un euro** — i conti restano a 40,00 € prima,
+durante e dopo. Cinque sabotaggi, cinque rossi: far entrare il compito nei
+conti → 3 rosse, togliere il nome dal ponte → 1, inventare un prezzo → 1,
+azzerare la persona → 2, ignorare la bandiera → 1.
+
+**Una cosa che la prova ha trovato su sé stessa.** La verifica «il testo si
+corregge strada facendo» usava un `some`: modificava il compito sbagliato e
+passava lo stesso. Adesso controlla *quale* è cambiato **e che l'altro sia
+rimasto com'era.
+
+### Il vocabolario ha guadagnato una parola
+
+La casella di spunta quadrata di questa scheda esisteva già, scritta a mano,
+nell'Attrezzatura. Alla seconda comparsa si è guadagnata un posto
+(`bottoneScelta('casella', …)`, § 13), e i bottoni censiti come «scritti a
+mano» scendono da 22 a 21.
+
+Nel migrarla il segno di spunta si era rimpicciolito — prima non aveva una
+misura e la ereditava. Misurato a schermo: 16 px. Il vocabolario ha ora una
+misura `simbolo` che vale esattamente quello, perché un segno non è
+un'etichetta minuta.
+
 ### Le due cose da sistemare prima
 
 **Questa scheda è Premium, e il Premium non esiste ancora.** Non c'è né
@@ -1406,6 +1450,14 @@ Quindi: **la si costruisce dietro una bandiera**, come `auth` e `rooms` del
 un gruppo di amici va benissimo ed è come funzionava sugli appunti. Sulla
 pubblica si accende quando il § 2 esiste, e allora la tendina «chi assegna» ha
 un significato.
+
+**Fatto così:** `FEATURES.compiti`, accesa qui e spegnibile da
+`window.APP_CONFIG`. Con la bandiera spenta la voce sparisce dal menu e la
+scheda non si disegna — e c'è una prova che lo verifica accendendo e spegnendo.
+
+**Quello che manca ancora**, e che arriva col § 2: oggi assegna chiunque.
+Quando ci sarà un gestore della Room, la scheda dovrà chiedere **chi** sta
+assegnando, non solo **a chi**.
 
 **Vantaggio di farla ora anche se il Premium è lontano:** si prova sul campo
 2027 con dati veri prima di venderla. È lo stesso metodo che ha corretto il

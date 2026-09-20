@@ -19,7 +19,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 66 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 67 prove, circa 9 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -52,6 +52,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `src/7*-usa-*.jsx` | lo **stato** uscito da `App()`: hook (`usaGioco`, `usaGalleria`, `usaScontrini`) che si portano dietro i loro `useState`. Tengono stato e **non disegnano** |
 | `src/8*-schede-*.jsx` | il **disegno** delle schede, uscito da `App()`. Non sono componenti React: sono funzioni che restituiscono JSX e ricevono le dipendenze in un oggetto. Disegnano e **non tengono stato** |
 | `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneScelta` (i chip accesi/spenti) |
+| `src/87-scheda-compiti.jsx` | «Chi fa cosa»: i compiti assegnati, dietro `FEATURES.compiti`. Un compito **non** è una spesa |
 | `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
 | `App.js` | **generato**, non modificare |
 | `sync-merge.js` | fusione voce per voce fra dispositivi (`rev`, `del`, orologio `hi`) |
@@ -64,7 +65,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
-| `test/` | 11 prove unitarie + 55 end‑to‑end |
+| `test/` | 11 prove unitarie + 56 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -114,6 +115,10 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   pura (i conti) → file fuori da `src/`, e si prova coi numeri veri. Scegliere
   il modo sbagliato produce un hook con venti dipendenze, che non ha staccato
   niente: ha solo spostato le righe.
+- **Un compito non è una spesa.** «Chi fa cosa» (§17) assegna incarichi e non
+  tocca i conti: nei conti entra la spesa che ne nasce, se qualcuno la
+  registra. Il ponte porta il nome e chi l'ha eseguito, **mai un prezzo** —
+  quando ci si divide i compiti il prezzo non si sa ancora.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.
