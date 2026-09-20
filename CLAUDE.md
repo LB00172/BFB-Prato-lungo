@@ -19,7 +19,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 65 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 66 prove, circa 9 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -59,11 +59,12 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `magazzino-foto.js` | dove stanno le foto degli scontrini: IndexedDB, con `localStorage` come rete di sicurezza. Fuori da `src/` per lo stesso motivo |
 | `conti.js` | **i conti**: `Conti.calcola({membri, presenze, acquisti, attrezzatura, giorni separati, giorni gratis})`. Funzione pura, fuori da `src/`, provata sui numeri veri del campo 2026 |
 | `presenze.js` | le **regole** delle presenze: giorno, pasto, blocco, presenze orfane. Pure, fuori da `src/`. I gestori restano in `App()` |
+| `allarmi.js` | **quando svegliare qualcuno**: orologio di un altro telefono avanti di giorni, e perdite che meritano un allarme invece di essere il recupero di un ritardo. Pure, fuori da `src/` |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile` |
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
-| `test/` | 10 prove unitarie + 55 end‑to‑end |
+| `test/` | 11 prove unitarie + 55 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -79,7 +80,10 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   cancella il lavoro di chi era online. Si scrive solo dentro
   `runTransaction`, passando da `sovrascrivibile()`.
 - **Contare le voci senza guardare le date genera falsi allarmi.** Togliere
-  un membro tocca 7 percorsi: sembrano 7 perdite e non lo sono.
+  un membro tocca 7 percorsi: sembrano 7 perdite e non lo sono. La regola sta
+  in `allarmi.js` e si conta solo la **raffica più recente**: le lapidi di un
+  gesto solo portano tutte lo stesso istante. Un allarme che suona a vuoto è
+  peggio di nessun allarme — dopo due volte non lo guarda più nessuno.
 - **Prima si aggiorna la storia della sincronizzazione, poi l'istantanea
   locale.** All'inverso, con lo spazio agli sgoccioli, l'istantanea si mangia
   i byte che servivano alla storia.

@@ -1067,17 +1067,66 @@ difensivo e il guasto ha un nome.
 `importData` *scrivono* dodici stati diversi. Un hook che si porta dietro venti
 setter non ha staccato niente, ha solo spostato le righe.
 
-**La sincronizzazione per ultima**, quando tutto il resto è fuori: è l'unica
-parte che ha già cancellato il lavoro di qualcuno una volta, e la si tocca
-quando attorno c'è meno roba possibile.
+### Sesto taglio: le decisioni della sincronizzazione (20 settembre 2026)
+
+**`allarmi.js`, 81 righe.** La sincronizzazione è la parte che ha già
+cancellato il lavoro di qualcuno una volta, e si tocca con cautela. Per questo
+è uscito **quello che decide**, non quello che collega:
+
+- **quando un orologio è sballato** — la data più alta che arriva dall'altro
+  telefono, confrontata con la nostra. Qui è solo l'avviso: il freno vero sta
+  in `sync-merge.js` e frena l'orologio locale, mai il confronto fra due voci;
+- **quando una perdita merita un allarme** — e questa è la regola che nasce da
+  un guaio vero.
+
+Togliere un membro cancella anche le sue presenze di tutti i giorni: un gesto
+solo che produce **sette «voci perse»**. Un telefono rimasto indietro le
+scopriva tre giorni dopo e gridava al disastro per una cosa che nessuno stava
+perdendo. La regola guarda **quando**, non solo quante, e conta solo la
+raffica più recente — le lapidi di un gesto solo portano tutte lo stesso
+istante.
+
+**`test/unita/allarmi.js`, 25 verifiche**, fra cui quel caso esatto: sette voci
+di tre giorni fa non sono un allarme; le stesse quattro di trenta secondi fa lo
+sono. Sei sabotaggi, sei rossi.
+
+Il più istruttivo è il sesto, perché al primo tentativo **non** diventava
+rosso: avevo provato con `'domani'` e `null`, che in JavaScript perdono
+comunque il confronto. Il valore davvero cattivo è una data arrivata come
+**stringa di cifre** — `'9999999999999' > 0` è vero — e senza il controllo del
+tipo l'app avrebbe detto a tutti di avere l'ora sbagliata di trecento anni.
+
+### Quello che resta della sincronizzazione, e perché resta lì
+
+Fuori sono le decisioni. Dentro `App()` restano il collegamento, gli stati
+(`cloud`, `lostSync`, `orologioFuori`) e `applyRemote`, che è **97 righe e
+chiama 16 setter**.
+
+Quei 16 sono il punto. Un `usaSincronizzazione` che se li porti dietro è
+l'errore già visto due volte — l'archivio, le presenze. Si potrebbe ridurli a
+uno solo passando un `applicaStato(nuovoStato)` che fa il ventaglio da `App()`,
+e a quel punto l'hook avrebbe quattro dipendenze: è fattibile, e va deciso
+guardando cosa ci si guadagna.
+
+**Quello che ci si guadagna è meno di quanto sembri.** Le decisioni sono già
+fuori e provate; quello che resta è idraulica, ed è idraulica in un posto solo.
+La prova del DOM identico **non copre** la sincronizzazione — la cattura non si
+collega a nessun cloud — quindi l'unica rete sarebbero le sei prove end-to-end
+(`perdita`, `sovrascrittura`, `riaggancio`, `tenuta`, `oracolo`, `verdetto`).
+Sono buone, ma spostare 250 righe del codice più pericoloso dell'app per
+guadagnare righe, e non chiarezza, non è un affare.
+
+**Si rifarà quando ci sarà un motivo vero**, e ce n'è uno in arrivo: il § 2
+(le room) cambia proprio questa parte. Allora si sposta *mentre* la si cambia,
+con una ragione, invece di spostarla adesso per simmetria.
 
 ### Dove siamo
 
 | | righe |
 | --- | --- |
 | all'inizio, un file solo | 8.080 |
-| `src/80-app.jsx` oggi | **3.237** |
-| fuori: `conti.js` + `presenze.js` | 507 |
+| `src/80-app.jsx` oggi | **3.229** |
+| fuori: conti, presenze, allarmi | 588 |
 | hook: gioco, galleria, scontrini | 452 |
 | schede | 2.861 |
 

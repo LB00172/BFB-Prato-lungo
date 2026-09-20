@@ -89,8 +89,8 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   `usaScontrini`) e i conti sono in `conti.js`. Quello che resta dentro è
   presenze, spese e sincronizzazione, e si sposta con le stesse prove — non
   tagliando righe. Non è una scoperta, è la voce §14 di `ROADMAP.md`.
-- **I conti stanno in `conti.js` e le regole delle presenze in `presenze.js`,
-  fuori da `src/`.** Non e' un vezzo di
+- **Le regole stanno fuori da `src/`: `conti.js` (i conti), `presenze.js`
+  (giorno, pasto, blocco, orfane), `allarmi.js` (quando svegliare qualcuno).** Non e' un vezzo di
   organizzazione: e' l'unica parte dell'app che maneggia i soldi di venti
   persone, ed e' una funzione pura di sei cose. Da li' si prova con una prova
   unitaria sui numeri veri del campo 2026 (`test/fixture/campo-2026.json`)

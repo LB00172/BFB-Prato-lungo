@@ -489,21 +489,11 @@ function App() {
       ? rmeta
       : SM.emptyMeta();
 
-    // Orologi: si guarda la data più alta che arriva. Se è avanti di giorni
-    // rispetto a questo telefono, uno dei due ha l'ora sbagliata — e chi ce
-    // l'ha avanti sta vincendo tutti i confronti senza saperlo.
-    if (rmeta && (rmeta.rev || rmeta.del)) {
-      let piuAlta = 0;
-      [rmeta.rev, rmeta.del].forEach((m) => {
-        if (!m) return;
-        Object.keys(m).forEach((k) => { if (typeof m[k] === 'number' && m[k] > piuAlta) piuAlta = m[k]; });
-      });
-      const avanti = piuAlta - Date.now();
-      if (avanti > OROLOGIO_SOGLIA) {
-        const v = { avanti, at: Date.now() };
-        setOrologioFuori(v);
-        try { localStorage.setItem(OROLOGIO_KEY, JSON.stringify(v)); } catch (e) { /* niente */ }
-      }
+    // Orologi sballati: la regola sta in allarmi.js, qui resta cosa farne.
+    const sballato = Allarmi.orologioAvanti(rmeta, Date.now(), OROLOGIO_SOGLIA);
+    if (sballato) {
+      setOrologioFuori(sballato);
+      try { localStorage.setItem(OROLOGIO_KEY, JSON.stringify(sballato)); } catch (e) { /* niente */ }
     }
 
     const res = SM.merge(local, metaRef.current, remoteState, metaRemota, Date.now());
@@ -529,21 +519,23 @@ function App() {
       //     membro tolto tre giorni fa (che porta con sé le sue presenze di
       //     tutti i giorni: un solo gesto, sette "voci") è un falso allarme.
       const quando = perse.map((p) => SM.quandoCancellata(p, metaRef.current, metaRemota));
-      const piuRecente = Math.max(0, ...quando);
-      const fresche = perse.filter((p, i) => piuRecente - quando[i] <= RAFFICA);
-      const eta = Date.now() - piuRecente;
+      // La regola — quali perdite meritano un allarme e quali sono solo il
+      // recupero di un ritardo — sta in allarmi.js.
+      const verdetto = Allarmi.perditeDaAnnunciare(perse, quando, Date.now(),
+        { raffica: RAFFICA, recente: PERDITA_RECENTE });
 
       try {
         localStorage.setItem(RESCUE_KEY, JSON.stringify({
           at: Date.now(), perse: perse.length, paths: perse.slice(0, 200),
-          quando: piuRecente, state: local, meta: metaRef.current,
+          quando: verdetto.piuRecente, state: local, meta: metaRef.current,
         }));
       } catch (e) { /* spazio esaurito: si prosegue senza scorta */ }
 
-      // Si avvisa solo per le cancellazioni recenti, e si contano quelle dello
-      // stesso gesto: le lapidi di una raffica portano tutte lo stesso istante.
-      if (fresche.length >= 3 && eta <= PERDITA_RECENTE) {
-        setLostSync({ n: fresche.length, at: Date.now(), quando: piuRecente, che: descriviPerdite(fresche, local) });
+      if (verdetto.annuncia) {
+        setLostSync({
+          n: verdetto.fresche.length, at: Date.now(), quando: verdetto.piuRecente,
+          che: descriviPerdite(verdetto.fresche, local),
+        });
       }
     }
     // Se il risultato è già identico a quello ricevuto non c'è niente da
