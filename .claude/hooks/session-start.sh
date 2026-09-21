@@ -47,8 +47,15 @@ npm install --no-audit --no-fund
 # Se la rete non lo lascia passare non e' un guasto della sessione: `npm test`
 # gira lo stesso, e a fermarsi sarebbe solo `npm run regole`, che lo direbbe
 # da se'. Quindi si avvisa e si tira dritto.
+#
+# E si scarica solo se questo ramo ha davvero le prove delle regole: la
+# versione privata non le ha, e scaricare 137 MB per un comando che li' non
+# esiste sarebbe lavoro buttato. Lo si chiede a package.json invece di
+# saperlo a memoria — un ramo puo' cambiare, un numero scritto qui no.
 CACHE_EMU="${HOME:-/root}/.cache/firebase/emulators"
-if compgen -G "$CACHE_EMU/cloud-firestore-emulator-*.jar" > /dev/null; then
+if ! grep -q '"regole"' package.json; then
+  echo "→ emulatore Firestore: non serve su questo ramo"
+elif compgen -G "$CACHE_EMU/cloud-firestore-emulator-*.jar" > /dev/null; then
   echo "→ emulatore Firestore: c'e' gia'"
 else
   echo "→ emulatore Firestore: lo scarico"
@@ -58,4 +65,4 @@ else
   fi
 fi
 
-echo "✓ pronto: npm test (74 prove) e npm run regole"
+echo "✓ pronto"
