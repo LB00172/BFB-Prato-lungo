@@ -18,7 +18,12 @@ window.FIREBASE_CONFIG = {
 };
 
 // Codice del campo: chi conosce questo codice accede ai dati condivisi.
-window.CAMP_CODE_DEFAULT = "Bandone";
+// Il codice del campo su cui scrive questa versione. **Deve essere diverso da
+// quello della Brigata**: i due rami parlano con lo STESSO progetto Firebase,
+// quindi con lo stesso codice l'anteprima pubblica scriverebbe dentro il
+// documento del campo 2026 — quello di cui si stanno ancora chiudendo i
+// rimborsi. Le versioni sono due: i dati pure.
+window.CAMP_CODE_DEFAULT = "CampOpsProva";
 
 // ============================================================================
 //  BLOCCO CON PASSWORD
@@ -46,11 +51,16 @@ window.CAMP_CODE_DEFAULT = "Bandone";
 // (Authentication -> Email/Password), l'app ricade sull'accesso anonimo di
 // prima: si puo' quindi attivare senza fretta. Vedi README, "Sicurezza".
 window.APP_LOCK = {
-  salt: "43fae8e332f167f7b612255eec80a82a",
-  hash: "432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14",
+  salt: "585d27f76cbf10a88166855e1721ffc1",
+  hash: "75b95d8f8b0d9645683337cb62b05f72980e806052ea5a2b7ca92b82e58d1663",
   iter: 200000,
-  hint: "Password del campo — chiedila a chi organizza.",
-  dbEmail: "campo@brigatabandone.it",
+  hint: "Password di prova di Camp Ops — chiedila a chi organizza.",
+  // Su questo ramo NON c'e' utente condiviso, e non e' una dimenticanza:
+  // campo@brigatabandone.it e' l'utente della Brigata, roba della versione
+  // privata. Senza dbEmail l'app entra nel database in anonimo, che e' quello
+  // che deve fare la versione pubblica finche' i dati non si spostano sotto
+  // rooms/<id>/dati/ (ROADMAP § 2).
+  dbEmail: null,
 };
 
 // ============================================================================
@@ -104,8 +114,12 @@ window.APP_CONFIG = {
     credits: "Camp Ops · Lorenzo Ballerini · © 2026",
   },
   features: {
-    auth: false,           // login con Google / email+password (roadmap settembre)
-    rooms: false,          // creazione "room" con ID e password (roadmap settembre)
+    // Accese il 21 settembre: i provider Google ed Email/Password sono attivi
+    // nella console. Finche' le regole Firestore nuove non sono pubblicate,
+    // CREARE una stanza si ferma sul permesso negato — l'interfaccia c'e' e
+    // si vede, il giro completo no.
+    auth: true,            // login con Google / email+password
+    rooms: true,           // creazione "room" con ID e codice d'ingresso
     equipExemption: false, // esenzione per membro dalla spesa attrezzatura (da rivedere)
   },
 };

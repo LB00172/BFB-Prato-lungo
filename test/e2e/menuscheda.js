@@ -1,6 +1,10 @@
 // Il Menù è una scheda a sé ma condivide il giorno con il Calendario.
 const { chromium } = require('playwright-core');
-const H = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
+// L'impronta del blocco si LEGGE da firebase-config.js (test/lib/app.js).
+// Ricopiata qui, il giorno in cui cambia la password del campo questa prova
+// diventa rossa per un motivo che non c'entra niente con quello che prova —
+// e' successo davvero, a diciannove prove insieme.
+const H = require('../lib/app').SBLOCCO;
 (async () => {
   const b = await chromium.launch({ executablePath: require('../lib/app').chromium(), args: ['--no-sandbox'] });
   const p = await b.newPage({ viewport: { width: 390, height: 820 } });

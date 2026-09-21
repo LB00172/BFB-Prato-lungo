@@ -454,6 +454,45 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     immagini.length > 0 && immagini.every((f) => ordine.includes(f)));
 }
 
+// ---------- Niente `require` dentro il codice che gira nel browser --------
+// La funzione passata ad addInitScript viene serializzata e ESEGUITA NEL
+// BROWSER, dove `require` non esiste. Scriverlo li' dentro non da' errore di
+// sintassi: la pagina si apre, lo script fallisce in silenzio, e la prova
+// muore venti secondi dopo su un timeout che dice solo "non trovo il menu".
+//
+// Ci sono cascato in DIECI file insieme, sostituendo un valore ricopiato con
+// una lettura da file. Il valore si passa come argomento — addInitScript ne
+// accetta uno — e la funzione resta pura.
+{
+  const fuori = [];
+  fs.readdirSync(path.join(RADICE, 'test', 'e2e')).filter((f) => f.endsWith('.js')).forEach((f) => {
+    const testo = fs.readFileSync(path.join(RADICE, 'test', 'e2e', f), 'utf8');
+    let i = testo.indexOf('addInitScript(');
+    while (i >= 0) {
+      // Il corpo della funzione: da addInitScript( fino alla virgola che
+      // introduce l'argomento, o alla parentesi di chiusura se non c'e'.
+      const da = i + 'addInitScript('.length;
+      let p2 = 1;
+      let fine2 = da;
+      for (let j = da; j < testo.length && p2 > 0; j++) {
+        if (testo[j] === '(') p2++;
+        else if (testo[j] === ')') p2--;
+        fine2 = j;
+      }
+      const corpo = testo.slice(da, fine2);
+      // Si toglie quello che sta DOPO l'ultima graffa chiusa o freccia
+      // semplice: e' l'argomento, e li' require ci sta benissimo.
+      const taglio = corpo.lastIndexOf('}, ') >= 0 ? corpo.lastIndexOf('}, ')
+        : (corpo.indexOf('), ') >= 0 ? corpo.indexOf('), ') : corpo.length);
+      if (/\brequire\s*\(/.test(corpo.slice(0, taglio))) fuori.push(f);
+      i = testo.indexOf('addInitScript(', i + 1);
+    }
+  });
+  const unici = [...new Set(fuori)];
+  ok(`nessun require dentro una funzione che gira nel browser (${unici.length})`
+    + (unici.length ? ' — DENTRO: ' + unici.join(', ') : ''), unici.length === 0);
+}
+
 // ---------- I due rami non divergono sui soldi ----------
 // Le versioni sono due e restano separate (CLAUDE.md): `main` e' la privata,
 // `feature/public-app` la pubblica. La separazione e' voluta, ma ha un prezzo

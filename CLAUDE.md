@@ -181,6 +181,15 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   codice giusto in produzione che non arriva a nessuno è già successo una
   volta. Adesso `build.js` l'elenco lo chiede al precache, e una prova
   ricalcola la versione e la confronta con quella scritta in `sw.js`.
+- **La password del campo non sta nel repository, ma l'IMPRONTA ricopiata è
+  lo stesso problema.** Cambiando la password del campo sono diventate rosse
+  **diciannove prove in un colpo**: ognuna aveva l'impronta copiata dentro per
+  entrare già sbloccata, e nessuna c'entrava niente con il blocco. E tre prove
+  avevano addirittura la password **in chiaro**, contro la regola 3, da mesi.
+  Adesso l'impronta si legge da `firebase-config.js` (`SBLOCCO` in
+  `test/lib/app.js`) e le tre prove che attraversano davvero il blocco si
+  installano un blocco loro (`bloccoDiProva()`), con una password che non apre
+  niente di vero.
 - **Un elenco di file scritto a mano dentro una prova invecchia da solo.**
   La guardia sulle chiavi inventate leggeva `['conti.js', 'presenze.js',
   'allarmi.js', 'menu-spesa.js']`: è nato `auth.js`, che restituisce chiavi

@@ -1,12 +1,20 @@
 // Il telefono già sbloccato, che si aggancia col ripiego, deve vedersi
 // chiedere la password DA SOLO: nessun menu, nessun pulsante da cercare.
 const { chromium } = require('playwright-core');
-const H = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
+// Il blocco di prova: la password vera del campo non entra nel repository
+// (CLAUDE.md, regola 3). Qui se ne installa una che non apre niente.
+const { bloccoDiProva, PASSWORD_PROVA, BLOCCO_PROVA } = require('../lib/app');
+// Il telefono "gia' sbloccato da prima": l'impronta che si mette in
+// localStorage dev'essere quella del blocco INSTALLATO qui, non un'altra
+// ricopiata a mano — se le due non combaciano, l'app si crede bloccata e
+// questa prova verifica un caso diverso da quello che dice di verificare.
+const H = BLOCCO_PROVA.hash;
 (async () => {
   const b = await chromium.launch({ executablePath: require('../lib/app').chromium(), args: ['--no-sandbox'] });
   const p = await b.newPage({ viewport: { width: 390, height: 820 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   p.on('dialog', d => d.accept());
+  await p.addInitScript(...bloccoDiProva());
   await p.addInitScript((h) => {
     localStorage.setItem('cambusa_unlock', h);            // già sbloccato da prima
     localStorage.setItem('cambusa_install_hint_off', '1');
@@ -50,7 +58,7 @@ const H = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
   console.log('sequenza finora:', JSON.stringify(await p.evaluate(() => window.__log)));
 
   // Digito la password: deve riagganciarsi con l'utente condiviso
-  await p.fill('input[placeholder="••••••••"]', 'Bandy2026#');
+  await p.fill('input[placeholder="••••••••"]', PASSWORD_PROVA);
   await p.locator('button', { hasText: /Entra|Verifica/ }).first().click();
   await p.waitForTimeout(1200);
   const log = await p.evaluate(() => window.__log);

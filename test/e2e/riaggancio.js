@@ -1,11 +1,15 @@
 // Dopo "Blocca ora" e rientro, l'app deve riagganciarsi al database
 // passando la password appena digitata (serve per l'utente condiviso).
 const { chromium } = require('playwright-core');
+// Il blocco di prova: la password vera del campo non entra nel repository
+// (CLAUDE.md, regola 3). Qui se ne installa una che non apre niente.
+const { bloccoDiProva, PASSWORD_PROVA } = require('../lib/app');
 (async () => {
   const b = await chromium.launch({ executablePath: require('../lib/app').chromium(), args: ['--no-sandbox'] });
   const p = await b.newPage({ viewport: { width: 390, height: 820 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   p.on('dialog', d => d.accept());
+  await p.addInitScript(...bloccoDiProva());
   await p.addInitScript(() => {
     localStorage.setItem('cambusa_install_hint_off', '1');
     window.__log = [];
@@ -34,7 +38,7 @@ const { chromium } = require('playwright-core');
     });
   });
   const entra = async () => {
-    await p.fill('input[placeholder="••••••••"]', 'Bandy2026#');
+    await p.fill('input[placeholder="••••••••"]', PASSWORD_PROVA);
     await p.locator('button', { hasText: /Entra|Verifica/ }).first().click();
     await p.waitForTimeout(900);
   };

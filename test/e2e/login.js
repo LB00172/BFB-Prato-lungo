@@ -1,5 +1,10 @@
 // Blocco con password, tema scuro e sezione Impostazioni.
 const { chromium } = require('playwright-core');
+// La password del campo NON sta qui: questa prova si installa un blocco suo,
+// con un'impronta calcolata per una password che non apre niente di vero
+// (CLAUDE.md, regola 3). Il segreto del campo non serve per provare che il
+// blocco funziona — serve una password di cui si conosce l'impronta.
+const { bloccoDiProva, PASSWORD_PROVA } = require('../lib/app');
 
 (async () => {
   const b = await chromium.launch({ executablePath: require('../lib/app').chromium(), args: ['--no-sandbox'] });
@@ -8,6 +13,7 @@ const { chromium } = require('playwright-core');
   const errs = [];
   p.on('pageerror', (e) => errs.push(e.message));
   p.on('dialog', (d) => d.accept());
+  await p.addInitScript(...bloccoDiProva());
   await p.addInitScript(() => localStorage.setItem('cambusa_sync_optout', '1'));
 
   const entra = async (pwd) => {
@@ -25,12 +31,12 @@ const { chromium } = require('playwright-core');
   console.log('schermata di blocco all\'avvio:', bloccata > 0 ? 'OK' : 'PROBLEMA');
   console.log('app nascosta dietro il blocco:', appVisibile === 0 ? 'OK' : 'PROBLEMA');
   const testoBlocco = await p.locator('body').innerText();
-  console.log('la password NON è scritta nella pagina:', !/Bandy2026/.test(testoBlocco) ? 'OK' : 'PROBLEMA');
+  console.log('la password NON è scritta nella pagina:', !testoBlocco.includes(PASSWORD_PROVA) ? 'OK' : 'PROBLEMA');
   const sorgente = await p.evaluate(async () => {
     const f = await Promise.all(['App.js', 'firebase-config.js', 'index.html'].map((u) => fetch(u).then((r) => r.text())));
     return f.join('\n');
   });
-  console.log('la password NON è nel codice scaricato:', !/Bandy2026/.test(sorgente) ? 'OK' : 'PROBLEMA');
+  console.log('la password NON è nel codice scaricato:', !sorgente.includes(PASSWORD_PROVA) ? 'OK' : 'PROBLEMA');
   await p.screenshot({ path: require('path').join(__dirname,'..','tmp','vista-blocco.png') });
 
   // --- 2. Password sbagliata ---
@@ -41,7 +47,7 @@ const { chromium } = require('playwright-core');
   console.log('app ancora chiusa:', (await p.locator('button[aria-label="Menu"]').count()) === 0 ? 'OK' : 'PROBLEMA');
 
   // --- 3. Password giusta ---
-  await entra('Bandy2026#');
+  await entra(PASSWORD_PROVA);
   await p.waitForTimeout(500);
   const dentro = await p.locator('button[aria-label="Menu"]').count();
   console.log('password giusta -> entra:', dentro > 0 ? 'OK' : 'PROBLEMA');
@@ -125,7 +131,7 @@ const { chromium } = require('playwright-core');
   console.log('"Blocca ora" richiude l\'app:', (await p.locator('input[placeholder="••••••••"]').count()) > 0 ? 'OK' : 'PROBLEMA');
   console.log('la schermata di blocco segue il tema scuro:', (await p.evaluate(() => document.documentElement.getAttribute('data-theme'))) === 'dark' ? 'OK' : 'PROBLEMA');
 
-  await entra('Bandy2026#');
+  await entra(PASSWORD_PROVA);
   // con "chiedi ogni volta" il ricarico (nuova sessione) deve richiedere la password
   await ctx.newPage();  // non tocca la sessione della prima pagina
   const p2 = await ctx.newPage();

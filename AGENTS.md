@@ -100,6 +100,12 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   `npm run regole`. Una guardia dentro `npm test` controlla però che ogni
   strada nominata in `firestore.rules` compaia nelle prove, così una
   collezione nuova non entra senza che nessuno l'abbia guardata.
+- **Su questo ramo `CAMP_CODE_DEFAULT` è `CampOpsProva`, e non si rimette
+  `Bandone`.** I due rami parlano con lo **stesso** progetto Firebase: con lo
+  stesso codice, l'anteprima pubblica scriverebbe dentro il documento del
+  campo 2026 — quello di cui si stanno ancora chiudendo i rimborsi. Per lo
+  stesso motivo `APP_LOCK.dbEmail` qui è `null`: l'utente condiviso è della
+  Brigata.
 - **Questo ramo si chiama Camp Ops, e non è un refuso.** `feature/public-app`
   è la versione pubblica: marchio neutro, icone Camp Ops, `CACHE_NAME` con
   prefisso `camp-ops-`. La Brigata, Prato Lungo e Bandy vivono su `main`, che è

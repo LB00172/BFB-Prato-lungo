@@ -7,10 +7,10 @@ const { scontriniSalvati, fotoSalvate } = require('../lib/app');
   const p = await ctx.newPage();
   // Sbloccata e in modalità tecnica: chiudere il campo azzera tutto, giorni
   // bloccati compresi, ed è un gesto che fa solo chi tiene i conti.
-  await p.addInitScript(() => {
-    localStorage.setItem('cambusa_unlock', '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14');
+  await p.addInitScript((h) => {
+    localStorage.setItem('cambusa_unlock', h);
     localStorage.setItem('cambusa_admin', '1');
-  });
+  }, require('../lib/app').SBLOCCO);
   const errs = [];
   p.on('pageerror', (e) => errs.push(e.message));
   p.on('dialog', (d) => d.accept());

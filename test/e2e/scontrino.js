@@ -2,7 +2,11 @@
 // non più sulla mini scheda della lista.
 const { chromium } = require('playwright-core');
 const { scontriniSalvati, fotoSalvate } = require('../lib/app');
-const H = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
+// L'impronta del blocco si LEGGE da firebase-config.js (test/lib/app.js).
+// Ricopiata qui, il giorno in cui cambia la password del campo questa prova
+// diventa rossa per un motivo che non c'entra niente con quello che prova —
+// e' successo davvero, a diciannove prove insieme.
+const H = require('../lib/app').SBLOCCO;
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 (async () => {
   const b = await chromium.launch({ executablePath: require('../lib/app').chromium(), args: ['--no-sandbox'] });

@@ -27,7 +27,55 @@ const URL_APP = process.env.APP_URL || 'http://localhost:8091';
 
 // Impronta della password del campo: la scrivo in localStorage così i test
 // entrano già sbloccati, senza passare dalla schermata di blocco.
-const SBLOCCO = '432631a6d9164150bff2cef2afebf83fc36f43fe04c658bac55ec89dbeda8a14';
+//
+// Si LEGGE da firebase-config.js invece di ricopiarla qui. Ricopiata, il
+// giorno in cui qualcuno cambia la password del campo tutte le prove e2e
+// diventano rosse insieme, e per un motivo che non c'entra niente con quello
+// che stavano provando — un pomeriggio buttato a cercare un guasto che non
+// c'è. Si prende la prima `hash:` del file, che è quella di APP_LOCK:
+// APP_ADMIN viene dopo.
+const SBLOCCO = (() => {
+  const testo = fs.readFileSync(path.join(__dirname, '..', '..', 'firebase-config.js'), 'utf8');
+  const soloBlocco = testo.slice(0, testo.indexOf('window.APP_ADMIN'));
+  const m = soloBlocco.match(/hash:\s*"([0-9a-f]{64})"/);
+  if (!m) throw new Error('impronta del blocco non trovata in firebase-config.js');
+  return m[1];
+})();
+
+// ---- Il blocco, per le prove che ci passano davvero --------------------
+// Tre prove attraversano la schermata di blocco digitando la password, e per
+// farlo avevano la password VERA del campo scritta in chiaro nel repository.
+// È esattamente quello che CLAUDE.md (regola 3) vieta, ed era lì da mesi.
+//
+// Adesso quelle prove si installano un blocco LORO: un'impronta calcolata
+// per una password che non apre niente di vero. Il segreto del campo non
+// serve per provare che il blocco funziona — serve solo una password di cui
+// si conosce l'impronta.
+const PASSWORD_PROVA = 'prova-del-blocco';
+const BLOCCO_PROVA = {
+  salt: '6a82a5b35d6259dac32a3e6999e1a66a',
+  hash: '485326cea2e0921943eaca2202ae5a6b601f3b8558b08efeed96105e5701da8b',
+  iter: 200000,
+  hint: 'Password di prova.',
+  // Serve: App() chiede la password del database solo se il blocco dichiara
+  // un utente condiviso (`if (!lock.dbEmail || !lock.hash) return;`). Senza,
+  // e2e/autochiede proverebbe un caso che non puo' succedere. L'indirizzo e'
+  // finto per davvero — `.invalid` e' il dominio riservato che non risolve
+  // mai — e tanto in quella prova Firebase non c'e': c'e' un finto.
+  dbEmail: 'prova@campo.invalid',
+};
+
+// firebase-config.js assegna window.APP_LOCK DOPO di noi: si intercetta
+// l'assegnazione e si tiene la nostra, come si fa con APP_CONFIG altrove.
+const bloccoDiProva = () => [(s) => {
+  const mio = JSON.parse(s);
+  Object.defineProperty(window, 'APP_LOCK', {
+    configurable: true,
+    get() { return mio; },
+    set() { /* quello vero si assegna e viene ignorato */ },
+  });
+  window.APP_LOCK = mio;
+}, JSON.stringify(BLOCCO_PROVA)];
 
 // ---- Conteggio degli esiti ---------------------------------------------
 // Ogni test chiama ok(...) e chiude con fine(): l'uscita diversa da zero è
@@ -147,4 +195,4 @@ async function scontriniSalvati(page, n, ms) {
   }
 }
 
-module.exports = { chromium, apri, ok, fine, attendi, scontriniSalvati, fotoSalvate, URL_APP, SBLOCCO };
+module.exports = { chromium, apri, ok, fine, attendi, scontriniSalvati, fotoSalvate, URL_APP, SBLOCCO, bloccoDiProva, PASSWORD_PROVA, BLOCCO_PROVA };
