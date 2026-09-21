@@ -130,6 +130,56 @@
     return pezzi.join('-');
   }
 
+  // ---------- L'invito (§ 9) ----------
+  // Un link solo, che precompila il codice. E' il passo che decide se un
+  // gruppo poco tecnologico adotta l'app o si ferma al primo tentativo: far
+  // digitare otto caratteri a venti persone su WhatsApp non funziona.
+  //
+  // **Il codice sta nel FRAMMENTO (#), non nella query (?).** Non e' un
+  // vezzo: il frammento non viene spedito al server — non finisce nei log di
+  // Vercel, non entra nell'intestazione Referer quando si apre un link verso
+  // un altro sito, e non compare nelle statistiche. Il codice E' la password
+  // della stanza, quindi ogni posto in meno dove si deposita e' un posto in
+  // meno da cui puo' uscire.
+  //
+  // La scelta dichiarata (ROADMAP § 9): **il link porta il codice**, quindi
+  // chi inoltra il messaggio inoltra l'ingresso. Per un gruppo di amici e'
+  // accettabile ed e' l'unica forma che la gente usa davvero; la difesa e'
+  // che il proprietario puo' cambiare il codice quando serve. Un invito
+  // monouso a scadenza resta la strada per dopo, e non cambia questo formato.
+  const CHIAVE_INVITO = 'stanza';
+
+  function linkInvito(base, codice) {
+    const c = bello(codice);
+    if (!codiceValido(c)) return '';
+    // Si butta via quello che c'era dopo ? o #: un invito costruito sopra un
+    // altro invito porterebbe due codici, e vincerebbe quello sbagliato.
+    const pulito = String(base || '').split('#')[0].split('?')[0];
+    if (!pulito) return '';
+    return `${pulito}#${CHIAVE_INVITO}=${c}`;
+  }
+
+  // Il contrario: da un indirizzo al codice. Legge il frammento e anche la
+  // query, perche' un link ricopiato a mano o passato da un accorciatore puo'
+  // arrivare in tutte e due le forme, e rifiutarlo sarebbe pedanteria.
+  function leggiInvito(indirizzo) {
+    const testo = String(indirizzo || '');
+    // Si guarda PRIMA il frammento: e' li' che lo mettiamo noi.
+    const pezzi = [testo.split('#')[1] || '', testo.split('#')[0].split('?')[1] || ''];
+    for (let i = 0; i < pezzi.length; i++) {
+      const re = new RegExp('(?:^|&)' + CHIAVE_INVITO + '=([^&]*)');
+      const m = pezzi[i].match(re);
+      if (!m) continue;
+      let grezzo = m[1];
+      // %20, + al posto dello spazio, %2D al posto del trattino: un link che
+      // passa da WhatsApp e da un accorciatore torna indietro cosi'.
+      try { grezzo = decodeURIComponent(grezzo.replace(/\+/g, ' ')); } catch (e) { /* si tiene il grezzo */ }
+      const c = normalizza(grezzo);
+      if (codiceValido(c)) return c;
+    }
+    return null;
+  }
+
   // ---------- Il modulo di creazione (§ 9) ----------
   // Restituisce CHIAVI del dizionario, non frasi: questo file non sa in che
   // lingua verra' letto (CLAUDE.md, la trappola di conti.js). Si restituiscono
@@ -249,6 +299,9 @@
     rimuovibile,
     schedaIngresso,
     schedaProprietario,
+    linkInvito,
+    leggiInvito,
+    CHIAVE_INVITO,
   };
 }(typeof globalThis !== 'undefined' ? globalThis : this));
 

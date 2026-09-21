@@ -1042,6 +1042,16 @@
     'stanza.copiato': 'Copiato.',
     'stanza.dentro': (n) => `${n === 1 ? 'Una persona' : `${n} persone`} in questa stanza.`,
     'stanza.esci': 'Esci dalla stanza',
+    'stanza.invita': 'Invita',
+    'stanza.condividi': 'Condividi',
+    'stanza.copiaLink': 'Copia il link',
+    'stanza.linkCopiato': 'Link copiato.',
+    'stanza.invitoTesto': (nome, link) => `Ti invito nel campo "${nome}". Apri questo link e sei dentro: ${link}`,
+    'stanza.invitoArrivato': (nome) => `Hai un invito per *${nome}*.`,
+    'stanza.invitoCodice': (c) => `Hai un invito per la stanza *${c}*.`,
+    'stanza.accettaInvito': 'Entra',
+    'stanza.rifiutaInvito': 'Non adesso',
+    'stanza.linkNonValido': 'Questo link non porta a nessuna stanza.',
   };
 
   const ES = {
@@ -1949,6 +1959,16 @@
     'stanza.copiato': 'Copiado.',
     'stanza.dentro': (n) => `${n === 1 ? 'Una persona' : `${n} personas`} en esta habitación.`,
     'stanza.esci': 'Salir de la habitación',
+    'stanza.invita': 'Invitar',
+    'stanza.condividi': 'Compartir',
+    'stanza.copiaLink': 'Copiar el enlace',
+    'stanza.linkCopiato': 'Enlace copiado.',
+    'stanza.invitoTesto': (nome, link) => `Te invito al campamento "${nome}". Abre este enlace y ya estás dentro: ${link}`,
+    'stanza.invitoArrivato': (nome) => `Tienes una invitación para *${nome}*.`,
+    'stanza.invitoCodice': (c) => `Tienes una invitación para la habitación *${c}*.`,
+    'stanza.accettaInvito': 'Entrar',
+    'stanza.rifiutaInvito': 'Ahora no',
+    'stanza.linkNonValido': 'Este enlace no lleva a ninguna habitación.',
   };
 
   const FR = {
@@ -2858,6 +2878,16 @@
     'stanza.copiato': 'Copié.',
     'stanza.dentro': (n) => `${n === 1 ? 'Une personne' : `${n} personnes`} dans cette chambre.`,
     'stanza.esci': 'Quitter la chambre',
+    'stanza.invita': 'Inviter',
+    'stanza.condividi': 'Partager',
+    'stanza.copiaLink': 'Copier le lien',
+    'stanza.linkCopiato': 'Lien copié.',
+    'stanza.invitoTesto': (nome, link) => `Je t'invite au camp « ${nome} ». Ouvre ce lien et tu es dedans : ${link}`,
+    'stanza.invitoArrivato': (nome) => `Tu as une invitation pour *${nome}*.`,
+    'stanza.invitoCodice': (c) => `Tu as une invitation pour la chambre *${c}*.`,
+    'stanza.accettaInvito': 'Entrer',
+    'stanza.rifiutaInvito': 'Pas maintenant',
+    'stanza.linkNonValido': "Ce lien ne mène à aucune chambre.",
   };
 
   const DIZIONARI = { it: IT, es: ES, fr: FR };

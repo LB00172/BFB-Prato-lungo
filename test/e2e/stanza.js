@@ -16,7 +16,7 @@ const { apri, ok, fine } = require('../lib/app');
 
 // La bandiera si accende intercettando APP_CONFIG, come in e2e/lingue e
 // e2e/account: firebase-config.js lo riscrive per intero DOPO di noi.
-const conStanze = (acceso, utente) => [(s) => {
+const conStanze = (acceso, utente, esistente) => [(s) => {
   const o = JSON.parse(s);
   let vero;
   Object.defineProperty(window, 'APP_CONFIG', {
@@ -49,7 +49,13 @@ const conStanze = (acceso, utente) => [(s) => {
 
   // Il Firestore finto. Tiene tutto quello che gli viene scritto, cosi' la
   // prova puo' guardare il DATABASE e non solo lo schermo.
-  window.__db = { scritture: [], docs: {}, negaEntrata: false };
+  // Le stanze che esistono gia' si dichiarano QUI e non con page.evaluate()
+  // dopo: lo script di avvio rigira a ogni navigazione, quindi sopravvive al
+  // reload. Seminarle dopo lasciava un buco — l'ingresso automatico di un
+  // sabotaggio falliva perche' la stanza non c'era ancora, non perche'
+  // qualcuno gliel'avesse impedito, e la prova restava verde. Se ne e'
+  // accorto un sabotaggio che NON produceva rosso.
+  window.__db = { scritture: [], docs: {}, note: o.esistente ? [o.esistente] : [], negaEntrata: false };
   Object.defineProperty(window, 'StanzaCloud', {
     configurable: true,
     get() { return window.__sc; },
@@ -65,6 +71,15 @@ const conStanze = (acceso, utente) => [(s) => {
       const salt = Array.from(n).map((c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
       return window.improntaPassword(n, { salt, iter: 200000 });
     },
+    // L'impronta e' asincrona, quindi le stanze dichiarate si materializzano
+    // alla prima occasione invece che dentro lo script di avvio.
+    assicuraNote: async () => {
+      for (const c of window.__db.note) {
+        if (!window.__db.docs[c]) {
+          window.__db.docs[c] = { nome: 'Campo di Anna', impronta: await window.__sc.impronta(c) };
+        }
+      }
+    },
     crea: async (dati, utente) => {
       const cod = window.Stanza.normalizza(dati.codice);
       const imp = await window.__sc.impronta(cod);
@@ -75,6 +90,7 @@ const conStanze = (acceso, utente) => [(s) => {
       return cod;
     },
     entra: async (codice, utente) => {
+      await window.__sc.assicuraNote();
       const cod = window.Stanza.normalizza(codice);
       const imp = await window.__sc.impronta(cod);
       // Come Firestore: se l'impronta non combacia con quella custodita, la
@@ -97,7 +113,7 @@ const conStanze = (acceso, utente) => [(s) => {
       return 'stanza.nonRiuscito';
     },
   };
-}, JSON.stringify({ acceso, utente })];
+}, JSON.stringify({ acceso, utente, esistente })];
 
 const REGISTRATO = { uid: 'anna-1', email: 'anna@example.com', nome: 'Anna Bianchi', isAnonimo: false, emailVerificata: true };
 const OSPITE = null;
@@ -198,12 +214,7 @@ const impostazioni = async (a) => {
 
   // ---------- 5. Entrare: il codice giusto apre, quello sbagliato no ------
   {
-    const b = await apri({ initScript: conStanze(true, REGISTRATO) });
-    // Una stanza che esiste già, creata da qualcun altro.
-    await b.page.evaluate(async () => {
-      const imp = await window.__sc.impronta('K7RX2MQP');
-      window.__db.docs['K7RX2MQP'] = { nome: 'Campo di Anna', impronta: imp };
-    });
+    const b = await apri({ initScript: conStanze(true, REGISTRATO, 'K7RX2MQP') });
     await impostazioni(b);
     await b.page.locator('main button', { hasText: /Entra con un codice/i }).click();
     await b.page.waitForTimeout(300);
@@ -262,6 +273,57 @@ const impostazioni = async (a) => {
     ok('e nel database non finisce niente',
       (await c.page.evaluate(() => window.__db.scritture.length)) === 0);
     await c.browser.close();
+  }
+
+  // ---------- 7. L'invito arrivato da un link ----------
+  // È il passo che decide se un gruppo poco tecnologico adotta l'app: far
+  // digitare otto caratteri a venti persone su WhatsApp non funziona.
+  {
+    const d = await apri({ initScript: conStanze(true, REGISTRATO, 'K7RX2MQP') });
+    // Si arriva sul link, come chi tocca il messaggio su WhatsApp. La stanza
+    // esiste già PRIMA che la pagina si apra: è la condizione in cui un
+    // ingresso automatico riuscirebbe davvero, e quindi l'unica in cui la
+    // verifica qui sotto significa qualcosa.
+    await d.page.evaluate(() => { window.location.hash = 'stanza=K7RX-2MQP'; });
+    await d.page.reload();
+    await d.page.waitForTimeout(900);
+
+    const conInvito = await impostazioni(d);
+    ok(`l'invito si vede, col suo codice (${/K7RX-2MQP/.test(conInvito) ? 'visto' : 'NON visto'})`,
+      /invito per la stanza/i.test(conInvito) && /K7RX-2MQP/.test(conInvito));
+
+    // NON si entra da soli. Chi tocca un link non ha per forza deciso di
+    // cambiare campo, e un'app che ti sposta di nascosto si disinstalla.
+    ok('ma non si è entrati da soli',
+      (await d.page.evaluate(() => window.__db.scritture.length)) === 0);
+
+    // Il codice sparisce dalla barra: resterebbe nella cronologia del
+    // telefono, e da lì lo rilegge chiunque lo prenda in mano.
+    const barra = await d.page.evaluate(() => window.location.href);
+    ok(`e il codice non resta nella barra (${barra.slice(-24)})`, barra.indexOf('K7RX') < 0);
+
+    await d.page.locator('main button', { hasText: /^Entra$/i }).click();
+    await d.page.waitForTimeout(700);
+    const entrato = await d.page.locator('main').innerText();
+    ok(`toccando "Entra" si entra (${/sei dentro/i.test(entrato) ? 'dentro' : 'FUORI'})`, /sei dentro/i.test(entrato));
+
+    ok('nessun errore JavaScript con l\'invito' + (d.errori.length ? ': ' + d.errori.join(' | ') : ''),
+      d.errori.length === 0);
+    await d.browser.close();
+  }
+
+  // ---------- 8. Un link storpiato non apre una stanza a caso ----------
+  {
+    const e = await apri({ initScript: conStanze(true, REGISTRATO) });
+    await e.page.evaluate(() => { window.location.hash = 'stanza=OOOO-OOOO'; });
+    await e.page.reload();
+    await e.page.waitForTimeout(900);
+    const imp = await impostazioni(e);
+    ok('un link con un codice storto non mostra nessun invito',
+      !/invito per la stanza/i.test(imp));
+    ok('e non fa entrare da nessuna parte',
+      (await e.page.evaluate(() => window.__db.scritture.length)) === 0);
+    await e.browser.close();
   }
 
   fine();

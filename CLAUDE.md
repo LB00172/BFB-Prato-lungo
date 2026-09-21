@@ -211,6 +211,15 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   non produce rosso è una notizia, non un sollievo.** La cura è la stessa già
   usata per l'account: la decisione esce dal pezzo sostituito e diventa una
   funzione pura (`Stanza.schedaIngresso`) che il finto è costretto a chiamare.
+- **Un sabotaggio che non produce rosso è una notizia, e va inseguito.** È
+  capitato due volte in un giorno, e tutte e due le volte il difetto era nella
+  prova, non nel codice: la prima perché la prova verificava un pezzo che lei
+  stessa aveva sostituito; la seconda perché seminava i dati **dopo** il
+  momento in cui il codice sabotato li avrebbe usati, quindi il sabotaggio
+  falliva per il motivo sbagliato e la prova restava verde. Se una prova che
+  gira in un browser ha bisogno di uno stato che deve esistere *prima*
+  dell'apertura, quello stato si dichiara nello script di avvio — che rigira a
+  ogni navigazione — non con un `page.evaluate()` dopo.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.

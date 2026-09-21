@@ -210,6 +210,64 @@ if (!S) { fine(); }
     !S.rimuovibile('redattore', 'lettore', 1) && !S.rimuovibile('lettore', 'lettore', 1));
 }
 
+// ---------- L'invito ----------
+// Il link e' il passo che decide se un gruppo adotta l'app o si ferma: far
+// digitare otto caratteri a venti persone su WhatsApp non funziona. E un
+// link che arriva e non apre niente e' peggio di nessun link, perche' chi lo
+// riceve pensa che l'app sia rotta e non che il messaggio sia stato storpiato.
+{
+  const BASE = 'https://cambusa.example/app';
+
+  const link = S.linkInvito(BASE, 'k7rx2mqp');
+  ok(`l'invito e' un link solo (${link})`, link === BASE + '#stanza=K7RX-2MQP');
+  // Nel FRAMMENTO, non nella query: il frammento non viene spedito al server,
+  // quindi il codice non finisce nei log ne' nell'intestazione Referer. Il
+  // codice E' la password della stanza: ogni posto in meno dove si deposita
+  // e' un posto in meno da cui puo' uscire.
+  ok('il codice sta dopo il cancelletto, non dopo il punto interrogativo',
+    link.indexOf('#stanza=') > 0 && link.indexOf('?') < 0);
+  // Un invito costruito sopra un altro invito porterebbe due codici, e
+  // vincerebbe quello sbagliato.
+  ok('un invito costruito sopra un altro non porta due codici',
+    S.linkInvito(BASE + '?x=1#stanza=2345-6789', 'K7RX-2MQP') === BASE + '#stanza=K7RX-2MQP');
+  ok('un codice non valido non produce nessun link',
+    S.linkInvito(BASE, 'OOOO-OOOO') === '' && S.linkInvito(BASE, '') === '');
+  ok('e nemmeno un indirizzo vuoto', S.linkInvito('', 'K7RX-2MQP') === '');
+
+  // Il giro completo: quello che si costruisce si deve poter rileggere.
+  ok('il link si rilegge', S.leggiInvito(link) === S.normalizza('K7RX-2MQP'));
+
+  // Le forme in cui un link torna indietro dopo essere passato da WhatsApp,
+  // da un accorciatore, o da qualcuno che l'ha ricopiato a mano. Sono tutte
+  // lo STESSO invito.
+  const storpiati = [
+    BASE + '#stanza=k7rx-2mqp',
+    BASE + '#stanza=K7RX2MQP',
+    BASE + '#stanza=k7rx%202mqp',
+    BASE + '#stanza=k7rx+2mqp',
+    BASE + '?stanza=K7RX-2MQP',
+    BASE + '#altro=1&stanza=K7RX-2MQP',
+    BASE + '#stanza=K7RX-2MQP&altro=1',
+  ];
+  const persi = storpiati.filter((u) => S.leggiInvito(u) !== 'K7RX2MQP');
+  ok(`un link storpiato per strada apre lo stesso (${storpiati.length - persi.length}/${storpiati.length})`
+    + (persi.length ? ' — PERSI: ' + persi.join(', ') : ''), persi.length === 0);
+
+  // E quello che NON deve aprire niente. Un link che apre una stanza a caso
+  // sarebbe peggio di uno che non apre niente.
+  ok('un link senza codice non apre niente',
+    S.leggiInvito(BASE) === null && S.leggiInvito(BASE + '#altro=1') === null);
+  ok('un codice storto nel link non apre niente',
+    S.leggiInvito(BASE + '#stanza=OOOO-OOOO') === null
+    && S.leggiInvito(BASE + '#stanza=K7RX') === null
+    && S.leggiInvito(BASE + '#stanza=') === null);
+  ok('niente non e\' un invito', S.leggiInvito(null) === null && S.leggiInvito('') === null);
+  // Un parametro che CONTIENE la parola non e' quel parametro: "miastanza="
+  // non deve essere letto come "stanza=".
+  ok('un parametro che somiglia non viene scambiato',
+    S.leggiInvito(BASE + '#miastanza=K7RX-2MQP') === null);
+}
+
 // ---------- Il trasporto: solo quello che si puo' provare senza Firebase ----
 // StanzaCloud parla con Firestore e quasi tutto vuole una rete. Due cose pero'
 // decidono da sole, e sono quelle che rompono in silenzio.

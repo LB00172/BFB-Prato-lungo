@@ -3046,6 +3046,28 @@ const usaStanza = () => {
       });
     } catch (e) {/* niente: si resta senza stanza */}
   }, []);
+
+  // ---------- L'invito arrivato da un link ----------
+  // Chi apre "…#stanza=K7RX-2MQP" ha un invito in mano. NON lo si accetta da
+  // soli: si mostra e si chiede. Entrare di nascosto in una stanza perche'
+  // qualcuno ha inoltrato un messaggio e' esattamente il genere di cosa che
+  // fa disinstallare un'app — e chi tocca un link non ha per forza deciso
+  // di cambiare campo.
+  const [invito, setInvito] = useState(null);
+  useEffect(() => {
+    const regole = S();
+    if (!regole || typeof window === 'undefined') return;
+    const c = regole.leggiInvito(window.location.href);
+    if (!c) return;
+    setInvito(c);
+    // Il codice si toglie subito dalla barra: resterebbe nella cronologia del
+    // telefono, e da li' lo rilegge chiunque lo prenda in mano. Si sostituisce
+    // la voce invece di aggiungerne una, cosi' il tasto indietro non ci
+    // riporta dentro.
+    try {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    } catch (e) {/* niente: il link resta in barra, non e' un guasto */}
+  }, []);
   const pulisci = () => {
     setProblema(null);
     setFatto(null);
@@ -3139,6 +3161,28 @@ const usaStanza = () => {
       setFatto('stanza.entrato');
     }
   };
+
+  // Accettare l'invito e' entrare, con il codice che portava il link.
+  const accettaInvito = async utente => {
+    const cod = await prova(c => c.entra(invito, utente));
+    if (cod) {
+      ricorda(cod);
+      setInvito(null);
+      setFatto('stanza.entrato');
+    }
+  };
+  const rifiutaInvito = () => {
+    setInvito(null);
+    pulisci();
+  };
+
+  // Il link da mandare agli altri. Si costruisce sull'indirizzo di questa
+  // pagina senza quello che c'era dopo ? o # — ci pensa linkInvito.
+  const linkDaMandare = () => {
+    const regole = S();
+    if (!regole || !stanza || typeof window === 'undefined') return '';
+    return regole.linkInvito(window.location.origin + window.location.pathname, stanza.codice);
+  };
   const aggiornaMembri = async () => {
     if (!stanza) return;
     const elenco = await prova(c => c.membri(stanza.codice));
@@ -3175,7 +3219,11 @@ const usaStanza = () => {
     crea,
     entra,
     esci,
-    aggiornaMembri
+    aggiornaMembri,
+    invito,
+    accettaInvito,
+    rifiutaInvito,
+    linkDaMandare
   };
 };
 function App() {
@@ -9033,7 +9081,20 @@ const schedaImpostazioni = ({
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-}, L.t('stanza.titolo')), stanzaStato.stanza ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+}, L.t('stanza.titolo')), stanzaStato.invito && /*#__PURE__*/React.createElement("div", {
+  className: "bg-[#F0F4F1]/70 border border-[#2D392C]/20 rounded p-3 space-y-2"
+}, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-[#2D392C] leading-snug"
+}, frase('stanza.invitoCodice', Stanza.bello(stanzaStato.invito))), /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: stanzaStato.rifiutaInvito,
+  className: bottone('testuale', 'normale', 'flex-1')
+}, L.t('stanza.rifiutaInvito')), /*#__PURE__*/React.createElement("button", {
+  onClick: () => stanzaStato.accettaInvito(account.utente),
+  disabled: stanzaStato.occupato,
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t('stanza.accettaInvito')))), stanzaStato.stanza ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-[#2D392C] leading-snug"
 }, frase('stanza.entrato', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice))), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between gap-2 bg-[#F0F4F1]/60 rounded p-2"
@@ -9046,7 +9107,29 @@ const schedaImpostazioni = ({
     } catch (e) {/* niente */}
   },
   className: bottone('secondario', 'minuscolo', 'shrink-0')
-}, L.t('stanza.copiaCodice'))), stanzaStato.membri.length > 0 && /*#__PURE__*/React.createElement("p", {
+}, L.t('stanza.copiaCodice'))), /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: () => {
+    const link = stanzaStato.linkDaMandare();
+    const testo = L.t('stanza.invitoTesto')(stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice), link);
+    if (navigator.share) {
+      navigator.share({
+        text: testo
+      }).catch(() => {/* annullato: non e' un guasto */});
+    } else {
+      window.open('https://wa.me/?text=' + encodeURIComponent(testo), '_blank');
+    }
+  },
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t('stanza.condividi')), /*#__PURE__*/React.createElement("button", {
+  onClick: () => {
+    try {
+      navigator.clipboard.writeText(stanzaStato.linkDaMandare());
+    } catch (e) {/* niente */}
+  },
+  className: bottone('secondario', 'normale', 'flex-1')
+}, L.t('stanza.copiaLink'))), stanzaStato.membri.length > 0 && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500"
 }, L.t('stanza.dentro')(stanzaStato.membri.length)), /*#__PURE__*/React.createElement("button", {
   onClick: stanzaStato.esci,

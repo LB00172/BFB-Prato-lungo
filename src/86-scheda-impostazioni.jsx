@@ -192,6 +192,19 @@ const schedaImpostazioni = ({
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('stanza.titolo')}</h3>
 
+      {/* Un invito arrivato da un link. Si mostra e si CHIEDE: entrare di
+          nascosto perche' qualcuno ha inoltrato un messaggio e' il genere di
+          cosa che fa disinstallare un'app. */}
+      {stanzaStato.invito && (
+        <div className="bg-[#F0F4F1]/70 border border-[#2D392C]/20 rounded p-3 space-y-2">
+          <p className="text-piccolo text-[#2D392C] leading-snug">{frase('stanza.invitoCodice', Stanza.bello(stanzaStato.invito))}</p>
+          <div className="flex gap-2">
+            <button onClick={stanzaStato.rifiutaInvito} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('stanza.rifiutaInvito')}</button>
+            <button onClick={() => stanzaStato.accettaInvito(account.utente)} disabled={stanzaStato.occupato} className={bottone('primario', 'normale', 'flex-1')}>{L.t('stanza.accettaInvito')}</button>
+          </div>
+        </div>
+      )}
+
       {stanzaStato.stanza ? (
         <>
           <p className="text-piccolo text-[#2D392C] leading-snug">{frase('stanza.entrato', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice))}</p>
@@ -201,6 +214,26 @@ const schedaImpostazioni = ({
               onClick={() => { try { navigator.clipboard.writeText(Stanza.bello(stanzaStato.stanza.codice)); } catch (e) { /* niente */ } }}
               className={bottone('secondario', 'minuscolo', 'shrink-0')}
             >{L.t('stanza.copiaCodice')}</button>
+          </div>
+          {/* Le tre strade per mandare l'invito. "Condividi" sul telefono apre
+              WhatsApp, Telegram, SMS e mail con un gesto solo ed e' il tasto
+              giusto; gli altri due sono il ripiego per chi sta al computer,
+              dove navigator.share spesso non c'e'. Il meccanismo e' lo stesso
+              gia' usato per il PDF ricordo e il resoconto delle spese. */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const link = stanzaStato.linkDaMandare();
+                const testo = L.t('stanza.invitoTesto')(stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice), link);
+                if (navigator.share) { navigator.share({ text: testo }).catch(() => { /* annullato: non e' un guasto */ }); }
+                else { window.open('https://wa.me/?text=' + encodeURIComponent(testo), '_blank'); }
+              }}
+              className={bottone('primario', 'normale', 'flex-1')}
+            >{L.t('stanza.condividi')}</button>
+            <button
+              onClick={() => { try { navigator.clipboard.writeText(stanzaStato.linkDaMandare()); } catch (e) { /* niente */ } }}
+              className={bottone('secondario', 'normale', 'flex-1')}
+            >{L.t('stanza.copiaLink')}</button>
           </div>
           {stanzaStato.membri.length > 0 && (
             <p className="text-piccolo text-gray-500">{L.t('stanza.dentro')(stanzaStato.membri.length)}</p>

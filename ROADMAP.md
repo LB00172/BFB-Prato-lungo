@@ -254,9 +254,33 @@ trasporto. Si crea una stanza (serve un account verificato, e lo dice *prima*
 di disturbare la rete), si entra con un codice, il codice si vede e si copia.
 22 verifiche in `e2e/stanza`, sei sabotaggi.
 
-**Cosa manca al § 2:** gli inviti veri (link, QR, WhatsApp — sono il resto del
-§ 9), lo spostamento della sincronizzazione da `camps/` a `rooms/<id>/dati/`,
-e la migrazione dei dati del 2026. E, prima di tutto, incollare le regole nuove in console — cosa
+**L'invito c'è** (21 settembre). Link canonico:
+`https://…/#stanza=K7RX-2MQP`, più Condividi (`navigator.share`, che sul
+telefono apre WhatsApp/Telegram/SMS/mail con un gesto) e Copia link come
+ripiego da computer.
+
+**Due decisioni dichiarate, non subite:**
+
+1. **Il codice sta nel frammento (`#`), non nella query (`?`).** Il frammento
+   non viene spedito al server: non finisce nei log di Vercel, non entra
+   nell'intestazione Referer, non compare nelle statistiche. Il codice *è* la
+   password della stanza, quindi ogni posto in meno dove si deposita è un
+   posto in meno da cui può uscire. E all'apertura viene tolto anche dalla
+   barra, perché lì resterebbe nella cronologia del telefono.
+2. **Il link porta il codice**, quindi chi inoltra il messaggio inoltra
+   l'ingresso. È la forma che la gente usa davvero, e senza di essa un gruppo
+   poco tecnologico si ferma al primo tentativo. La difesa è che il
+   proprietario può cambiare il codice. L'invito monouso a scadenza
+   (`invites/<token>`) resta la strada per dopo e **non cambia questo
+   formato**: il link può portare un token al posto del codice senza che
+   niente altro si muova.
+
+L'invito **non si accetta da solo**: si mostra e si chiede. Chi tocca un link
+non ha per forza deciso di cambiare campo.
+
+**Cosa manca al § 2 e al § 9:** il QR, l'invito monouso, lo spostamento della
+sincronizzazione da `camps/` a `rooms/<id>/dati/`, e la migrazione dei dati
+del 2026. E, prima di tutto, incollare le regole nuove in console — cosa
 che non va fatta finché il modulo non esiste, altrimenti si pubblicano regole
 per una parte di app che nessuno può ancora usare.
 

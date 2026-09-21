@@ -49,6 +49,29 @@ const usaStanza = () => {
     } catch (e) { /* niente: si resta senza stanza */ }
   }, []);
 
+  // ---------- L'invito arrivato da un link ----------
+  // Chi apre "…#stanza=K7RX-2MQP" ha un invito in mano. NON lo si accetta da
+  // soli: si mostra e si chiede. Entrare di nascosto in una stanza perche'
+  // qualcuno ha inoltrato un messaggio e' esattamente il genere di cosa che
+  // fa disinstallare un'app — e chi tocca un link non ha per forza deciso
+  // di cambiare campo.
+  const [invito, setInvito] = useState(null);
+
+  useEffect(() => {
+    const regole = S();
+    if (!regole || typeof window === 'undefined') return;
+    const c = regole.leggiInvito(window.location.href);
+    if (!c) return;
+    setInvito(c);
+    // Il codice si toglie subito dalla barra: resterebbe nella cronologia del
+    // telefono, e da li' lo rilegge chiunque lo prenda in mano. Si sostituisce
+    // la voce invece di aggiungerne una, cosi' il tasto indietro non ci
+    // riporta dentro.
+    try {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    } catch (e) { /* niente: il link resta in barra, non e' un guasto */ }
+  }, []);
+
   const pulisci = () => { setProblema(null); setFatto(null); };
   const chiudi = () => { setModo(''); pulisci(); };
 
@@ -118,6 +141,25 @@ const usaStanza = () => {
     }
   };
 
+  // Accettare l'invito e' entrare, con il codice che portava il link.
+  const accettaInvito = async (utente) => {
+    const cod = await prova((c) => c.entra(invito, utente));
+    if (cod) {
+      ricorda(cod);
+      setInvito(null);
+      setFatto('stanza.entrato');
+    }
+  };
+  const rifiutaInvito = () => { setInvito(null); pulisci(); };
+
+  // Il link da mandare agli altri. Si costruisce sull'indirizzo di questa
+  // pagina senza quello che c'era dopo ? o # — ci pensa linkInvito.
+  const linkDaMandare = () => {
+    const regole = S();
+    if (!regole || !stanza || typeof window === 'undefined') return '';
+    return regole.linkInvito(window.location.origin + window.location.pathname, stanza.codice);
+  };
+
   const aggiornaMembri = async () => {
     if (!stanza) return;
     const elenco = await prova((c) => c.membri(stanza.codice));
@@ -140,5 +182,6 @@ const usaStanza = () => {
     nome, setNome, inizio, setInizio, fine, setFine, codice, setCodice,
     problema, fatto, occupato, chiudi,
     crea, entra, esci, aggiornaMembri,
+    invito, accettaInvito, rifiutaInvito, linkDaMandare,
   };
 };
