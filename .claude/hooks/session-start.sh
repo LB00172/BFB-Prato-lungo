@@ -18,6 +18,11 @@
 # install riusa quello che trova, ci butta via tutto e riparte.
 set -euo pipefail
 
+# Lo si invoca con `bash <percorso>` e non direttamente: il bit di esecuzione
+# si perde quando il file passa dall'API di GitHub o da un checkout su
+# Windows, e un gancio che non parte non lo dice nessuno — la sessione si apre
+# e basta, con node_modules vuoto.
+
 # Solo sul web. Sul computer di casa le dipendenze ci sono gia' e reinstallarle
 # a ogni avvio sarebbe solo fastidio.
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
