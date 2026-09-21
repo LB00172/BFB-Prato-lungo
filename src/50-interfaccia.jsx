@@ -18,11 +18,19 @@
 // La larghezza del bordo sta qui e non nel ruolo perche' nel codice era gia'
 // cosi': i bottoni minuti hanno il filo sottile, gli altri quello doppio. Non
 // l'ho deciso io, l'ho solo scritto.
+// TRE misure, non quattro. La quarta — "piccolo" — esisteva perche' aveva il
+// corpo di un bottone normale ma la scritta a 10px invece di 12. La scala del
+// testo (index.html, ROADMAP.md § 13) dice che fra 10 e 12 non c'era una
+// regola: adesso sono la stessa misura, e le due voci erano diventate la
+// stessa identica riga. Cancellarla e' il § 13 che arriva alla sua diagnosi
+// di agosto: "sei altezze per un elemento che ne vuole tre".
+//
+// Quello che resta le distingue davvero, ed e' il corpo: px-3 py-1.5,
+// px-4 py-2.5, px-4 py-3.
 const BOTTONE_MISURA = {
-  minuscolo: 'px-3 py-1.5 text-[10px] border',
-  piccolo: 'px-4 py-2.5 text-[10px] border-2',
-  normale: 'px-4 py-2.5 text-xs border-2',
-  grande: 'px-4 py-3 text-sm border-2',
+  minuscolo: 'px-3 py-1.5 text-piccolo border',
+  normale: 'px-4 py-2.5 text-piccolo border-2',
+  grande: 'px-4 py-3 text-normale border-2',
 };
 
 // I ruoli veri, guardando cosa fanno i bottoni e non come sono scritti.
@@ -156,15 +164,16 @@ const SCELTA_TONO = {
 };
 
 // Le misure di testo, le stesse che c'erano gia'.
+// Stessa storia dei bottoni: erano cinque misure di testo (9, 10, 11, 12, 16)
+// e la scala ne riconosce tre. "piccolo" e "normale" erano diventati la copia
+// di "minuscolo", quindi sono spariti.
 const SCELTA_TESTO = {
-  minimo: 'text-[9px]',
-  minuscolo: 'text-[10px]',
-  piccolo: 'text-[11px]',
-  normale: 'text-xs',
+  minimo: 'text-minuto',
+  minuscolo: 'text-piccolo',
   // Per i chip che contengono un SEGNO invece di una parola: una spunta non
   // e' un'etichetta minuta, e rimpicciolirla dentro un quadrato da 24 px la
   // fa sembrare sbiadita.
-  simbolo: 'text-base',
+  simbolo: 'text-medio',
 };
 
 // Uso: className={bottoneScelta('linguetta', 'sezione', spesaSection === k, 'minuscolo')}

@@ -60,16 +60,16 @@ function LockScreen({ onUnlock, reason }) {
       <div className="w-28 h-28 mb-5 rounded-full overflow-hidden shadow-2xl border-4 border-[#8F9E8B] bg-[#F0F4F1] shrink-0">
         <img src="./logo.png" alt={L.t('blocco.logo', BRAND.groupName)} className="w-full h-full object-cover" />
       </div>
-      <h1 className="font-rustic text-2xl tracking-widest text-[#8F9E8B] text-center">{BRAND.splashLine1}</h1>
-      <h2 className="font-rustic text-lg tracking-widest text-[#F0F4F1] text-center mb-6">{BRAND.splashLine2}</h2>
+      <h1 className="font-rustic text-titolo tracking-widest text-[#8F9E8B] text-center">{BRAND.splashLine1}</h1>
+      <h2 className="font-rustic text-grande tracking-widest text-[#F0F4F1] text-center mb-6">{BRAND.splashLine2}</h2>
 
       <div className="w-full max-w-xs space-y-3">
         {reason && (
           <div className="bg-[#1F271E] border border-[#8F9E8B]/30 rounded p-3 mb-1">
-            <p className="text-[11px] text-[#F0F4F1] leading-snug">{reason}</p>
+            <p className="text-piccolo text-[#F0F4F1] leading-snug">{reason}</p>
           </div>
         )}
-        <label className="block text-[10px] uppercase tracking-widest text-[#8F9E8B] font-bold">{L.t('blocco.password')}</label>
+        <label className="block text-piccolo uppercase tracking-widest text-[#8F9E8B] font-bold">{L.t('blocco.password')}</label>
         <div className="flex gap-2">
           <input
             type={show ? 'text' : 'password'}
@@ -85,7 +85,7 @@ function LockScreen({ onUnlock, reason }) {
           <button
             onClick={() => setShow((s) => !s)}
             aria-label={L.t(show ? 'blocco.nascondi' : 'blocco.mostra')}
-            className="shrink-0 px-3 rounded bg-[#1F271E] border-2 border-[#8F9E8B]/40 text-lg leading-none hover:border-[#8F9E8B]"
+            className="shrink-0 px-3 rounded bg-[#1F271E] border-2 border-[#8F9E8B]/40 text-grande leading-none hover:border-[#8F9E8B]"
           >
             {show ? '🙈' : '👁️'}
           </button>
@@ -94,18 +94,18 @@ function LockScreen({ onUnlock, reason }) {
         <button
           onClick={submit}
           disabled={busy || waitLeft > 0}
-          className="w-full py-3 rounded bg-[#8F9E8B] text-[#1F271E] font-bold uppercase text-sm tracking-widest hover:brightness-110 disabled:opacity-50"
+          className="w-full py-3 rounded bg-[#8F9E8B] text-[#1F271E] font-bold uppercase text-normale tracking-widest hover:brightness-110 disabled:opacity-50"
         >
           {busy ? L.t('blocco.verifica') : waitLeft > 0 ? L.t('blocco.attendi', waitLeft) : L.t('blocco.entra')}
         </button>
 
-        {error && <p className="text-[11px] text-[#F0A0A0] leading-snug">{error}</p>}
-        <p className="text-[10px] text-[#8F9E8B]/80 leading-snug">
+        {error && <p className="text-piccolo text-[#F0A0A0] leading-snug">{error}</p>}
+        <p className="text-piccolo text-[#8F9E8B]/80 leading-snug">
           {(LOCK && LOCK.hint) || L.t('blocco.chiedi')}
         </p>
       </div>
 
-      <p className="absolute bottom-4 left-0 right-0 text-center text-[9px] tracking-wide text-[#8F9E8B]/70 px-6">
+      <p className="absolute bottom-4 left-0 right-0 text-center text-minuto tracking-wide text-[#8F9E8B]/70 px-6">
         {BRAND.credits}
       </p>
     </div>

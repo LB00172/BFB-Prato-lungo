@@ -78,7 +78,13 @@ I ruoli veri, guardando cosa fanno, sembrano essere sei:
 
 ## Tipografia
 
-Undici misure di testo. `font-rustic` compare 82 volte ed è l'identità.
+Undici misure di testo (dodici a settembre, dopo che ne era nata un'altra).
+`font-rustic` compare 82 volte ed è l'identità.
+
+> **Superato il 21 settembre 2026.** La tabella qui sotto è la fotografia di
+> agosto, tenuta perché è la diagnosi. Oggi le misure sono sei e stanno in
+> `index.html`: si chiedono per nome, e due prove impediscono che se ne
+> riaprano altre.
 
 | Misura | Volte |
 | --- | --- |
@@ -164,8 +170,14 @@ Nell'ordine, perché ogni passo dipende dal precedente:
 2. ~~**Bottoni: qui sta il lavoro.**~~ **Fatto** il 23 agosto 2026: 47 forme
    ridotte ai sei ruoli veri più quattro misure, e il sesto ruolo — il chip di
    scelta — che da solo ne ha assorbite undici.
-3. **Testo: da undici misure a cinque o sei**, e la scala scritta da qualche
-   parte invece che nella testa.
+3. ~~**Testo: da undici misure a cinque o sei**, e la scala scritta da qualche
+   parte invece che nella testa.~~ **Fatto** il 21 settembre 2026: dodici
+   misure (erano diventate dodici) ridotte a **sei**, dichiarate come token di
+   Tailwind v4 in `index.html` (`@theme`) e chiamate per nome — `text-minuto`,
+   `text-piccolo`, `text-normale`, `text-medio`, `text-grande`, `text-titolo`.
+   449 usi spostati. Il merge di 10/11/12 px ha fatto collassare la quarta
+   misura dei bottoni e due delle cinque dei chip: erano distinzioni che la
+   scala dice non esistere, e sono state tolte invece che puntellate.
 4. **Solo dopo, spezzare `src/7-app.jsx`.** Con un vocabolario deciso la divisione ha
    un bersaglio; senza, sposta soltanto le righe di posto.
 

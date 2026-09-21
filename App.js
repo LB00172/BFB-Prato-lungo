@@ -758,11 +758,19 @@ const compressImage = (file, maxDim = 1200, quality = 0.6) => new Promise((resol
 // La larghezza del bordo sta qui e non nel ruolo perche' nel codice era gia'
 // cosi': i bottoni minuti hanno il filo sottile, gli altri quello doppio. Non
 // l'ho deciso io, l'ho solo scritto.
+// TRE misure, non quattro. La quarta — "piccolo" — esisteva perche' aveva il
+// corpo di un bottone normale ma la scritta a 10px invece di 12. La scala del
+// testo (index.html, ROADMAP.md § 13) dice che fra 10 e 12 non c'era una
+// regola: adesso sono la stessa misura, e le due voci erano diventate la
+// stessa identica riga. Cancellarla e' il § 13 che arriva alla sua diagnosi
+// di agosto: "sei altezze per un elemento che ne vuole tre".
+//
+// Quello che resta le distingue davvero, ed e' il corpo: px-3 py-1.5,
+// px-4 py-2.5, px-4 py-3.
 const BOTTONE_MISURA = {
-  minuscolo: 'px-3 py-1.5 text-[10px] border',
-  piccolo: 'px-4 py-2.5 text-[10px] border-2',
-  normale: 'px-4 py-2.5 text-xs border-2',
-  grande: 'px-4 py-3 text-sm border-2'
+  minuscolo: 'px-3 py-1.5 text-piccolo border',
+  normale: 'px-4 py-2.5 text-piccolo border-2',
+  grande: 'px-4 py-3 text-normale border-2'
 };
 
 // I ruoli veri, guardando cosa fanno i bottoni e non come sono scritti.
@@ -882,15 +890,16 @@ const SCELTA_TONO = {
 };
 
 // Le misure di testo, le stesse che c'erano gia'.
+// Stessa storia dei bottoni: erano cinque misure di testo (9, 10, 11, 12, 16)
+// e la scala ne riconosce tre. "piccolo" e "normale" erano diventati la copia
+// di "minuscolo", quindi sono spariti.
 const SCELTA_TESTO = {
-  minimo: 'text-[9px]',
-  minuscolo: 'text-[10px]',
-  piccolo: 'text-[11px]',
-  normale: 'text-xs',
+  minimo: 'text-minuto',
+  minuscolo: 'text-piccolo',
   // Per i chip che contengono un SEGNO invece di una parola: una spunta non
   // e' un'etichetta minuta, e rimpicciolirla dentro un quadrato da 24 px la
   // fa sembrare sbiadita.
-  simbolo: 'text-base'
+  simbolo: 'text-medio'
 };
 
 // Uso: className={bottoneScelta('linguetta', 'sezione', spesaSection === k, 'minuscolo')}
@@ -2110,11 +2119,11 @@ function BandyGame({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2 bg-white/95 px-3 py-2 rounded-lg shrink-0"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs uppercase font-bold text-gray-500 truncate max-w-[24%]"
+    className: "text-piccolo uppercase font-bold text-gray-500 truncate max-w-[24%]"
   }, playerName), /*#__PURE__*/React.createElement("span", {
-    className: "font-rustic text-lg text-[#2D392C] shrink-0"
+    className: "font-rustic text-grande text-[#2D392C] shrink-0"
   }, score, " \uD83C\uDF3F"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] text-gray-400 min-w-0 truncate text-right"
+    className: "text-piccolo text-gray-400 min-w-0 truncate text-right"
   }, livelloInfo(level).icona, " ", livelloInfo(level).nome, " \xB7 -", Math.max(0, level * 15 - score), " \xB7 rec ", bestLocal)), /*#__PURE__*/React.createElement("div", {
     className: "relative flex-1 min-h-0 flex items-center justify-center"
   }, /*#__PURE__*/React.createElement("canvas", {
@@ -2133,24 +2142,24 @@ function BandyGame({
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-black/70 px-5 py-3 rounded-lg text-center"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] uppercase tracking-widest text-[#8F9E8B]"
+    className: "text-piccolo uppercase tracking-widest text-[#8F9E8B]"
   }, L.t('gioco.livello', level)), /*#__PURE__*/React.createElement("div", {
-    className: "font-rustic text-2xl text-[#D97706] leading-tight"
+    className: "font-rustic text-titolo text-[#D97706] leading-tight"
   }, livelloInfo(level).icona, " ", livelloInfo(level).nome), level > LIVELLI.length && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] uppercase tracking-widest text-[#F0F4F1]"
+    className: "text-piccolo uppercase tracking-widest text-[#F0F4F1]"
   }, L.t('gioco.ancoraPiuVeloce')))), (over || paused) && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 bg-black/70 rounded-lg flex flex-col items-center justify-center text-center p-4"
   }, over ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "font-rustic text-2xl text-[#F0F4F1]"
+    className: "font-rustic text-titolo text-[#F0F4F1]"
   }, L.t('gioco.scappato')), /*#__PURE__*/React.createElement("div", {
-    className: "text-[#D97706] font-rustic text-3xl my-2"
+    className: "text-[#D97706] font-rustic text-titolo my-2"
   }, score), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-gray-300 mb-4"
+    className: "text-piccolo text-gray-300 mb-4"
   }, score > bestLocal ? L.t('gioco.nuovoRecord') : L.t('gioco.recordResta', bestLocal)), /*#__PURE__*/React.createElement("button", {
     onClick: onExit,
-    className: "px-6 py-2.5 bg-[#2D392C] text-white rounded font-bold uppercase text-xs"
+    className: "px-6 py-2.5 bg-[#2D392C] text-white rounded font-bold uppercase text-piccolo"
   }, L.t('archivio.chiudi'))) : /*#__PURE__*/React.createElement("div", {
-    className: "font-rustic text-xl text-[#F0F4F1]"
+    className: "font-rustic text-titolo text-[#F0F4F1]"
   }, L.t('gioco.inPausa')))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-2 max-w-[240px] w-full mx-auto shrink-0"
   }, /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("button", {
@@ -2170,7 +2179,7 @@ function BandyGame({
   }, "\u25C0"), /*#__PURE__*/React.createElement("button", {
     onClick: togglePause,
     "aria-label": L.t('gioco.pausa'),
-    className: "py-3 bg-[#5C4A3C] text-white rounded font-bold text-xs"
+    className: "py-3 bg-[#5C4A3C] text-white rounded font-bold text-piccolo"
   }, paused ? '▶' : '❚❚'), /*#__PURE__*/React.createElement("button", {
     onPointerDown: e => {
       e.preventDefault();
@@ -2187,7 +2196,7 @@ function BandyGame({
     className: "py-3 bg-[#2D392C] text-white rounded font-bold"
   }, "\u25BC"), /*#__PURE__*/React.createElement("span", null)), /*#__PURE__*/React.createElement("button", {
     onClick: onExit,
-    className: "w-full py-1.5 text-[11px] uppercase font-bold text-[#8F9E8B] hover:text-white shrink-0"
+    className: "w-full py-1.5 text-piccolo uppercase font-bold text-[#8F9E8B] hover:text-white shrink-0"
   }, L.t('gioco.esci')));
 }
 
@@ -2261,17 +2270,17 @@ function LockScreen({
     alt: L.t('blocco.logo', BRAND.groupName),
     className: "w-full h-full object-cover"
   })), /*#__PURE__*/React.createElement("h1", {
-    className: "font-rustic text-2xl tracking-widest text-[#8F9E8B] text-center"
+    className: "font-rustic text-titolo tracking-widest text-[#8F9E8B] text-center"
   }, BRAND.splashLine1), /*#__PURE__*/React.createElement("h2", {
-    className: "font-rustic text-lg tracking-widest text-[#F0F4F1] text-center mb-6"
+    className: "font-rustic text-grande tracking-widest text-[#F0F4F1] text-center mb-6"
   }, BRAND.splashLine2), /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-xs space-y-3"
   }, reason && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#1F271E] border border-[#8F9E8B]/30 rounded p-3 mb-1"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#F0F4F1] leading-snug"
+    className: "text-piccolo text-[#F0F4F1] leading-snug"
   }, reason)), /*#__PURE__*/React.createElement("label", {
-    className: "block text-[10px] uppercase tracking-widest text-[#8F9E8B] font-bold"
+    className: "block text-piccolo uppercase tracking-widest text-[#8F9E8B] font-bold"
   }, L.t('blocco.password')), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("input", {
@@ -2287,17 +2296,17 @@ function LockScreen({
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShow(s => !s),
     "aria-label": L.t(show ? 'blocco.nascondi' : 'blocco.mostra'),
-    className: "shrink-0 px-3 rounded bg-[#1F271E] border-2 border-[#8F9E8B]/40 text-lg leading-none hover:border-[#8F9E8B]"
+    className: "shrink-0 px-3 rounded bg-[#1F271E] border-2 border-[#8F9E8B]/40 text-grande leading-none hover:border-[#8F9E8B]"
   }, show ? '🙈' : '👁️')), /*#__PURE__*/React.createElement("button", {
     onClick: submit,
     disabled: busy || waitLeft > 0,
-    className: "w-full py-3 rounded bg-[#8F9E8B] text-[#1F271E] font-bold uppercase text-sm tracking-widest hover:brightness-110 disabled:opacity-50"
+    className: "w-full py-3 rounded bg-[#8F9E8B] text-[#1F271E] font-bold uppercase text-normale tracking-widest hover:brightness-110 disabled:opacity-50"
   }, busy ? L.t('blocco.verifica') : waitLeft > 0 ? L.t('blocco.attendi', waitLeft) : L.t('blocco.entra')), error && /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#F0A0A0] leading-snug"
+    className: "text-piccolo text-[#F0A0A0] leading-snug"
   }, error), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-[#8F9E8B]/80 leading-snug"
+    className: "text-piccolo text-[#8F9E8B]/80 leading-snug"
   }, LOCK && LOCK.hint || L.t('blocco.chiedi'))), /*#__PURE__*/React.createElement("p", {
-    className: "absolute bottom-4 left-0 right-0 text-center text-[9px] tracking-wide text-[#8F9E8B]/70 px-6"
+    className: "absolute bottom-4 left-0 right-0 text-center text-minuto tracking-wide text-[#8F9E8B]/70 px-6"
   }, BRAND.credits));
 }
 
@@ -5137,7 +5146,7 @@ function App() {
     "aria-label": L.t('settimana.precedente'),
     className: bottoneIcona('tenue')
   }, "\u2190"), /*#__PURE__*/React.createElement("span", {
-    className: "font-bold text-sm text-[#2D392C] uppercase font-rustic"
+    className: "font-bold text-normale text-[#2D392C] uppercase font-rustic"
   }, L.t('settimana.selezionata')), /*#__PURE__*/React.createElement("button", {
     onClick: () => changeWeek(7),
     "aria-label": L.t('settimana.successiva'),
@@ -5157,9 +5166,9 @@ function App() {
       },
       className: `p-2 flex flex-col items-center rounded-lg border transition-all ${isSelected ? 'bg-[#5C4A3C] text-white border-[#5C4A3C]' : isCampPeriod ? 'bg-[#2D392C]/10 text-[#2D392C] border-[#2D392C]' : 'bg-white text-gray-400 border-gray-200'}`
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] uppercase font-bold"
+      className: "text-piccolo uppercase font-bold"
     }, label), /*#__PURE__*/React.createElement("span", {
-      className: "text-lg font-bold font-rustic"
+      className: "text-grande font-bold font-rustic"
     }, d.getDate()), isCampPeriod && /*#__PURE__*/React.createElement("span", {
       className: "w-1.5 h-1.5 bg-[#D97706] rounded-full mt-0.5"
     }));
@@ -5212,15 +5221,15 @@ function App() {
   const schedaQuote = c => /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+    className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
   }, c.titolo), c.sottotitolo && /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-gray-500 leading-snug mb-2"
+    className: "text-piccolo text-gray-500 leading-snug mb-2"
   }, c.sottotitolo), c.avviso && /*#__PURE__*/React.createElement("div", {
     className: "mb-3 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, c.avviso)), c.elenco.length === 0 ? /*#__PURE__*/React.createElement("p", {
-    className: "text-sm text-gray-400 italic"
+    className: "text-normale text-gray-400 italic"
   }, c.vuoto || L.t('quote.vuoto')) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-[#8F9E8B]/20"
   }, c.elenco.map(b => /*#__PURE__*/React.createElement("li", {
@@ -5229,30 +5238,30 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-sm font-bold text-[#2D392C]"
+    className: "text-normale font-bold text-[#2D392C]"
   }, b.name), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] text-gray-500"
+    className: "text-piccolo text-gray-500"
   }, L.t('quote.pastiRiga', c.pastiDi(b), b.mealsGratis, b.isChild))), /*#__PURE__*/React.createElement("span", {
     className: `font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-[#2D392C]'}`
   }, b.isChild ? L.t('quote.gratis') : `${money(c.quotaDi(b))} €`)))), /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center pt-2 mt-1 border-t border-[#8F9E8B]/30"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] uppercase font-bold text-gray-500"
+    className: "text-piccolo uppercase font-bold text-gray-500"
   }, L.t('quote.totaleRaccolto')), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C]"
   }, money(c.raccolto), " \u20AC")), /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-400 italic mt-2"
+    className: "text-minuto text-gray-400 italic mt-2"
   }, L.t('quote.arrotondamento', Math.abs(c.scarto) >= 0.005 ? `${c.scarto > 0 ? '+' : ''}${money(c.scarto)}` : null))), c.nonRipartito > 0.005 && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mt-2"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('quote.nonRipartito', money(c.nonRipartito), money(c.totale), money(c.raccolto))), /*#__PURE__*/React.createElement("ul", {
     className: "mt-1.5 space-y-1"
   }, c.buchi.map(b => /*#__PURE__*/React.createElement("li", {
     key: b.perche,
-    className: "text-[10px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('quote.buco', money(b.quanto), L.t(b.perche))))), /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-500 italic mt-1.5 leading-snug"
+    className: "text-minuto text-gray-500 italic mt-1.5 leading-snug"
   }, L.t('quote.siSistema'))));
 
   // Scheda dei saldi di UNA cassa: chi ha anticipato, chi deve, chi paga chi.
@@ -5263,24 +5272,24 @@ function App() {
     return /*#__PURE__*/React.createElement("div", {
       className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md"
     }, /*#__PURE__*/React.createElement("h3", {
-      className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 mb-3"
+      className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 mb-3"
     }, c.titolo), c.sottotitolo && /*#__PURE__*/React.createElement("p", {
-      className: "text-[9px] text-[#8F9E8B] leading-snug mb-3"
+      className: "text-minuto text-[#8F9E8B] leading-snug mb-3"
     }, c.sottotitolo), s.byBuyer.length > 0 && /*#__PURE__*/React.createElement("div", {
       className: "mb-3 pb-3 border-b border-[#8F9E8B]/30"
     }, /*#__PURE__*/React.createElement("h4", {
-      className: "font-rustic text-sm text-[#8F9E8B] mb-1"
+      className: "font-rustic text-normale text-[#8F9E8B] mb-1"
     }, L.t('saldi.anticipiPerAcquirente')), /*#__PURE__*/React.createElement("ul", {
       className: "divide-y divide-[#8F9E8B]/20"
     }, s.byBuyer.map(b => /*#__PURE__*/React.createElement("li", {
       key: b.name,
       className: "flex items-center justify-between py-1.5"
     }, /*#__PURE__*/React.createElement("span", {
-      className: `text-xs font-bold ${b.name === '—' ? 'text-gray-400 italic' : ''}`
+      className: `text-piccolo font-bold ${b.name === '—' ? 'text-gray-400 italic' : ''}`
     }, b.name === '—' ? L.t('saldi.nonIndicato') : b.name), /*#__PURE__*/React.createElement("span", {
-      className: "font-rustic font-bold text-sm"
+      className: "font-rustic font-bold text-normale"
     }, money(b.total), " \u20AC"))))), s.settlement.length === 0 ? /*#__PURE__*/React.createElement("p", {
-      className: "text-sm text-gray-400 italic"
+      className: "text-normale text-gray-400 italic"
     }, c.vuoto || L.t('saldi.vuoto')) : /*#__PURE__*/React.createElement("ul", {
       className: "divide-y divide-[#8F9E8B]/20"
     }, s.settlement.map(x => {
@@ -5292,18 +5301,18 @@ function App() {
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex flex-col min-w-0"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "text-sm font-bold truncate"
+        className: "text-normale font-bold truncate"
       }, x.name), /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px] text-[#8F9E8B]"
+        className: "text-minuto text-[#8F9E8B]"
       }, L.t('saldi.haAnticipatoDeve', money(x.paid), money(x.owed)))), /*#__PURE__*/React.createElement("span", {
-        className: `font-rustic font-bold text-sm shrink-0 text-right ${credito ? 'text-[#8FBF8F]' : debito ? 'text-[#D97706]' : 'text-gray-400'}`
+        className: `font-rustic font-bold text-normale shrink-0 text-right ${credito ? 'text-[#8FBF8F]' : debito ? 'text-[#D97706]' : 'text-gray-400'}`
       }, credito ? L.t('saldi.riceve', money(x.net)) : debito ? L.t('saldi.da', money(-x.net)) : L.t('saldi.inPari')));
     })), s.transfers.length > 0 && /*#__PURE__*/React.createElement("div", {
       className: "mt-3 pt-3 border-t border-[#8F9E8B]/30"
     }, /*#__PURE__*/React.createElement("h4", {
-      className: "font-rustic text-sm text-[#8F9E8B] mb-1"
+      className: "font-rustic text-normale text-[#8F9E8B] mb-1"
     }, L.t('saldi.chiPagaChi')), /*#__PURE__*/React.createElement("p", {
-      className: "text-[9px] text-gray-400 mb-2"
+      className: "text-minuto text-gray-400 mb-2"
     }, L.t('saldi.toccaRiga')), /*#__PURE__*/React.createElement("ul", {
       className: "space-y-1.5"
     }, s.transfers.map((t, i) => {
@@ -5319,7 +5328,7 @@ function App() {
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center justify-between"
       }, /*#__PURE__*/React.createElement("span", {
-        className: `text-xs ${paid ? 'line-through text-gray-400' : ''}`
+        className: `text-piccolo ${paid ? 'line-through text-gray-400' : ''}`
       }, /*#__PURE__*/React.createElement("span", {
         className: "font-bold"
       }, t.from), /*#__PURE__*/React.createElement("span", {
@@ -5331,22 +5340,22 @@ function App() {
       }, /*#__PURE__*/React.createElement("span", {
         className: `font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-[#D97706]'}`
       }, money(t.amount), " \u20AC"), paid && /*#__PURE__*/React.createElement("span", {
-        className: "text-[#8FBF8F] text-sm font-bold"
+        className: "text-[#8FBF8F] text-normale font-bold"
       }, "\u2713"))), mostraDati && /*#__PURE__*/React.createElement("div", {
         className: "mt-1.5 pt-1.5 border-t border-[#8F9E8B]/20 space-y-1"
       }, [['PayPal', dest.paypal], ['IBAN', dest.iban]].filter(r => r[1]).map(r => /*#__PURE__*/React.createElement("div", {
         key: r[0],
         className: "flex items-start gap-2"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px] uppercase font-bold text-[#8F9E8B] w-11 shrink-0 pt-0.5"
+        className: "text-minuto uppercase font-bold text-[#8F9E8B] w-11 shrink-0 pt-0.5"
       }, r[0]), /*#__PURE__*/React.createElement("span", {
-        className: `text-[10px] text-[#F0F4F1] break-all leading-snug ${r[0] === 'IBAN' ? 'font-mono' : ''}`
+        className: `text-piccolo text-[#F0F4F1] break-all leading-snug ${r[0] === 'IBAN' ? 'font-mono' : ''}`
       }, r[1]), /*#__PURE__*/React.createElement("button", {
         onClick: e => {
           e.stopPropagation();
           copiaDato(`${r[0]} di ${t.to}`, r[1]);
         },
-        className: "ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#2D392C] border border-[#8F9E8B]/30 text-[#8F9E8B] hover:text-white"
+        className: "ml-auto shrink-0 text-minuto uppercase font-bold px-2 py-1 rounded bg-[#2D392C] border border-[#8F9E8B]/30 text-[#8F9E8B] hover:text-white"
       }, L.t(copied === `${r[0]} di ${t.to}` ? 'saldi.copiato' : 'saldi.copia'))))));
     })), (() => {
       const senza = [...new Set(s.transfers.map(t => t.to))].filter(n => {
@@ -5355,26 +5364,26 @@ function App() {
       });
       if (senza.length === 0) return null;
       return /*#__PURE__*/React.createElement("p", {
-        className: "text-[9px] text-gray-400 italic mt-2"
+        className: "text-minuto text-gray-400 italic mt-2"
       }, frase('saldi.senzaDati', senza.join(', '), senza.length === 1));
     })()), s.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
-      className: "text-[9px] text-[#D97706] italic mt-2"
+      className: "text-minuto text-[#D97706] italic mt-2"
     }, L.t('saldi.senzaAcquirente', money(s.unattributed))), c.nonRipartito > 0.005 && /*#__PURE__*/React.createElement("div", {
       className: "mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
     }, /*#__PURE__*/React.createElement("p", {
-      className: "text-[11px] text-[#5C4A3C] leading-snug"
+      className: "text-piccolo text-[#5C4A3C] leading-snug"
     }, frase('saldi.nonQuadrano', money(c.nonRipartito)))), s.unknownBuyers.length > 0 && /*#__PURE__*/React.createElement("div", {
       className: "mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
     }, /*#__PURE__*/React.createElement("p", {
-      className: "text-[11px] text-[#5C4A3C] leading-snug"
+      className: "text-piccolo text-[#5C4A3C] leading-snug"
     }, frase('saldi.daControllareTesta'), ' ', s.unknownBuyers.map((u, i) => /*#__PURE__*/React.createElement("span", {
       key: u.name
     }, i > 0 ? ', ' : '', /*#__PURE__*/React.createElement("span", {
       className: "font-bold"
     }, u.name), " (", money(u.paid), " \u20AC)")), frase('saldi.daControllareCoda', s.unknownBuyers.length === 1))), Math.abs(c.scarto) >= 0.005 && s.transfers.length > 0 && /*#__PURE__*/React.createElement("p", {
-      className: "text-[9px] text-gray-400 italic mt-2"
+      className: "text-minuto text-gray-400 italic mt-2"
     }, L.t('saldi.arrotondamento', money(Math.abs(c.scarto)))), /*#__PURE__*/React.createElement("p", {
-      className: "text-[9px] text-gray-400 italic mt-1"
+      className: "text-minuto text-gray-400 italic mt-1"
     }, L.t('saldi.legenda')));
   };
 
@@ -5736,13 +5745,13 @@ function App() {
       alt: `Logo ${BRAND.groupName}`,
       className: "w-full h-full object-cover"
     })), /*#__PURE__*/React.createElement("h1", {
-      className: "font-rustic text-3xl tracking-widest text-[#8F9E8B]"
+      className: "font-rustic text-titolo tracking-widest text-[#8F9E8B]"
     }, BRAND.splashLine1), /*#__PURE__*/React.createElement("h2", {
-      className: "font-rustic text-xl tracking-widest text-[#F0F4F1]"
+      className: "font-rustic text-titolo tracking-widest text-[#F0F4F1]"
     }, BRAND.splashLine2), /*#__PURE__*/React.createElement("p", {
-      className: "mt-4 text-xs uppercase tracking-widest opacity-60"
+      className: "mt-4 text-piccolo uppercase tracking-widest opacity-60"
     }, BRAND.splashTagline), /*#__PURE__*/React.createElement("p", {
-      className: "absolute bottom-4 left-0 right-0 text-center text-[9px] tracking-wide text-[#8F9E8B]/70 px-6"
+      className: "absolute bottom-4 left-0 right-0 text-center text-minuto tracking-wide text-[#8F9E8B]/70 px-6"
     }, BRAND.credits));
   }
 
@@ -5809,7 +5818,7 @@ function App() {
   const renderBuyerSelect = (value, onChange, extraClass) => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("select", {
     value: value || '',
     onChange: e => onChange(e.target.value),
-    className: `w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] ${extraClass || ''}`
+    className: `w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C] ${extraClass || ''}`
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, L.t('acquirente.nonIndicato')), members.map(m => /*#__PURE__*/React.createElement("option", {
@@ -5818,7 +5827,7 @@ function App() {
   }, m.name)), value && !members.some(m => m.name === value) && /*#__PURE__*/React.createElement("option", {
     value: value
   }, L.t('acquirente.nonPiuMembro', value))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-[#D97706] mt-1"
+    className: "text-minuto text-[#D97706] mt-1"
   }, L.t('galleria.primaMembri')));
   const goTo = tab => {
     setActiveTab(tab);
@@ -5951,9 +5960,9 @@ function App() {
   }), /*#__PURE__*/React.createElement("span", {
     className: "block w-5 h-0.5 bg-[#F0F4F1]"
   })), /*#__PURE__*/React.createElement("h1", {
-    className: "font-rustic text-2xl tracking-wide"
+    className: "font-rustic text-titolo tracking-wide"
   }, BRAND.appTitle), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs uppercase tracking-wider text-[#8F9E8B]"
+    className: "text-piccolo uppercase tracking-wider text-[#8F9E8B]"
   }, tabs[activeTab]), (() => {
     const foto = cloud.foto || 0;
     const sospeso = !!cloud.pending || foto > 0;
@@ -5962,7 +5971,7 @@ function App() {
     const pallino = sospeso ? 'bg-[#F6C177] animate-pulse' : isOnline ? 'bg-[#8F9E8B]' : 'bg-[#D97706]';
     return /*#__PURE__*/React.createElement("span", {
       title: sospeso ? L.t('spia.sospeso') : testo,
-      className: `absolute top-3 right-3 flex items-center gap-1 text-[9px] uppercase font-bold ${colore}`
+      className: `absolute top-3 right-3 flex items-center gap-1 text-minuto uppercase font-bold ${colore}`
     }, /*#__PURE__*/React.createElement("span", {
       className: `w-2 h-2 rounded-full ${pallino}`
     }), testo);
@@ -5984,30 +5993,30 @@ function App() {
   }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-[#2D392C] leading-tight"
   }, BRAND.appTitle), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] uppercase tracking-wider text-[#8F9E8B]"
+    className: "text-minuto uppercase tracking-wider text-[#8F9E8B]"
   }, BRAND.groupName))), MENU_GROUPS.map(group => /*#__PURE__*/React.createElement("div", {
     key: group.title,
     className: "pt-2 first:pt-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 px-1 pb-1"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] uppercase tracking-widest font-bold text-[#8F9E8B] shrink-0"
+    className: "text-minuto uppercase tracking-widest font-bold text-[#8F9E8B] shrink-0"
   }, group.title), /*#__PURE__*/React.createElement("span", {
     className: "flex-grow h-px bg-[#8F9E8B]/30"
   })), group.items.map(tab => /*#__PURE__*/React.createElement("button", {
     key: tab,
     onClick: () => goTo(tab),
-    className: `w-full text-left px-3 py-2.5 rounded font-bold uppercase text-[13px] tracking-wide transition-colors flex items-center gap-2.5 ${activeTab === tab ? 'bg-[#2D392C] text-[#F0F4F1]' : 'text-[#2D392C] hover:bg-[#E2EAE4]'}`
+    className: `w-full text-left px-3 py-2.5 rounded font-bold uppercase text-normale tracking-wide transition-colors flex items-center gap-2.5 ${activeTab === tab ? 'bg-[#2D392C] text-[#F0F4F1]' : 'text-[#2D392C] hover:bg-[#E2EAE4]'}`
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-base leading-none w-5 text-center shrink-0"
+    className: "text-medio leading-none w-5 text-center shrink-0"
   }, TAB_ICONS[tab]), /*#__PURE__*/React.createElement("span", {
     className: "min-w-0 truncate"
   }, tabs[tab])))))))), showInstallHint && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-b border-[#D97706]/40 px-4 py-2.5 flex items-start gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-base leading-none mt-0.5"
+    className: "text-medio leading-none mt-0.5"
   }, "\uD83D\uDCF2"), /*#__PURE__*/React.createElement("p", {
-    className: "flex-grow text-[11px] text-[#5C4A3C] leading-snug"
+    className: "flex-grow text-piccolo text-[#5C4A3C] leading-snug"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
   }, L.t(isDesktop ? 'installa.computer' : 'installa.telefono')), ' ', L.t(isIOS ? 'installa.ios' : isDesktop ? 'installa.desktop' : 'installa.android'), ' ', L.t('installa.poi')), /*#__PURE__*/React.createElement("button", {
@@ -6023,11 +6032,11 @@ function App() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-start gap-2"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-base leading-none mt-0.5"
+      className: "text-medio leading-none mt-0.5"
     }, "\uD83C\uDF92"), /*#__PURE__*/React.createElement("div", {
       className: "min-w-0 flex-grow"
     }, /*#__PURE__*/React.createElement("p", {
-      className: "text-[11px] text-[#5C4A3C] leading-snug"
+      className: "text-piccolo text-[#5C4A3C] leading-snug"
     }, frase('backup.fineGiornata', modifiche)), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-2 mt-2"
     }, /*#__PURE__*/React.createElement("button", {
@@ -6046,17 +6055,17 @@ function App() {
   })(), spazioPieno && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('spazio.pieno'), admin && /*#__PURE__*/React.createElement(React.Fragment, null, frase('spazio.dettaglio')))), membriSalvati.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-base leading-none mt-0.5"
+    className: "text-medio leading-none mt-0.5"
   }, "\uD83D\uDD12"), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-grow"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('membriSalvati.avviso', membriSalvati.length, membriSalvati.length === 1 ? membriSalvati[0] : `${membriSalvati.slice(0, 4).join(', ')}${membriSalvati.length > 4 ? '…' : ''}`)), /*#__PURE__*/React.createElement("button", {
     onClick: () => setMembriSalvati([]),
     className: bottone('secondario', 'minuscolo', 'mt-2')
@@ -6065,11 +6074,11 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-base leading-none mt-0.5"
+    className: "text-medio leading-none mt-0.5"
   }, "\uD83D\uDD12"), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-grow"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('respinte.testa', respinte.length), ' ', respinte.slice(0, 3).map((r, i) => /*#__PURE__*/React.createElement("span", {
     key: r.che + r.nome + i
   }, i > 0 ? ' · ' : '', L.t('respinte.riga', L.t(r.che), r.nome, L.t(r.azione), money(r.quanto)))), respinte.length > 3 ? L.t('respinte.altre', respinte.length - 3) : '', ".", ' ', frase('respinte.coda')), /*#__PURE__*/React.createElement("button", {
@@ -6080,11 +6089,11 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-base leading-none mt-0.5"
+    className: "text-medio leading-none mt-0.5"
   }, "\uD83D\uDD50"), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-grow"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('orologio.avviso', Math.round(orologioFuori.avanti / 86400000))), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setOrologioFuori(null);
@@ -6098,11 +6107,11 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-base leading-none mt-0.5"
+    className: "text-medio leading-none mt-0.5"
   }, "\u26A0\uFE0F"), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-grow"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('perdita.avviso', lostSync.n, lostSync.quando ? L.data(new Date(lostSync.quando), 'dataOraBreve') : null, lostSync.che || null)), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mt-2"
   }, /*#__PURE__*/React.createElement("button", {
@@ -6407,7 +6416,7 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C] min-w-0 break-words"
+    className: "font-rustic text-grande text-[#2D392C] min-w-0 break-words"
   }, L.t('lista.acquistataTitolo', buying.name, buying.qty)), receipts[buying.id] ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[buying.id]),
     "aria-label": L.t('lista.vediScontrino'),
@@ -6415,16 +6424,16 @@ function App() {
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
     title: L.t('lista.scontrinoTitolo'),
     "aria-label": L.t('lista.allegaScontrino'),
-    className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]"
+    className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-grande leading-none hover:bg-[#E2EAE4]"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
     onChange: e => attachReceiptTo(e, buying.id),
     className: "hidden"
   }))), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-gray-500 -mt-1"
+    className: "text-piccolo text-gray-500 -mt-1"
   }, L.t(receipts[buying.id] ? 'lista.scontrinoGiaLi' : 'lista.scontrinoDaMettere')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+    className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, L.t('lista.prezzo')), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "0",
@@ -6440,39 +6449,39 @@ function App() {
     placeholder: "0.00",
     className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+    className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, L.t('lista.acquirente')), renderBuyerSelect(buying.buyer, v => setBuying(b => ({
     ...b,
     buyer: v
   })))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+    className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, L.t('lista.tipologia')), /*#__PURE__*/React.createElement("select", {
     value: buying.type,
     onChange: e => setBuying(b => ({
       ...b,
       type: e.target.value
     })),
-    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold"
   }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
     key: k,
     value: k
   }, tipoSpesa(k))))), buying.type === 'logistica' && /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2"
+    className: "text-piccolo text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2"
   }, frase('correggi.notaLogistica')), buying.type !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+    className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, L.t('lista.conto')), /*#__PURE__*/React.createElement("select", {
     value: buying.account || 'comune',
     onChange: e => setBuying(b => ({
       ...b,
       account: e.target.value
     })),
-    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold"
   }, /*#__PURE__*/React.createElement("option", {
     value: "comune"
   }, L.t('lista.contoComune')), /*#__PURE__*/React.createElement("option", {
     value: "sep"
   }, L.t('giorno.contoSeparato'))), buying.account === 'sep' && sepDays.length === 0 && /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] mt-1 leading-snug text-[#5C4A3C]"
+    className: "text-minuto mt-1 leading-snug text-[#5C4A3C]"
   }, L.t('lista.senzaGiorniBreve'))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 pt-1"
   }, /*#__PURE__*/React.createElement("button", {
@@ -6490,7 +6499,7 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C]"
+    className: "font-rustic text-grande text-[#2D392C]"
   }, L.t(editing.kind === 'purchase' ? 'correggi.spesa' : 'correggi.voce')), receipts[editing.id] ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[editing.id]),
     "aria-label": L.t('lista.vediScontrino'),
@@ -6498,14 +6507,14 @@ function App() {
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
     title: L.t('lista.scontrinoTitolo'),
     "aria-label": L.t('lista.allegaScontrino'),
-    className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]"
+    className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-grande leading-none hover:bg-[#E2EAE4]"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
     onChange: e => attachReceiptTo(e, editing.id),
     className: "hidden"
   }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+    className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, "Nome"), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: editing.name,
@@ -6513,16 +6522,16 @@ function App() {
       ...x,
       name: e.target.value
     })),
-    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+    className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, "Acquirente"), renderBuyerSelect(editing.buyer, v => setEditing(x => ({
     ...x,
     buyer: v
   })))), /*#__PURE__*/React.createElement("div", {
     className: editing.kind === 'purchase' ? 'grid grid-cols-2 gap-3' : ''
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+    className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, "Prezzo (\u20AC)"), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "0",
@@ -6535,32 +6544,32 @@ function App() {
     })),
     className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
   })), editing.kind === 'purchase' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+    className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, "Tipologia"), /*#__PURE__*/React.createElement("select", {
     value: editing.type,
     onChange: e => setEditing(x => ({
       ...x,
       type: e.target.value
     })),
-    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold"
   }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
     key: k,
     value: k
   }, tipoSpesa(k)))))), editing.kind === 'purchase' && (editing.type !== 'logistica' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+    className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, L.t('lista.conto')), /*#__PURE__*/React.createElement("select", {
     value: editing.account,
     onChange: e => setEditing(x => ({
       ...x,
       account: e.target.value
     })),
-    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold"
   }, /*#__PURE__*/React.createElement("option", {
     value: "comune"
   }, L.t('lista.contoComune')), /*#__PURE__*/React.createElement("option", {
     value: "sep"
   }, L.t('giorno.contoSeparato')))) : /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2"
+    className: "text-piccolo text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2"
   }, frase('correggi.notaLogistica'))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 pt-1"
   }, /*#__PURE__*/React.createElement("button", {
@@ -6576,9 +6585,9 @@ function App() {
     onClick: e => e.stopPropagation(),
     className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
+    className: "font-rustic text-grande text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
   }, L.t('ripristino.titolo')), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-gray-500"
+    className: "text-piccolo text-gray-500"
   }, frase('ripristino.nota')), snapList.map(s => {
     const giorno = L.data(parseDate(s.id.slice(0, 10)), 'settimanaLunga');
     const fascia = s.id.slice(11) === '00' ? L.t('ripristino.fasciaMattina') : s.id.slice(11) === '12' ? L.t('ripristino.fasciaPomeriggio') : '';
@@ -6590,11 +6599,11 @@ function App() {
     }, /*#__PURE__*/React.createElement("span", {
       className: "min-w-0"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-sm font-bold truncate"
+      className: "block text-normale font-bold truncate"
     }, giorno), /*#__PURE__*/React.createElement("span", {
-      className: "block text-[9px] text-gray-500"
+      className: "block text-minuto text-gray-500"
     }, fascia ? L.t('ripristino.copiaDelle', fascia, ora) : L.t('ripristino.copiaCloud'))), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-white border border-[#8F9E8B]/40 text-gray-500"
+      className: "text-minuto uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-white border border-[#8F9E8B]/40 text-gray-500"
     }, L.t(s.dove === 'locale' ? 'ripristino.sulTelefono' : 'ripristino.nelCloud')));
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSnapList(null),
@@ -6606,17 +6615,17 @@ function App() {
     onClick: e => e.stopPropagation(),
     className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
+    className: "font-rustic text-grande text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
   }, L.t('chiusura.campoTitolo')), /*#__PURE__*/React.createElement("label", {
-    className: "block text-[10px] uppercase font-bold text-gray-500"
+    className: "block text-piccolo uppercase font-bold text-gray-500"
   }, L.t('chiusura.nomeArchivio')), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: closeName,
     onChange: e => setCloseName(e.target.value),
     placeholder: L.t('chiusura.esempioNome'),
-    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
   }), /*#__PURE__*/React.createElement("div", {
-    className: "bg-[#F0F4F1]/60 rounded p-3 text-[11px] text-gray-600 space-y-1"
+    className: "bg-[#F0F4F1]/60 rounded p-3 text-piccolo text-gray-600 space-y-1"
   }, /*#__PURE__*/React.createElement("p", {
     className: "font-bold text-[#2D392C]"
   }, L.t('chiusura.verraArchiviato')), /*#__PURE__*/React.createElement("p", null, L.t('chiusura.riepilogo', money(totals.overallTotal), purchases.length, members.length)), /*#__PURE__*/React.createElement("p", {
@@ -6636,9 +6645,9 @@ function App() {
     onClick: e => e.stopPropagation(),
     className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
+    className: "font-rustic text-grande text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
   }, viewArchive.name), /*#__PURE__*/React.createElement("pre", {
-    className: "text-[11px] text-gray-700 whitespace-pre-wrap font-sans leading-relaxed"
+    className: "text-piccolo text-gray-700 whitespace-pre-wrap font-sans leading-relaxed"
   }, viewArchive.report || L.t('archivio.nessunResoconto')), /*#__PURE__*/React.createElement("button", {
     onClick: () => shareArchive(viewArchive),
     className: bottone('whatsapp', 'normale', 'w-full')
@@ -6661,19 +6670,19 @@ function App() {
     alt: "",
     className: "max-w-full max-h-[60vh] rounded opacity-40 blur-sm"
   }), /*#__PURE__*/React.createElement("p", {
-    className: "mt-3 text-[11px] uppercase tracking-widest text-white/60"
+    className: "mt-3 text-piccolo uppercase tracking-widest text-white/60"
   }, L.t('galleria.scaricoFoto')))), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 w-full max-w-md flex items-center justify-between gap-3 pt-3"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] text-white/70 truncate"
+    className: "text-piccolo text-white/70 truncate"
   }, viewPhoto.by || L.t('archivio.anonimo'), viewPhoto.at ? ` · ${L.data(new Date(viewPhoto.at), 'numerica')}` : ''), /*#__PURE__*/React.createElement("span", {
     className: "flex items-center gap-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => removePhoto(viewPhoto),
-    className: "text-[10px] uppercase font-bold px-3 py-2 rounded border border-[#D97706]/60 text-[#D97706]"
+    className: "text-piccolo uppercase font-bold px-3 py-2 rounded border border-[#D97706]/60 text-[#D97706]"
   }, L.t('archivio.elimina')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewPhoto(null),
-    className: "text-[10px] uppercase font-bold px-3 py-2 rounded bg-[#F0F4F1] text-[#2D392C]"
+    className: "text-piccolo uppercase font-bold px-3 py-2 rounded bg-[#F0F4F1] text-[#2D392C]"
   }, L.t('archivio.chiudi'))))), viewReceipt && /*#__PURE__*/React.createElement("div", {
     onClick: () => setViewReceipt(null),
     className: "fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 cursor-pointer"
@@ -6682,11 +6691,11 @@ function App() {
     alt: L.t('lista.scontrino'),
     className: "max-w-full max-h-full rounded shadow-2xl"
   }), /*#__PURE__*/React.createElement("span", {
-    className: "absolute bottom-6 left-0 right-0 text-center text-[10px] uppercase tracking-widest text-white/60"
+    className: "absolute bottom-6 left-0 right-0 text-center text-piccolo uppercase tracking-widest text-white/60"
   }, L.t('galleria.toccaPerChiudere'))), /*#__PURE__*/React.createElement("footer", {
     className: "fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#F0F4F1] border-t-2 border-[#5C4A3C] py-3 px-4 text-center z-10"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-rustic text-[#2D392C] tracking-widest text-sm uppercase font-bold"
+    className: "font-rustic text-[#2D392C] tracking-widest text-normale uppercase font-bold"
   }, BRAND.footerMotto)));
 }
 // ---------- Schede del giorno: Calendario, Menu', Presenze ----------
@@ -6723,9 +6732,9 @@ const schedaCalendario = ({
   onClick: () => goTo('impostazioni'),
   className: "w-full bg-[#D97706]/10 border border-[#D97706]/40 rounded-lg p-3 text-left flex items-start gap-2 hover:bg-[#D97706]/15"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-base leading-none mt-0.5"
+  className: "text-medio leading-none mt-0.5"
 }, "\u26A0\uFE0F"), /*#__PURE__*/React.createElement("span", {
-  className: "text-[11px] text-[#5C4A3C] leading-snug"
+  className: "text-piccolo text-[#5C4A3C] leading-snug"
 }, frase('giorno.nonPronto'))), (() => {
   const orfane = presenzeOrfane();
   if (orfane.length === 0) return null;
@@ -6734,9 +6743,9 @@ const schedaCalendario = ({
     onClick: () => goTo('presenze'),
     className: "w-full bg-[#D97706]/10 border border-[#D97706]/40 rounded-lg p-3 text-left flex items-start gap-2 hover:bg-[#D97706]/15"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-base leading-none mt-0.5"
+    className: "text-medio leading-none mt-0.5"
   }, "\uD83C\uDF7D\uFE0F"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('giorno.orfaneAvviso', totale, orfane.length)));
 })(), renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
   className: "bg-white rounded-lg border border-[#8F9E8B]/30 shadow-sm overflow-hidden"
@@ -6744,11 +6753,11 @@ const schedaCalendario = ({
   onClick: () => setSepOpen(v => !v),
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0"
+  className: "text-piccolo uppercase font-bold text-[#5C4A3C] shrink-0"
 }, L.t('giorno.contoSeparato')), /*#__PURE__*/React.createElement("span", {
-  className: "ml-auto text-[9px] text-gray-500 truncate"
+  className: "ml-auto text-minuto text-gray-500 truncate"
 }, sepDays.length === 0 ? L.t('giorno.nessunGiorno') : L.t('giorno.giorniInTotale', sepDays.length)), /*#__PURE__*/React.createElement("span", {
-  className: `text-[10px] text-[#5C4A3C] shrink-0 transition-transform ${sepOpen ? 'rotate-180' : ''}`
+  className: `text-piccolo text-[#5C4A3C] shrink-0 transition-transform ${sepOpen ? 'rotate-180' : ''}`
 }, "\u25BE")), sepOpen && /*#__PURE__*/React.createElement("div", {
   className: "px-3 pb-3"
 }, /*#__PURE__*/React.createElement("div", {
@@ -6766,14 +6775,14 @@ const schedaCalendario = ({
     onChange: () => toggleSepDay(dateStr),
     className: "w-3.5 h-3.5 accent-[#5C4A3C]"
   }), /*#__PURE__*/React.createElement("span", {
-    className: `text-[9px] font-bold ${on ? 'text-[#5C4A3C]' : 'text-gray-400'}`
+    className: `text-minuto font-bold ${on ? 'text-[#5C4A3C]' : 'text-gray-400'}`
   }, d.getDate()));
 })), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic mt-2 leading-snug"
+  className: "text-minuto text-gray-400 italic mt-2 leading-snug"
 }, frase('giorno.separatoNota')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-dashed border-[#8F9E8B] pb-1"
+  className: "font-rustic text-grande border-b border-dashed border-[#8F9E8B] pb-1"
 }, L.data(parseDate(selectedDateStr), 'completa')), (() => {
   const loc = window.CAMP_LOCATION;
   const locOk = loc && typeof loc.lat === 'number' && typeof loc.lon === 'number';
@@ -6783,7 +6792,7 @@ const schedaCalendario = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, !locOk ? /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] text-gray-400 italic"
+    className: "text-piccolo text-gray-400 italic"
   }, L.t('meteo.senzaLuogo')) : wx ? (() => {
     // La faccia della giornata e', quando si sa, la
     // condizione prevalente delle ore diurne; il brutto si
@@ -6791,37 +6800,37 @@ const schedaCalendario = ({
     // se e' una spruzzata o una lavata: "40%" da solo no.
     const r = raccontaMeteo(wx);
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-      className: "text-2xl leading-none"
+      className: "text-titolo leading-none"
     }, r.icon), /*#__PURE__*/React.createElement("div", {
       className: "flex flex-col min-w-0"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-sm font-bold text-[#2D392C] leading-tight"
+      className: "text-normale font-bold text-[#2D392C] leading-tight"
     }, r.label, r.coda ? /*#__PURE__*/React.createElement("span", {
       className: "font-normal"
     }, ", ", r.coda) : null), loc.label && /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] text-gray-400"
+      className: "text-minuto text-gray-400"
     }, loc.label)), /*#__PURE__*/React.createElement("span", {
-      className: "ml-auto text-xs text-gray-600 font-bold shrink-0 text-right"
+      className: "ml-auto text-piccolo text-gray-600 font-bold shrink-0 text-right"
     }, Math.round(wx.tmax), "\xB0 / ", Math.round(wx.tmin), "\xB0", r.mm ? /*#__PURE__*/React.createElement("span", {
       className: "text-[#5C8AA8]"
     }, " \xB7 \uD83D\uDCA7", r.mm) : wx.rain != null ? /*#__PURE__*/React.createElement("span", {
       className: "text-[#5C8AA8]"
     }, " \xB7 \uD83D\uDCA7", wx.rain, "%") : null));
   })() : /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] text-gray-400 italic"
+    className: "text-piccolo text-gray-400 italic"
   }, L.t('meteo.nonDisponibile', isOnline))), locOk && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2 pt-1 border-t border-[#8F9E8B]/20"
   }, (() => {
     const vecchia = weather.fetchedAt && Date.now() - weather.fetchedAt > METEO_VECCHIO;
     return /*#__PURE__*/React.createElement("span", {
-      className: `text-[9px] ${vecchia ? 'text-[#D97706] font-bold' : 'text-gray-400'}`
+      className: `text-minuto ${vecchia ? 'text-[#D97706] font-bold' : 'text-gray-400'}`
     }, weather.fetchedAt ? L.t('meteo.previsioniDel', vecchia, L.data(new Date(weather.fetchedAt), 'breve'), L.data(new Date(weather.fetchedAt), 'ora')) : L.t('meteo.nonScaricate'));
   })(), /*#__PURE__*/React.createElement("button", {
     onClick: () => fetchWeather(true),
     disabled: !isOnline || wxBusy,
     className: bottone('secondario', 'minuscolo', 'shrink-0')
   }, wxBusy ? '…' : L.t('gioco.aggiorna'))), admin && locOk && /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-gray-400 font-mono pt-0.5"
+    className: "text-minuto text-gray-400 font-mono pt-0.5"
   }, "\uD83D\uDCCD ", loc.lat, ", ", loc.lon, L.t('meteo.quote', loc.alt, weather.quota)));
 })(), (() => {
   const lunch = members.filter(m => getMeal(selectedDateStr, m.id).lunch).length;
@@ -6829,35 +6838,35 @@ const schedaCalendario = ({
   return /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 bg-[#2D392C]/5 px-3 py-2 rounded border border-[#2D392C]/15"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xl leading-none"
+    className: "text-titolo leading-none"
   }, "\uD83C\uDF72"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] uppercase font-bold text-gray-500"
+    className: "text-piccolo uppercase font-bold text-gray-500"
   }, L.t('giorno.cucina')), /*#__PURE__*/React.createElement("span", {
-    className: "ml-auto text-sm font-bold text-[#2D392C]"
+    className: "ml-auto text-normale font-bold text-[#2D392C]"
   }, lunch, " ", /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-normal text-gray-500"
+    className: "text-piccolo font-normal text-gray-500"
   }, L.t('giorno.aPranzo')), /*#__PURE__*/React.createElement("span", {
     className: "text-gray-300"
   }, " \xB7 "), dinner, " ", /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-normal text-gray-500"
+    className: "text-piccolo font-normal text-gray-500"
   }, L.t('giorno.aCena'))));
 })(), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "flex items-center justify-between mb-1"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] uppercase font-bold text-gray-500 tracking-wide"
+  className: "text-piccolo uppercase font-bold text-gray-500 tracking-wide"
 }, L.t('giorno.note')), (getDayData(selectedDateStr).appunti || '').trim() && /*#__PURE__*/React.createElement("span", {
-  className: "text-[9px] text-[#2D392C]"
+  className: "text-minuto text-[#2D392C]"
 }, L.t('giorno.scritte'))), /*#__PURE__*/React.createElement("textarea", {
   value: getDayData(selectedDateStr).appunti || '',
   onChange: e => updateDayData(selectedDateStr, 'appunti', e.target.value),
   rows: 3,
   placeholder: L.t('giorno.promemoria'),
-  className: "w-full p-3 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm leading-snug focus:outline-none focus:border-[#2D392C] resize-y"
+  className: "w-full p-3 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale leading-snug focus:outline-none focus:border-[#2D392C] resize-y"
 }), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic mt-1"
+  className: "text-minuto text-gray-400 italic mt-1"
 }, frase('giorno.noteNota'))), /*#__PURE__*/React.createElement("button", {
   onClick: () => goTo('menu'),
-  className: bottone('secondario', 'piccolo', 'w-full')
+  className: bottone('secondario', 'normale', 'w-full')
 }, L.t('giorno.vaiAlMenu', !!(getDayData(selectedDateStr).note || '').trim()))));
 const schedaMenu = ({
   confermaPropostaSpesa,
@@ -6880,24 +6889,24 @@ const schedaMenu = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-baseline justify-between border-b border-dashed border-[#8F9E8B] pb-1"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg text-[#2D392C]"
+  className: "font-rustic text-grande text-[#2D392C]"
 }, L.t('menu.diGiorno', L.data(parseDate(selectedDateStr), 'completa')))), (() => {
   const lunch = members.filter(m => getMeal(selectedDateStr, m.id).lunch).length;
   const dinner = members.filter(m => getMeal(selectedDateStr, m.id).dinner).length;
   return /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 bg-[#2D392C]/5 px-3 py-2 rounded border border-[#2D392C]/15"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xl leading-none"
+    className: "text-titolo leading-none"
   }, "\uD83C\uDF72"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] uppercase font-bold text-gray-500"
+    className: "text-piccolo uppercase font-bold text-gray-500"
   }, L.t('menu.daPreparare')), /*#__PURE__*/React.createElement("span", {
-    className: "ml-auto text-sm font-bold text-[#2D392C]"
+    className: "ml-auto text-normale font-bold text-[#2D392C]"
   }, lunch, " ", /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-normal text-gray-500"
+    className: "text-piccolo font-normal text-gray-500"
   }, L.t('giorno.aPranzo')), /*#__PURE__*/React.createElement("span", {
     className: "text-gray-300"
   }, " \xB7 "), dinner, " ", /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-normal text-gray-500"
+    className: "text-piccolo font-normal text-gray-500"
   }, L.t('giorno.aCena'))));
 })(), /*#__PURE__*/React.createElement("textarea", {
   value: getDayData(selectedDateStr).note,
@@ -6905,12 +6914,12 @@ const schedaMenu = ({
   placeholder: L.t('menu.cosaSiMangia'),
   className: "lined-paper w-full p-3 rounded-lg border border-[#8F9E8B]/30 focus:outline-none focus:border-[#2D392C] resize-y"
 }), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic"
+  className: "text-minuto text-gray-400 italic"
 }, L.t('menu.unaPerRiga')), /*#__PURE__*/React.createElement("button", {
   onClick: proponiDalMenu,
-  className: bottone('secondario', 'piccolo', 'w-full mt-1')
+  className: bottone('secondario', 'normale', 'w-full mt-1')
 }, L.t('menu.portaInLista')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic"
+  className: "text-minuto text-gray-400 italic"
 }, frase('menu.ponteNota', toBuy.length))), propostaSpesa && /*#__PURE__*/React.createElement("div", {
   className: "fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-3 z-50",
   onClick: () => setPropostaSpesa(null)
@@ -6920,9 +6929,9 @@ const schedaMenu = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "p-4 border-b border-[#8F9E8B]/30"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg text-[#2D392C]"
+  className: "font-rustic text-grande text-[#2D392C]"
 }, L.t('menu.dallaSpesa')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug mt-1"
+  className: "text-piccolo text-gray-500 leading-snug mt-1"
 }, L.t('menu.trovate', propostaSpesa.voci.length, L.data(parseDate(selectedDateStr), 'lunga'), propostaSpesa.scartate))), /*#__PURE__*/React.createElement("ul", {
   className: "overflow-y-auto divide-y divide-[#8F9E8B]/15 px-4"
 }, propostaSpesa.voci.map((v, i) => /*#__PURE__*/React.createElement("li", {
@@ -6941,9 +6950,9 @@ const schedaMenu = ({
   })),
   className: "w-4 h-4 shrink-0 accent-[#2D392C]"
 }), /*#__PURE__*/React.createElement("span", {
-  className: "text-sm text-[#2D392C] min-w-0 flex-1 truncate"
+  className: "text-normale text-[#2D392C] min-w-0 flex-1 truncate"
 }, v.nome), v.qta && /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] font-bold text-[#5C4A3C] shrink-0"
+  className: "text-piccolo font-bold text-[#5C4A3C] shrink-0"
 }, v.qta))))), /*#__PURE__*/React.createElement("div", {
   className: "p-4 border-t border-[#8F9E8B]/30 flex gap-2"
 }, /*#__PURE__*/React.createElement("button", {
@@ -6955,7 +6964,7 @@ const schedaMenu = ({
 }, L.t('menu.aggiungiN', propostaSpesa.voci.filter((_, i) => propostaSpesa.scelte[i]).length))))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
 }, L.t('menu.giorniDelCampo')), /*#__PURE__*/React.createElement("ul", {
   className: "space-y-1.5"
 }, (() => {
@@ -6975,11 +6984,11 @@ const schedaMenu = ({
       },
       className: `w-full text-left flex items-center gap-2 px-3 py-2 rounded border transition-colors ${ds === selectedDateStr ? 'bg-[#5C4A3C]/15 border-[#5C4A3C]/50' : 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20 hover:bg-[#E2EAE4]'}`
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-bold text-[#2D392C] shrink-0 w-16"
+      className: "text-piccolo font-bold text-[#2D392C] shrink-0 w-16"
     }, L.data(parseDate(ds), 'settimanaGiorno')), /*#__PURE__*/React.createElement("span", {
-      className: `text-[10px] truncate ${testo ? 'text-gray-600' : 'text-gray-400 italic'}`
+      className: `text-piccolo truncate ${testo ? 'text-gray-600' : 'text-gray-400 italic'}`
     }, testo ? prima : L.t('menu.daScrivere')), testo && /*#__PURE__*/React.createElement("span", {
-      className: "ml-auto text-[10px] shrink-0"
+      className: "ml-auto text-piccolo shrink-0"
     }, "\u2714")));
   });
 })())));
@@ -7024,7 +7033,7 @@ const schedaPresenze = ({
       setCurrentDate(parseDate(e.target.value));
     }
   },
-  className: "bg-transparent border-none text-sm focus:outline-none font-bold text-center w-full mx-2 text-[#5C4A3C]"
+  className: "bg-transparent border-none text-normale focus:outline-none font-bold text-center w-full mx-2 text-[#5C4A3C]"
 }), /*#__PURE__*/React.createElement("button", {
   onClick: () => navigateDate(1),
   className: bottoneIcona('tenue')
@@ -7035,18 +7044,18 @@ const schedaPresenze = ({
   return /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/10 border-2 border-[#D97706]/50 rounded-lg p-3 space-y-3"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('presenze.orfaneTitolo', totale)), /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
   }, orfane.map(o => /*#__PURE__*/React.createElement("li", {
     key: o.id,
     className: "bg-white/70 rounded border border-[#8F9E8B]/30 p-2.5 space-y-2"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-[#2D392C] leading-snug"
+    className: "text-piccolo text-[#2D392C] leading-snug"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
   }, o.nome || L.t('presenze.personaSparita')), ' — ', L.t('presenze.pastiSuGiorni', o.pasti, o.giorni.length), /*#__PURE__*/React.createElement("span", {
-    className: "block text-[9px] text-gray-500"
+    className: "block text-minuto text-gray-500"
   }, o.giorni.slice(0, 6).map(d => L.data(parseDate(d), 'breve')).join(' · '), o.giorni.length > 6 ? ' …' : '')), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("select", {
@@ -7055,7 +7064,7 @@ const schedaPresenze = ({
       ...prev,
       [o.id]: e.target.value
     })),
-    className: "flex-grow min-w-0 p-2 bg-white border border-[#8F9E8B]/40 rounded text-xs focus:outline-none focus:border-[#2D392C]"
+    className: "flex-grow min-w-0 p-2 bg-white border border-[#8F9E8B]/40 rounded text-piccolo focus:outline-none focus:border-[#2D392C]"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, L.t('presenze.aChiSono')), members.map(m => /*#__PURE__*/React.createElement("option", {
@@ -7070,20 +7079,20 @@ const schedaPresenze = ({
     "aria-label": L.t('presenze.buttaVia'),
     className: bottone('distruttivo', 'minuscolo', 'shrink-0')
   }, L.t('presenze.butta')))))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-[#5C4A3C] italic"
+    className: "text-minuto text-[#5C4A3C] italic"
   }, L.t('galleria.primaMembri')));
 })(), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2"
 }, /*#__PURE__*/React.createElement("span", {
   className: "min-w-0 truncate"
 }, L.t('presenze.delGiorno', L.data(parseDate(selectedDateStr), 'lunga'))), giornoBloccato(selectedDateStr) && /*#__PURE__*/React.createElement("span", {
-  className: "ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white"
+  className: "ml-auto shrink-0 text-minuto uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white"
 }, L.t('presenze.bloccate'))), giornoGratis(selectedDateStr) && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C]/10 border border-[#2D392C]/35 rounded p-2.5"
 }, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-[#2D392C] leading-snug"
+  className: "text-piccolo text-[#2D392C] leading-snug"
 }, frase('presenze.gratis'))), admin && members.length > 0 && /*#__PURE__*/React.createElement("button", {
   onClick: () => chiediGiornoGratis(selectedDateStr),
   disabled: !!giornoBloccato(selectedDateStr),
@@ -7091,35 +7100,35 @@ const schedaPresenze = ({
 }, L.t(giornoGratis(selectedDateStr) ? 'presenze.gratisTogli' : 'presenze.gratisMetti')), giornoBloccato(selectedDateStr) && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#5C4A3C]/10 border border-[#5C4A3C]/40 rounded p-2.5"
 }, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-[#5C4A3C] leading-snug"
+  className: "text-piccolo text-[#5C4A3C] leading-snug"
 }, frase('presenze.chiuse', L.data(new Date(giornoBloccato(selectedDateStr).at), 'dataOra')))), members.length === 0 ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-400 italic"
+  className: "text-normale text-gray-400 italic"
 }, L.t('presenze.primaIMembri')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
   className: `bg-[#F0F4F1]/60 rounded border border-[#8F9E8B]/30 overflow-hidden ${giornoBloccato(selectedDateStr) ? 'opacity-50 pointer-events-none' : ''}`
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setAzioniOpen(v => !v),
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0"
+  className: "text-piccolo uppercase font-bold text-[#5C4A3C] shrink-0"
 }, L.t('presenze.segnaInBlocco')), /*#__PURE__*/React.createElement("span", {
-  className: "ml-auto text-[9px] text-gray-500 truncate"
+  className: "ml-auto text-minuto text-gray-500 truncate"
 }, L.t('presenze.pranzoCena', members.filter(m => getMeal(selectedDateStr, m.id).lunch).length, members.filter(m => getMeal(selectedDateStr, m.id).dinner).length)), /*#__PURE__*/React.createElement("span", {
-  className: `text-[10px] text-[#5C4A3C] shrink-0 transition-transform ${azioniOpen ? 'rotate-180' : ''}`
+  className: `text-piccolo text-[#5C4A3C] shrink-0 transition-transform ${azioniOpen ? 'rotate-180' : ''}`
 }, "\u25BE")), azioniOpen && /*#__PURE__*/React.createElement("div", {
   className: "px-3 pb-3 space-y-2"
 }, /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-3 gap-2"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => chiediSetAll('lunch'),
-  className: bottone('primario', 'piccolo')
+  className: bottone('primario', 'normale')
 }, L.t('presenze.tuttiPranzo')), /*#__PURE__*/React.createElement("button", {
   onClick: () => chiediSetAll('dinner'),
-  className: bottone('bruno', 'piccolo')
+  className: bottone('bruno', 'normale')
 }, L.t('presenze.tuttiCena')), /*#__PURE__*/React.createElement("button", {
   onClick: chiediCopiaDaIeri,
-  className: bottone('secondario', 'piccolo')
+  className: bottone('secondario', 'normale')
 }, L.t('presenze.copiaIeri'))), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 leading-snug"
+  className: "text-minuto text-gray-400 leading-snug"
 }, L.t('presenze.bloccoNota')))), /*#__PURE__*/React.createElement("ul", {
   className: "space-y-2"
 }, members.map(m => {
@@ -7129,9 +7138,9 @@ const schedaPresenze = ({
     key: m.id,
     className: "flex items-center justify-between gap-2 bg-[#F0F4F1]/60 p-2 rounded border border-[#8F9E8B]/20"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-sm font-bold text-[#2D392C] truncate flex items-center gap-1"
+    className: "text-normale font-bold text-[#2D392C] truncate flex items-center gap-1"
   }, m.name, m.isChild && /*#__PURE__*/React.createElement("span", {
-    className: "text-[8px] uppercase bg-[#D97706] text-white px-1 rounded"
+    className: "text-minuto uppercase bg-[#D97706] text-white px-1 rounded"
   }, L.t('presenze.gratisEtichetta'))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1.5 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
@@ -7145,19 +7154,19 @@ const schedaPresenze = ({
   }, L.t('presenze.cena'))));
 }))), admin && members.length > 0 && (giornoBloccato(selectedDateStr) ? /*#__PURE__*/React.createElement("button", {
   onClick: () => sbloccaGiorno(selectedDateStr),
-  className: bottone('secondario', 'piccolo', 'w-full')
+  className: bottone('secondario', 'normale', 'w-full')
 }, L.t('presenze.sblocca')) : /*#__PURE__*/React.createElement("button", {
   onClick: () => bloccaGiorno(selectedDateStr),
-  className: bottone('bruno', 'piccolo', 'w-full')
+  className: bottone('bruno', 'normale', 'w-full')
 }, L.t('presenze.blocca')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-2"
 }, /*#__PURE__*/React.createElement("h4", {
-  className: "font-rustic text-sm text-[#5C4A3C]"
+  className: "font-rustic text-normale text-[#5C4A3C]"
 }, L.t('presenze.noteOspiti')), /*#__PURE__*/React.createElement("textarea", {
   value: getDayData(selectedDateStr).guestsNames,
   onChange: e => updateDayData(selectedDateStr, 'guestsNames', e.target.value),
   placeholder: L.t('presenze.ospitiSegno'),
-  className: "w-full h-20 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] resize-none"
+  className: "w-full h-20 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C] resize-none"
 })));
 // ---------- Schede dei conti: Spese Totali, Lista della Spesa, Attrezzatura ----------
 // Vedi 81-schede-giorno.jsx per il perche' sono funzioni e non componenti.
@@ -7204,86 +7213,86 @@ const schedaSpesa = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-4"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
 }, L.t('spesa.cassaGlobale')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 -mt-1"
+  className: "text-piccolo text-gray-500 -mt-1"
 }, frase('spesa.cassaNota')), /*#__PURE__*/React.createElement("div", {
   className: "space-y-2"
 }, [[L.t('spesa.cibo'), totals.totalFood], [L.t('spesa.bevande'), totals.totalDrinks], [L.t('spesa.logisticaEAttrezzatura'), totals.totalAccessory]].map(([label, val]) => /*#__PURE__*/React.createElement("div", {
   key: label,
   className: "flex justify-between items-center bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[11px] uppercase font-bold text-gray-500"
+  className: "text-piccolo uppercase font-bold text-gray-500"
 }, label), /*#__PURE__*/React.createElement("span", {
   className: "font-bold text-[#2D392C]"
 }, money(val), " \u20AC")))), totals.foodDrinksSep > 0 && /*#__PURE__*/React.createElement("div", {
   className: "flex justify-between items-center bg-[#5C4A3C]/10 px-3 py-2 rounded border border-[#5C4A3C]/30"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] uppercase font-bold text-[#5C4A3C]"
+  className: "text-piccolo uppercase font-bold text-[#5C4A3C]"
 }, L.t('spesa.diCuiSeparato')), /*#__PURE__*/React.createElement("span", {
   className: "font-bold text-[#5C4A3C]"
 }, money(totals.foodDrinksSep), " \u20AC")), /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C]/10 p-3 rounded border border-[#2D392C]/20 flex justify-between items-center mt-2"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "font-bold text-xs uppercase"
+  className: "font-bold text-piccolo uppercase"
 }, L.t('spesa.importoComplessivo')), /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic font-bold text-lg text-[#2D392C]"
+  className: "font-rustic font-bold text-grande text-[#2D392C]"
 }, money(totals.overallTotal), " \u20AC"))), /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-4"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-1"
 }, L.t('spesa.contoDellaServa')), /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-2 gap-3"
 }, /*#__PURE__*/React.createElement("div", {
   className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] uppercase text-[#8F9E8B] block"
+  className: "text-piccolo uppercase text-[#8F9E8B] block"
 }, L.t('spesa.quotaPasto')), /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-xl text-[#D97706]"
+  className: "font-rustic text-titolo text-[#D97706]"
 }, money(totals.costPerMeal), " \u20AC"), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 mt-1"
+  className: "text-minuto text-gray-400 mt-1"
 }, L.t('spesa.quotaPastoNota', money(totals.foodDrinksCommon), totals.adultMealsCommon, totals.sepDaysCount > 0))), !(FEATURES.equipExemption && totals.equipPayersCount !== totals.accessoryPayersCount) ? /*#__PURE__*/React.createElement("div", {
   className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] uppercase text-[#8F9E8B] block"
+  className: "text-piccolo uppercase text-[#8F9E8B] block"
 }, L.t('spesa.quotaPersona')), /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-xl text-[#D97706]"
+  className: "font-rustic text-titolo text-[#D97706]"
 }, money(totals.accessoryPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 mt-1"
+  className: "text-minuto text-gray-400 mt-1"
 }, L.t('spesa.quotaPersonaNota', money(totals.totalAccessory), totals.accessoryPayersCount))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
   className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] uppercase text-[#8F9E8B] block"
+  className: "text-piccolo uppercase text-[#8F9E8B] block"
 }, L.t('spesa.logisticaTesta')), /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-xl text-[#D97706]"
+  className: "font-rustic text-titolo text-[#D97706]"
 }, money(totals.logisticsPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 mt-1"
+  className: "text-minuto text-gray-400 mt-1"
 }, L.t('spesa.logisticaTestaNota', money(totals.logisticsPurchases), totals.accessoryPayersCount))), /*#__PURE__*/React.createElement("div", {
   className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] uppercase text-[#8F9E8B] block"
+  className: "text-piccolo uppercase text-[#8F9E8B] block"
 }, L.t('spesa.attrezzaturaTesta')), /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-xl text-[#D97706]"
+  className: "font-rustic text-titolo text-[#D97706]"
 }, money(totals.equipPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 mt-1"
+  className: "text-minuto text-gray-400 mt-1"
 }, L.t('spesa.attrezzaturaTestaNota', money(totals.equipBought), totals.equipPayersCount)))), (totals.sepDaysCount > 0 || totals.foodDrinksSep > 0) && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#1F271E] p-3 rounded border border-[#5C4A3C] col-span-2"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] uppercase text-[#8F9E8B] block"
+  className: "text-piccolo uppercase text-[#8F9E8B] block"
 }, L.t('spesa.separatoQuotaPasto')), /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-xl text-[#D97706]"
+  className: "font-rustic text-titolo text-[#D97706]"
 }, money(totals.costPerMealSep), " \u20AC"), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 mt-1"
+  className: "text-minuto text-gray-400 mt-1"
 }, L.t('spesa.separatoQuotaNota', money(totals.foodDrinksSep), totals.adultMealsSep, totals.sepDaysCount, totals.sepPeopleCount)))), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic"
+  className: "text-minuto text-gray-400 italic"
 }, L.t('spesa.bambiniGratis')))), spesaSection === 'quote' && /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, totals.overallTotal > 0 && totals.adultMealsTotal === 0 && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
 }, /*#__PURE__*/React.createElement("p", {
-  className: "text-[11px] text-[#5C4A3C] leading-snug"
+  className: "text-piccolo text-[#5C4A3C] leading-snug"
 }, frase('quote.senzaPasti', money(totals.overallTotal)))), totals.freeDaysCount > 0 && /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-[#2D392C] leading-snug bg-[#2D392C]/8 border border-[#2D392C]/25 rounded p-2.5"
+  className: "text-piccolo text-[#2D392C] leading-snug bg-[#2D392C]/8 border border-[#2D392C]/25 rounded p-2.5"
 }, frase('quote.giorniGratis', totals.freeDaysCount, totals.mealsFree)), schedaQuote({
   titolo: L.t('quote.cassaComune'),
   sottotitolo: cassaSepAttiva ? L.t('quote.cassaComuneNota') : null,
@@ -7312,9 +7321,9 @@ const schedaSpesa = ({
 }), cassaSepAttiva && totals.breakdown.length > 0 && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
 }, L.t('quote.totaleAPersona')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug mb-2"
+  className: "text-piccolo text-gray-500 leading-snug mb-2"
 }, L.t('quote.totaleNota')), /*#__PURE__*/React.createElement("ul", {
   className: "divide-y divide-[#8F9E8B]/20"
 }, totals.breakdown.map(b => /*#__PURE__*/React.createElement("li", {
@@ -7323,24 +7332,24 @@ const schedaSpesa = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex flex-col"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-sm font-bold text-[#2D392C]"
+  className: "text-normale font-bold text-[#2D392C]"
 }, b.name), /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] text-gray-500"
+  className: "text-piccolo text-gray-500"
 }, b.isChild ? L.t('quote.bambino') : L.t('quote.comunePiuSeparata', money(b.payComune), money(b.paySep)))), /*#__PURE__*/React.createElement("span", {
   className: `font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-[#2D392C]'}`
 }, b.isChild ? L.t('quote.gratis') : `${money(b.pay)} €`)))), /*#__PURE__*/React.createElement("div", {
   className: "flex justify-between items-center pt-2 mt-1 border-t border-[#8F9E8B]/30"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[11px] uppercase font-bold text-gray-500"
+  className: "text-piccolo uppercase font-bold text-gray-500"
 }, L.t('quote.totaleRaccolto')), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic font-bold text-[#2D392C]"
 }, money(totals.collected), " \u20AC")))), spesaSection === 'saldi' && /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, cassaSepAttiva && (risparmio > 0 || saldiOttimizzati) && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
   onClick: () => setSaldiOttimizzati(!saldiOttimizzati),
-  className: bottoneScelta('interruttore', 'bordato', saldiOttimizzati, 'normale', 'w-full')
+  className: bottoneScelta('interruttore', 'bordato', saldiOttimizzati, 'minuscolo', 'w-full')
 }, saldiOttimizzati ? L.t('saldi.tornaPerCassa') : L.t('saldi.ottimizza', totals.transfers.length, totals.transfersOttimizzati.length)), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic mt-1 leading-snug"
+  className: "text-minuto text-gray-400 italic mt-1 leading-snug"
 }, L.t(saldiOttimizzati ? 'saldi.notaOttimizzati' : 'saldi.notaPerCassa'))), saldiOttimizzati ? schedaSaldi({
   cassa: cassaUnica,
   titolo: L.t('saldi.passaggiOttimizzati'),
@@ -7364,38 +7373,38 @@ const schedaSpesa = ({
   onClick: shareReport,
   className: bottone('whatsapp', 'grande', 'w-full flex items-center justify-center gap-2')
 }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDCE4"), " ", L.t('saldi.condividi')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic text-center"
+  className: "text-minuto text-gray-400 italic text-center"
 }, L.t('saldi.condividiNota'))), spesaSection === 'dati' && /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, admin && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2"
 }, /*#__PURE__*/React.createElement("span", null, L.t('chiusura.contiTitolo')), bloccoConti() && /*#__PURE__*/React.createElement("span", {
-  className: "ml-auto text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white"
+  className: "ml-auto text-minuto uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white"
 }, L.t('chiusura.chiusi'))), bloccoConti() ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug"
+  className: "text-piccolo text-gray-500 leading-snug"
 }, frase('chiusura.contiChiusiNota', L.data(new Date(bloccoConti().at), 'dataOra'))), /*#__PURE__*/React.createElement("button", {
   onClick: riapriConti,
   className: bottone('secondario', 'normale', 'w-full')
 }, L.t('chiusura.riapri'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug"
+  className: "text-piccolo text-gray-500 leading-snug"
 }, frase('chiusura.daFare')), /*#__PURE__*/React.createElement("button", {
   onClick: chiudiConti,
   className: bottone('bruno', 'normale', 'w-full')
 }, L.t('chiusura.chiudi')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
 }, L.t('backup.titolo')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500"
+  className: "text-piccolo text-gray-500"
 }, L.t('backup.nota')), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: exportData,
   className: bottone('primario', 'normale', 'flex-1')
 }, L.t('backup.esporta')), admin && /*#__PURE__*/React.createElement("label", {
-  className: "flex-1 py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase text-center cursor-pointer hover:bg-[#463628]"
+  className: "flex-1 py-2.5 bg-[#5C4A3C] text-white rounded text-piccolo font-bold uppercase text-center cursor-pointer hover:bg-[#463628]"
 }, L.t('backup.importa'), /*#__PURE__*/React.createElement("input", {
   type: "file",
   accept: "application/json,.json",
@@ -7403,33 +7412,33 @@ const schedaSpesa = ({
   className: "hidden"
 }))), admin && /*#__PURE__*/React.createElement("button", {
   onClick: openRestore,
-  className: "w-full py-2.5 bg-white border-2 border-[#D97706]/50 text-[#D97706] rounded text-xs font-bold uppercase hover:bg-[#D97706]/10"
+  className: "w-full py-2.5 bg-white border-2 border-[#D97706]/50 text-[#D97706] rounded text-piccolo font-bold uppercase hover:bg-[#D97706]/10"
 }, L.t('backup.ripristino'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#5C4A3C]/30 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
 }, L.t('campo.chiusuraTitolo')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500"
+  className: "text-piccolo text-gray-500"
 }, frase('campo.chiusuraNota')), admin ? /*#__PURE__*/React.createElement("button", {
   onClick: openClose,
   className: bottone('bruno', 'grande', 'w-full')
 }, L.t('campo.chiudiEArchivia')) : /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-400 italic"
+  className: "text-piccolo text-gray-400 italic"
 }, L.t('campo.laFaChiTieneIConti')), archives.length > 0 && /*#__PURE__*/React.createElement("button", {
   onClick: () => goTo('archivio'),
-  className: bottone('testuale', 'piccolo', 'w-full')
+  className: bottone('testuale', 'normale', 'w-full')
 }, L.t('campo.vediArchivio', archives.length))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg text-[#2D392C]"
+  className: "font-rustic text-grande text-[#2D392C]"
 }, L.t('cloud.titolo')), /*#__PURE__*/React.createElement("span", {
-  className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
+  className: `text-minuto uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
 }, L.t(cloud.connected ? 'cloud.connesso' : 'cloud.nonConnesso'))), !(window.CloudSync && window.CloudSync.isConfigured()) ? /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 italic"
+  className: "text-piccolo text-gray-500 italic"
 }, frase('cloud.nonConfigurato')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500"
+  className: "text-piccolo text-gray-500"
 }, L.t('cloud.notaAuto')), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("input", {
@@ -7438,7 +7447,7 @@ const schedaSpesa = ({
   onChange: e => setCampCodeInput(e.target.value),
   placeholder: L.t('cloud.codiceCampo'),
   disabled: cloud.connected,
-  className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] disabled:opacity-60"
+  className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C] disabled:opacity-60"
 }), cloud.connected ? /*#__PURE__*/React.createElement("button", {
   onClick: disconnectCloud,
   className: bottone('bruno', 'normale')
@@ -7446,11 +7455,13 @@ const schedaSpesa = ({
   onClick: () => connectCloud(campCodeInput),
   className: bottone('primario', 'normale')
 }, L.t('cloud.connetti'))), /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center justify-between text-[10px] text-gray-500"
-}, /*#__PURE__*/React.createElement("span", null, cloud.status === 'connecting' && L.t('cloud.inCorso'), cloud.status === 'saving' && L.t('cloud.salvataggio'), cloud.status === 'connected' && (cloud.lastSync ? L.t('cloud.ultimaSync', L.data(new Date(cloud.lastSync), 'oraPiena')) : L.t('cloud.inAscolto')), cloud.status === 'error' && /*#__PURE__*/React.createElement("span", {
+  className: "flex items-start justify-between gap-2 text-piccolo text-gray-500"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "min-w-0 break-words"
+}, cloud.status === 'connecting' && L.t('cloud.inCorso'), cloud.status === 'saving' && L.t('cloud.salvataggio'), cloud.status === 'connected' && (cloud.lastSync ? L.t('cloud.ultimaSync', L.data(new Date(cloud.lastSync), 'oraPiena')) : L.t('cloud.inAscolto')), cloud.status === 'error' && /*#__PURE__*/React.createElement("span", {
   className: "text-red-700"
 }, L.t('cloud.errore', cloud.error)), cloud.status === 'idle' && L.t(localStorage.getItem('cambusa_sync_optout') === '1' ? 'cloud.disattivata' : 'cloud.inAttesa')), !isOnline && /*#__PURE__*/React.createElement("span", {
-  className: "text-[#D97706] font-bold"
+  className: "text-[#D97706] font-bold shrink-0"
 }, L.t('cloud.offline')))))));
 const schedaLista = ({
   addPurchase,
@@ -7500,15 +7511,15 @@ const schedaLista = ({
 }, [['daacquistare', L.t('sezione.daAcquistare'), toBuy.length], ['acquistato', L.t('lista.acquistato'), purchases.length]].map(([k, l, n]) => /*#__PURE__*/React.createElement("button", {
   key: k,
   onClick: () => setListaSection(k),
-  className: bottoneScelta('linguetta', 'sezione', listaSection === k, 'piccolo')
+  className: bottoneScelta('linguetta', 'sezione', listaSection === k, 'minuscolo')
 }, l, n > 0 ? ` (${n})` : ''))), listaSection === 'daacquistare' && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#5C4A3C]/30 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg text-[#2D392C]"
+  className: "font-rustic text-grande text-[#2D392C]"
 }, L.t('lista.daAcquistareTitolo')), toBuy.length > 0 && /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] uppercase font-bold text-gray-500"
+  className: "text-piccolo uppercase font-bold text-gray-500"
 }, L.t('lista.quanteVoci', toBuy.length))), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("input", {
@@ -7517,14 +7528,14 @@ const schedaLista = ({
   onChange: e => setNewBuyName(e.target.value),
   onKeyDown: e => e.key === 'Enter' && addToBuy(),
   placeholder: L.t('lista.cosaServe'),
-  className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
 }), /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: newBuyQty,
   onChange: e => setNewBuyQty(e.target.value),
   onKeyDown: e => e.key === 'Enter' && addToBuy(),
   placeholder: L.t('lista.qta'),
-  className: "w-20 shrink-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm text-center focus:outline-none focus:border-[#2D392C]"
+  className: "w-20 shrink-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale text-center focus:outline-none focus:border-[#2D392C]"
 }), /*#__PURE__*/React.createElement("button", {
   onClick: addToBuy,
   "aria-label": L.t('lista.aggiungiAllaLista'),
@@ -7536,22 +7547,22 @@ const schedaLista = ({
   value: toBuyQuery,
   onChange: e => setToBuyQuery(e.target.value),
   placeholder: L.t('lista.cerca'),
-  className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
 }), toBuyQuery && /*#__PURE__*/React.createElement("button", {
   onClick: () => setToBuyQuery(''),
   "aria-label": L.t('lista.azzeraRicerca'),
   className: bottoneIcona('neutro', 'shrink-0')
 }, "\xD7")), toBuy.length === 0 ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-400 italic"
+  className: "text-normale text-gray-400 italic"
 }, L.t('lista.vuota')) : (() => {
   const q = toBuyQuery.trim().toLowerCase();
   const visibili = toBuy.filter(it => !q || (it.name || '').toLowerCase().includes(q) || (it.qty || '').toLowerCase().includes(q));
   return /*#__PURE__*/React.createElement(React.Fragment, null, q && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] uppercase font-bold text-gray-500"
+    className: "text-piccolo uppercase font-bold text-gray-500"
   }, L.t('lista.trovate', visibili.length, toBuy.length))), visibili.length === 0 ? /*#__PURE__*/React.createElement("p", {
-    className: "text-sm text-gray-400 italic"
+    className: "text-normale text-gray-400 italic"
   }, L.t('lista.nienteCorrisponde', toBuyQuery)) : /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
   }, visibili.map(it => /*#__PURE__*/React.createElement("li", {
@@ -7562,9 +7573,9 @@ const schedaLista = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex-grow min-w-0"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-bold text-[#2D392C] leading-snug break-words"
+    className: "text-normale font-bold text-[#2D392C] leading-snug break-words"
   }, it.name), it.qty && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-gray-500"
+    className: "text-piccolo text-gray-500"
   }, L.t('lista.quantita', it.qty))), receipts[it.id] && /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[it.id]),
     "aria-label": L.t('lista.vediScontrino'),
@@ -7583,29 +7594,29 @@ const schedaLista = ({
       type: 'alimentare',
       account: 'comune'
     }),
-    className: bottone('bruno', 'piccolo', 'mt-2 w-full')
+    className: bottone('bruno', 'normale', 'mt-2 w-full')
   }, L.t('lista.segnaAcquistata'))))));
 })(), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic"
+  className: "text-minuto text-gray-400 italic"
 }, L.t('lista.notaPassaggio'))), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, !manualOpen ? /*#__PURE__*/React.createElement("button", {
   onClick: () => setManualOpen(true),
   className: "w-full bg-white p-3 rounded-lg border-2 border-dashed border-[#8F9E8B]/60 text-[#2D392C] hover:bg-[#E2EAE4] flex items-center justify-center gap-2"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-lg leading-none"
+  className: "text-grande leading-none"
 }, "\uFF0B"), /*#__PURE__*/React.createElement("span", {
-  className: "font-bold uppercase text-xs tracking-wide"
+  className: "font-bold uppercase text-piccolo tracking-wide"
 }, L.t('lista.aggiungiAMano'))) : /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg text-[#2D392C]"
+  className: "font-rustic text-grande text-[#2D392C]"
 }, L.t('lista.prodottoAcquistato')), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center gap-2 shrink-0"
 }, /*#__PURE__*/React.createElement("label", {
   title: L.t('lista.scontrinoTitolo'),
   "aria-label": L.t('lista.allegaScontrino'),
-  className: `cursor-pointer px-3 py-2 rounded border-2 text-lg leading-none ${pReceipt ? 'bg-[#2D392C] border-[#2D392C]' : 'bg-white border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'}`
+  className: `cursor-pointer px-3 py-2 rounded border-2 text-grande leading-none ${pReceipt ? 'bg-[#2D392C] border-[#2D392C]' : 'bg-white border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'}`
 }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
   type: "file",
   accept: "image/*",
@@ -7616,7 +7627,7 @@ const schedaLista = ({
   "aria-label": L.t('lista.chiudiMaschera'),
   className: bottoneIcona('neutro')
 }, "\xD7"))), /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 -mt-1"
+  className: "text-piccolo text-gray-500 -mt-1"
 }, L.t('lista.nonEraInLista')), pReceipt && /*#__PURE__*/React.createElement("div", {
   className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-2 rounded border border-[#8F9E8B]/30"
 }, /*#__PURE__*/React.createElement("img", {
@@ -7624,25 +7635,25 @@ const schedaLista = ({
   alt: L.t('lista.scontrino'),
   className: "w-12 h-12 object-cover rounded"
 }), /*#__PURE__*/React.createElement("span", {
-  className: "flex-grow text-xs text-[#2D392C] font-bold"
+  className: "flex-grow text-piccolo text-[#2D392C] font-bold"
 }, L.t('lista.scontrinoAllegato')), /*#__PURE__*/React.createElement("button", {
   onClick: () => setPReceipt(null),
   "aria-label": L.t('lista.rimuoviFoto'),
   className: bottoneIcona('distruttivo')
 }, "\xD7")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
 }, L.t('lista.nome')), /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: pName,
   onChange: e => setPName(e.target.value),
   placeholder: L.t('lista.esempioNome'),
-  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
 })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
 }, L.t('lista.acquirente')), renderBuyerSelect(pBuyer, setPBuyer)), /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-2 gap-3"
 }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
 }, L.t('lista.prezzo')), /*#__PURE__*/React.createElement("input", {
   type: "number",
   min: "0",
@@ -7654,26 +7665,26 @@ const schedaLista = ({
   placeholder: "0.00",
   className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
 })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
 }, L.t('lista.tipologia')), /*#__PURE__*/React.createElement("select", {
   value: pType,
   onChange: e => setPType(e.target.value),
-  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold focus:outline-none focus:border-[#2D392C]"
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold focus:outline-none focus:border-[#2D392C]"
 }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
   key: k,
   value: k
 }, tipoSpesa(k)))))), pType !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
 }, L.t('lista.conto')), /*#__PURE__*/React.createElement("select", {
   value: pAccount,
   onChange: e => setPAccount(e.target.value),
-  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold focus:outline-none focus:border-[#2D392C]"
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold focus:outline-none focus:border-[#2D392C]"
 }, /*#__PURE__*/React.createElement("option", {
   value: "comune"
 }, L.t('lista.contoComune')), /*#__PURE__*/React.createElement("option", {
   value: "sep"
 }, L.t('giorno.contoSeparato'))), pAccount === 'sep' && /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] mt-1 leading-snug text-[#5C4A3C]"
+  className: "text-minuto mt-1 leading-snug text-[#5C4A3C]"
 }, sepDays.length === 0 ? L.t('lista.senzaGiorniSpuntati') : L.t('lista.siDivide', sepDays.length))), /*#__PURE__*/React.createElement("button", {
   onClick: addPurchase,
   className: bottone('primario', 'grande', 'w-full')
@@ -7682,7 +7693,7 @@ const schedaLista = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg text-[#2D392C]"
+  className: "font-rustic text-grande text-[#2D392C]"
 }, L.t('lista.cronologia')), purchases.length > 0 && /*#__PURE__*/React.createElement("span", {
   className: "font-rustic font-bold text-[#2D392C]"
 }, money(totals.overallTotal), " \u20AC")), purchases.length > 4 && /*#__PURE__*/React.createElement("div", {
@@ -7692,7 +7703,7 @@ const schedaLista = ({
   value: purchaseQuery,
   onChange: e => setPurchaseQuery(e.target.value),
   placeholder: L.t('lista.cercaSpese'),
-  className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
 }), purchaseQuery && /*#__PURE__*/React.createElement("button", {
   onClick: () => setPurchaseQuery(''),
   "aria-label": L.t('lista.azzeraRicerca'),
@@ -7701,9 +7712,9 @@ const schedaLista = ({
   key: g[0].id,
   className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mb-3"
 }, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-[#5C4A3C] leading-snug"
+  className: "text-piccolo text-[#5C4A3C] leading-snug"
 }, frase('lista.doppia', g[0].name, money(posNum(g[0].price)), g.length, g.some(x => (x.buyer || '') !== (g[0].buyer || '')) ? [...new Set(g.map(x => x.buyer || '—'))].join(' e ') : null)))), purchases.length === 0 ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-400 italic"
+  className: "text-normale text-gray-400 italic"
 }, L.t('lista.nessunAcquisto')) : (() => {
   const q = purchaseQuery.trim().toLowerCase();
   const visibili = purchases.slice().reverse().filter(p => !q || (p.name || '').toLowerCase().includes(q) || (p.buyer || '').toLowerCase().includes(q) || tipoSpesa(p.type).toLowerCase().includes(q));
@@ -7711,11 +7722,11 @@ const schedaLista = ({
   return /*#__PURE__*/React.createElement(React.Fragment, null, q && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20 mb-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] uppercase font-bold text-gray-500"
+    className: "text-piccolo uppercase font-bold text-gray-500"
   }, L.t('lista.trovate', visibili.length, purchases.length)), /*#__PURE__*/React.createElement("span", {
-    className: "font-rustic font-bold text-[#2D392C] text-sm"
+    className: "font-rustic font-bold text-[#2D392C] text-normale"
   }, money(sommaVisibili), " \u20AC")), visibili.length === 0 ? /*#__PURE__*/React.createElement("p", {
-    className: "text-sm text-gray-400 italic"
+    className: "text-normale text-gray-400 italic"
   }, L.t('lista.nessunaSpesaCorrisponde', purchaseQuery)) : /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
   }, visibili.map(p =>
@@ -7729,7 +7740,7 @@ const schedaLista = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start justify-between gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-sm font-bold text-[#2D392C] leading-snug break-words min-w-0"
+    className: "text-normale font-bold text-[#2D392C] leading-snug break-words min-w-0"
   }, p.name), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C] shrink-0 whitespace-nowrap"
   }, money(posNum(p.price)), " \u20AC")), /*#__PURE__*/React.createElement("div", {
@@ -7737,13 +7748,13 @@ const schedaLista = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap items-center gap-1 min-w-0 flex-grow"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B]"
+    className: "text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B]"
   }, tipoSpesa(p.type) || p.type), p.account === 'sep' && p.type !== 'logistica' && /*#__PURE__*/React.createElement("span", {
-    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
+    className: "text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
   }, L.t('lista.separatoEtichetta')), p.fromList && /*#__PURE__*/React.createElement("span", {
-    className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
+    className: "text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
   }, L.t('lista.acquistataEtichetta')), /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] text-gray-400 basis-full"
+    className: "text-minuto text-gray-400 basis-full"
   }, p.buyer ? /*#__PURE__*/React.createElement("span", {
     className: "text-[#5C4A3C] font-bold"
   }, p.buyer) : /*#__PURE__*/React.createElement("span", {
@@ -7755,7 +7766,7 @@ const schedaLista = ({
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
     title: L.t('lista.scontrinoTitolo'),
     "aria-label": L.t('lista.allegaScontrino'),
-    className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]"
+    className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-normale leading-none hover:bg-[#E2EAE4]"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
@@ -7772,7 +7783,7 @@ const schedaLista = ({
     className: bottoneIcona('distruttivo', 'shrink-0')
   }, "\xD7"))))));
 })(), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic mt-2"
+  className: "text-minuto text-gray-400 italic mt-2"
 }, L.t('lista.notaScontrini')))));
 const schedaAttrezzatura = ({
   addEquip,
@@ -7798,15 +7809,15 @@ const schedaAttrezzatura = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+    className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
   }, L.t('attrezzatura.aggiungiTitolo')), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: newEquipText,
     onChange: e => setNewEquipText(e.target.value),
     placeholder: L.t('attrezzatura.esempio'),
-    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
   }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[10px] uppercase font-bold text-gray-500 mb-1"
+    className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, L.t('attrezzatura.acquirenteFacoltativo')), renderBuyerSelect(newEquipBuyer, setNewEquipBuyer)), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("input", {
@@ -7823,17 +7834,17 @@ const schedaAttrezzatura = ({
     onClick: addEquip,
     className: bottone('primario', 'normale', 'shrink-0')
   }, L.t('attrezzatura.aggiungi'))), /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-400"
+    className: "text-minuto text-gray-400"
   }, L.t('attrezzatura.nota'))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C]"
+    className: "font-rustic text-grande text-[#2D392C]"
   }, L.t('area.attrezzatura')), equipment.length > 0 && /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] uppercase font-bold text-gray-500"
+    className: "text-piccolo uppercase font-bold text-gray-500"
   }, L.t('attrezzatura.daComprare', equipment.filter(e => !e.bought).length))), equipment.length === 0 ? /*#__PURE__*/React.createElement("p", {
-    className: "text-sm text-gray-400 italic"
+    className: "text-normale text-gray-400 italic"
   }, L.t('attrezzatura.vuota')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
   }, equipment.map(e =>
@@ -7853,9 +7864,9 @@ const schedaAttrezzatura = ({
   }, "\u2713"), /*#__PURE__*/React.createElement("div", {
     className: "flex-grow min-w-0"
   }, /*#__PURE__*/React.createElement("div", {
-    className: `text-sm leading-snug break-words ${e.bought ? 'line-through text-gray-500' : 'text-[#2D392C]'}`
+    className: `text-normale leading-snug break-words ${e.bought ? 'line-through text-gray-500' : 'text-[#2D392C]'}`
   }, e.text), e.buyer && /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-[#5C4A3C] font-bold break-words"
+    className: "text-minuto text-[#5C4A3C] font-bold break-words"
   }, e.buyer)), /*#__PURE__*/React.createElement("span", {
     className: `font-rustic font-bold shrink-0 ${e.bought ? 'text-[#2D392C]' : 'text-gray-400'}`
   }, money(posNum(e.price)), " \u20AC")), /*#__PURE__*/React.createElement("div", {
@@ -7867,7 +7878,7 @@ const schedaAttrezzatura = ({
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
     title: L.t('lista.scontrinoTitolo'),
     "aria-label": L.t('lista.allegaScontrino'),
-    className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]"
+    className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-normale leading-none hover:bg-[#E2EAE4]"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
@@ -7885,7 +7896,7 @@ const schedaAttrezzatura = ({
   }, "\xD7"))))), /*#__PURE__*/React.createElement("div", {
     className: "mt-3 pt-2 border-t border-[#8F9E8B]/30 space-y-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[11px] text-gray-500"
+    className: "flex justify-between text-piccolo text-gray-500"
   }, /*#__PURE__*/React.createElement("span", {
     className: "uppercase font-bold"
   }, L.t('attrezzatura.previsto')), /*#__PURE__*/React.createElement("span", {
@@ -7893,7 +7904,7 @@ const schedaAttrezzatura = ({
   }, money(equipPlannedTotal), " \u20AC")), /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] uppercase font-bold text-[#2D392C]"
+    className: "text-piccolo uppercase font-bold text-[#2D392C]"
   }, L.t('attrezzatura.acquistatoNelleSpese')), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C]"
   }, money(equipBoughtTotal), " \u20AC"))))));
@@ -7922,16 +7933,16 @@ const schedaMembri = ({
   key: g[0].id,
   className: "bg-[#D97706]/10 border-2 border-[#D97706]/40 rounded-lg p-3 space-y-2"
 }, /*#__PURE__*/React.createElement("p", {
-  className: "text-[11px] text-[#5C4A3C] leading-snug"
+  className: "text-piccolo text-[#5C4A3C] leading-snug"
 }, frase('membri.doppia', g[0].name, g.length)), /*#__PURE__*/React.createElement("button", {
   onClick: () => unisciDoppi(g),
-  className: bottone('avviso', 'piccolo', 'w-full')
+  className: bottone('avviso', 'normale', 'w-full')
 }, L.t('membri.unisci')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-500 italic leading-snug"
+  className: "text-minuto text-gray-500 italic leading-snug"
 }, L.t('membri.unisciNota')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
 }, L.t('membri.aggiungiTitolo')), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("input", {
@@ -7940,12 +7951,12 @@ const schedaMembri = ({
   onChange: e => setNewMemberName(e.target.value),
   onKeyDown: e => e.key === 'Enter' && addMember(),
   placeholder: L.t('membri.nome'),
-  className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
 }), /*#__PURE__*/React.createElement("button", {
   onClick: addMember,
   className: bottoneIcona('pieno')
 }, "+")), /*#__PURE__*/React.createElement("label", {
-  className: "flex items-center gap-2 text-xs text-gray-600"
+  className: "flex items-center gap-2 text-piccolo text-gray-600"
 }, /*#__PURE__*/React.createElement("input", {
   type: "checkbox",
   checked: newMemberChild,
@@ -7953,9 +7964,9 @@ const schedaMembri = ({
 }), L.t('membri.bambinoGratis'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
 }, L.t('membri.quanti', members.length)), members.length === 0 ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-400 italic"
+  className: "text-normale text-gray-400 italic"
 }, L.t('membri.vuoto')) : /*#__PURE__*/React.createElement("ul", {
   className: "space-y-2"
 }, members.map(m => /*#__PURE__*/React.createElement("li", {
@@ -7964,9 +7975,9 @@ const schedaMembri = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between gap-2"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "font-bold text-sm text-[#2D392C] truncate"
+  className: "font-bold text-normale text-[#2D392C] truncate"
 }, m.name, (m.paypal || m.iban) && /*#__PURE__*/React.createElement("span", {
-  className: "ml-1.5 text-[9px] text-[#8F9E8B]",
+  className: "ml-1.5 text-minuto text-[#8F9E8B]",
   title: L.t('membri.haRimborso')
 }, "\uD83D\uDCB3")), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center gap-2 shrink-0"
@@ -7974,7 +7985,7 @@ const schedaMembri = ({
   onClick: () => setInfoMember(v => v === m.id ? null : m.id),
   "aria-label": L.t('membri.datiDi', m.name),
   title: L.t('membri.datiRimborso'),
-  className: `w-6 h-6 rounded-full border-2 font-serif italic font-bold text-[11px] leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B] text-[#5C4A3C]'}`
+  className: `w-6 h-6 rounded-full border-2 font-serif italic font-bold text-piccolo leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B] text-[#5C4A3C]'}`
 }, "i"), /*#__PURE__*/React.createElement("button", {
   onClick: () => toggleChild(m.id),
   className: bottoneScelta('etichetta', 'ambra', m.isChild, 'minimo')
@@ -7984,18 +7995,18 @@ const schedaMembri = ({
 }, "\xD7"))), infoMember === m.id && /*#__PURE__*/React.createElement("div", {
   className: "mt-2.5 pt-2.5 border-t border-[#8F9E8B]/30 space-y-2"
 }, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug"
+  className: "text-piccolo text-gray-500 leading-snug"
 }, frase('membri.comeRimborso')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1"
+  className: "block text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1"
 }, "PayPal"), /*#__PURE__*/React.createElement("input", {
   type: "text",
   inputMode: "email",
   value: m.paypal || '',
   onChange: e => setMemberField(m.id, 'paypal', e.target.value),
   placeholder: L.t('membri.paypalSegno'),
-  className: "w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  className: "w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-normale focus:outline-none focus:border-[#2D392C]"
 })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1"
+  className: "block text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1"
 }, "IBAN"), /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: m.iban || '',
@@ -8005,21 +8016,21 @@ const schedaMembri = ({
     if (p !== (m.iban || '')) setMemberField(m.id, 'iban', p);
   },
   placeholder: L.t('membri.ibanSegno'),
-  className: "w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-xs font-mono focus:outline-none focus:border-[#2D392C]"
+  className: "w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-piccolo font-mono focus:outline-none focus:border-[#2D392C]"
 }), (m.iban || '').trim() !== '' && (ibanValid(m.iban) ? /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-[#2D392C] mt-1"
+  className: "text-minuto text-[#2D392C] mt-1"
 }, L.t('membri.ibanOk')) : /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-[#D97706] mt-1"
+  className: "text-minuto text-[#D97706] mt-1"
 }, L.t('membri.ibanNo')))), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic leading-snug"
+  className: "text-minuto text-gray-400 italic leading-snug"
 }, L.t('membri.datiDove'))), FEATURES.equipExemption && /*#__PURE__*/React.createElement("button", {
   onClick: () => toggleEquipExempt(m.id),
   "aria-label": L.t('membri.esenzione'),
   className: "mt-1.5 flex items-center gap-2 text-left"
 }, /*#__PURE__*/React.createElement("span", {
-  className: `w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-[10px] font-bold ${m.equipExempt ? 'bg-[#5C4A3C] border-[#5C4A3C] text-white' : 'bg-white border-[#8F9E8B]'}`
+  className: `w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-piccolo font-bold ${m.equipExempt ? 'bg-[#5C4A3C] border-[#5C4A3C] text-white' : 'bg-white border-[#8F9E8B]'}`
 }, m.equipExempt ? '✓' : ''), /*#__PURE__*/React.createElement("span", {
-  className: `text-[10px] ${m.equipExempt ? 'font-bold text-[#5C4A3C]' : 'text-gray-500'}`
+  className: `text-piccolo ${m.equipExempt ? 'font-bold text-[#5C4A3C]' : 'text-gray-500'}`
 }, L.t('membri.esente'))))))));
 
 // Le Regole non dipendono da niente: e' l'unica scheda che si disegna da
@@ -8029,16 +8040,16 @@ const schedaRegole = () => /*#__PURE__*/React.createElement("div", {
 }, /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
 }, L.t('regole.titolo')), /*#__PURE__*/React.createElement("ol", {
   className: "space-y-3"
 }, CAMP_RULES.map((text, i) => /*#__PURE__*/React.createElement("li", {
   key: i,
   className: "flex gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-lg text-[#5C4A3C] leading-none shrink-0"
+  className: "font-rustic text-grande text-[#5C4A3C] leading-none shrink-0"
 }, i + 1, "."), /*#__PURE__*/React.createElement("p", {
-  className: "text-[11px] leading-relaxed uppercase underline underline-offset-2 decoration-[#8F9E8B]/70 font-bold text-[#2D392C]"
+  className: "text-piccolo leading-relaxed uppercase underline underline-offset-2 decoration-[#8F9E8B]/70 font-bold text-[#2D392C]"
 }, text))))));
 const schedaDotazioni = ({
   addGear,
@@ -8051,7 +8062,7 @@ const schedaDotazioni = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
 }, L.t('dotazioni.base')), /*#__PURE__*/React.createElement("ul", {
   className: "space-y-2"
 }, BASE_GEAR.map(item => /*#__PURE__*/React.createElement("li", {
@@ -8060,13 +8071,13 @@ const schedaDotazioni = ({
 }, /*#__PURE__*/React.createElement("span", {
   className: `shrink-0 rounded-full bg-[#D97706] ${item.emphasis ? 'w-2 h-2' : 'w-1.5 h-1.5'}`
 }), /*#__PURE__*/React.createElement("span", {
-  className: item.emphasis ? 'text-base font-bold uppercase underline decoration-2 underline-offset-2 text-[#2D392C] leading-snug' : 'text-sm text-[#2D392C]'
+  className: item.emphasis ? 'text-medio font-bold uppercase underline decoration-2 underline-offset-2 text-[#2D392C] leading-snug' : 'text-normale text-[#2D392C]'
 }, item.text)))), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic mt-2"
+  className: "text-minuto text-gray-400 italic mt-2"
 }, L.t('dotazioni.obbligo'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
 }, L.t('dotazioni.aggiunte')), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("input", {
@@ -8075,13 +8086,13 @@ const schedaDotazioni = ({
   onChange: e => setNewGearText(e.target.value),
   onKeyDown: e => e.key === 'Enter' && addGear(),
   placeholder: L.t('dotazioni.esempio'),
-  className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
 }), /*#__PURE__*/React.createElement("button", {
   onClick: addGear,
   "aria-label": L.t('dotazioni.aggiungi'),
   className: bottoneIcona('pieno')
 }, "+")), gear.length === 0 ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-400 italic"
+  className: "text-normale text-gray-400 italic"
 }, L.t('dotazioni.vuoto')) : /*#__PURE__*/React.createElement("ul", {
   className: "space-y-2"
 }, gear.map(g => /*#__PURE__*/React.createElement("li", {
@@ -8090,7 +8101,7 @@ const schedaDotazioni = ({
 }, /*#__PURE__*/React.createElement("span", {
   className: "w-1.5 h-1.5 bg-[#8F9E8B] rounded-full shrink-0"
 }), /*#__PURE__*/React.createElement("span", {
-  className: "flex-grow text-sm text-[#2D392C]"
+  className: "flex-grow text-normale text-[#2D392C]"
 }, g.text), /*#__PURE__*/React.createElement("button", {
   onClick: () => removeGear(g.id),
   "aria-label": L.t('dotazioni.rimuovi'),
@@ -8119,9 +8130,9 @@ const schedaArchivio = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
 }, L.t('area.archivio')), archives.length === 0 ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-400 italic"
+  className: "text-normale text-gray-400 italic"
 }, frase('archivio.vuoto')) : /*#__PURE__*/React.createElement("ul", {
   className: "space-y-3"
 }, archives.map(a => /*#__PURE__*/React.createElement("li", {
@@ -8132,26 +8143,26 @@ const schedaArchivio = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "min-w-0"
 }, /*#__PURE__*/React.createElement("p", {
-  className: "font-rustic text-base text-[#2D392C] truncate"
+  className: "font-rustic text-medio text-[#2D392C] truncate"
 }, a.name), /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500"
+  className: "text-piccolo text-gray-500"
 }, L.t('archivio.periodoChiuso', a.from === a.to ? a.from : `${a.from} → ${a.to}`, L.data(new Date(a.closedAt), 'numerica')))), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic font-bold text-[#2D392C] shrink-0"
 }, money(a.totals && a.totals.overall || 0), " \u20AC")), /*#__PURE__*/React.createElement("div", {
-  className: "flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500"
+  className: "flex flex-wrap gap-x-3 gap-y-1 text-piccolo text-gray-500"
 }, /*#__PURE__*/React.createElement("span", null, L.t('archivio.membri', a.totals && a.totals.members || 0)), /*#__PURE__*/React.createElement("span", null, L.t('archivio.spese', a.totals && a.totals.purchases || 0)), /*#__PURE__*/React.createElement("span", null, L.t('archivio.pasti', a.totals && a.totals.meals || 0)), a.photos > 0 && /*#__PURE__*/React.createElement("span", null, L.t('archivio.foto', a.photos)), !a.state && /*#__PURE__*/React.createElement("span", {
   className: "text-[#8F9E8B] italic"
 }, L.t('archivio.soloCloud'))), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setViewArchive(a),
-  className: bottone('primario', 'piccolo', 'flex-1')
+  className: bottone('primario', 'normale', 'flex-1')
 }, L.t('archivio.resoconto')), a.photos > 0 && /*#__PURE__*/React.createElement("button", {
   onClick: () => openAlbum(a),
-  className: "flex-1 py-2 bg-[#8F9E8B] text-white rounded text-[10px] font-bold uppercase hover:brightness-95"
+  className: "flex-1 py-2 bg-[#8F9E8B] text-white rounded text-piccolo font-bold uppercase hover:brightness-95"
 }, L.t('archivio.album')), /*#__PURE__*/React.createElement("button", {
   onClick: () => downloadArchive(a),
-  className: bottone('bruno', 'piccolo', 'flex-1')
+  className: bottone('bruno', 'normale', 'flex-1')
 }, L.t('archivio.scarica')), /*#__PURE__*/React.createElement("button", {
   onClick: () => removeArchive(a),
   "aria-label": L.t('archivio.eliminaArchivio'),
@@ -8161,14 +8172,14 @@ const schedaArchivio = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg text-[#2D392C] truncate"
+  className: "font-rustic text-grande text-[#2D392C] truncate"
 }, L.t('archivio.albumDi', album.name)), /*#__PURE__*/React.createElement("button", {
   onClick: () => setAlbum(null),
   className: bottone('testuale', 'minuscolo', 'shrink-0')
 }, L.t('archivio.chiudi'))), album.loading ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-400 italic"
+  className: "text-normale text-gray-400 italic"
 }, L.t('archivio.carico')) : album.photos.length === 0 ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-400 italic"
+  className: "text-normale text-gray-400 italic"
 }, L.t('archivio.senzaFoto')) : /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-3 gap-1.5"
 }, album.photos.map(p => /*#__PURE__*/React.createElement("button", {
@@ -8182,9 +8193,9 @@ const schedaArchivio = ({
   className: "w-full h-full object-cover",
   loading: "lazy"
 }), p.by && /*#__PURE__*/React.createElement("span", {
-  className: "absolute bottom-0 left-0 right-0 bg-black/55 text-white text-[8px] px-1 py-0.5 truncate text-left"
+  className: "absolute bottom-0 left-0 right-0 bg-black/55 text-white text-minuto px-1 py-0.5 truncate text-left"
 }, p.by))))), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic text-center px-4"
+  className: "text-minuto text-gray-400 italic text-center px-4"
 }, L.t('archivio.conservalo')));
 const schedaGioco = ({
   endGame,
@@ -8201,7 +8212,7 @@ const schedaGioco = ({
 }, !gameRunning ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
 }, L.t('area.gioco')), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center gap-3"
 }, /*#__PURE__*/React.createElement("img", {
@@ -8212,9 +8223,9 @@ const schedaGioco = ({
     imageRendering: 'pixelated'
   }
 }), /*#__PURE__*/React.createElement("p", {
-  className: "text-[11px] text-gray-600 leading-snug"
+  className: "text-piccolo text-gray-600 leading-snug"
 }, L.t('gioco.spiegazione'))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
+  className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
 }, L.t('gioco.nomeGiocatore')), /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: gamePlayer,
@@ -8222,36 +8233,36 @@ const schedaGioco = ({
   onKeyDown: e => e.key === 'Enter' && startGame(),
   placeholder: L.t('gioco.comeTiChiami'),
   maxLength: 24,
-  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
 })), /*#__PURE__*/React.createElement("button", {
   onClick: startGame,
   className: bottone('primario', 'grande', 'w-full')
 }, L.t('gioco.gioca')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic"
+  className: "text-minuto text-gray-400 italic"
 }, L.t('gioco.comandi'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg"
+  className: "font-rustic text-grande"
 }, L.t('gioco.classifica')), /*#__PURE__*/React.createElement("button", {
   onClick: refreshLeaderboard,
-  className: "text-[9px] uppercase font-bold text-[#8F9E8B] hover:text-white"
+  className: "text-minuto uppercase font-bold text-[#8F9E8B] hover:text-white"
 }, L.t('gioco.aggiorna'))), /*#__PURE__*/React.createElement("div", {
-  className: "flex justify-between text-xs mb-3 pb-2 border-b border-[#8F9E8B]/20"
+  className: "flex justify-between text-piccolo mb-3 pb-2 border-b border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[#8F9E8B]"
 }, L.t('gioco.tuoRecord')), /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-[#D97706] text-lg leading-none"
+  className: "font-rustic text-[#D97706] text-grande leading-none"
 }, gameBest)), leaderboard.length === 0 ? /*#__PURE__*/React.createElement("p", {
-  className: "text-[11px] text-gray-400 italic"
+  className: "text-piccolo text-gray-400 italic"
 }, L.t('gioco.senzaPunteggi')) : /*#__PURE__*/React.createElement("ul", {
   className: "space-y-1"
 }, leaderboard.map((r, i) => /*#__PURE__*/React.createElement("li", {
   key: r.name + i,
   className: "flex items-center justify-between py-1"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-sm truncate"
+  className: "text-normale truncate"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[#8F9E8B] mr-2"
 }, i + 1, "."), i === 0 ? '🏆 ' : '', r.name), /*#__PURE__*/React.createElement("span", {
@@ -8274,15 +8285,15 @@ const schedaGuida = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-1"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-1"
 }, L.t('guida.titolo')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[11px] text-gray-500 mb-3"
+  className: "text-piccolo text-gray-500 mb-3"
 }, L.t('guida.sottotitolo')), /*#__PURE__*/React.createElement("div", {
   className: "flex flex-wrap gap-1.5"
 }, GUIDE.map(g => /*#__PURE__*/React.createElement("button", {
   key: g.k,
   onClick: () => setGuideOpen(g.k),
-  className: bottoneScelta('pillola', 'tenue', guideOpen === g.k, 'piccolo')
+  className: bottoneScelta('pillola', 'tenue', guideOpen === g.k, 'minuscolo')
 }, g.icon, " ", g.title))), (() => {
   const g = GUIDE.find(x => x.k === guideOpen) || GUIDE[0];
   return /*#__PURE__*/React.createElement("div", {
@@ -8290,18 +8301,18 @@ const schedaGuida = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-1"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-lg leading-none"
+    className: "text-grande leading-none"
   }, g.icon), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic text-[#2D392C]"
   }, g.title)), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-[#2D392C] leading-relaxed"
+    className: "text-piccolo text-[#2D392C] leading-relaxed"
   }, g.body));
 })()), /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md"
 }, /*#__PURE__*/React.createElement("h4", {
-  className: "font-rustic text-base mb-2"
+  className: "font-rustic text-medio mb-2"
 }, L.t('guida.trePassi')), /*#__PURE__*/React.createElement("ol", {
-  className: "text-xs space-y-1.5 list-decimal list-inside text-[#F0F4F1]/90"
+  className: "text-piccolo space-y-1.5 list-decimal list-inside text-[#F0F4F1]/90"
 }, /*#__PURE__*/React.createElement("li", null, frase('guida.passo1')), /*#__PURE__*/React.createElement("li", null, frase('guida.passo2')), /*#__PURE__*/React.createElement("li", null, frase('guida.passo3')))));
 // ---------- Scheda Galleria ----------
 // Primo pezzo di interfaccia uscito da 80-app.jsx.
@@ -8351,30 +8362,30 @@ const schedaGalleria = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
 }, L.t('galleria.carica')), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-500 leading-snug"
+  className: "text-normale text-gray-500 leading-snug"
 }, frase('galleria.senzaCloud')) : /*#__PURE__*/React.createElement("div", {
   className: "space-y-3"
 }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1"
+  className: "block text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1"
 }, L.t('galleria.chiScatta')), /*#__PURE__*/React.createElement("select", {
   value: photoWho,
   onChange: e => setPhotoWho(e.target.value),
-  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
 }, /*#__PURE__*/React.createElement("option", {
   value: ""
 }, L.t('galleria.scegliNome')), members.map(m => /*#__PURE__*/React.createElement("option", {
   key: m.id,
   value: m.name
 }, m.name, " (", photosBy(m.name), "/", photoCap, ")"))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-[#D97706] mt-1"
+  className: "text-minuto text-[#D97706] mt-1"
 }, L.t('galleria.primaMembri'))), photoWho && /*#__PURE__*/React.createElement("p", {
-  className: "text-[11px] text-gray-600"
+  className: "text-piccolo text-gray-600"
 }, photosBy(photoWho) >= photoCap ? /*#__PURE__*/React.createElement("span", {
   className: "text-[#D97706] font-bold"
 }, L.t('galleria.esaurite', photoWho, photoCap)) : frase('galleria.restano', photoWho, photoCap - photosBy(photoWho), photoCap)), /*#__PURE__*/React.createElement("label", {
-  className: `block w-full py-3 rounded font-bold uppercase text-sm tracking-wide text-center cursor-pointer ${photoWho && photosBy(photoWho) < photoCap && !photoBusy ? 'bg-[#2D392C] text-white hover:bg-[#1F271E]' : 'bg-gray-200 text-gray-400 pointer-events-none'}`
+  className: `block w-full py-3 rounded font-bold uppercase text-normale tracking-wide text-center cursor-pointer ${photoWho && photosBy(photoWho) < photoCap && !photoBusy ? 'bg-[#2D392C] text-white hover:bg-[#1F271E]' : 'bg-gray-200 text-gray-400 pointer-events-none'}`
 }, photoBusy || L.t('galleria.scegliFoto'), /*#__PURE__*/React.createElement("input", {
   type: "file",
   accept: "image/*",
@@ -8384,15 +8395,15 @@ const schedaGalleria = ({
 })), (cloud.foto || 0) > 0 && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
 }, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-[#5C4A3C] leading-snug"
+  className: "text-piccolo text-[#5C4A3C] leading-snug"
 }, frase('galleria.inCoda', cloud.foto))), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic leading-snug"
+  className: "text-minuto text-gray-400 italic leading-snug"
 }, frase('galleria.tetto', photoCap)))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3 gap-2"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg text-[#2D392C] shrink-0"
+  className: "font-rustic text-grande text-[#2D392C] shrink-0"
 }, L.t('archivio.album'), " ", photos.length > 0 ? `(${photos.length})` : ''), photos.length > 0 && !picking && /*#__PURE__*/React.createElement("div", {
   className: "flex rounded border border-[#8F9E8B]/40 overflow-hidden shrink-0"
 }, [['album', L.t('galleria.vistaAlbum')], ['griglia', L.t('galleria.vistaGriglia')]].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
@@ -8403,11 +8414,11 @@ const schedaGalleria = ({
   onClick: uscitaScelta,
   className: bottone('primario', 'minuscolo', 'shrink-0')
 }, L.t('galleria.annulla'))), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-400 italic"
+  className: "text-normale text-gray-400 italic"
 }, L.t('galleria.senzaLinea')) : !photosReady ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-400 italic"
+  className: "text-normale text-gray-400 italic"
 }, L.t('archivio.carico')) : photos.length === 0 ? /*#__PURE__*/React.createElement("p", {
-  className: "text-sm text-gray-400 italic"
+  className: "text-normale text-gray-400 italic"
 }, L.t('galleria.ancoraNessuna')) : galleryView === 'album' && !picking ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
   className: "album-sfoglio",
   ref: albumRef,
@@ -8438,14 +8449,14 @@ const schedaGalleria = ({
   onClick: () => sfoglia(-1),
   disabled: albumPage <= 0,
   "aria-label": L.t('galleria.paginaPrec'),
-  className: `w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage <= 0 ? 'text-gray-300' : 'text-[#2D392C]'}`
+  className: `w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-normale ${albumPage <= 0 ? 'text-gray-300' : 'text-[#2D392C]'}`
 }, "\u2039"), /*#__PURE__*/React.createElement("span", {
-  className: "text-[10px] uppercase tracking-widest text-gray-500"
+  className: "text-piccolo uppercase tracking-widest text-gray-500"
 }, Math.min(albumPage + 1, paginaAlbum(photos).length), " / ", paginaAlbum(photos).length), /*#__PURE__*/React.createElement("button", {
   onClick: () => sfoglia(1),
   disabled: albumPage >= paginaAlbum(photos).length - 1,
   "aria-label": L.t('galleria.paginaSucc'),
-  className: `w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage >= paginaAlbum(photos).length - 1 ? 'text-gray-300' : 'text-[#2D392C]'}`
+  className: `w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-normale ${albumPage >= paginaAlbum(photos).length - 1 ? 'text-gray-300' : 'text-[#2D392C]'}`
 }, "\u203A"))) : /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-3 gap-1.5"
 }, photos.map(p => {
@@ -8461,14 +8472,14 @@ const schedaGalleria = ({
     className: `w-full h-full object-cover ${picking && scelta < 0 ? 'opacity-45' : ''}`,
     loading: "lazy"
   }), picking && /*#__PURE__*/React.createElement("span", {
-    className: `absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border-2 ${scelta >= 0 ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white/80 border-white'}`
+    className: `absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-minuto font-bold border-2 ${scelta >= 0 ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white/80 border-white'}`
   }, scelta >= 0 ? scelta + 1 : ''), p.by && /*#__PURE__*/React.createElement("span", {
-    className: "absolute bottom-0 left-0 right-0 bg-black/55 text-white text-[8px] px-1 py-0.5 truncate text-left"
+    className: "absolute bottom-0 left-0 right-0 bg-black/55 text-white text-minuto px-1 py-0.5 truncate text-left"
   }, soloNome(p.by)));
 })), picking && /*#__PURE__*/React.createElement("div", {
   className: "mt-3 pt-3 border-t border-[#8F9E8B]/30 space-y-2"
 }, /*#__PURE__*/React.createElement("p", {
-  className: "text-[11px] text-gray-600"
+  className: "text-piccolo text-gray-600"
 }, picked.length === 0 ? L.t('galleria.toccaLeFoto') : frase('galleria.scelte', picked.length, photos.length, Math.ceil(picked.length / PER_PAGINA_ALBUM))), /*#__PURE__*/React.createElement("button", {
   onClick: () => generaRicordo(photos, false),
   disabled: picked.length === 0 || !!pdfBusy,
@@ -8476,24 +8487,24 @@ const schedaGalleria = ({
 }, pdfBusy || L.t('galleria.creaConScelte', picked.length)), /*#__PURE__*/React.createElement("button", {
   onClick: () => setPicked(photos.map(x => x.id)),
   disabled: !!pdfBusy || picked.length === photos.length,
-  className: bottone('secondario', 'piccolo', 'w-full')
+  className: bottone('secondario', 'normale', 'w-full')
 }, L.t('galleria.scegliTutte')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic leading-snug"
+  className: "text-minuto text-gray-400 italic leading-snug"
 }, L.t('galleria.notaScelte'))), photos.length > 0 && !picking && cloud.connected && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
   onClick: () => generaRicordo(photos, true),
   disabled: !!pdfBusy,
   className: bottone('bruno', 'grande', 'w-full mt-3')
 }, pdfBusy || L.t('galleria.creaCompleto', photos.length)), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic mt-1.5 leading-snug"
+  className: "text-minuto text-gray-400 italic mt-1.5 leading-snug"
 }, frase('galleria.notaCompleto', Math.ceil(photos.length / PER_PAGINA_ALBUM))), /*#__PURE__*/React.createElement("button", {
   onClick: () => {
     setGalleryView('griglia');
     setPicking(true);
   },
   disabled: !!pdfBusy,
-  className: bottone('secondario', 'piccolo', 'w-full mt-2')
+  className: bottone('secondario', 'normale', 'w-full mt-2')
 }, L.t('galleria.scegliTu')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic mt-2"
+  className: "text-minuto text-gray-400 italic mt-2"
 }, L.t('galleria.notaFinale')))));
 // ---------- Scheda Impostazioni ----------
 // La piu' grande di tutte, e la piu' intrecciata: aspetto, blocco, backup,
@@ -8553,32 +8564,32 @@ const schedaImpostazioni = ({
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg text-[#2D392C]"
+  className: "font-rustic text-grande text-[#2D392C]"
 }, L.t('pronto.titolo')), /*#__PURE__*/React.createElement("span", {
-  className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-[#D97706] text-white' : 'bg-[#2D392C] text-white'}`
+  className: `text-minuto uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-[#D97706] text-white' : 'bg-[#2D392C] text-white'}`
 }, L.t(!campoInCorso ? 'pronto.nessunCampo' : readyOk ? 'pronto.si' : 'pronto.nonAncora'))), !campoInCorso ? /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug"
+  className: "text-piccolo text-gray-500 leading-snug"
 }, frase('pronto.senzaCampo')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug"
+  className: "text-piccolo text-gray-500 leading-snug"
 }, frase('pronto.treCose')), /*#__PURE__*/React.createElement("ul", {
   className: "space-y-2"
 }, readyChecks.map(c => /*#__PURE__*/React.createElement("li", {
   key: c.titolo,
   className: `flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20' : 'bg-[#D97706]/10 border-[#D97706]/40'}`
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-base leading-none shrink-0"
+  className: "text-medio leading-none shrink-0"
 }, c.ok ? '✅' : '⚠️'), /*#__PURE__*/React.createElement("div", {
   className: "min-w-0"
 }, /*#__PURE__*/React.createElement("div", {
-  className: "text-[11px] font-bold text-[#2D392C]"
+  className: "text-piccolo font-bold text-[#2D392C]"
 }, c.titolo), !c.ok && /*#__PURE__*/React.createElement("div", {
-  className: "text-[10px] text-[#5C4A3C] leading-snug mt-0.5"
+  className: "text-piccolo text-[#5C4A3C] leading-snug mt-0.5"
 }, c.no))))), readyOk && /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic"
+  className: "text-minuto text-gray-400 italic"
 }, L.t('pronto.tuttoBene')))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
 }, L.t('lingua.titolo')), /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-3 gap-2"
 }, Object.keys(window.Lingue.LINGUE).map(k => /*#__PURE__*/React.createElement("button", {
@@ -8589,11 +8600,11 @@ const schedaImpostazioni = ({
   },
   className: bottoneScelta('linguetta', 'sezione', lingua === k, 'minuscolo')
 }, window.Lingue.LINGUE[k].nome))), /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug"
+  className: "text-piccolo text-gray-500 leading-snug"
 }, L.t('lingua.nota'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
 }, L.t('aspetto.titolo')), /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-3 gap-2"
 }, [['auto', L.t('aspetto.automatico'), '🌗'], ['light', L.t('aspetto.chiaro'), '☀️'], ['dark', L.t('aspetto.scuro'), '🌙']].map(([k, l, icon]) => /*#__PURE__*/React.createElement("button", {
@@ -8601,17 +8612,17 @@ const schedaImpostazioni = ({
   onClick: () => setTheme(k),
   className: bottoneScelta('linguetta', 'sezione', theme === k, 'minuscolo')
 }, /*#__PURE__*/React.createElement("span", {
-  className: "block text-base leading-none mb-1"
+  className: "block text-medio leading-none mb-1"
 }, icon), l))), /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500"
+  className: "text-piccolo text-gray-500"
 }, L.t('aspetto.spiegazione', theme === 'auto', theme === 'auto' ? isDark : theme === 'dark'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
 }, L.t('area.galleria')), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between gap-3"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-sm text-[#2D392C]"
+  className: "text-normale text-[#2D392C]"
 }, L.t('impostazioni.fotoPerPersona')), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center gap-2 shrink-0"
 }, [3, 4, 5, 7].map(n => /*#__PURE__*/React.createElement("button", {
@@ -8620,13 +8631,13 @@ const schedaImpostazioni = ({
     setPhotoCap(n);
     scriviLocale(PHOTO_CAP_KEY, String(n));
   },
-  className: bottoneScelta('linguetta', 'sezione', photoCap === n, 'normale', 'w-9')
+  className: bottoneScelta('linguetta', 'sezione', photoCap === n, 'minuscolo', 'w-9')
 }, n)))), /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug"
+  className: "text-piccolo text-gray-500 leading-snug"
 }, L.t('impostazioni.fotoNota'))), admin && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
 }, L.t('diag.titolo')), (() => {
   const m = metaRef.current || {
     rev: {},
@@ -8644,37 +8655,37 @@ const schedaImpostazioni = ({
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-600"
+    className: "flex flex-wrap gap-x-4 gap-y-1 text-piccolo text-gray-600"
   }, /*#__PURE__*/React.createElement("span", null, fraseVestita('font-bold text-[#2D392C]', 'diag.vociDatate', Object.keys(m.rev || {}).length)), /*#__PURE__*/React.createElement("span", null, fraseVestita('font-bold text-[#2D392C]', 'diag.cancellazioni', lapidi.length))), (() => {
     const MF = window.MagazzinoFoto;
     const quante = Object.keys(receipts || {}).length;
     const kb = MF ? Math.round(MF.peso(receipts) / 1024) : 0;
     return /*#__PURE__*/React.createElement("p", {
-      className: "text-[11px] text-gray-600"
+      className: "text-piccolo text-gray-600"
     }, fraseVestita('font-bold text-[#2D392C]', 'diag.scontrini', quante, quante > 0 ? kb : null, fotoDove === 'magazzino'));
   })(), Object.keys(m.rev || {}).length === 0 && ((st.members || []).length > 0 || (st.purchases || []).length > 0 || Object.keys(st.campData || {}).length > 0) && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('diag.senzaStoria'))), (cloud.pending || (cloud.foto || 0) > 0) && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('diag.daInviare', !!cloud.pending, cloud.foto || 0)), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       const CS = window.CloudSync;
       if (CS && CS.riprova) CS.riprova();
     },
-    className: bottone('avviso', 'piccolo', 'w-full mt-2')
+    className: bottone('avviso', 'normale', 'w-full mt-2')
   }, L.t('diag.riprovaAdesso'))), scorta && scorta.state && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 space-y-2"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('diag.reteDiSicurezza', L.data(new Date(scorta.at), 'dataOra'), scorta.perse, scorta.quando ? L.data(new Date(scorta.quando), 'dataOra') : null, scorta.quando ? Date.now() - scorta.quando > PERDITA_RECENTE : false)), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-[#5C4A3C] leading-snug"
+    className: "text-piccolo text-[#5C4A3C] leading-snug"
   }, frase('diag.annullandoTorna', scorta.perse, scorta.paths && scorta.paths.length ? descriviPerdite(scorta.paths, scorta.state) : null)), /*#__PURE__*/React.createElement("button", {
     onClick: annullaSync,
-    className: bottone('avviso', 'piccolo', 'w-full')
+    className: bottone('avviso', 'normale', 'w-full')
   }, L.t('diag.annullaSync')), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       if (window.confirm(L.t('diag.confermaButtaCopia'))) {
@@ -8685,22 +8696,22 @@ const schedaImpostazioni = ({
     },
     className: bottone('testuale', 'minuscolo', 'w-full')
   }, L.t('diag.buttaCopia'))), lapidi.length === 0 ? /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-gray-400 italic"
+    className: "text-piccolo text-gray-400 italic"
   }, L.t('diag.nessunaCancellazione')) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] uppercase font-bold text-gray-500 mb-1"
+    className: "text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, L.t('diag.ultimeCancellazioni')), /*#__PURE__*/React.createElement("ul", {
     className: "space-y-1"
   }, lapidi.slice(0, 12).map(l => /*#__PURE__*/React.createElement("li", {
     key: l.p,
-    className: "flex items-start justify-between gap-2 text-[10px] bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20"
+    className: "flex items-start justify-between gap-2 text-piccolo bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[#2D392C] leading-snug"
   }, descriviPath(l.p, st)), /*#__PURE__*/React.createElement("span", {
     className: "text-gray-500 shrink-0"
   }, L.data(new Date(l.at), 'breve'), ' ', L.data(new Date(l.at), 'ora'))))), lapidi.length > 12 && /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-400 italic mt-1"
+    className: "text-minuto text-gray-400 italic mt-1"
   }, L.t('diag.eAltre', lapidi.length - 12))), /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-400 italic leading-snug"
+    className: "text-minuto text-gray-400 italic leading-snug"
   }, L.t('diag.notaCancellazioni')));
 })()), admin && /*#__PURE__*/React.createElement("div", {
   className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
@@ -8708,17 +8719,17 @@ const schedaImpostazioni = ({
   onClick: () => setLogOpen(v => !v),
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-lg text-[#2D392C] shrink-0"
+  className: "font-rustic text-grande text-[#2D392C] shrink-0"
 }, L.t('registro.titolo')), /*#__PURE__*/React.createElement("span", {
   className: "ml-auto flex items-center gap-2 shrink-0"
 }, /*#__PURE__*/React.createElement("span", {
-  className: "text-[9px] uppercase font-bold px-2 py-1 rounded bg-gray-200 text-gray-500"
+  className: "text-minuto uppercase font-bold px-2 py-1 rounded bg-gray-200 text-gray-500"
 }, (() => {
   void diagTick;
   const n = logLeggi().length;
   return n === 0 ? L.t('registro.vuoto') : L.t('registro.quanteVoci', n);
 })()), /*#__PURE__*/React.createElement("span", {
-  className: `text-[10px] text-[#5C4A3C] transition-transform ${logOpen ? 'rotate-180' : ''}`
+  className: `text-piccolo text-[#5C4A3C] transition-transform ${logOpen ? 'rotate-180' : ''}`
 }, "\u25BE"))), logOpen && /*#__PURE__*/React.createElement("div", {
   className: "px-4 pb-4 space-y-3"
 }, (() => {
@@ -8727,7 +8738,7 @@ const schedaImpostazioni = ({
   const st = syncStateRef.current;
   if (reg.length === 0) {
     return /*#__PURE__*/React.createElement("p", {
-      className: "text-[11px] text-gray-400 italic"
+      className: "text-piccolo text-gray-400 italic"
     }, L.t('registro.nessuna'));
   }
   // Raggruppate per giorno: leggere 400 righe di fila è inutile.
@@ -8741,18 +8752,18 @@ const schedaImpostazioni = ({
     });
   });
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-gray-500 leading-snug"
+    className: "text-piccolo text-gray-500 leading-snug"
   }, L.t('registro.nota')), /*#__PURE__*/React.createElement("div", {
     className: "space-y-3 max-h-96 overflow-y-auto pr-1"
   }, perGiorno.map(gruppo => /*#__PURE__*/React.createElement("div", {
     key: gruppo.giorno
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1"
+    className: "text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1"
   }, gruppo.giorno), /*#__PURE__*/React.createElement("ul", {
     className: "space-y-1"
   }, gruppo.voci.map((r, i) => /*#__PURE__*/React.createElement("li", {
     key: r.p + r.at + i,
-    className: "flex items-start gap-2 text-[10px] bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20"
+    className: "flex items-start gap-2 text-piccolo bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-gray-500 shrink-0 w-10"
   }, L.data(new Date(r.at), 'ora')), /*#__PURE__*/React.createElement("span", {
@@ -8765,12 +8776,12 @@ const schedaImpostazioni = ({
   }, sezioneDiPath(r.p)), /*#__PURE__*/React.createElement("span", {
     className: "text-[#2D392C]"
   }, " \xB7 ", descriviPath(r.p, st))), /*#__PURE__*/React.createElement("span", {
-    className: `shrink-0 text-[8px] uppercase font-bold px-1.5 py-0.5 rounded ${r.o === 'io' ? 'bg-[#2D392C]/10 text-[#2D392C]' : 'bg-[#5C4A3C]/10 text-[#5C4A3C]'}`
+    className: `shrink-0 text-minuto uppercase font-bold px-1.5 py-0.5 rounded ${r.o === 'io' ? 'bg-[#2D392C]/10 text-[#2D392C]' : 'bg-[#5C4A3C]/10 text-[#5C4A3C]'}`
   }, L.t(r.o === 'io' ? 'registro.qui' : 'registro.sync')))))))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: esportaRegistro,
-    className: bottone('primario', 'piccolo', 'flex-1')
+    className: bottone('primario', 'normale', 'flex-1')
   }, L.t('registro.esporta')), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       if (window.confirm(L.t('registro.confermaSvuota'))) {
@@ -8778,7 +8789,7 @@ const schedaImpostazioni = ({
         setDiagTick(t => t + 1);
       }
     },
-    className: bottone('secondario', 'piccolo', 'flex-1')
+    className: bottone('secondario', 'normale', 'flex-1')
   }, L.t('registro.svuota'))));
 })())), /*#__PURE__*/React.createElement("div", {
   className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
@@ -8786,7 +8797,7 @@ const schedaImpostazioni = ({
   onClick: () => setBloccoOpen(v => !v),
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-lg text-[#2D392C] shrink-0"
+  className: "font-rustic text-grande text-[#2D392C] shrink-0"
 }, L.t('blocco.titoloScheda')), /*#__PURE__*/React.createElement("span", {
   className: "ml-auto flex items-center gap-1.5 shrink-0"
 }, (() => {
@@ -8795,17 +8806,17 @@ const schedaImpostazioni = ({
   const protetto = cloud.authMode === 'shared';
   const ignoto = !protetto && !cloud.connected;
   return /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px]",
+    className: "text-piccolo",
     title: L.t(protetto ? 'blocco.dbProtetto' : ignoto ? 'blocco.dbNonCollegato' : 'blocco.dbAperto')
   }, protetto ? '🔒' : ignoto ? '—' : '⚠');
 })(), /*#__PURE__*/React.createElement("span", {
-  className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
+  className: `text-minuto uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
 }, L.t(LOCK && LOCK.hash ? 'blocco.attivo' : 'blocco.nonAttivo')), /*#__PURE__*/React.createElement("span", {
-  className: `text-[10px] text-[#5C4A3C] transition-transform ${bloccoOpen ? 'rotate-180' : ''}`
+  className: `text-piccolo text-[#5C4A3C] transition-transform ${bloccoOpen ? 'rotate-180' : ''}`
 }, "\u25BE"))), bloccoOpen && /*#__PURE__*/React.createElement("div", {
   className: "px-4 pb-4 space-y-3"
 }, LOCK && LOCK.hash ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug"
+  className: "text-piccolo text-gray-500 leading-snug"
 }, L.t('blocco.spiegazione')), (() => {
   const lock = window.APP_LOCK || {};
   if (!lock.dbEmail) return null;
@@ -8818,11 +8829,11 @@ const schedaImpostazioni = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] uppercase font-bold text-gray-500"
+    className: "text-piccolo uppercase font-bold text-gray-500"
   }, L.t('blocco.database')), /*#__PURE__*/React.createElement("span", {
-    className: `text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`
+    className: `text-piccolo font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`
   }, L.t(protetto ? 'blocco.statoProtetto' : ignoto ? 'blocco.statoIgnoto' : 'blocco.statoAperto'))), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-gray-500 leading-snug mt-1"
+    className: "text-piccolo text-gray-500 leading-snug mt-1"
   }, L.t(protetto ? 'blocco.notaProtetto' : ignoto ? 'blocco.notaIgnoto' : 'blocco.notaAperto')));
 })(), /*#__PURE__*/React.createElement("label", {
   className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer"
@@ -8832,31 +8843,31 @@ const schedaImpostazioni = ({
   onChange: toggleAskAlways,
   className: "w-4 h-4 accent-[#2D392C] shrink-0"
 }), /*#__PURE__*/React.createElement("span", {
-  className: "text-[11px] text-[#2D392C] leading-snug"
+  className: "text-piccolo text-[#2D392C] leading-snug"
 }, frase('blocco.ogniVolta'), /*#__PURE__*/React.createElement("span", {
-  className: "block text-[9px] text-gray-500"
+  className: "block text-minuto text-gray-500"
 }, L.t('blocco.senzaSpunta')))), window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
 }, /*#__PURE__*/React.createElement("p", {
-  className: "text-[11px] text-[#5C4A3C] leading-snug"
+  className: "text-piccolo text-[#5C4A3C] leading-snug"
 }, frase('blocco.ripiego'))), /*#__PURE__*/React.createElement("button", {
   onClick: lockNow,
   className: bottone('bruno', 'normale', 'w-full')
 }, L.t('blocco.bloccaOra'))) : /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500"
+  className: "text-piccolo text-gray-500"
 }, L.t('blocco.nessunaPassword')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setDatiOpen(v => !v),
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-lg text-[#2D392C] shrink-0"
+  className: "font-rustic text-grande text-[#2D392C] shrink-0"
 }, L.t('dati.titolo')), /*#__PURE__*/React.createElement("span", {
   className: "ml-auto flex items-center gap-2 shrink-0"
 }, /*#__PURE__*/React.createElement("span", {
-  className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
+  className: `text-minuto uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
 }, L.t(cloud.connected ? 'dati.connessa' : isOnline ? 'dati.nonConnessa' : 'dati.offline')), /*#__PURE__*/React.createElement("span", {
-  className: `text-[10px] text-[#5C4A3C] transition-transform ${datiOpen ? 'rotate-180' : ''}`
+  className: `text-piccolo text-[#5C4A3C] transition-transform ${datiOpen ? 'rotate-180' : ''}`
 }, "\u25BE"))), datiOpen && /*#__PURE__*/React.createElement("div", {
   className: "px-4 pb-4 space-y-3"
 }, /*#__PURE__*/React.createElement("div", {
@@ -8871,29 +8882,29 @@ const schedaImpostazioni = ({
   onClick: wipeLocal,
   className: bottone('distruttivo', 'normale', 'w-full')
 }, L.t('dati.cancellaLocale')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-gray-400 italic leading-snug"
+  className: "text-minuto text-gray-400 italic leading-snug"
 }, L.t('dati.notaCancella')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setTecnicaOpen(v => !v),
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-lg text-[#2D392C] shrink-0"
+  className: "font-rustic text-grande text-[#2D392C] shrink-0"
 }, L.t('tecnica.titolo')), /*#__PURE__*/React.createElement("span", {
   className: "ml-auto flex items-center gap-2 shrink-0"
 }, /*#__PURE__*/React.createElement("span", {
-  className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${admin ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
+  className: `text-minuto uppercase font-bold px-2 py-1 rounded ${admin ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
 }, L.t(admin ? 'tecnica.attiva' : 'tecnica.spenta')), /*#__PURE__*/React.createElement("span", {
-  className: `text-[10px] text-[#5C4A3C] transition-transform ${tecnicaOpen ? 'rotate-180' : ''}`
+  className: `text-piccolo text-[#5C4A3C] transition-transform ${tecnicaOpen ? 'rotate-180' : ''}`
 }, "\u25BE"))), tecnicaOpen && /*#__PURE__*/React.createElement("div", {
   className: "px-4 pb-4 space-y-3"
 }, admin ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug"
+  className: "text-piccolo text-gray-500 leading-snug"
 }, frase('tecnica.accesaNota')), /*#__PURE__*/React.createElement("button", {
   onClick: esciAdmin,
   className: bottone('secondario', 'normale', 'w-full')
 }, L.t('tecnica.spegni'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-gray-500 leading-snug"
+  className: "text-piccolo text-gray-500 leading-snug"
 }, L.t('tecnica.spentaNota')), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("input", {
@@ -8905,26 +8916,26 @@ const schedaImpostazioni = ({
   },
   onKeyDown: e => e.key === 'Enter' && entraAdmin(),
   placeholder: L.t('tecnica.password'),
-  className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm"
+  className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale"
 }), /*#__PURE__*/React.createElement("button", {
   onClick: entraAdmin,
   className: bottone('primario', 'normale', 'shrink-0')
 }, L.t('tecnica.attivaTasto'))), adminErr && /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] font-bold text-red-700"
+  className: "text-piccolo font-bold text-red-700"
 }, adminErr)))), /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-2"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1"
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-1"
 }, L.t('info.titolo')), /*#__PURE__*/React.createElement("div", {
-  className: "flex justify-between text-[11px]"
+  className: "flex justify-between text-piccolo"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[#8F9E8B]"
 }, L.t('info.versione')), /*#__PURE__*/React.createElement("span", {
   className: "font-bold"
 }, swVersion || '—')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[10px] text-[#F0F4F1]/70 leading-snug"
+  className: "text-piccolo text-[#F0F4F1]/70 leading-snug"
 }, L.t('info.aggiornamento')), /*#__PURE__*/React.createElement("p", {
-  className: "text-[9px] text-[#8F9E8B]/80 pt-1"
+  className: "text-minuto text-[#8F9E8B]/80 pt-1"
 }, BRAND.credits)));
 // ---------- Scheda "Chi fa cosa": i compiti assegnati ----------
 //
@@ -8970,12 +8981,12 @@ const schedaCompiti = ({
   }, /*#__PURE__*/React.createElement("input", {
     value: c.testo,
     onChange: e => setCompitoCampo(c.id, 'testo', e.target.value),
-    className: `w-full bg-transparent text-sm text-[#2D392C] focus:outline-none border-b border-transparent focus:border-[#8F9E8B]/40 ${c.fatto ? 'line-through text-gray-400' : ''}`
+    className: `w-full bg-transparent text-normale text-[#2D392C] focus:outline-none border-b border-transparent focus:border-[#8F9E8B]/40 ${c.fatto ? 'line-through text-gray-400' : ''}`
   }), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] uppercase font-bold text-[#8F9E8B] shrink-0"
-  }, L.t('compiti.aChi')), renderBuyerSelect(c.chi, v => setCompitoCampo(c.id, 'chi', v), 'text-xs p-1.5')), c.fatto && /*#__PURE__*/React.createElement("button", {
+    className: "text-minuto uppercase font-bold text-[#8F9E8B] shrink-0"
+  }, L.t('compiti.aChi')), renderBuyerSelect(c.chi, v => setCompitoCampo(c.id, 'chi', v), 'text-piccolo p-1.5')), c.fatto && /*#__PURE__*/React.createElement("button", {
     onClick: () => daCompitoASpesa(c),
     className: bottone('bruno', 'minuscolo')
   }, "\uD83D\uDCB6 ", L.t('compiti.registraSpesa'))), /*#__PURE__*/React.createElement("button", {
@@ -8988,7 +8999,7 @@ const schedaCompiti = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+    className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
   }, L.t('compiti.assegnaTitolo')), /*#__PURE__*/React.createElement("input", {
     value: nuovoCompito,
     onChange: e => setNuovoCompito(e.target.value),
@@ -8996,33 +9007,33 @@ const schedaCompiti = ({
       if (e.key === 'Enter') addCompito();
     },
     placeholder: L.t('compiti.cosa'),
-    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+    className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
   }), renderBuyerSelect(nuovoCompitoChi, setNuovoCompitoChi), /*#__PURE__*/React.createElement("button", {
     onClick: addCompito,
     disabled: !nuovoCompito.trim(),
     className: bottone('primario', 'grande', 'w-full')
   }, L.t('compiti.assegna')), /*#__PURE__*/React.createElement("p", {
-    className: "text-[9px] text-gray-400 italic leading-snug"
+    className: "text-minuto text-gray-400 italic leading-snug"
   }, frase('compiti.spiegazione'))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between px-4 py-3 border-b border-[#8F9E8B]/40"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C]"
+    className: "font-rustic text-grande text-[#2D392C]"
   }, L.t('compiti.daFare')), daFare.length > 0 && /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C]"
   }, daFare.length)), daFare.length === 0 ? /*#__PURE__*/React.createElement("p", {
-    className: "px-4 py-6 text-center text-xs text-gray-400 italic"
+    className: "px-4 py-6 text-center text-piccolo text-gray-400 italic"
   }, compiti.length === 0 ? L.t('compiti.vuoto') : L.t('compiti.tuttoFatto')) : /*#__PURE__*/React.createElement("ul", null, daFare.map(riga))), fatti.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between px-4 py-3 border-b border-[#8F9E8B]/40"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-rustic text-lg text-[#2D392C]"
+    className: "font-rustic text-grande text-[#2D392C]"
   }, L.t('compiti.fatti')), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C]"
   }, fatti.length)), /*#__PURE__*/React.createElement("ul", null, fatti.map(riga))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-[#D97706] italic leading-snug px-1"
+    className: "text-piccolo text-[#D97706] italic leading-snug px-1"
   }, L.t('compiti.senzaMembri')));
 };
 const root = createRoot(document.getElementById('root'));

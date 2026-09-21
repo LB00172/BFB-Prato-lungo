@@ -25,7 +25,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 69 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 70 prove, circa 9 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -73,7 +73,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
-| `test/` | 12 prove unitarie + 57 end‑to‑end |
+| `test/` | 12 prove unitarie + 58 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -150,6 +150,15 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   Settantatré chiavi sono funzioni: un apostrofo sbagliato dentro un template
   non si vedrebbe fino al giorno in cui qualcuno accende la lingua. Le prove
   le chiamano tutte, in tutte le lingue, con lo zero, l'uno e il due.
+- **Un token di `@theme` scritto male non rompe niente.** `text-piccolo` con
+  il token sbagliato diventa una classe che non esiste: l'elemento eredita la
+  misura del genitore, l'app resta in piedi e nessuno se ne accorge. Non c'è
+  errore in console e il DOM è identico — la classe c'è, è il CSS che manca.
+  Se ne accorge solo `e2e/scala-testo`, che misura il `font-size` calcolato.
+- **Il confronto del DOM è cieco quando a cambiare sono le classi.** Serve a
+  spostare codice senza cambiare comportamento; quando il lavoro È cambiare
+  l'aspetto (la scala del testo, i colori), non dice niente di utile. Lì la
+  rete è un'altra: si guarda quello che disegna il browser.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.
@@ -228,7 +237,7 @@ priorità) e la fila in cui affrontarle, con scritto cosa blocca cosa.
 Le tre cose da sapere senza aprirlo:
 
 - **L'iPhone è verificato** (`ROADMAP.md` §10): ad agosto 2026, a mano, e
-  l'aggiornamento del service worker arriva. Le 57 prove girano comunque solo
+  l'aggiornamento del service worker arriva. Le 70 prove girano comunque solo
   su Chromium, quindi quel giro va rifatto ogni volta che si tocca `sw.js` o
   `build.js` — sono i due file che decidono se un rilascio arriva o resta in
   cache. Si comincia invece dalle immagini fuori da `localStorage` (§19): nel
@@ -247,7 +256,9 @@ Le tre cose da sapere senza aprirlo:
   `… prima.json dopo.json` — i due HTML devono essere identici al carattere.
 
 Prima di rimettere mano all'interfaccia, `RICOGNIZIONE-UI.md`: i colori, i 127
-bottoni e le undici misure di testo, già contati. È il materiale del §13 — di
-cui i **bottoni sono fatti** (102 su 124 passano dal vocabolario, i 22 rimasti
-sono censiti e il conteggio è una prova). Restano le misure di testo, e si
-fanno insieme al §18: stessi file.
+bottoni e le misure di testo, già contati. È il materiale del §13, che è
+**fatto**: i bottoni passano dal vocabolario (102 su 124, i 22 rimasti sono
+censiti) e le misure di testo sono **sei**, dichiarate in `index.html` come
+token di Tailwind v4 e chiamate per nome — `text-minuto`, `text-piccolo`,
+`text-normale`, `text-medio`, `text-grande`, `text-titolo`. **Mai una misura
+scritta a numero**: due prove lo vietano.

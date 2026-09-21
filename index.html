@@ -18,6 +18,36 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
+  <!-- LA SCALA DEL TESTO (ROADMAP.md § 13, punto 3).
+       Erano dodici misure e 449 usi decisi a occhio, uno alla volta: fra
+       text-[9px] e text-[10px] non c'era una regola, c'era la memoria di cosa
+       stava bene in quel punto. Adesso sono sei, e stanno scritte qui.
+
+       Tailwind e' la build v4 nel browser: in v4 i token vivono nel CSS, non
+       in un tailwind.config.js che qui non esiste (niente build step). Da
+       @theme nascono utility vere — text-minuto, text-piccolo... — quindi
+       leading-snug e compagnia continuano a vincere sulla riga, come prima.
+
+       Le altezze di riga non sono inventate: sono quelle che le misure
+       assorbite avevano gia'. 1.5 e' quella ereditata dalle misure in pixel,
+       20/14 e' quella di text-sm, 32/24 quella di text-2xl. -->
+  <style type="text/tailwindcss">
+    @theme {
+      --text-minuto: 9px;          /* etichette minute, note a margine */
+      --text-minuto--line-height: 1.5;
+      --text-piccolo: 11px;        /* il grosso della scrittura secondaria */
+      --text-piccolo--line-height: 1.5;
+      --text-normale: 14px;        /* il corpo */
+      --text-normale--line-height: 1.4286;
+      --text-medio: 16px;          /* il corpo, quando deve farsi vedere */
+      --text-medio--line-height: 1.5;
+      --text-grande: 18px;         /* i titoli delle schede */
+      --text-grande--line-height: 1.5556;
+      --text-titolo: 24px;         /* i numeri grossi e i titoli veri */
+      --text-titolo--line-height: 1.3333;
+    }
+  </style>
+
   <style>
     .font-rustic {
       font-family: 'Special Elite', system-ui, -apple-system, sans-serif;

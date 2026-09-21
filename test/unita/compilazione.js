@@ -325,4 +325,40 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     + (fuori.length ? ' — ' + fuori.join('; ') : ''), fuori.length === 0);
 }
 
+// ---------- La scala del testo non si riapre ----------
+// Dodici misure erano diventate dodici perche' ogni volta che serviva un
+// testo "un po' piu' piccolo" qualcuno ne scriveva una nuova a occhio. La
+// scala sta in index.html (@theme) e i sorgenti chiedono un NOME: qui si
+// controlla che nessuno sia tornato a scrivere il numero.
+//
+// La prova end-to-end (e2e/scala-testo) guarda quello che disegna il browser,
+// che e' la verita'; questa costa un secondo e dice SUBITO in quale file.
+{
+  const grezze = [];
+  SORGENTI.forEach((f) => {
+    const testo = fs.readFileSync(path.join(RADICE, 'src', f), 'utf8');
+    [...testo.matchAll(/\btext-(xs|sm|base|lg|xl|2xl|3xl|\[\d+px\])/g)].forEach((m) => {
+      grezze.push(`${f}: text-${m[1]}`);
+    });
+  });
+  ok(`nessuna misura di testo scritta a numero nei sorgenti (${grezze.length})`
+    + (grezze.length ? ' — ' + grezze.slice(0, 6).join(', ') : ''), grezze.length === 0);
+
+  // E il contrario: i nomi che i sorgenti usano devono esistere fra i token.
+  const html = fs.readFileSync(path.join(RADICE, 'index.html'), 'utf8');
+  const token = new Set([...html.matchAll(/--text-([a-z]+):/g)].map((m) => m[1]));
+  const inventate = new Set();
+  SORGENTI.forEach((f) => {
+    const testo = fs.readFileSync(path.join(RADICE, 'src', f), 'utf8');
+    [...testo.matchAll(/\btext-([a-z]+)\b/g)].forEach((m) => {
+      // text-white, text-gray-400… sono colori: si guardano solo i nomi che
+      // index.html dichiara come misure, piu' quelli che ci somigliano.
+      if (token.has(m[1])) return;
+      if (['minuto', 'piccolo', 'normale', 'medio', 'grande', 'titolo'].includes(m[1])) inventate.add(f + ': text-' + m[1]);
+    });
+  });
+  ok(`le misure usate esistono fra i token di index.html (${token.size} dichiarati)`
+    + (inventate.size ? ' — INVENTATE: ' + [...inventate].join(', ') : ''), inventate.size === 0);
+}
+
 fine();

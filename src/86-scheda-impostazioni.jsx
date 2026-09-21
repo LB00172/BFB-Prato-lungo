@@ -57,33 +57,33 @@ const schedaImpostazioni = ({
         resterebbero rossi per sempre — su un telefono che sta benissimo. */}
     <div className={`p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-white border-[#2D392C]/20' : 'bg-white border-[#D97706]/50'}`}>
       <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
-        <h3 className="font-rustic text-lg text-[#2D392C]">{L.t('pronto.titolo')}</h3>
-        <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-[#D97706] text-white' : 'bg-[#2D392C] text-white'}`}>
+        <h3 className="font-rustic text-grande text-[#2D392C]">{L.t('pronto.titolo')}</h3>
+        <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-[#D97706] text-white' : 'bg-[#2D392C] text-white'}`}>
           {L.t(!campoInCorso ? 'pronto.nessunCampo' : readyOk ? 'pronto.si' : 'pronto.nonAncora')}
         </span>
       </div>
       {!campoInCorso ? (
-        <p className="text-[10px] text-gray-500 leading-snug">
+        <p className="text-piccolo text-gray-500 leading-snug">
           {frase('pronto.senzaCampo')}
         </p>
       ) : (
         <>
-          <p className="text-[10px] text-gray-500 leading-snug">
+          <p className="text-piccolo text-gray-500 leading-snug">
             {frase('pronto.treCose')}
           </p>
           <ul className="space-y-2">
             {readyChecks.map((c) => (
               <li key={c.titolo} className={`flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
-                <span className="text-base leading-none shrink-0">{c.ok ? '✅' : '⚠️'}</span>
+                <span className="text-medio leading-none shrink-0">{c.ok ? '✅' : '⚠️'}</span>
                 <div className="min-w-0">
-                  <div className="text-[11px] font-bold text-[#2D392C]">{c.titolo}</div>
-                  {!c.ok && <div className="text-[10px] text-[#5C4A3C] leading-snug mt-0.5">{c.no}</div>}
+                  <div className="text-piccolo font-bold text-[#2D392C]">{c.titolo}</div>
+                  {!c.ok && <div className="text-piccolo text-[#5C4A3C] leading-snug mt-0.5">{c.no}</div>}
                 </div>
               </li>
             ))}
           </ul>
           {readyOk && (
-            <p className="text-[9px] text-gray-400 italic">{L.t('pronto.tuttoBene')}</p>
+            <p className="text-minuto text-gray-400 italic">{L.t('pronto.tuttoBene')}</p>
           )}
         </>
       )}
@@ -94,7 +94,7 @@ const schedaImpostazioni = ({
         lingua e meta' nell'altra. */}
     {FEATURES.lingue && (
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('lingua.titolo')}</h3>
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('lingua.titolo')}</h3>
       <div className="grid grid-cols-3 gap-2">
         {Object.keys(window.Lingue.LINGUE).map((k) => (
           <button
@@ -106,13 +106,13 @@ const schedaImpostazioni = ({
           </button>
         ))}
       </div>
-      <p className="text-[10px] text-gray-500 leading-snug">{L.t('lingua.nota')}</p>
+      <p className="text-piccolo text-gray-500 leading-snug">{L.t('lingua.nota')}</p>
     </div>
     )}
 
     {/* Aspetto */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('aspetto.titolo')}</h3>
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('aspetto.titolo')}</h3>
       <div className="grid grid-cols-3 gap-2">
         {[['auto', L.t('aspetto.automatico'), '🌗'], ['light', L.t('aspetto.chiaro'), '☀️'], ['dark', L.t('aspetto.scuro'), '🌙']].map(([k, l, icon]) => (
           <button
@@ -120,34 +120,34 @@ const schedaImpostazioni = ({
             onClick={() => setTheme(k)}
             className={bottoneScelta('linguetta', 'sezione', theme === k, 'minuscolo')}
           >
-            <span className="block text-base leading-none mb-1">{icon}</span>
+            <span className="block text-medio leading-none mb-1">{icon}</span>
             {l}
           </button>
         ))}
       </div>
-      <p className="text-[10px] text-gray-500">
+      <p className="text-piccolo text-gray-500">
         {L.t('aspetto.spiegazione', theme === 'auto', theme === 'auto' ? isDark : theme === 'dark')}
       </p>
     </div>
 
     {/* Galleria */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('area.galleria')}</h3>
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('area.galleria')}</h3>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-[#2D392C]">{L.t('impostazioni.fotoPerPersona')}</span>
+        <span className="text-normale text-[#2D392C]">{L.t('impostazioni.fotoPerPersona')}</span>
         <div className="flex items-center gap-2 shrink-0">
           {[3, 4, 5, 7].map((n) => (
             <button
               key={n}
               onClick={() => { setPhotoCap(n); scriviLocale(PHOTO_CAP_KEY, String(n)); }}
-              className={bottoneScelta('linguetta', 'sezione', photoCap === n, 'normale', 'w-9')}
+              className={bottoneScelta('linguetta', 'sezione', photoCap === n, 'minuscolo', 'w-9')}
             >
               {n}
             </button>
           ))}
         </div>
       </div>
-      <p className="text-[10px] text-gray-500 leading-snug">
+      <p className="text-piccolo text-gray-500 leading-snug">
         {L.t('impostazioni.fotoNota')}
       </p>
     </div>
@@ -157,7 +157,7 @@ const schedaImpostazioni = ({
         vuol dire leggere il database a mano. Solo in modalità tecnica. */}
     {admin && (
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('diag.titolo')}</h3>
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('diag.titolo')}</h3>
       {(() => {
         const m = metaRef.current || { rev: {}, del: {} };
         const st = syncStateRef.current;
@@ -170,7 +170,7 @@ const schedaImpostazioni = ({
         const scorta = load(RESCUE_KEY, null);
         return (
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-600">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-piccolo text-gray-600">
               <span>{fraseVestita('font-bold text-[#2D392C]', 'diag.vociDatate', Object.keys(m.rev || {}).length)}</span>
               <span>{fraseVestita('font-bold text-[#2D392C]', 'diag.cancellazioni', lapidi.length)}</span>
             </div>
@@ -184,7 +184,7 @@ const schedaImpostazioni = ({
               const quante = Object.keys(receipts || {}).length;
               const kb = MF ? Math.round(MF.peso(receipts) / 1024) : 0;
               return (
-                <p className="text-[11px] text-gray-600">
+                <p className="text-piccolo text-gray-600">
                   {fraseVestita('font-bold text-[#2D392C]', 'diag.scontrini', quante, quante > 0 ? kb : null, fotoDove === 'magazzino')}
                 </p>
               );
@@ -198,7 +198,7 @@ const schedaImpostazioni = ({
             {Object.keys(m.rev || {}).length === 0 &&
               ((st.members || []).length > 0 || (st.purchases || []).length > 0 || Object.keys(st.campData || {}).length > 0) && (
               <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-                <p className="text-[10px] text-[#5C4A3C] leading-snug">
+                <p className="text-piccolo text-[#5C4A3C] leading-snug">
                   {frase('diag.senzaStoria')}
                 </p>
               </div>
@@ -207,12 +207,12 @@ const schedaImpostazioni = ({
             {/* Cosa non è ancora arrivato agli altri, e come forzarlo. */}
             {(cloud.pending || (cloud.foto || 0) > 0) && (
               <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-                <p className="text-[10px] text-[#5C4A3C] leading-snug">
+                <p className="text-piccolo text-[#5C4A3C] leading-snug">
                   {frase('diag.daInviare', !!cloud.pending, cloud.foto || 0)}
                 </p>
                 <button
                   onClick={() => { const CS = window.CloudSync; if (CS && CS.riprova) CS.riprova(); }}
-                  className={bottone('avviso', 'piccolo', 'w-full mt-2')}
+                  className={bottone('avviso', 'normale', 'w-full mt-2')}
                 >
                   {L.t('diag.riprovaAdesso')}
                 </button>
@@ -221,18 +221,18 @@ const schedaImpostazioni = ({
 
             {scorta && scorta.state && (
               <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 space-y-2">
-                <p className="text-[10px] text-[#5C4A3C] leading-snug">
+                <p className="text-piccolo text-[#5C4A3C] leading-snug">
                   {frase('diag.reteDiSicurezza',
                     L.data(new Date(scorta.at), 'dataOra'),
                     scorta.perse,
                     scorta.quando ? L.data(new Date(scorta.quando), 'dataOra') : null,
                     scorta.quando ? Date.now() - scorta.quando > PERDITA_RECENTE : false)}
                 </p>
-                <p className="text-[10px] text-[#5C4A3C] leading-snug">
+                <p className="text-piccolo text-[#5C4A3C] leading-snug">
                   {frase('diag.annullandoTorna', scorta.perse,
                     scorta.paths && scorta.paths.length ? descriviPerdite(scorta.paths, scorta.state) : null)}
                 </p>
-                <button onClick={annullaSync} className={bottone('avviso', 'piccolo', 'w-full')}>
+                <button onClick={annullaSync} className={bottone('avviso', 'normale', 'w-full')}>
                   {L.t('diag.annullaSync')}
                 </button>
                 <button
@@ -245,13 +245,13 @@ const schedaImpostazioni = ({
             )}
 
             {lapidi.length === 0 ? (
-              <p className="text-[11px] text-gray-400 italic">{L.t('diag.nessunaCancellazione')}</p>
+              <p className="text-piccolo text-gray-400 italic">{L.t('diag.nessunaCancellazione')}</p>
             ) : (
               <div>
-                <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">{L.t('diag.ultimeCancellazioni')}</p>
+                <p className="text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('diag.ultimeCancellazioni')}</p>
                 <ul className="space-y-1">
                   {lapidi.slice(0, 12).map((l) => (
-                    <li key={l.p} className="flex items-start justify-between gap-2 text-[10px] bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20">
+                    <li key={l.p} className="flex items-start justify-between gap-2 text-piccolo bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20">
                       <span className="text-[#2D392C] leading-snug">{descriviPath(l.p, st)}</span>
                       <span className="text-gray-500 shrink-0">
                         {L.data(new Date(l.at), 'breve')}
@@ -261,11 +261,11 @@ const schedaImpostazioni = ({
                   ))}
                 </ul>
                 {lapidi.length > 12 && (
-                  <p className="text-[9px] text-gray-400 italic mt-1">{L.t('diag.eAltre', lapidi.length - 12)}</p>
+                  <p className="text-minuto text-gray-400 italic mt-1">{L.t('diag.eAltre', lapidi.length - 12)}</p>
                 )}
               </div>
             )}
-            <p className="text-[9px] text-gray-400 italic leading-snug">
+            <p className="text-minuto text-gray-400 italic leading-snug">
               {L.t('diag.notaCancellazioni')}
             </p>
           </div>
@@ -284,12 +284,12 @@ const schedaImpostazioni = ({
         onClick={() => setLogOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-lg text-[#2D392C] shrink-0">{L.t('registro.titolo')}</span>
+        <span className="font-rustic text-grande text-[#2D392C] shrink-0">{L.t('registro.titolo')}</span>
         <span className="ml-auto flex items-center gap-2 shrink-0">
-          <span className="text-[9px] uppercase font-bold px-2 py-1 rounded bg-gray-200 text-gray-500">
+          <span className="text-minuto uppercase font-bold px-2 py-1 rounded bg-gray-200 text-gray-500">
             {(() => { void diagTick; const n = logLeggi().length; return n === 0 ? L.t('registro.vuoto') : L.t('registro.quanteVoci', n); })()}
           </span>
-          <span className={`text-[10px] text-[#5C4A3C] transition-transform ${logOpen ? 'rotate-180' : ''}`}>▾</span>
+          <span className={`text-piccolo text-[#5C4A3C] transition-transform ${logOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
       </button>
       {logOpen && (<div className="px-4 pb-4 space-y-3">
@@ -298,7 +298,7 @@ const schedaImpostazioni = ({
           const reg = logLeggi();
           const st = syncStateRef.current;
           if (reg.length === 0) {
-            return <p className="text-[11px] text-gray-400 italic">{L.t('registro.nessuna')}</p>;
+            return <p className="text-piccolo text-gray-400 italic">{L.t('registro.nessuna')}</p>;
           }
           // Raggruppate per giorno: leggere 400 righe di fila è inutile.
           const perGiorno = [];
@@ -310,16 +310,16 @@ const schedaImpostazioni = ({
           });
           return (
             <>
-              <p className="text-[10px] text-gray-500 leading-snug">
+              <p className="text-piccolo text-gray-500 leading-snug">
                 {L.t('registro.nota')}
               </p>
               <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
                 {perGiorno.map((gruppo) => (
                   <div key={gruppo.giorno}>
-                    <p className="text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1">{gruppo.giorno}</p>
+                    <p className="text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1">{gruppo.giorno}</p>
                     <ul className="space-y-1">
                       {gruppo.voci.map((r, i) => (
-                        <li key={r.p + r.at + i} className="flex items-start gap-2 text-[10px] bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20">
+                        <li key={r.p + r.at + i} className="flex items-start gap-2 text-piccolo bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20">
                           <span className="text-gray-500 shrink-0 w-10">
                             {L.data(new Date(r.at), 'ora')}
                           </span>
@@ -330,7 +330,7 @@ const schedaImpostazioni = ({
                             <span className="font-bold text-[#5C4A3C]">{sezioneDiPath(r.p)}</span>
                             <span className="text-[#2D392C]"> · {descriviPath(r.p, st)}</span>
                           </span>
-                          <span className={`shrink-0 text-[8px] uppercase font-bold px-1.5 py-0.5 rounded ${r.o === 'io' ? 'bg-[#2D392C]/10 text-[#2D392C]' : 'bg-[#5C4A3C]/10 text-[#5C4A3C]'}`}>
+                          <span className={`shrink-0 text-minuto uppercase font-bold px-1.5 py-0.5 rounded ${r.o === 'io' ? 'bg-[#2D392C]/10 text-[#2D392C]' : 'bg-[#5C4A3C]/10 text-[#5C4A3C]'}`}>
                             {L.t(r.o === 'io' ? 'registro.qui' : 'registro.sync')}
                           </span>
                         </li>
@@ -340,10 +340,10 @@ const schedaImpostazioni = ({
                 ))}
               </div>
               <div className="flex gap-2">
-                <button onClick={esportaRegistro} className={bottone('primario', 'piccolo', 'flex-1')}>{L.t('registro.esporta')}</button>
+                <button onClick={esportaRegistro} className={bottone('primario', 'normale', 'flex-1')}>{L.t('registro.esporta')}</button>
                 <button
                   onClick={() => { if (window.confirm(L.t('registro.confermaSvuota'))) { localStorage.removeItem(LOG_KEY); setDiagTick((t) => t + 1); } }}
-                  className={bottone('secondario', 'piccolo', 'flex-1')}
+                  className={bottone('secondario', 'normale', 'flex-1')}
                 >
                   {L.t('registro.svuota')}
                 </button>
@@ -362,7 +362,7 @@ const schedaImpostazioni = ({
         onClick={() => setBloccoOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-lg text-[#2D392C] shrink-0">{L.t('blocco.titoloScheda')}</span>
+        <span className="font-rustic text-grande text-[#2D392C] shrink-0">{L.t('blocco.titoloScheda')}</span>
         <span className="ml-auto flex items-center gap-1.5 shrink-0">
           {/* Stato del database anche da chiusa: è l'unica cosa che
               serve vedere a colpo d'occhio. */}
@@ -371,18 +371,18 @@ const schedaImpostazioni = ({
             if (!lock.dbEmail || !(LOCK && LOCK.hash)) return null;
             const protetto = cloud.authMode === 'shared';
             const ignoto = !protetto && !cloud.connected;
-            return <span className="text-[10px]" title={L.t(protetto ? 'blocco.dbProtetto' : ignoto ? 'blocco.dbNonCollegato' : 'blocco.dbAperto')}>{protetto ? '🔒' : ignoto ? '—' : '⚠'}</span>;
+            return <span className="text-piccolo" title={L.t(protetto ? 'blocco.dbProtetto' : ignoto ? 'blocco.dbNonCollegato' : 'blocco.dbAperto')}>{protetto ? '🔒' : ignoto ? '—' : '⚠'}</span>;
           })()}
-          <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
+          <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
             {L.t(LOCK && LOCK.hash ? 'blocco.attivo' : 'blocco.nonAttivo')}
           </span>
-          <span className={`text-[10px] text-[#5C4A3C] transition-transform ${bloccoOpen ? 'rotate-180' : ''}`}>▾</span>
+          <span className={`text-piccolo text-[#5C4A3C] transition-transform ${bloccoOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
       </button>
       {bloccoOpen && (<div className="px-4 pb-4 space-y-3">
       {LOCK && LOCK.hash ? (
         <>
-          <p className="text-[10px] text-gray-500 leading-snug">
+          <p className="text-piccolo text-gray-500 leading-snug">
             {L.t('blocco.spiegazione')}
           </p>
           {/* Stato reale della protezione del database: il blocco
@@ -397,12 +397,12 @@ const schedaImpostazioni = ({
             return (
               <div className={`p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : ignoto ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/30' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] uppercase font-bold text-gray-500">{L.t('blocco.database')}</span>
-                  <span className={`text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`}>
+                  <span className="text-piccolo uppercase font-bold text-gray-500">{L.t('blocco.database')}</span>
+                  <span className={`text-piccolo font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`}>
                     {L.t(protetto ? 'blocco.statoProtetto' : ignoto ? 'blocco.statoIgnoto' : 'blocco.statoAperto')}
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-500 leading-snug mt-1">
+                <p className="text-piccolo text-gray-500 leading-snug mt-1">
                   {L.t(protetto ? 'blocco.notaProtetto' : ignoto ? 'blocco.notaIgnoto' : 'blocco.notaAperto')}
                 </p>
               </div>
@@ -410,14 +410,14 @@ const schedaImpostazioni = ({
           })()}
           <label className="flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer">
             <input type="checkbox" checked={askAlways} onChange={toggleAskAlways} className="w-4 h-4 accent-[#2D392C] shrink-0" />
-            <span className="text-[11px] text-[#2D392C] leading-snug">
+            <span className="text-piccolo text-[#2D392C] leading-snug">
               {frase('blocco.ogniVolta')}
-              <span className="block text-[9px] text-gray-500">{L.t('blocco.senzaSpunta')}</span>
+              <span className="block text-minuto text-gray-500">{L.t('blocco.senzaSpunta')}</span>
             </span>
           </label>
           {window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && (
             <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-              <p className="text-[11px] text-[#5C4A3C] leading-snug">
+              <p className="text-piccolo text-[#5C4A3C] leading-snug">
                 {frase('blocco.ripiego')}
               </p>
             </div>
@@ -427,7 +427,7 @@ const schedaImpostazioni = ({
           </button>
         </>
       ) : (
-        <p className="text-[10px] text-gray-500">
+        <p className="text-piccolo text-gray-500">
           {L.t('blocco.nessunaPassword')}
         </p>
       )}
@@ -440,12 +440,12 @@ const schedaImpostazioni = ({
         onClick={() => setDatiOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-lg text-[#2D392C] shrink-0">{L.t('dati.titolo')}</span>
+        <span className="font-rustic text-grande text-[#2D392C] shrink-0">{L.t('dati.titolo')}</span>
         <span className="ml-auto flex items-center gap-2 shrink-0">
-          <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
+          <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
             {L.t(cloud.connected ? 'dati.connessa' : isOnline ? 'dati.nonConnessa' : 'dati.offline')}
           </span>
-          <span className={`text-[10px] text-[#5C4A3C] transition-transform ${datiOpen ? 'rotate-180' : ''}`}>▾</span>
+          <span className={`text-piccolo text-[#5C4A3C] transition-transform ${datiOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
       </button>
       {datiOpen && (<div className="px-4 pb-4 space-y-3">
@@ -456,7 +456,7 @@ const schedaImpostazioni = ({
       <button onClick={wipeLocal} className={bottone('distruttivo', 'normale', 'w-full')}>
         {L.t('dati.cancellaLocale')}
       </button>
-      <p className="text-[9px] text-gray-400 italic leading-snug">
+      <p className="text-minuto text-gray-400 italic leading-snug">
         {L.t('dati.notaCancella')}
       </p>
       </div>)}
@@ -471,18 +471,18 @@ const schedaImpostazioni = ({
         onClick={() => setTecnicaOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-lg text-[#2D392C] shrink-0">{L.t('tecnica.titolo')}</span>
+        <span className="font-rustic text-grande text-[#2D392C] shrink-0">{L.t('tecnica.titolo')}</span>
         <span className="ml-auto flex items-center gap-2 shrink-0">
-          <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${admin ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
+          <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${admin ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
             {L.t(admin ? 'tecnica.attiva' : 'tecnica.spenta')}
           </span>
-          <span className={`text-[10px] text-[#5C4A3C] transition-transform ${tecnicaOpen ? 'rotate-180' : ''}`}>▾</span>
+          <span className={`text-piccolo text-[#5C4A3C] transition-transform ${tecnicaOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
       </button>
       {tecnicaOpen && (<div className="px-4 pb-4 space-y-3">
         {admin ? (
           <>
-            <p className="text-[10px] text-gray-500 leading-snug">
+            <p className="text-piccolo text-gray-500 leading-snug">
               {frase('tecnica.accesaNota')}
             </p>
             <button
@@ -494,7 +494,7 @@ const schedaImpostazioni = ({
           </>
         ) : (
           <>
-            <p className="text-[10px] text-gray-500 leading-snug">
+            <p className="text-piccolo text-gray-500 leading-snug">
               {L.t('tecnica.spentaNota')}
             </p>
             <div className="flex gap-2">
@@ -504,7 +504,7 @@ const schedaImpostazioni = ({
                 onChange={(e) => { setAdminPwd(e.target.value); setAdminErr(''); }}
                 onKeyDown={(e) => e.key === 'Enter' && entraAdmin()}
                 placeholder={L.t('tecnica.password')}
-                className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm"
+                className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale"
               />
               <button
                 onClick={entraAdmin}
@@ -513,7 +513,7 @@ const schedaImpostazioni = ({
                 {L.t('tecnica.attivaTasto')}
               </button>
             </div>
-            {adminErr && <p className="text-[10px] font-bold text-red-700">{adminErr}</p>}
+            {adminErr && <p className="text-piccolo font-bold text-red-700">{adminErr}</p>}
           </>
         )}
       </div>)}
@@ -521,15 +521,15 @@ const schedaImpostazioni = ({
 
     {/* Info */}
     <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-2">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1">{L.t('info.titolo')}</h3>
-      <div className="flex justify-between text-[11px]">
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-1">{L.t('info.titolo')}</h3>
+      <div className="flex justify-between text-piccolo">
         <span className="text-[#8F9E8B]">{L.t('info.versione')}</span>
         <span className="font-bold">{swVersion || '—'}</span>
       </div>
-      <p className="text-[10px] text-[#F0F4F1]/70 leading-snug">
+      <p className="text-piccolo text-[#F0F4F1]/70 leading-snug">
         {L.t('info.aggiornamento')}
       </p>
-      <p className="text-[9px] text-[#8F9E8B]/80 pt-1">{BRAND.credits}</p>
+      <p className="text-minuto text-[#8F9E8B]/80 pt-1">{BRAND.credits}</p>
     </div>
   </div>
 );

@@ -26,7 +26,7 @@ cosa blocca cosa.
 | — | § 12 Ponte Menù → Lista della spesa | **fatto** il 19 agosto: i menù veri del campo hanno corretto il piano (niente tabella di ingredienti) |
 | — | § 11 Coda foto | **chiusa**: la galleria resta online (§ 15-bis.4), e il messaggio ora dice anche cosa si perde chiudendo l'app |
 | — | § 19 Immagini fuori da `localStorage` | **fatto** il 23 agosto: le foto stanno in IndexedDB, `localStorage` è tornato da 3 MB a 2 KB |
-| 1 | § 13 Vocabolario dell'interfaccia | **bottoni fatti** il 23 agosto: 102 su 124, più il sesto ruolo (chip di scelta). **Restano le undici misure di testo**, da ridurre a cinque o sei: è quello che resta prima della versione pubblica |
+| — | § 13 Vocabolario dell'interfaccia | **fatto**: bottoni il 23 agosto (102 su 124, più il chip di scelta), **misure di testo il 21 settembre** — da dodici a sei, dichiarate in `index.html` e chiamate per nome |
 | — | § 14 Spezzare i sorgenti | **a buon punto** il 20 settembre: disegno, stato isolato e tutte le regole che decidono qualcosa sono fuori e provate senza browser. Resta il collegamento della sincronizzazione, che si sposta col § 2 |
 | — | § 17 Compiti assegnati | **fatto** il 20 settembre: scheda «Chi fa cosa», dietro `FEATURES.compiti`. Il gestore della Room arriva col § 2 |
 | — | § 18 Più lingue | **fatto** il 21 settembre: tutti e diciannove i sorgenti passano dal dizionario, `FEATURES.lingue` accesa. Le misure di testo del § 13 **non** sono state fatte in questo giro: si toccano gli stessi file, ma sono un lavoro diverso |
@@ -593,7 +593,7 @@ fuori non è un campo a metà, è un campo che non funziona.
 
 ## 10. Verifiche su iPhone — fatte ad agosto 2026
 
-**Le 57 prove girano tutte su Chromium**, quindi su iOS l'unica prova possibile
+**Le 70 prove girano tutte su Chromium**, quindi su iOS l'unica prova possibile
 è un telefono in mano. È stata fatta durante il campo 2026, e **funziona**.
 
 Era la voce in cima all'ordine di lavoro, perché è l'unica che poteva rendere
@@ -809,13 +809,57 @@ usate una volta sola da cui si era partiti. **Il conteggio però è congelato in
 `test/unita/compilazione.js`**: se sale, qualcuno ha scritto un bottone a mano
 invece di chiedere una parola al vocabolario.
 
-### Quello che resta del § 13
+### Il testo: dodici misure, sei (21 settembre 2026)
 
-Il punto 3 — **le undici misure di testo** ridotte a cinque o sei. È il pezzo
-più invasivo dei tre: 272 usi decisi a occhio, uno alla volta, e a differenza
-dei bottoni non c'è un ruolo dietro cui nasconderli. Va fatto quando si
-toccheranno le schede per il § 18 (le lingue), non prima: sono gli stessi file,
-e aprirli due volte per due motivi diversi è il modo di sbagliare tutte e due.
+Non erano più undici: mentre si lavorava ne era nata un'altra, ed è la prova
+che il problema non era il numero ma l'assenza di una regola. **449 usi**
+decisi a occhio, uno alla volta.
+
+**Dove vive la scala.** Tailwind qui è la build v4 nel browser e non c'è un
+`tailwind.config.js` — ma in v4 i token stanno nel CSS. Sei righe di `@theme`
+in `index.html`, e da lì nascono utility vere: `text-minuto` (9px),
+`text-piccolo` (11), `text-normale` (14), `text-medio` (16), `text-grande`
+(18), `text-titolo` (24). Vere davvero, non classi scritte a mano: `leading-snug`
+continua a vincere sull'altezza di riga esattamente come prima, che è la
+ragione per cui questa strada è stata scelta al posto di un blocco di CSS.
+
+Le altezze di riga non sono inventate: sono quelle che le misure assorbite
+avevano già (1.5 ereditata dalle misure in pixel, 20/14 di `text-sm`, 32/24 di
+`text-2xl`).
+
+**Cosa si è mosso, e cosa no.** Unire 10 e 11 px era obbligatorio — facevano
+gli stessi due mestieri, etichetta maiuscola e nota secondaria, e la differenza
+era memoria, non regola. La direzione è stata una via di mezzo: il minimo sale
+da 8 a 9, le note secondarie si accorpano a 11, il corpo resta dov'è. Si sono
+mossi 149 usi su 449.
+
+**La conseguenza che non era nel piano.** Il merge ha fatto collassare la
+quarta misura dei bottoni: `piccolo` esisteva perché aveva il corpo di un
+bottone normale con la scritta a 10px invece di 12, e dopo la scala le due
+voci erano diventate la stessa identica riga di classi. È stata tolta, e i
+suoi 18 posti di chiamata spostati su `normale`. Lo stesso per due delle
+cinque misure dei chip. **Non è un effetto collaterale: è la diagnosi di
+agosto che arriva a valle** — «sei altezze per un elemento che ne vuole tre».
+
+**Il confronto del DOM qui non serve a niente**, ed è la differenza con gli
+altri due punti: i nomi delle classi cambiano ovunque per definizione, quindi
+lo strumento diventa cieco proprio dove servirebbe. La rete è un'altra
+(`e2e/scala-testo`), e guarda quello che vede il browser: che i token valgano
+quello che dichiarano, che nessuna schermata trabocchi di lato a 360 px, e
+**quante misure il browser disegna davvero** — che è la definizione operativa
+di «fatto». Sono sei.
+
+Un token scritto male è il pericolo vero: non rompe niente, l'elemento eredita
+la misura del genitore e l'app resta in piedi con i caratteri sbagliati. Il
+sabotaggio lo ha confermato — `text-piccolo` diventava 16px in silenzio.
+
+**Un difetto trovato dalla prova.** A 360 px la scheda «Spese Totali → Dati»
+usciva dallo schermo di 18 px. Non era la scala: era il messaggio d'errore di
+Firebase, che contiene un indirizzo — una parola lunghissima che non va a capo
+— dentro un flex senza `min-w-0`. Quella riga non poteva restringersi e
+spingeva fuori tutta la schermata. C'era da sempre, e si vedeva solo su un
+telefono stretto e solo quando il cloud falliva davvero: il pixel in più l'ha
+fatta uscire allo scoperto.
 
 ## 14. Spezzare i sorgenti — il disegno e la parte isolata dello stato sono fuori
 

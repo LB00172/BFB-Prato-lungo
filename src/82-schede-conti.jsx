@@ -47,8 +47,8 @@ const schedaSpesa = ({
 
     {spesaSection === 'totali' && (<div className="space-y-4">
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-4">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('spesa.cassaGlobale')}</h3>
-      <p className="text-[10px] text-gray-500 -mt-1">{frase('spesa.cassaNota')}</p>
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('spesa.cassaGlobale')}</h3>
+      <p className="text-piccolo text-gray-500 -mt-1">{frase('spesa.cassaNota')}</p>
       <div className="space-y-2">
         {[
           [L.t('spesa.cibo'), totals.totalFood],
@@ -56,30 +56,30 @@ const schedaSpesa = ({
           [L.t('spesa.logisticaEAttrezzatura'), totals.totalAccessory],
         ].map(([label, val]) => (
           <div key={label} className="flex justify-between items-center bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20">
-            <span className="text-[11px] uppercase font-bold text-gray-500">{label}</span>
+            <span className="text-piccolo uppercase font-bold text-gray-500">{label}</span>
             <span className="font-bold text-[#2D392C]">{money(val)} €</span>
           </div>
         ))}
       </div>
       {totals.foodDrinksSep > 0 && (
         <div className="flex justify-between items-center bg-[#5C4A3C]/10 px-3 py-2 rounded border border-[#5C4A3C]/30">
-          <span className="text-[10px] uppercase font-bold text-[#5C4A3C]">{L.t('spesa.diCuiSeparato')}</span>
+          <span className="text-piccolo uppercase font-bold text-[#5C4A3C]">{L.t('spesa.diCuiSeparato')}</span>
           <span className="font-bold text-[#5C4A3C]">{money(totals.foodDrinksSep)} €</span>
         </div>
       )}
       <div className="bg-[#2D392C]/10 p-3 rounded border border-[#2D392C]/20 flex justify-between items-center mt-2">
-        <span className="font-bold text-xs uppercase">{L.t('spesa.importoComplessivo')}</span>
-        <span className="font-rustic font-bold text-lg text-[#2D392C]">{money(totals.overallTotal)} €</span>
+        <span className="font-bold text-piccolo uppercase">{L.t('spesa.importoComplessivo')}</span>
+        <span className="font-rustic font-bold text-grande text-[#2D392C]">{money(totals.overallTotal)} €</span>
       </div>
     </div>
 
     <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-4">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1">{L.t('spesa.contoDellaServa')}</h3>
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-1">{L.t('spesa.contoDellaServa')}</h3>
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
-          <span className="text-[10px] uppercase text-[#8F9E8B] block">{L.t('spesa.quotaPasto')}</span>
-          <span className="font-rustic text-xl text-[#D97706]">{money(totals.costPerMeal)} €</span>
-          <p className="text-[9px] text-gray-400 mt-1">
+          <span className="text-piccolo uppercase text-[#8F9E8B] block">{L.t('spesa.quotaPasto')}</span>
+          <span className="font-rustic text-titolo text-[#D97706]">{money(totals.costPerMeal)} €</span>
+          <p className="text-minuto text-gray-400 mt-1">
             {L.t('spesa.quotaPastoNota', money(totals.foodDrinksCommon), totals.adultMealsCommon, totals.sepDaysCount > 0)}
           </p>
         </div>
@@ -95,23 +95,23 @@ const schedaSpesa = ({
             perche' un numero solo sarebbe una bugia. */}
         {!(FEATURES.equipExemption && totals.equipPayersCount !== totals.accessoryPayersCount) ? (
           <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
-            <span className="text-[10px] uppercase text-[#8F9E8B] block">{L.t('spesa.quotaPersona')}</span>
-            <span className="font-rustic text-xl text-[#D97706]">{money(totals.accessoryPerAdult)} €</span>
-            <p className="text-[9px] text-gray-400 mt-1">
+            <span className="text-piccolo uppercase text-[#8F9E8B] block">{L.t('spesa.quotaPersona')}</span>
+            <span className="font-rustic text-titolo text-[#D97706]">{money(totals.accessoryPerAdult)} €</span>
+            <p className="text-minuto text-gray-400 mt-1">
               {L.t('spesa.quotaPersonaNota', money(totals.totalAccessory), totals.accessoryPayersCount)}
             </p>
           </div>
         ) : (
           <>
             <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
-              <span className="text-[10px] uppercase text-[#8F9E8B] block">{L.t('spesa.logisticaTesta')}</span>
-              <span className="font-rustic text-xl text-[#D97706]">{money(totals.logisticsPerAdult)} €</span>
-              <p className="text-[9px] text-gray-400 mt-1">{L.t('spesa.logisticaTestaNota', money(totals.logisticsPurchases), totals.accessoryPayersCount)}</p>
+              <span className="text-piccolo uppercase text-[#8F9E8B] block">{L.t('spesa.logisticaTesta')}</span>
+              <span className="font-rustic text-titolo text-[#D97706]">{money(totals.logisticsPerAdult)} €</span>
+              <p className="text-minuto text-gray-400 mt-1">{L.t('spesa.logisticaTestaNota', money(totals.logisticsPurchases), totals.accessoryPayersCount)}</p>
             </div>
             <div className="bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20">
-              <span className="text-[10px] uppercase text-[#8F9E8B] block">{L.t('spesa.attrezzaturaTesta')}</span>
-              <span className="font-rustic text-xl text-[#D97706]">{money(totals.equipPerAdult)} €</span>
-              <p className="text-[9px] text-gray-400 mt-1">
+              <span className="text-piccolo uppercase text-[#8F9E8B] block">{L.t('spesa.attrezzaturaTesta')}</span>
+              <span className="font-rustic text-titolo text-[#D97706]">{money(totals.equipPerAdult)} €</span>
+              <p className="text-minuto text-gray-400 mt-1">
                 {L.t('spesa.attrezzaturaTestaNota', money(totals.equipBought), totals.equipPayersCount)}
               </p>
             </div>
@@ -119,15 +119,15 @@ const schedaSpesa = ({
         )}
         {(totals.sepDaysCount > 0 || totals.foodDrinksSep > 0) && (
           <div className="bg-[#1F271E] p-3 rounded border border-[#5C4A3C] col-span-2">
-            <span className="text-[10px] uppercase text-[#8F9E8B] block">{L.t('spesa.separatoQuotaPasto')}</span>
-            <span className="font-rustic text-xl text-[#D97706]">{money(totals.costPerMealSep)} €</span>
-            <p className="text-[9px] text-gray-400 mt-1">
+            <span className="text-piccolo uppercase text-[#8F9E8B] block">{L.t('spesa.separatoQuotaPasto')}</span>
+            <span className="font-rustic text-titolo text-[#D97706]">{money(totals.costPerMealSep)} €</span>
+            <p className="text-minuto text-gray-400 mt-1">
               {L.t('spesa.separatoQuotaNota', money(totals.foodDrinksSep), totals.adultMealsSep, totals.sepDaysCount, totals.sepPeopleCount)}
             </p>
           </div>
         )}
       </div>
-      <p className="text-[9px] text-gray-400 italic">{L.t('spesa.bambiniGratis')}</p>
+      <p className="text-minuto text-gray-400 italic">{L.t('spesa.bambiniGratis')}</p>
     </div>
 
     </div>)}
@@ -138,13 +138,13 @@ const schedaSpesa = ({
         zero: meglio dirlo, invece di mostrare solo degli zeri. */}
     {totals.overallTotal > 0 && totals.adultMealsTotal === 0 && (
       <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-        <p className="text-[11px] text-[#5C4A3C] leading-snug">
+        <p className="text-piccolo text-[#5C4A3C] leading-snug">
           {frase('quote.senzaPasti', money(totals.overallTotal))}
         </p>
       </div>
     )}
     {totals.freeDaysCount > 0 && (
-      <p className="text-[10px] text-[#2D392C] leading-snug bg-[#2D392C]/8 border border-[#2D392C]/25 rounded p-2.5">
+      <p className="text-piccolo text-[#2D392C] leading-snug bg-[#2D392C]/8 border border-[#2D392C]/25 rounded p-2.5">
         {frase('quote.giorniGratis', totals.freeDaysCount, totals.mealsFree)}
       </p>
     )}
@@ -191,14 +191,14 @@ const schedaSpesa = ({
         fuori in tutto senza sommare a mente. */}
     {cassaSepAttiva && totals.breakdown.length > 0 && (
       <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
-        <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">{L.t('quote.totaleAPersona')}</h3>
-        <p className="text-[10px] text-gray-500 leading-snug mb-2">{L.t('quote.totaleNota')}</p>
+        <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">{L.t('quote.totaleAPersona')}</h3>
+        <p className="text-piccolo text-gray-500 leading-snug mb-2">{L.t('quote.totaleNota')}</p>
         <ul className="divide-y divide-[#8F9E8B]/20">
           {totals.breakdown.map((b) => (
             <li key={b.id} className="flex items-center justify-between py-2">
               <div className="flex flex-col">
-                <span className="text-sm font-bold text-[#2D392C]">{b.name}</span>
-                <span className="text-[10px] text-gray-500">
+                <span className="text-normale font-bold text-[#2D392C]">{b.name}</span>
+                <span className="text-piccolo text-gray-500">
                   {b.isChild ? L.t('quote.bambino') : L.t('quote.comunePiuSeparata', money(b.payComune), money(b.paySep))}
                 </span>
               </div>
@@ -209,7 +209,7 @@ const schedaSpesa = ({
           ))}
         </ul>
         <div className="flex justify-between items-center pt-2 mt-1 border-t border-[#8F9E8B]/30">
-          <span className="text-[11px] uppercase font-bold text-gray-500">{L.t('quote.totaleRaccolto')}</span>
+          <span className="text-piccolo uppercase font-bold text-gray-500">{L.t('quote.totaleRaccolto')}</span>
           <span className="font-rustic font-bold text-[#2D392C]">{money(totals.collected)} €</span>
         </div>
       </div>
@@ -224,13 +224,13 @@ const schedaSpesa = ({
       <div>
         <button
           onClick={() => setSaldiOttimizzati(!saldiOttimizzati)}
-          className={bottoneScelta('interruttore', 'bordato', saldiOttimizzati, 'normale', 'w-full')}
+          className={bottoneScelta('interruttore', 'bordato', saldiOttimizzati, 'minuscolo', 'w-full')}
         >
           {saldiOttimizzati
             ? L.t('saldi.tornaPerCassa')
             : L.t('saldi.ottimizza', totals.transfers.length, totals.transfersOttimizzati.length)}
         </button>
-        <p className="text-[9px] text-gray-400 italic mt-1 leading-snug">
+        <p className="text-minuto text-gray-400 italic mt-1 leading-snug">
           {L.t(saldiOttimizzati ? 'saldi.notaOttimizzati' : 'saldi.notaPerCassa')}
         </p>
       </div>
@@ -262,7 +262,7 @@ const schedaSpesa = ({
     <button onClick={shareReport} className={bottone('whatsapp', 'grande', 'w-full flex items-center justify-center gap-2')}>
       <span>📤</span> {L.t('saldi.condividi')}
     </button>
-    <p className="text-[9px] text-gray-400 italic text-center">{L.t('saldi.condividiNota')}</p>
+    <p className="text-minuto text-gray-400 italic text-center">{L.t('saldi.condividiNota')}</p>
 
     </div>)}
 
@@ -271,13 +271,13 @@ const schedaSpesa = ({
         gente comincia a pagarsi e gli importi non devono più muoversi. */}
     {admin && (
       <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-        <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2">
+        <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2">
           <span>{L.t('chiusura.contiTitolo')}</span>
-          {bloccoConti() && <span className="ml-auto text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white">{L.t('chiusura.chiusi')}</span>}
+          {bloccoConti() && <span className="ml-auto text-minuto uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white">{L.t('chiusura.chiusi')}</span>}
         </h3>
         {bloccoConti() ? (
           <>
-            <p className="text-[10px] text-gray-500 leading-snug">
+            <p className="text-piccolo text-gray-500 leading-snug">
               {frase('chiusura.contiChiusiNota', L.data(new Date(bloccoConti().at), 'dataOra'))}
             </p>
             <button onClick={riapriConti} className={bottone('secondario', 'normale', 'w-full')}>
@@ -286,7 +286,7 @@ const schedaSpesa = ({
           </>
         ) : (
           <>
-            <p className="text-[10px] text-gray-500 leading-snug">
+            <p className="text-piccolo text-gray-500 leading-snug">
               {frase('chiusura.daFare')}
             </p>
             <button onClick={chiudiConti} className={bottone('bruno', 'normale', 'w-full')}>
@@ -299,8 +299,8 @@ const schedaSpesa = ({
 
     {/* Backup dati */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('backup.titolo')}</h3>
-      <p className="text-[10px] text-gray-500">{L.t('backup.nota')}</p>
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('backup.titolo')}</h3>
+      <p className="text-piccolo text-gray-500">{L.t('backup.nota')}</p>
       {/* Esportare è innocuo e serve a chiunque voglia tenersi una
           copia. Importare e ripristinare invece RIMPIAZZANO tutto:
           cancellano il lavoro di tutti gli altri e possono sbloccare
@@ -308,14 +308,14 @@ const schedaSpesa = ({
       <div className="flex gap-2">
         <button onClick={exportData} className={bottone('primario', 'normale', 'flex-1')}>{L.t('backup.esporta')}</button>
         {admin && (
-          <label className="flex-1 py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase text-center cursor-pointer hover:bg-[#463628]">
+          <label className="flex-1 py-2.5 bg-[#5C4A3C] text-white rounded text-piccolo font-bold uppercase text-center cursor-pointer hover:bg-[#463628]">
             {L.t('backup.importa')}
             <input type="file" accept="application/json,.json" onChange={importData} className="hidden" />
           </label>
         )}
       </div>
       {admin && (
-        <button onClick={openRestore} className="w-full py-2.5 bg-white border-2 border-[#D97706]/50 text-[#D97706] rounded text-xs font-bold uppercase hover:bg-[#D97706]/10">
+        <button onClick={openRestore} className="w-full py-2.5 bg-white border-2 border-[#D97706]/50 text-[#D97706] rounded text-piccolo font-bold uppercase hover:bg-[#D97706]/10">
           {L.t('backup.ripristino')}
         </button>
       )}
@@ -323,8 +323,8 @@ const schedaSpesa = ({
 
     {/* Chiusura del campo */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#5C4A3C]/30 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('campo.chiusuraTitolo')}</h3>
-      <p className="text-[10px] text-gray-500">
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('campo.chiusuraTitolo')}</h3>
+      <p className="text-piccolo text-gray-500">
         {frase('campo.chiusuraNota')}
       </p>
       {/* Azzera membri, presenze e spese: giorni bloccati compresi.
@@ -334,10 +334,10 @@ const schedaSpesa = ({
           {L.t('campo.chiudiEArchivia')}
         </button>
       ) : (
-        <p className="text-[10px] text-gray-400 italic">{L.t('campo.laFaChiTieneIConti')}</p>
+        <p className="text-piccolo text-gray-400 italic">{L.t('campo.laFaChiTieneIConti')}</p>
       )}
       {archives.length > 0 && (
-        <button onClick={() => goTo('archivio')} className={bottone('testuale', 'piccolo', 'w-full')}>
+        <button onClick={() => goTo('archivio')} className={bottone('testuale', 'normale', 'w-full')}>
           {L.t('campo.vediArchivio', archives.length)}
         </button>
       )}
@@ -346,19 +346,19 @@ const schedaSpesa = ({
     {/* Sincronizzazione Cloud (online) */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
       <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
-        <h3 className="font-rustic text-lg text-[#2D392C]">{L.t('cloud.titolo')}</h3>
-        <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
+        <h3 className="font-rustic text-grande text-[#2D392C]">{L.t('cloud.titolo')}</h3>
+        <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
           {L.t(cloud.connected ? 'cloud.connesso' : 'cloud.nonConnesso')}
         </span>
       </div>
 
       {!(window.CloudSync && window.CloudSync.isConfigured()) ? (
-        <p className="text-[10px] text-gray-500 italic">
+        <p className="text-piccolo text-gray-500 italic">
           {frase('cloud.nonConfigurato')}
         </p>
       ) : (
         <>
-          <p className="text-[10px] text-gray-500">
+          <p className="text-piccolo text-gray-500">
             {L.t('cloud.notaAuto')}
           </p>
           <div className="flex gap-2">
@@ -368,7 +368,7 @@ const schedaSpesa = ({
               onChange={(e) => setCampCodeInput(e.target.value)}
               placeholder={L.t('cloud.codiceCampo')}
               disabled={cloud.connected}
-              className="flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] disabled:opacity-60"
+              className="flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C] disabled:opacity-60"
             />
             {cloud.connected ? (
               <button onClick={disconnectCloud} className={bottone('bruno', 'normale')}>{L.t('cloud.disconnetti')}</button>
@@ -376,8 +376,14 @@ const schedaSpesa = ({
               <button onClick={() => connectCloud(campCodeInput)} className={bottone('primario', 'normale')}>{L.t('cloud.connetti')}</button>
             )}
           </div>
-          <div className="flex items-center justify-between text-[10px] text-gray-500">
-            <span>
+          {/* min-w-0 e break-words non sono decorazione: il messaggio
+              d'errore di Firebase contiene un indirizzo, cioe' una parola
+              lunghissima che non va a capo da sola. Dentro un flex senza
+              min-w-0 quella riga non puo' restringersi, e spinge tutta la
+              schermata fuori dallo schermo. Si vedeva solo su un telefono
+              stretto e solo quando il cloud falliva davvero. */}
+          <div className="flex items-start justify-between gap-2 text-piccolo text-gray-500">
+            <span className="min-w-0 break-words">
               {cloud.status === 'connecting' && L.t('cloud.inCorso')}
               {cloud.status === 'saving' && L.t('cloud.salvataggio')}
               {cloud.status === 'connected' && (cloud.lastSync ? L.t('cloud.ultimaSync', L.data(new Date(cloud.lastSync), 'oraPiena')) : L.t('cloud.inAscolto'))}
@@ -386,7 +392,7 @@ const schedaSpesa = ({
                 ? 'cloud.disattivata'
                 : 'cloud.inAttesa')}
             </span>
-            {!isOnline && <span className="text-[#D97706] font-bold">{L.t('cloud.offline')}</span>}
+            {!isOnline && <span className="text-[#D97706] font-bold shrink-0">{L.t('cloud.offline')}</span>}
           </div>
         </>
       )}
@@ -444,7 +450,7 @@ const schedaLista = ({
         <button
           key={k}
           onClick={() => setListaSection(k)}
-          className={bottoneScelta('linguetta', 'sezione', listaSection === k, 'piccolo')}
+          className={bottoneScelta('linguetta', 'sezione', listaSection === k, 'minuscolo')}
         >
           {l}{n > 0 ? ` (${n})` : ''}
         </button>
@@ -455,9 +461,9 @@ const schedaLista = ({
     {listaSection === 'daacquistare' && (
     <div className="bg-white p-4 rounded-lg border-2 border-[#5C4A3C]/30 shadow-sm space-y-3">
       <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
-        <h3 className="font-rustic text-lg text-[#2D392C]">{L.t('lista.daAcquistareTitolo')}</h3>
+        <h3 className="font-rustic text-grande text-[#2D392C]">{L.t('lista.daAcquistareTitolo')}</h3>
         {toBuy.length > 0 && (
-          <span className="text-[10px] uppercase font-bold text-gray-500">{L.t('lista.quanteVoci', toBuy.length)}</span>
+          <span className="text-piccolo uppercase font-bold text-gray-500">{L.t('lista.quanteVoci', toBuy.length)}</span>
         )}
       </div>
 
@@ -468,7 +474,7 @@ const schedaLista = ({
           onChange={(e) => setNewBuyName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addToBuy()}
           placeholder={L.t('lista.cosaServe')}
-          className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+          className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
         />
         <input
           type="text"
@@ -476,7 +482,7 @@ const schedaLista = ({
           onChange={(e) => setNewBuyQty(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addToBuy()}
           placeholder={L.t('lista.qta')}
-          className="w-20 shrink-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm text-center focus:outline-none focus:border-[#2D392C]"
+          className="w-20 shrink-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale text-center focus:outline-none focus:border-[#2D392C]"
         />
         <button onClick={addToBuy} aria-label={L.t('lista.aggiungiAllaLista')} className={bottoneIcona('pieno', 'shrink-0')}>+</button>
       </div>
@@ -490,7 +496,7 @@ const schedaLista = ({
             value={toBuyQuery}
             onChange={(e) => setToBuyQuery(e.target.value)}
             placeholder={L.t('lista.cerca')}
-            className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+            className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
           />
           {toBuyQuery && (
             <button onClick={() => setToBuyQuery('')} aria-label={L.t('lista.azzeraRicerca')} className={bottoneIcona('neutro', 'shrink-0')}>&times;</button>
@@ -499,7 +505,7 @@ const schedaLista = ({
       )}
 
       {toBuy.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">{L.t('lista.vuota')}</p>
+        <p className="text-normale text-gray-400 italic">{L.t('lista.vuota')}</p>
       ) : (() => {
         const q = toBuyQuery.trim().toLowerCase();
         const visibili = toBuy.filter((it) => !q ||
@@ -509,21 +515,21 @@ const schedaLista = ({
         <>
         {q && (
           <div className="flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20">
-            <span className="text-[10px] uppercase font-bold text-gray-500">
+            <span className="text-piccolo uppercase font-bold text-gray-500">
               {L.t('lista.trovate', visibili.length, toBuy.length)}
             </span>
           </div>
         )}
         {visibili.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">{L.t('lista.nienteCorrisponde', toBuyQuery)}</p>
+          <p className="text-normale text-gray-400 italic">{L.t('lista.nienteCorrisponde', toBuyQuery)}</p>
         ) : (
         <ul className="space-y-2">
           {visibili.map((it) => (
             <li key={it.id} className="bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
               <div className="flex items-center gap-2">
                 <div className="flex-grow min-w-0">
-                  <div className="text-sm font-bold text-[#2D392C] leading-snug break-words">{it.name}</div>
-                  {it.qty && <div className="text-[10px] text-gray-500">{L.t('lista.quantita', it.qty)}</div>}
+                  <div className="text-normale font-bold text-[#2D392C] leading-snug break-words">{it.name}</div>
+                  {it.qty && <div className="text-piccolo text-gray-500">{L.t('lista.quantita', it.qty)}</div>}
                 </div>
                 {/* Lo scontrino si allega al momento dell'acquisto,
                     nella maschera di "Segna come acquistata": è lì che
@@ -535,7 +541,7 @@ const schedaLista = ({
               </div>
               <button
                 onClick={() => setBuying({ id: it.id, name: it.name, qty: it.qty, price: '', buyer: '', type: 'alimentare', account: 'comune' })}
-                className={bottone('bruno', 'piccolo', 'mt-2 w-full')}
+                className={bottone('bruno', 'normale', 'mt-2 w-full')}
               >
                 {L.t('lista.segnaAcquistata')}
               </button>
@@ -546,7 +552,7 @@ const schedaLista = ({
         </>
         );
       })()}
-      <p className="text-[9px] text-gray-400 italic">{L.t('lista.notaPassaggio')}</p>
+      <p className="text-minuto text-gray-400 italic">{L.t('lista.notaPassaggio')}</p>
     </div>
     )}
 
@@ -558,18 +564,18 @@ const schedaLista = ({
         onClick={() => setManualOpen(true)}
         className="w-full bg-white p-3 rounded-lg border-2 border-dashed border-[#8F9E8B]/60 text-[#2D392C] hover:bg-[#E2EAE4] flex items-center justify-center gap-2"
       >
-        <span className="text-lg leading-none">＋</span>
-        <span className="font-bold uppercase text-xs tracking-wide">{L.t('lista.aggiungiAMano')}</span>
+        <span className="text-grande leading-none">＋</span>
+        <span className="font-bold uppercase text-piccolo tracking-wide">{L.t('lista.aggiungiAMano')}</span>
       </button>
     ) : (
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
       <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
-        <h3 className="font-rustic text-lg text-[#2D392C]">{L.t('lista.prodottoAcquistato')}</h3>
+        <h3 className="font-rustic text-grande text-[#2D392C]">{L.t('lista.prodottoAcquistato')}</h3>
         <div className="flex items-center gap-2 shrink-0">
           <label
             title={L.t('lista.scontrinoTitolo')}
             aria-label={L.t('lista.allegaScontrino')}
-            className={`cursor-pointer px-3 py-2 rounded border-2 text-lg leading-none ${pReceipt ? 'bg-[#2D392C] border-[#2D392C]' : 'bg-white border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'}`}
+            className={`cursor-pointer px-3 py-2 rounded border-2 text-grande leading-none ${pReceipt ? 'bg-[#2D392C] border-[#2D392C]' : 'bg-white border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'}`}
           >
             📷
             <input type="file" accept="image/*" onChange={onReceiptFile} className="hidden" />
@@ -583,35 +589,35 @@ const schedaLista = ({
           </button>
         </div>
       </div>
-      <p className="text-[10px] text-gray-500 -mt-1">{L.t('lista.nonEraInLista')}</p>
+      <p className="text-piccolo text-gray-500 -mt-1">{L.t('lista.nonEraInLista')}</p>
 
       {pReceipt && (
         <div className="flex items-center gap-3 bg-[#F0F4F1]/60 p-2 rounded border border-[#8F9E8B]/30">
           <img src={pReceipt} alt={L.t('lista.scontrino')} className="w-12 h-12 object-cover rounded" />
-          <span className="flex-grow text-xs text-[#2D392C] font-bold">{L.t('lista.scontrinoAllegato')}</span>
+          <span className="flex-grow text-piccolo text-[#2D392C] font-bold">{L.t('lista.scontrinoAllegato')}</span>
           <button onClick={() => setPReceipt(null)} aria-label={L.t('lista.rimuoviFoto')} className={bottoneIcona('distruttivo')}>&times;</button>
         </div>
       )}
 
       <div>
-        <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">{L.t('lista.nome')}</label>
+        <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.nome')}</label>
         <input
           type="text"
           value={pName}
           onChange={(e) => setPName(e.target.value)}
           placeholder={L.t('lista.esempioNome')}
-          className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+          className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
         />
       </div>
 
       <div>
-        <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">{L.t('lista.acquirente')}</label>
+        <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.acquirente')}</label>
         {renderBuyerSelect(pBuyer, setPBuyer)}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">{L.t('lista.prezzo')}</label>
+          <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.prezzo')}</label>
           <input
             type="number" min="0" step="0.01" inputMode="decimal"
             value={pPrice}
@@ -622,11 +628,11 @@ const schedaLista = ({
           />
         </div>
         <div>
-          <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">{L.t('lista.tipologia')}</label>
+          <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.tipologia')}</label>
           <select
             value={pType}
             onChange={(e) => setPType(e.target.value)}
-            className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold focus:outline-none focus:border-[#2D392C]"
+            className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold focus:outline-none focus:border-[#2D392C]"
           >
             {Object.keys(PURCHASE_TYPES).map((k) => (
               <option key={k} value={k}>{tipoSpesa(k)}</option>
@@ -639,17 +645,17 @@ const schedaLista = ({
           comune, quindi per quella il menu non serve. */}
       {pType !== 'logistica' && (
         <div>
-          <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">{L.t('lista.conto')}</label>
+          <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.conto')}</label>
           <select
             value={pAccount}
             onChange={(e) => setPAccount(e.target.value)}
-            className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold focus:outline-none focus:border-[#2D392C]"
+            className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold focus:outline-none focus:border-[#2D392C]"
           >
             <option value="comune">{L.t('lista.contoComune')}</option>
             <option value="sep">{L.t('giorno.contoSeparato')}</option>
           </select>
           {pAccount === 'sep' && (
-            <p className="text-[9px] mt-1 leading-snug text-[#5C4A3C]">
+            <p className="text-minuto mt-1 leading-snug text-[#5C4A3C]">
               {sepDays.length === 0
                 ? L.t('lista.senzaGiorniSpuntati')
                 : L.t('lista.siDivide', sepDays.length)}
@@ -667,7 +673,7 @@ const schedaLista = ({
     {/* Cronologia acquisti */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
       <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3">
-        <h3 className="font-rustic text-lg text-[#2D392C]">{L.t('lista.cronologia')}</h3>
+        <h3 className="font-rustic text-grande text-[#2D392C]">{L.t('lista.cronologia')}</h3>
         {purchases.length > 0 && (
           <span className="font-rustic font-bold text-[#2D392C]">{money(totals.overallTotal)} €</span>
         )}
@@ -682,7 +688,7 @@ const schedaLista = ({
             value={purchaseQuery}
             onChange={(e) => setPurchaseQuery(e.target.value)}
             placeholder={L.t('lista.cercaSpese')}
-            className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+            className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
           />
           {purchaseQuery && (
             <button onClick={() => setPurchaseQuery('')} aria-label={L.t('lista.azzeraRicerca')} className={bottoneIcona('neutro', 'shrink-0')}>&times;</button>
@@ -696,7 +702,7 @@ const schedaLista = ({
           × già a portata di mano qui sotto. */}
       {spesePotenzialmenteDoppie().map((g) => (
         <div key={g[0].id} className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mb-3">
-          <p className="text-[10px] text-[#5C4A3C] leading-snug">
+          <p className="text-piccolo text-[#5C4A3C] leading-snug">
             {frase('lista.doppia', g[0].name, money(posNum(g[0].price)), g.length,
               g.some((x) => (x.buyer || '') !== (g[0].buyer || ''))
                 ? [...new Set(g.map((x) => x.buyer || '—'))].join(' e ')
@@ -706,7 +712,7 @@ const schedaLista = ({
       ))}
 
       {purchases.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">{L.t('lista.nessunAcquisto')}</p>
+        <p className="text-normale text-gray-400 italic">{L.t('lista.nessunAcquisto')}</p>
       ) : (() => {
         const q = purchaseQuery.trim().toLowerCase();
         const visibili = purchases.slice().reverse().filter((p) => !q ||
@@ -718,14 +724,14 @@ const schedaLista = ({
         <>
         {q && (
           <div className="flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20 mb-2">
-            <span className="text-[10px] uppercase font-bold text-gray-500">
+            <span className="text-piccolo uppercase font-bold text-gray-500">
               {L.t('lista.trovate', visibili.length, purchases.length)}
             </span>
-            <span className="font-rustic font-bold text-[#2D392C] text-sm">{money(sommaVisibili)} €</span>
+            <span className="font-rustic font-bold text-[#2D392C] text-normale">{money(sommaVisibili)} €</span>
           </div>
         )}
         {visibili.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">{L.t('lista.nessunaSpesaCorrisponde', purchaseQuery)}</p>
+          <p className="text-normale text-gray-400 italic">{L.t('lista.nessunaSpesaCorrisponde', purchaseQuery)}</p>
         ) : (
         <ul className="space-y-2">
           {visibili.map((p) => (
@@ -734,17 +740,17 @@ const schedaLista = ({
             // prezzo che gli stavano accanto); sotto le informazioni.
             <li key={p.id} className="bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20 space-y-1.5">
               <div className="flex items-start justify-between gap-2">
-                <span className="text-sm font-bold text-[#2D392C] leading-snug break-words min-w-0">{p.name}</span>
+                <span className="text-normale font-bold text-[#2D392C] leading-snug break-words min-w-0">{p.name}</span>
                 <span className="font-rustic font-bold text-[#2D392C] shrink-0 whitespace-nowrap">{money(posNum(p.price))} €</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex flex-wrap items-center gap-1 min-w-0 flex-grow">
-                  <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B]">{tipoSpesa(p.type) || p.type}</span>
+                  <span className="text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B]">{tipoSpesa(p.type) || p.type}</span>
                   {p.account === 'sep' && p.type !== 'logistica' && (
-                    <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]">{L.t('lista.separatoEtichetta')}</span>
+                    <span className="text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]">{L.t('lista.separatoEtichetta')}</span>
                   )}
-                  {p.fromList && <span className="text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]">{L.t('lista.acquistataEtichetta')}</span>}
-                  <span className="text-[9px] text-gray-400 basis-full">
+                  {p.fromList && <span className="text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]">{L.t('lista.acquistataEtichetta')}</span>}
+                  <span className="text-minuto text-gray-400 basis-full">
                     {p.buyer ? <span className="text-[#5C4A3C] font-bold">{p.buyer}</span> : <span className="italic">{L.t('lista.acquirenteIgnoto')}</span>}
                     {p.at && ` · ${L.data(new Date(p.at), 'breve')} ${L.data(new Date(p.at), 'ora')}`}
                   </span>
@@ -752,7 +758,7 @@ const schedaLista = ({
                 {receipts[p.id] ? (
                   <button onClick={() => setViewReceipt(receipts[p.id])} aria-label={L.t('lista.vediScontrino')} className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
                 ) : (
-                  <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]">
+                  <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-normale leading-none hover:bg-[#E2EAE4]">
                     📷
                     <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, p.id)} className="hidden" />
                   </label>
@@ -767,7 +773,7 @@ const schedaLista = ({
         </>
         );
       })()}
-      <p className="text-[9px] text-gray-400 italic mt-2">{L.t('lista.notaScontrini')}</p>
+      <p className="text-minuto text-gray-400 italic mt-2">{L.t('lista.notaScontrini')}</p>
     </div>
     </>)}
   </div>
@@ -796,16 +802,16 @@ const schedaAttrezzatura = ({
   <div className="space-y-4">
     {/* Form di inserimento */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('attrezzatura.aggiungiTitolo')}</h3>
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('attrezzatura.aggiungiTitolo')}</h3>
       <input
         type="text"
         value={newEquipText}
         onChange={(e) => setNewEquipText(e.target.value)}
         placeholder={L.t('attrezzatura.esempio')}
-        className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+        className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
       />
       <div>
-        <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">{L.t('attrezzatura.acquirenteFacoltativo')}</label>
+        <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('attrezzatura.acquirenteFacoltativo')}</label>
         {renderBuyerSelect(newEquipBuyer, setNewEquipBuyer)}
       </div>
       <div className="flex gap-2">
@@ -819,21 +825,21 @@ const schedaAttrezzatura = ({
         />
         <button onClick={addEquip} className={bottone('primario', 'normale', 'shrink-0')}>{L.t('attrezzatura.aggiungi')}</button>
       </div>
-      <p className="text-[9px] text-gray-400">{L.t('attrezzatura.nota')}</p>
+      <p className="text-minuto text-gray-400">{L.t('attrezzatura.nota')}</p>
     </div>
 
     {/* Elenco attrezzatura */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
       <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3">
-        <h3 className="font-rustic text-lg text-[#2D392C]">{L.t('area.attrezzatura')}</h3>
+        <h3 className="font-rustic text-grande text-[#2D392C]">{L.t('area.attrezzatura')}</h3>
         {equipment.length > 0 && (
-          <span className="text-[10px] uppercase font-bold text-gray-500">
+          <span className="text-piccolo uppercase font-bold text-gray-500">
             {L.t('attrezzatura.daComprare', equipment.filter((e) => !e.bought).length)}
           </span>
         )}
       </div>
       {equipment.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">{L.t('attrezzatura.vuota')}</p>
+        <p className="text-normale text-gray-400 italic">{L.t('attrezzatura.vuota')}</p>
       ) : (
         <>
         <ul className="space-y-2">
@@ -851,8 +857,8 @@ const schedaAttrezzatura = ({
                   ✓
                 </button>
                 <div className="flex-grow min-w-0">
-                  <div className={`text-sm leading-snug break-words ${e.bought ? 'line-through text-gray-500' : 'text-[#2D392C]'}`}>{e.text}</div>
-                  {e.buyer && <div className="text-[9px] text-[#5C4A3C] font-bold break-words">{e.buyer}</div>}
+                  <div className={`text-normale leading-snug break-words ${e.bought ? 'line-through text-gray-500' : 'text-[#2D392C]'}`}>{e.text}</div>
+                  {e.buyer && <div className="text-minuto text-[#5C4A3C] font-bold break-words">{e.buyer}</div>}
                 </div>
                 <span className={`font-rustic font-bold shrink-0 ${e.bought ? 'text-[#2D392C]' : 'text-gray-400'}`}>{money(posNum(e.price))} €</span>
               </div>
@@ -860,7 +866,7 @@ const schedaAttrezzatura = ({
                 {receipts[e.id] ? (
                   <button onClick={() => setViewReceipt(receipts[e.id])} aria-label={L.t('lista.vediScontrino')} className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
                 ) : (
-                  <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]">
+                  <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-normale leading-none hover:bg-[#E2EAE4]">
                     📷
                     <input type="file" accept="image/*" onChange={(ev) => attachReceiptTo(ev, e.id)} className="hidden" />
                   </label>
@@ -872,12 +878,12 @@ const schedaAttrezzatura = ({
           ))}
         </ul>
         <div className="mt-3 pt-2 border-t border-[#8F9E8B]/30 space-y-1">
-          <div className="flex justify-between text-[11px] text-gray-500">
+          <div className="flex justify-between text-piccolo text-gray-500">
             <span className="uppercase font-bold">{L.t('attrezzatura.previsto')}</span>
             <span className="font-bold">{money(equipPlannedTotal)} €</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-[11px] uppercase font-bold text-[#2D392C]">{L.t('attrezzatura.acquistatoNelleSpese')}</span>
+            <span className="text-piccolo uppercase font-bold text-[#2D392C]">{L.t('attrezzatura.acquistatoNelleSpese')}</span>
             <span className="font-rustic font-bold text-[#2D392C]">{money(equipBoughtTotal)} €</span>
           </div>
         </div>

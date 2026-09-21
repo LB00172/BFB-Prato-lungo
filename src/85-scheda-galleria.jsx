@@ -45,20 +45,20 @@ const schedaGalleria = ({
   <div className="space-y-4">
     {/* Caricamento */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('galleria.carica')}</h3>
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('galleria.carica')}</h3>
 
       {!cloud.connected ? (
-        <p className="text-sm text-gray-500 leading-snug">
+        <p className="text-normale text-gray-500 leading-snug">
           {frase('galleria.senzaCloud')}
         </p>
       ) : (
         <div className="space-y-3">
           <div>
-            <label className="block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1">{L.t('galleria.chiScatta')}</label>
+            <label className="block text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1">{L.t('galleria.chiScatta')}</label>
             <select
               value={photoWho}
               onChange={(e) => setPhotoWho(e.target.value)}
-              className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
+              className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
             >
               <option value="">{L.t('galleria.scegliNome')}</option>
               {members.map((m) => (
@@ -68,19 +68,19 @@ const schedaGalleria = ({
               ))}
             </select>
             {members.length === 0 && (
-              <p className="text-[9px] text-[#D97706] mt-1">{L.t('galleria.primaMembri')}</p>
+              <p className="text-minuto text-[#D97706] mt-1">{L.t('galleria.primaMembri')}</p>
             )}
           </div>
 
           {photoWho && (
-            <p className="text-[11px] text-gray-600">
+            <p className="text-piccolo text-gray-600">
               {photosBy(photoWho) >= photoCap
                 ? <span className="text-[#D97706] font-bold">{L.t('galleria.esaurite', photoWho, photoCap)}</span>
                 : frase('galleria.restano', photoWho, photoCap - photosBy(photoWho), photoCap)}
             </p>
           )}
 
-          <label className={`block w-full py-3 rounded font-bold uppercase text-sm tracking-wide text-center cursor-pointer ${photoWho && photosBy(photoWho) < photoCap && !photoBusy ? 'bg-[#2D392C] text-white hover:bg-[#1F271E]' : 'bg-gray-200 text-gray-400 pointer-events-none'}`}>
+          <label className={`block w-full py-3 rounded font-bold uppercase text-normale tracking-wide text-center cursor-pointer ${photoWho && photosBy(photoWho) < photoCap && !photoBusy ? 'bg-[#2D392C] text-white hover:bg-[#1F271E]' : 'bg-gray-200 text-gray-400 pointer-events-none'}`}>
             {photoBusy || L.t('galleria.scegliFoto')}
             <input type="file" accept="image/*" multiple onChange={addPhotos} className="hidden" />
           </label>
@@ -92,13 +92,13 @@ const schedaGalleria = ({
               soli al prossimo collegamento. */}
           {(cloud.foto || 0) > 0 && (
             <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-              <p className="text-[10px] text-[#5C4A3C] leading-snug">
+              <p className="text-piccolo text-[#5C4A3C] leading-snug">
                 {frase('galleria.inCoda', cloud.foto)}
               </p>
             </div>
           )}
 
-          <p className="text-[9px] text-gray-400 italic leading-snug">
+          <p className="text-minuto text-gray-400 italic leading-snug">
             {frase('galleria.tetto', photoCap)}
           </p>
         </div>
@@ -108,7 +108,7 @@ const schedaGalleria = ({
     {/* Griglia */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
       <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3 gap-2">
-        <h3 className="font-rustic text-lg text-[#2D392C] shrink-0">
+        <h3 className="font-rustic text-grande text-[#2D392C] shrink-0">
           {L.t('archivio.album')} {photos.length > 0 ? `(${photos.length})` : ''}
         </h3>
         {/* Due modi di guardare le stesse foto: l'album per sfogliarle,
@@ -137,11 +137,11 @@ const schedaGalleria = ({
         )}
       </div>
       {!cloud.connected ? (
-        <p className="text-sm text-gray-400 italic">{L.t('galleria.senzaLinea')}</p>
+        <p className="text-normale text-gray-400 italic">{L.t('galleria.senzaLinea')}</p>
       ) : !photosReady ? (
-        <p className="text-sm text-gray-400 italic">{L.t('archivio.carico')}</p>
+        <p className="text-normale text-gray-400 italic">{L.t('archivio.carico')}</p>
       ) : photos.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">{L.t('galleria.ancoraNessuna')}</p>
+        <p className="text-normale text-gray-400 italic">{L.t('galleria.ancoraNessuna')}</p>
       ) : galleryView === 'album' && !picking ? (
         <div>
           <div className="album-sfoglio" ref={albumRef} onScroll={onScrollAlbum}>
@@ -169,18 +169,18 @@ const schedaGalleria = ({
               onClick={() => sfoglia(-1)}
               disabled={albumPage <= 0}
               aria-label={L.t('galleria.paginaPrec')}
-              className={`w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage <= 0 ? 'text-gray-300' : 'text-[#2D392C]'}`}
+              className={`w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-normale ${albumPage <= 0 ? 'text-gray-300' : 'text-[#2D392C]'}`}
             >
               ‹
             </button>
-            <span className="text-[10px] uppercase tracking-widest text-gray-500">
+            <span className="text-piccolo uppercase tracking-widest text-gray-500">
               {Math.min(albumPage + 1, paginaAlbum(photos).length)} / {paginaAlbum(photos).length}
             </span>
             <button
               onClick={() => sfoglia(1)}
               disabled={albumPage >= paginaAlbum(photos).length - 1}
               aria-label={L.t('galleria.paginaSucc')}
-              className={`w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage >= paginaAlbum(photos).length - 1 ? 'text-gray-300' : 'text-[#2D392C]'}`}
+              className={`w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-normale ${albumPage >= paginaAlbum(photos).length - 1 ? 'text-gray-300' : 'text-[#2D392C]'}`}
             >
               ›
             </button>
@@ -201,12 +201,12 @@ const schedaGalleria = ({
               >
                 <img src={p.thumb} alt="" className={`w-full h-full object-cover ${picking && scelta < 0 ? 'opacity-45' : ''}`} loading="lazy" />
                 {picking && (
-                  <span className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border-2 ${scelta >= 0 ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white/80 border-white'}`}>
+                  <span className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-minuto font-bold border-2 ${scelta >= 0 ? 'bg-[#2D392C] text-white border-[#2D392C]' : 'bg-white/80 border-white'}`}>
                     {scelta >= 0 ? scelta + 1 : ''}
                   </span>
                 )}
                 {p.by && (
-                  <span className="absolute bottom-0 left-0 right-0 bg-black/55 text-white text-[8px] px-1 py-0.5 truncate text-left">
+                  <span className="absolute bottom-0 left-0 right-0 bg-black/55 text-white text-minuto px-1 py-0.5 truncate text-left">
                     {soloNome(p.by)}
                   </span>
                 )}
@@ -219,7 +219,7 @@ const schedaGalleria = ({
       {/* Stampa del ricordo: compare solo mentre si scelgono le foto. */}
       {picking && (
         <div className="mt-3 pt-3 border-t border-[#8F9E8B]/30 space-y-2">
-          <p className="text-[11px] text-gray-600">
+          <p className="text-piccolo text-gray-600">
             {picked.length === 0
               ? L.t('galleria.toccaLeFoto')
               : frase('galleria.scelte', picked.length, photos.length, Math.ceil(picked.length / PER_PAGINA_ALBUM))}
@@ -234,11 +234,11 @@ const schedaGalleria = ({
           <button
             onClick={() => setPicked(photos.map((x) => x.id))}
             disabled={!!pdfBusy || picked.length === photos.length}
-            className={bottone('secondario', 'piccolo', 'w-full')}
+            className={bottone('secondario', 'normale', 'w-full')}
           >
             {L.t('galleria.scegliTutte')}
           </button>
-          <p className="text-[9px] text-gray-400 italic leading-snug">
+          <p className="text-minuto text-gray-400 italic leading-snug">
             {L.t('galleria.notaScelte')}
           </p>
         </div>
@@ -256,17 +256,17 @@ const schedaGalleria = ({
           >
             {pdfBusy || L.t('galleria.creaCompleto', photos.length)}
           </button>
-          <p className="text-[9px] text-gray-400 italic mt-1.5 leading-snug">
+          <p className="text-minuto text-gray-400 italic mt-1.5 leading-snug">
             {frase('galleria.notaCompleto', Math.ceil(photos.length / PER_PAGINA_ALBUM))}
           </p>
           <button
             onClick={() => { setGalleryView('griglia'); setPicking(true); }}
             disabled={!!pdfBusy}
-            className={bottone('secondario', 'piccolo', 'w-full mt-2')}
+            className={bottone('secondario', 'normale', 'w-full mt-2')}
           >
             {L.t('galleria.scegliTu')}
           </button>
-          <p className="text-[9px] text-gray-400 italic mt-2">
+          <p className="text-minuto text-gray-400 italic mt-2">
             {L.t('galleria.notaFinale')}
           </p>
         </>
