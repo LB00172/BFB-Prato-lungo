@@ -26,10 +26,10 @@ cosa blocca cosa.
 | — | § 12 Ponte Menù → Lista della spesa | **fatto** il 19 agosto: i menù veri del campo hanno corretto il piano (niente tabella di ingredienti) |
 | — | § 11 Coda foto | **chiusa**: la galleria resta online (§ 15-bis.4), e il messaggio ora dice anche cosa si perde chiudendo l'app |
 | — | § 19 Immagini fuori da `localStorage` | **fatto** il 23 agosto: le foto stanno in IndexedDB, `localStorage` è tornato da 3 MB a 2 KB |
-| — | § 13 Vocabolario dell'interfaccia | **bottoni fatti** il 23 agosto: 102 su 124, più il sesto ruolo (chip di scelta). Restano le misure di testo, che si fanno col § 18 |
+| 1 | § 13 Vocabolario dell'interfaccia | **bottoni fatti** il 23 agosto: 102 su 124, più il sesto ruolo (chip di scelta). **Restano le undici misure di testo**, da ridurre a cinque o sei: è quello che resta prima della versione pubblica |
 | — | § 14 Spezzare i sorgenti | **a buon punto** il 20 settembre: disegno, stato isolato e tutte le regole che decidono qualcosa sono fuori e provate senza browser. Resta il collegamento della sincronizzazione, che si sposta col § 2 |
 | — | § 17 Compiti assegnati | **fatto** il 20 settembre: scheda «Chi fa cosa», dietro `FEATURES.compiti`. Il gestore della Room arriva col § 2 |
-| 1 | § 18 Più lingue | Ha bisogno del § 14 (le schede ricevono `t` come dipendenza) e deve precedere il § 3, o si rifanno le schede degli store. **Si porta dietro le misure di testo del § 13**: stessi file |
+| — | § 18 Più lingue | **fatto** il 21 settembre: tutti e diciannove i sorgenti passano dal dizionario, `FEATURES.lingue` accesa. Le misure di testo del § 13 **non** sono state fatte in questo giro: si toccano gli stessi file, ma sono un lavoro diverso |
 
 **Poi — la versione pubblica, che è una catena:**
 
