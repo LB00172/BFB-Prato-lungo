@@ -34,6 +34,7 @@ const SORGENTI = [
   '75-usa-gioco.jsx',        // "Aiuta Bandy": stato, classifica, partite
   '76-usa-galleria.jsx',     // foto del campo: ascolto, caricamento, album, PDF ricordo
   '77-usa-scontrini.jsx',    // foto degli scontrini: magazzino, migrazione, potatura
+  '78-usa-account.jsx',      // chi sei: login, registrazione, verifica (FEATURES.auth)
   '80-app.jsx',              // function App(): stato, sincronizzazione, conti, gestori
   // Le schede: disegno uscito da App(), un file per area. Stanno DOPO
   // 80-app.jsx e va bene: sono `const` che App() chiama solo al disegno,
@@ -75,7 +76,7 @@ console.log('Compilato src/*.jsx -> App.js (' + SORGENTI.length + ' sorgenti)');
 // 2) Calcola una versione dal contenuto degli asset cacheati e la scrive in sw.js
 const filesToHash = [
   'App.js', 'index.html', 'manifest.json',
-  'firebase-config.js', 'sync-merge.js', 'pdf-ricordo.js', 'conti.js', 'presenze.js', 'allarmi.js', 'lingue.js', 'menu-spesa.js', 'magazzino-foto.js', 'firebase-sync.js',
+  'firebase-config.js', 'sync-merge.js', 'pdf-ricordo.js', 'conti.js', 'presenze.js', 'allarmi.js', 'lingue.js', 'auth.js', 'menu-spesa.js', 'magazzino-foto.js', 'firebase-sync.js',
   'vendor/tailwind.js', 'vendor/fonts.css',
 ];
 const h = crypto.createHash('sha1');

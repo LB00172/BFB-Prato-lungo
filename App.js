@@ -2851,6 +2851,150 @@ const usaScontrini = ({
     onReceiptFile
   };
 };
+// ---------- L'account ----------
+//
+// Quarto pezzo di stato che esce da App() (ROADMAP.md § 14), e il primo
+// mattone della versione pubblica (§ 1). Tiene lo stato del login e niente
+// altro: chi sei, cosa stai scrivendo nella maschera, e se qualcosa e' andato
+// storto. Le REGOLE — cosa ti lascia fare l'app, se la registrazione e'
+// valida, come si traduce un codice d'errore di Firebase — stanno in auth.js,
+// fuori da src/, e si provano senza browser.
+//
+// La cosa da non dimenticare leggendo questo file: **non e' un muro**.
+// L'account non serve per usare l'app. Chi apre l'app e digita il codice del
+// campo segna presenze e spese come ha sempre fatto, e questo hook resta uno
+// stato che nessuno guarda. Serve per CREARE e AMMINISTRARE un campo, cioe'
+// per le cose che nella versione pubblica avranno un proprietario.
+const usaAccount = () => {
+  // L'utente com'e' adesso: null vuol dire ospite. Ci pensa AuthCloud ad
+  // aggiornarlo, e parte da quello che sa gia' (di solito null) per non
+  // lasciare la scheda vuota mentre l'SDK arriva da gstatic.
+  const [utente, setUtente] = useState(null);
+  // Quale maschera e' aperta: 'entra' | 'registra'. Chiusa di default, perche'
+  // il tasto Google e' la strada breve e le due caselle sono la lunga.
+  const [modo, setModo] = useState('');
+  const [nome, setNome] = useState('');
+  const [cognome, setCognome] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  // Una chiave del dizionario, non una frase: i messaggi li sceglie il disegno
+  // (§ 18). null vuol dire che non c'e' niente da dire.
+  const [problema, setProblema] = useState(null);
+  const [occupato, setOccupato] = useState(false);
+  // Una riga verde dopo un'azione riuscita: "email rimandata", "ti abbiamo
+  // scritto". Senza, l'utente tocca due volte e riceve due email.
+  const [fatto, setFatto] = useState(null);
+  const AC = () => typeof window !== 'undefined' && window.AuthCloud || null;
+  useEffect(() => {
+    const ac = AC();
+    if (!ac) return undefined;
+    return ac.osserva(u => setUtente(u));
+  }, []);
+  const stato = window.Auth ? window.Auth.stato(utente) : 'ospite';
+  const pulisci = () => {
+    setProblema(null);
+    setFatto(null);
+  };
+  const chiudi = () => {
+    setModo('');
+    setPassword('');
+    pulisci();
+  };
+
+  // Ogni azione passa di qui: una sola strada per "occupato", per l'errore
+  // tradotto e per il caso in cui Firebase non sia configurato affatto. Senza,
+  // ogni tasto avrebbe il suo try/catch e uno di loro se lo dimenticherebbe.
+  const prova = async (azione, dopo) => {
+    const ac = AC();
+    if (!ac || !ac.disponibile()) {
+      setProblema('auth.senzaFirebase');
+      return false;
+    }
+    setOccupato(true);
+    pulisci();
+    try {
+      await azione(ac);
+      if (dopo) setFatto(dopo);
+      return true;
+    } catch (e) {
+      // motivo() restituisce null quando non c'e' niente da dire (la finestra
+      // di Google chiusa con la X e' un ripensamento, non un guasto).
+      const chiave = window.Auth ? window.Auth.motivo(e) : 'auth.nonRiuscito';
+      if (chiave) setProblema(chiave);
+      return false;
+    } finally {
+      setOccupato(false);
+    }
+  };
+  const entraConGoogle = () => prova(ac => ac.conGoogle());
+  const entraConEmail = async () => {
+    if (!email.trim() || !password) {
+      setProblema('auth.serveEmailEPassword');
+      return;
+    }
+    if (await prova(ac => ac.entra(email, password))) chiudi();
+  };
+  const registrati = async () => {
+    const dati = {
+      nome,
+      cognome,
+      email,
+      password
+    };
+    const problemi = window.Auth ? window.Auth.validaRegistrazione(dati) : [];
+    // Si mostra il primo: un elenco di cinque righe rosse sotto una maschera
+    // di quattro caselle e' piu' scoraggiante del problema che descrive.
+    if (problemi.length) {
+      setProblema(problemi[0]);
+      setFatto(null);
+      return;
+    }
+    if (await prova(ac => ac.registra(dati))) {
+      setPassword('');
+      setModo('');
+      setFatto('auth.controllaEmail');
+    }
+  };
+  const esci = () => prova(ac => ac.esci());
+  const reimposta = async () => {
+    if (!email.trim()) {
+      setProblema('auth.serveEmail');
+      return;
+    }
+    await prova(ac => ac.reimposta(email), 'auth.emailReimpostaInviata');
+  };
+  const rimandaVerifica = () => prova(ac => ac.inviaVerifica(), 'auth.emailVerificaInviata');
+
+  // Firebase non si accorge da solo che l'utente ha cliccato il link: l'oggetto
+  // in memoria resta "da verificare" finche' non lo si ricarica. Senza questo
+  // tasto, chi verifica e torna nell'app pensa che non abbia funzionato.
+  const controllaVerifica = () => prova(ac => ac.ricarica());
+  return {
+    utente,
+    stato,
+    modo,
+    setModo,
+    nome,
+    setNome,
+    cognome,
+    setCognome,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    problema,
+    fatto,
+    occupato,
+    chiudi,
+    entraConGoogle,
+    entraConEmail,
+    registrati,
+    esci,
+    reimposta,
+    rimandaVerifica,
+    controllaVerifica
+  };
+};
 function App() {
   // ---------- La lingua ----------
   // Dietro FEATURES.lingue finche' i dizionari non sono completi: mostrare
@@ -2956,6 +3100,11 @@ function App() {
     toBuy,
     equipment
   });
+
+  // ---------- L'account (§ 1) ----------
+  // Dietro FEATURES.auth. L'hook gira comunque: senza bandiera nessuno guarda
+  // il suo stato, e senza Firebase configurato resta "ospite" e basta.
+  const account = usaAccount();
 
   // Conto separato: giorni le cui presenze fanno cassa a parte. Il cibo e le
   // bevande marcati "separato" si dividono solo sui pasti di questi giorni;
@@ -6361,6 +6510,7 @@ function App() {
     guideOpen,
     setGuideOpen
   }), activeTab === 'impostazioni' && schedaImpostazioni({
+    account,
     admin,
     adminErr,
     adminPwd,
@@ -8554,6 +8704,7 @@ const schedaImpostazioni = ({
   tecnicaOpen,
   lingua,
   setLingua,
+  account,
   theme,
   toggleAskAlways,
   wipeLocal
@@ -8586,7 +8737,109 @@ const schedaImpostazioni = ({
   className: "text-piccolo text-[#5C4A3C] leading-snug mt-0.5"
 }, c.no))))), readyOk && /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic"
-}, L.t('pronto.tuttoBene')))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
+}, L.t('pronto.tuttoBene')))), FEATURES.auth && /*#__PURE__*/React.createElement("div", {
+  className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+}, /*#__PURE__*/React.createElement("h3", {
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+}, L.t('auth.titolo')), account.stato === 'registrato' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-[#2D392C] leading-snug"
+}, frase('auth.entratoCome', window.Auth.nomeVisibile({
+  nome: account.utente && account.utente.nome,
+  email: account.utente && account.utente.email
+}))), /*#__PURE__*/React.createElement("button", {
+  onClick: account.esci,
+  disabled: account.occupato,
+  className: bottone('secondario', 'normale', 'w-full')
+}, L.t('auth.esci'))), account.stato === 'daVerificare' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-[#5C4A3C] leading-snug"
+}, frase('auth.daVerificare', account.utente && account.utente.email || '')), /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: account.controllaVerifica,
+  disabled: account.occupato,
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t('auth.hoVerificato')), /*#__PURE__*/React.createElement("button", {
+  onClick: account.rimandaVerifica,
+  disabled: account.occupato,
+  className: bottone('secondario', 'normale', 'flex-1')
+}, L.t('auth.rimandaEmail'))), /*#__PURE__*/React.createElement("button", {
+  onClick: account.esci,
+  disabled: account.occupato,
+  className: bottone('testuale', 'minuscolo', 'w-full')
+}, L.t('auth.esci'))), (account.stato === 'ospite' || account.stato === 'anonimo') && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-gray-500 leading-snug"
+}, frase('auth.aCosaServe')), /*#__PURE__*/React.createElement("button", {
+  onClick: account.entraConGoogle,
+  disabled: account.occupato,
+  className: bottone('primario', 'normale', 'w-full')
+}, L.t('auth.conGoogle')), !account.modo ? /*#__PURE__*/React.createElement("div", {
+  className: "flex items-center gap-2"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "flex-grow h-px bg-[#8F9E8B]/30"
+}), /*#__PURE__*/React.createElement("span", {
+  className: "text-minuto uppercase tracking-widest text-gray-400 shrink-0"
+}, L.t('auth.oppure')), /*#__PURE__*/React.createElement("span", {
+  className: "flex-grow h-px bg-[#8F9E8B]/30"
+})) : null, !account.modo && /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: () => account.setModo('entra'),
+  className: bottone('secondario', 'normale', 'flex-1')
+}, L.t('auth.haiGiaAccount')), /*#__PURE__*/React.createElement("button", {
+  onClick: () => account.setModo('registra'),
+  className: bottone('secondario', 'normale', 'flex-1')
+}, L.t('auth.creaAccount'))), account.modo && /*#__PURE__*/React.createElement("div", {
+  className: "space-y-2 pt-1"
+}, account.modo === 'registra' && /*#__PURE__*/React.createElement("div", {
+  className: "grid grid-cols-2 gap-2"
+}, /*#__PURE__*/React.createElement("input", {
+  type: "text",
+  value: account.nome,
+  onChange: e => account.setNome(e.target.value),
+  placeholder: L.t('auth.nome'),
+  autoComplete: "given-name",
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
+}), /*#__PURE__*/React.createElement("input", {
+  type: "text",
+  value: account.cognome,
+  onChange: e => account.setCognome(e.target.value),
+  placeholder: L.t('auth.cognome'),
+  autoComplete: "family-name",
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
+})), /*#__PURE__*/React.createElement("input", {
+  type: "email",
+  inputMode: "email",
+  value: account.email,
+  onChange: e => account.setEmail(e.target.value),
+  placeholder: L.t('auth.email'),
+  autoComplete: "email",
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
+}), /*#__PURE__*/React.createElement("input", {
+  type: "password",
+  value: account.password,
+  onChange: e => account.setPassword(e.target.value),
+  onKeyDown: e => e.key === 'Enter' && (account.modo === 'entra' ? account.entraConEmail() : account.registrati()),
+  placeholder: L.t('auth.password'),
+  autoComplete: account.modo === 'entra' ? 'current-password' : 'new-password',
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
+}), /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: account.chiudi,
+  className: bottone('testuale', 'normale', 'flex-1')
+}, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
+  onClick: account.modo === 'entra' ? account.entraConEmail : account.registrati,
+  disabled: account.occupato,
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t(account.modo === 'entra' ? 'auth.entra' : 'auth.registrati'))), account.modo === 'entra' && /*#__PURE__*/React.createElement("button", {
+  onClick: account.reimposta,
+  disabled: account.occupato,
+  className: bottone('testuale', 'minuscolo', 'w-full')
+}, L.t('auth.passwordDimenticata')))), account.problema && /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo font-bold text-red-700 leading-snug"
+}, L.t(account.problema)), account.fatto && /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-[#2D392C] leading-snug"
+}, L.t(account.fatto))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"

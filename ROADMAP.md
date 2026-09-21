@@ -35,7 +35,7 @@ cosa blocca cosa.
 
 | | Sezione | Perché in quest'ordine |
 | --- | --- | --- |
-| 4 | § 1 Login | Senza account non esiste nient'altro di quanto segue |
+| 4 | § 1 Login | **in corso** dal 21 settembre su `feature/public-app`: le regole, il trasporto e la tessera ci sono; restano la console Firebase e `users/<uid>` (che viaggia col § 2) |
 | 5 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
 | 6 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
 | 7 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
@@ -113,6 +113,51 @@ classica con nome, cognome, email e password scelta dall'utente.
 **Nota di prodotto:** il login non deve diventare un muro. Consiglio di
 mantenere la possibilità di *entrare in un campo con il solo codice* (ospite),
 e rendere l'account necessario solo per **creare** e **amministrare** un campo.
+
+### Dove siamo — 21 settembre, su `feature/public-app`
+
+Il pezzo che sta nel codice è scritto e provato, dietro `FEATURES.auth` (per
+ora **spenta**: si accende quando la console Firebase è pronta).
+
+| Dove | Cosa |
+| --- | --- |
+| `auth.js` → `Auth` | le **regole**, pure e senza browser: i quattro stati (ospite, anonimo, da verificare, registrato), la tabella dei permessi, la validazione della registrazione, `promuovibile()`, la traduzione dei codici d'errore di Firebase, il profilo |
+| `auth.js` → `AuthCloud` | il **trasporto**: Google, email/password, uscita, reimposta, verifica. Carica l'SDK da gstatic come `firebase-sync.js` e riusa la stessa app (`getApps()`), così i due non litigano |
+| `src/78-usa-account.jsx` | lo **stato** (§ 14): cosa stai scrivendo nella maschera, se è occupato, che problema c'è. Una sola strada (`prova`) per l'errore tradotto e per il caso «Firebase non configurato» |
+| `src/86-scheda-impostazioni.jsx` | la **tessera** in Impostazioni, prima della lingua: tre rami (registrato, da verificare, ospite/anonimo) |
+| `test/unita/auth.js` | 51 verifiche sulle regole, senza browser |
+| `test/e2e/account.js` | 17 verifiche a schermo, con un Firebase finto che registra **quale strada** prende la registrazione |
+
+Le tre regole che le prove difendono, perché sono quelle che si rompono in
+silenzio:
+
+1. **Non è un muro.** Entrare in un campo col codice e segnare presenze e spese
+   si può da tutti e quattro gli stati. Se qualcuno stringe quella tabella,
+   metà del gruppo resta fuori il primo giorno di campo — quando non c'è linea
+   per registrarsi e nessuno ha voglia di farlo. La prova e2e apre l'app con
+   l'account possibile e, se non si apre, **lo dice con un nome** invece di
+   scadere su un'attesa muta.
+2. **Un anonimo si promuove, non si ricrea.** Su Firestore i dati sono appesi
+   all'uid: uscire e registrarsi da capo li stacca dal proprietario. Il
+   Firebase finto della prova non decide da sé — chiede a `Auth.promuovibile()`,
+   cioè alla regola vera.
+3. **Tre codici d'errore danno lo stesso messaggio.** `user-not-found`,
+   `wrong-password` e `invalid-credential` diventano tutti «credenziali
+   sbagliate»: distinguerli è un modo per sapere chi è iscritto, un indirizzo
+   alla volta.
+
+**Cosa manca al § 1**, e non si può fare da qui:
+
+- **La console Firebase** (solo Lorenzo): accendere i provider *Google* e
+  *Email/Password*, mettere il dominio di Vercel fra quelli autorizzati,
+  personalizzare l'email di verifica. Finché non è fatto, `operation-not-allowed`
+  è l'errore che si vede — ed è già tradotto in una frase che lo spiega.
+- **`users/<uid>`**: il profilo esiste già come oggetto (`Auth.profilo()`, e la
+  password non ci entra: una prova lo verifica), ma scriverlo vuol dire
+  decidere le Security Rules, che sono il cuore del § 2. Si scrive lì.
+- **Cancellazione dell'account**: la chiede Google Play (§ 3). Va insieme alla
+  room, perché cancellare un account che amministra una room è una domanda
+  sulla room, non sull'account.
 
 ## 2. Room dedicate per gruppo (ID + password)
 

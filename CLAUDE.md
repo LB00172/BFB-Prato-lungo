@@ -14,9 +14,10 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    `frase('chiave')` quando c'è del grassetto dentro — `fraseVestita(classe,
    'chiave')` se quel grassetto ha anche un colore — e `L.data(d, 'forma')`
    per le date. **Mai `'it-IT'` a mano** — ce n'erano 32 sparsi, adesso zero.
-   Tutti e diciannove i sorgenti passano dal dizionario (752 chiavi) e
+   **Tutti** i sorgenti passano dal dizionario (791 chiavi) e
    `FEATURES.lingue` è accesa: `node test/censimento-testi.js` dice se
-   qualcuno ha scritto testo nuovo a mano, e una prova lo vieta.
+   qualcuno ha scritto testo nuovo a mano, e una prova lo vieta — compreso
+   un sorgente appena nato, che senza quella riga entrerebbe senza contarlo.
 2. **`App.js` è generato. Non si tocca mai a mano.** Si modificano i sorgenti
    in `src/` e poi si lancia `node build.js`, che li incolla nell'ordine
    dichiarato, ricompila `App.js` e ricalcola `CACHE_NAME` in `sw.js` dall'hash
@@ -25,7 +26,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 70 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 72 prove, circa 9 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -59,6 +60,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `src/8*-schede-*.jsx` | il **disegno** delle schede, uscito da `App()`. Non sono componenti React: sono funzioni che restituiscono JSX e ricevono le dipendenze in un oggetto. Disegnano e **non tengono stato** |
 | `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneScelta` (i chip accesi/spenti) |
 | `src/87-scheda-compiti.jsx` | «Chi fa cosa»: i compiti assegnati, dietro `FEATURES.compiti`. Un compito **non** è una spesa |
+| `src/78-usa-account.jsx` | lo stato del login: maschera, occupato, problema. Le regole no — quelle stanno in `auth.js` |
 | `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
 | `App.js` | **generato**, non modificare |
 | `sync-merge.js` | fusione voce per voce fra dispositivi (`rev`, `del`, orologio `hi`) |
@@ -68,12 +70,13 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `presenze.js` | le **regole** delle presenze: giorno, pasto, blocco, presenze orfane. Pure, fuori da `src/`. I gestori restano in `App()` |
 | `lingue.js` | **le lingue**: dizionario (it/es/fr), plurali come funzioni, le dodici forme di data, e la regola che si prova — ogni chiave italiana esiste altrove e viceversa. Fuori da `src/` |
 | `allarmi.js` | **quando svegliare qualcuno**: orologio di un altro telefono avanti di giorni, e perdite che meritano un allarme invece di essere il recupero di un ritardo. Pure, fuori da `src/` |
+| `auth.js` | **chi sei, e cosa ti lascia fare l'app**: `Auth` sono le regole (stati, permessi, validazione, codici d'errore tradotti), `AuthCloud` è il trasporto verso Firebase Authentication. Fuori da `src/`. Dietro `FEATURES.auth` |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile` |
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
-| `test/` | 12 prove unitarie + 58 end‑to‑end |
+| `test/` | 13 prove unitarie + 59 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -159,6 +162,23 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   spostare codice senza cambiare comportamento; quando il lavoro È cambiare
   l'aspetto (la scala del testo, i colori), non dice niente di utile. Lì la
   rete è un'altra: si guarda quello che disegna il browser.
+- **Un elenco di file scritto a mano dentro una prova invecchia da solo.**
+  La guardia sulle chiavi inventate leggeva `['conti.js', 'presenze.js',
+  'allarmi.js', 'menu-spesa.js']`: è nato `auth.js`, che restituisce chiavi
+  esattamente come `conti.js`, e i suoi refusi hanno smesso di essere guardati
+  **senza che niente diventasse rosso**. Lo stesso valeva per la tabella del
+  censimento, che controllava solo i file che già conosceva. Una guardia che
+  non copre il codice nuovo non è una guardia a metà: è un sonnifero. L'elenco
+  si chiede a chi lo tiene già — `index.html` per i file caricati, `build.js`
+  per i sorgenti.
+- **I bottoni sono in maiuscolo per CSS, e `innerText` lo restituisce.**
+  `uppercase` non cambia il DOM, cambia quello che il browser disegna — ma
+  `innerText` legge il disegnato, quindi «Entra con Google» arriva alla prova
+  come «ENTRA CON GOOGLE». Ci sono già cascato **quattro volte**, e la seconda
+  faccia della trappola è peggiore della prima: una verifica che cerca
+  `/Entra con Google/` e **non deve trovarlo** passa, ma per il motivo
+  sbagliato, e continuerebbe a passare anche se il bottone ci fosse. Nelle
+  prove il confronto sul testo a schermo va sempre con `/i`.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.
@@ -217,6 +237,14 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   quella che spiega PERCHÉ una cifra è quella; l'ottimizzata serve QUANDO si
   paga. Le spunte delle due viste sono separate (`opt:`), altrimenti un
   rimborso segnato in una vista sembrerebbe fatto anche nell'altra.
+- **L'account non è un muro.** Entrare in un campo col codice, segnare presenze
+  e registrare spese si può da ospite, da anonimo, da registrato e da chi non ha
+  ancora verificato l'indirizzo. L'account serve a **creare** e **amministrare**
+  un campo, cioè alle cose che nella versione pubblica avranno un proprietario.
+  È un difetto che non si vede scrivendo il codice: si vede in montagna il primo
+  giorno, quando non c'è linea per registrarsi e nessuno ha voglia di farlo — e
+  lì non si sistema. La tabella dei permessi sta in `auth.js` e due prove la
+  guardano da sole.
 - **Importazione, ripristino di emergenza e chiusura del campo stanno in
   modalità tecnica.** Non modificano i dati: li RIMPIAZZANO, e si portano
   via i blocchi insieme al resto. Erano le ultime tre strade aperte a
@@ -237,7 +265,7 @@ priorità) e la fila in cui affrontarle, con scritto cosa blocca cosa.
 Le tre cose da sapere senza aprirlo:
 
 - **L'iPhone è verificato** (`ROADMAP.md` §10): ad agosto 2026, a mano, e
-  l'aggiornamento del service worker arriva. Le 70 prove girano comunque solo
+  l'aggiornamento del service worker arriva. Le 72 prove girano comunque solo
   su Chromium, quindi quel giro va rifatto ogni volta che si tocca `sw.js` o
   `build.js` — sono i due file che decidono se un rilascio arriva o resta in
   cache. Si comincia invece dalle immagini fuori da `localStorage` (§19): nel

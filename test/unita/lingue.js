@@ -72,6 +72,7 @@ ok(`il dizionario italiano ha ${CHIAVI.length} voci`, CHIAVI.length > 20);
     'es:sezione.calendario',                       // "Calendario" e' anche spagnolo
     'es:gioco.pausa',                              // "Pausa" e' anche spagnolo
     'es:info.titolo',                              // "Info" e' anche spagnolo
+    'es:auth.email',                               // "Email" e' anche spagnolo
     'es:registro.sync', 'fr:registro.sync',        // "sync" e' una sigla, non una parola
     'es:quote.gratis',                             // "Gratis" e' anche spagnolo
     'es:guida.calendario.titolo',                  // "Calendario" e' anche spagnolo
@@ -245,10 +246,20 @@ const UN_GIORNO = new Date(2026, 7, 11, 14, 5);  // martedì 11 agosto 2026, 14:
   const fs = require('fs');
   const path = require('path');
   const RADICE = path.join(__dirname, '..', '..');
+  // I sorgenti di src/, piu' OGNI file che index.html carica dal proprio
+  // dominio. L'elenco era scritto a mano, e un elenco a mano invecchia: e'
+  // bastato che nascesse auth.js — che restituisce chiavi esattamente come
+  // conti.js — perche' i suoi refusi smettessero di essere guardati senza
+  // che nessuno se ne accorgesse. Qui si chiede a index.html, che i file li
+  // elenca gia' per forza.
+  const html = fs.readFileSync(path.join(RADICE, 'index.html'), 'utf8');
+  const propri = [...html.matchAll(/<script\s+src="([^"]+)"/g)]
+    .map((m) => m[1])
+    .filter((f) => !/^https?:|^vendor\/|^App\.js$/.test(f));
   const files = fs.readdirSync(path.join(RADICE, 'src'))
     .filter((f) => f.endsWith('.jsx'))
     .map((f) => path.join('src', f))
-    .concat(['conti.js', 'presenze.js', 'allarmi.js', 'menu-spesa.js']);
+    .concat(propri);
 
   const prefissi = {};
   Object.keys(IT).forEach((k) => { if (k.includes('.')) prefissi[k.split('.')[0]] = 1; });

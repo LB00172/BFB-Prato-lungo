@@ -287,8 +287,9 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
 // contate qui una per una, cosi' il conto e' esatto lo stesso — e se cambia
 // in un senso o nell'altro la prova diventa rossa e si guarda perche'.
 //
-// Adesso ci sono TUTTI e diciannove: il § 18 e' finito, e da qui in poi la
-// tabella serve solo a non tornare indietro.
+// Adesso ci sono TUTTI i sorgenti: il § 18 e' finito, e da qui in poi la
+// tabella serve solo a non tornare indietro — anche per i file che nascono
+// dopo, che senza la riga in fondo entrerebbero senza essere contati.
 {
   const { perFile } = require('../censimento-testi');
   const TRADOTTI = {
@@ -304,6 +305,7 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     '75-usa-gioco.jsx': 1,           // una scheggia di codice
     '76-usa-galleria.jsx': 1,        // una scheggia di codice
     '77-usa-scontrini.jsx': 2,       // 'memoria del telefono': e' un valore, non un testo
+    '78-usa-account.jsx': 1,         // una scheggia di codice
     // Un console.warn, il titolo del foglio di condivisione (che porta il
     // nome del campo) e quattordici schegge di codice.
     '80-app.jsx': 17,
@@ -321,6 +323,13 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     const quanti = perFile[f] || 0;
     if (quanti !== TRADOTTI[f]) fuori.push(`${f}: ${quanti} invece di ${TRADOTTI[f]}`);
   });
+  // E un sorgente NUOVO non deve poter entrare senza passare di qui: la
+  // tabella guardava solo i file che conosceva, quindi un file appena nato
+  // pieno di testo italiano sarebbe passato senza che nessuno lo contasse.
+  // E' successo con 78-usa-account.jsx, ed e' la stessa forma della trappola
+  // «un controllo che chiede dei dati non vale quando i dati non ci sono».
+  SORGENTI.filter((f) => !(f in TRADOTTI))
+    .forEach((f) => fuori.push(`${f}: sorgente nuovo, non e' nella tabella`));
   ok(`i ${Object.keys(TRADOTTI).length} file gia' tradotti non hanno testo nuovo scritto a mano`
     + (fuori.length ? ' — ' + fuori.join('; ') : ''), fuori.length === 0);
 }

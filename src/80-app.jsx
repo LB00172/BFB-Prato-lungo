@@ -87,6 +87,11 @@ function App() {
     handleCloudReceipts, attachReceiptTo, onReceiptFile,
   } = usaScontrini({ purchases, toBuy, equipment });
 
+  // ---------- L'account (§ 1) ----------
+  // Dietro FEATURES.auth. L'hook gira comunque: senza bandiera nessuno guarda
+  // il suo stato, e senza Firebase configurato resta "ospite" e basta.
+  const account = usaAccount();
+
   // Conto separato: giorni le cui presenze fanno cassa a parte. Il cibo e le
   // bevande marcati "separato" si dividono solo sui pasti di questi giorni;
   // gli altri giorni restano nel conto comune. Vuoto = tutto in comune.
@@ -2864,7 +2869,7 @@ function App() {
 
         {/* ---------- IMPOSTAZIONI ---------- */}
         {activeTab === 'impostazioni' && schedaImpostazioni({
-          admin, adminErr, adminPwd, annullaSync, askAlways, bloccoOpen, campData, campoInCorso, cloud, datiOpen, diagTick, entraAdmin, esciAdmin, esportaRegistro, exportData, fotoDove, goTo, isDark, isOnline, lingua, lockNow, logOpen, members, metaRef, photoCap, purchases, readyChecks, readyOk, receipts, setAdminErr, setAdminPwd, setBloccoOpen, setDatiOpen, setDiagTick, setLingua, setLogOpen, setLostSync, setPhotoCap, setTecnicaOpen, setTheme, swVersion, syncStateRef, tecnicaOpen, theme, toggleAskAlways, wipeLocal,
+          account, admin, adminErr, adminPwd, annullaSync, askAlways, bloccoOpen, campData, campoInCorso, cloud, datiOpen, diagTick, entraAdmin, esciAdmin, esportaRegistro, exportData, fotoDove, goTo, isDark, isOnline, lingua, lockNow, logOpen, members, metaRef, photoCap, purchases, readyChecks, readyOk, receipts, setAdminErr, setAdminPwd, setBloccoOpen, setDatiOpen, setDiagTick, setLingua, setLogOpen, setLostSync, setPhotoCap, setTecnicaOpen, setTheme, swVersion, syncStateRef, tecnicaOpen, theme, toggleAskAlways, wipeLocal,
         })}
       </main>
 

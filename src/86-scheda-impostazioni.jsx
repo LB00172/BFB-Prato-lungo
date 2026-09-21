@@ -46,6 +46,7 @@ const schedaImpostazioni = ({
   tecnicaOpen,
   lingua,
   setLingua,
+  account,
   theme,
   toggleAskAlways,
   wipeLocal,
@@ -88,6 +89,97 @@ const schedaImpostazioni = ({
         </>
       )}
     </div>
+
+    {/* Account (ROADMAP.md § 1). Dietro FEATURES.auth.
+
+        Sta QUI, in fondo a Impostazioni, e non davanti all'app: e' la nota di
+        prodotto del § 1 messa in pratica. Chi apre l'app e digita il codice
+        del campo segna presenze e spese senza sapere che questa tessera
+        esiste. L'account serve a creare e amministrare un campo — cioe' alle
+        cose che nella versione pubblica hanno un proprietario. */}
+    {FEATURES.auth && (
+    <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('auth.titolo')}</h3>
+
+      {account.stato === 'registrato' && (
+        <>
+          <p className="text-piccolo text-[#2D392C] leading-snug">{frase('auth.entratoCome', window.Auth.nomeVisibile({ nome: account.utente && account.utente.nome, email: account.utente && account.utente.email }))}</p>
+          <button onClick={account.esci} disabled={account.occupato} className={bottone('secondario', 'normale', 'w-full')}>{L.t('auth.esci')}</button>
+        </>
+      )}
+
+      {account.stato === 'daVerificare' && (
+        <>
+          <p className="text-piccolo text-[#5C4A3C] leading-snug">{frase('auth.daVerificare', (account.utente && account.utente.email) || '')}</p>
+          <div className="flex gap-2">
+            <button onClick={account.controllaVerifica} disabled={account.occupato} className={bottone('primario', 'normale', 'flex-1')}>{L.t('auth.hoVerificato')}</button>
+            <button onClick={account.rimandaVerifica} disabled={account.occupato} className={bottone('secondario', 'normale', 'flex-1')}>{L.t('auth.rimandaEmail')}</button>
+          </div>
+          <button onClick={account.esci} disabled={account.occupato} className={bottone('testuale', 'minuscolo', 'w-full')}>{L.t('auth.esci')}</button>
+        </>
+      )}
+
+      {(account.stato === 'ospite' || account.stato === 'anonimo') && (
+        <>
+          <p className="text-piccolo text-gray-500 leading-snug">{frase('auth.aCosaServe')}</p>
+          <button onClick={account.entraConGoogle} disabled={account.occupato} className={bottone('primario', 'normale', 'w-full')}>{L.t('auth.conGoogle')}</button>
+
+          {!account.modo ? (
+            <div className="flex items-center gap-2">
+              <span className="flex-grow h-px bg-[#8F9E8B]/30"></span>
+              <span className="text-minuto uppercase tracking-widest text-gray-400 shrink-0">{L.t('auth.oppure')}</span>
+              <span className="flex-grow h-px bg-[#8F9E8B]/30"></span>
+            </div>
+          ) : null}
+
+          {!account.modo && (
+            <div className="flex gap-2">
+              <button onClick={() => account.setModo('entra')} className={bottone('secondario', 'normale', 'flex-1')}>{L.t('auth.haiGiaAccount')}</button>
+              <button onClick={() => account.setModo('registra')} className={bottone('secondario', 'normale', 'flex-1')}>{L.t('auth.creaAccount')}</button>
+            </div>
+          )}
+
+          {account.modo && (
+            <div className="space-y-2 pt-1">
+              {account.modo === 'registra' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="text" value={account.nome} onChange={(e) => account.setNome(e.target.value)}
+                    placeholder={L.t('auth.nome')} autoComplete="given-name"
+                    className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+                  <input type="text" value={account.cognome} onChange={(e) => account.setCognome(e.target.value)}
+                    placeholder={L.t('auth.cognome')} autoComplete="family-name"
+                    className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+                </div>
+              )}
+              <input type="email" inputMode="email" value={account.email} onChange={(e) => account.setEmail(e.target.value)}
+                placeholder={L.t('auth.email')} autoComplete="email"
+                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+              <input type="password" value={account.password} onChange={(e) => account.setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (account.modo === 'entra' ? account.entraConEmail() : account.registrati())}
+                placeholder={L.t('auth.password')} autoComplete={account.modo === 'entra' ? 'current-password' : 'new-password'}
+                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+              <div className="flex gap-2">
+                <button onClick={account.chiudi} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
+                <button
+                  onClick={account.modo === 'entra' ? account.entraConEmail : account.registrati}
+                  disabled={account.occupato}
+                  className={bottone('primario', 'normale', 'flex-1')}
+                >
+                  {L.t(account.modo === 'entra' ? 'auth.entra' : 'auth.registrati')}
+                </button>
+              </div>
+              {account.modo === 'entra' && (
+                <button onClick={account.reimposta} disabled={account.occupato} className={bottone('testuale', 'minuscolo', 'w-full')}>{L.t('auth.passwordDimenticata')}</button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {account.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(account.problema)}</p>}
+      {account.fatto && <p className="text-piccolo text-[#2D392C] leading-snug">{L.t(account.fatto)}</p>}
+    </div>
+    )}
 
     {/* Lingua. Dietro FEATURES.lingue: finche' i dizionari non coprono tutta
         l'app, offrire la scelta vorrebbe dire mostrare meta' schermata in una

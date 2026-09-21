@@ -83,6 +83,20 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 - **Le regole Firestore a utente condiviso sono il modello scelto** per un campo
   solo. L'isolamento fra campi diversi è previsto per la versione pubblica —
   vedi `ROADMAP.md`, non è una svista.
+- **`FEATURES.auth` è spenta di proposito, e l'account non è un muro.** Il § 1
+  della roadmap è scritto e provato (`auth.js` per le regole,
+  `src/78-usa-account.jsx` per lo stato, la tessera in Impostazioni), ma
+  l'interruttore resta spento finché i provider non sono accesi nella console
+  Firebase — cosa che dal codice non si vede. Soprattutto: **entrare in un
+  campo col codice, segnare presenze e registrare spese si può senza account**,
+  da tutti e quattro gli stati. Non è una dimenticanza da stringere: è la nota
+  di prodotto del § 1, e due prove la sorvegliano. Metà del gruppo, in
+  montagna, il primo giorno, non si registra — non c'è linea e non ne ha
+  voglia.
+- **Tre codici d'errore di Firebase danno lo stesso messaggio.**
+  `user-not-found`, `wrong-password` e `invalid-credential` diventano tutti
+  «credenziali sbagliate». Non è pigrizia nella traduzione: distinguerli
+  permette di scoprire chi è iscritto, un indirizzo alla volta.
 - **`src/80-app.jsx` è ancora un file da ~3.300 righe.** Lo sappiamo: era un
   file solo da 8.080. Il disegno delle schede è uscito in `src/8*-schede-*.jsx`,
   lo stato sta uscendo in `src/7*-usa-*.jsx` (`usaGioco`, `usaGalleria`,
@@ -119,7 +133,7 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   `frase()` (o `fraseVestita()` se il grassetto ha un colore), `L.data()`.
   **Nessun `'it-IT'` scritto a mano** — ce n'erano 32 sparsi in otto file,
   adesso sono zero e c'e' una prova che li conta. Tutti e diciannove i
-  sorgenti passano dal dizionario (752 chiavi) e `FEATURES.lingue` e'
+  sorgenti passano dal dizionario (791 chiavi) e `FEATURES.lingue` e'
   **accesa**: l'italiano resta predefinito, e quello che scrive l'utente non
   si traduce mai. I file non possono tornare indietro: una prova conta i testi
   scritti a mano in ognuno (`node test/censimento-testi.js`) e diventa rossa
@@ -143,7 +157,7 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 
 ```
 node build.js          # src/*.jsx -> App.js + CACHE_NAME
-npm test               # tutto (~10 min)
+npm test               # tutte e 72 (~10 min)
 npm test unita         # solo quelle senza browser (~10 s)
 ```
 
