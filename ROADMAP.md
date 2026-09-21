@@ -36,7 +36,7 @@ cosa blocca cosa.
 | | Sezione | Perché in quest'ordine |
 | --- | --- | --- |
 | 4 | § 1 Login | **in corso** dal 21 settembre su `feature/public-app`: le regole, il trasporto e la tessera ci sono; restano la console Firebase e `users/<uid>` (che viaggia col § 2) |
-| 5 | § 2 Room | I dati sono già in `camps/<codice>`: è evoluzione, non riscrittura |
+| 5 | § 2 Room | **in corso** dal 21 settembre: `stanza.js` (codice d'ingresso, ruoli) e `firestore.rules` scritte e provate contro l'emulatore. Restano il modulo e il collegamento della sincronizzazione |
 | 6 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
 | 7 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
 | 8 | § 3 Google Play | Si pubblica quando c'è qualcosa da far entrare, cioè dopo la 7 — e dopo il § 18, altrimenti le schede dello store si rifanno |
@@ -224,6 +224,35 @@ arriva dopo entra col proprio account.
 Il ponte è temporaneo e va tolto: quando il gruppo è passato, le regole tornano
 a guardare solo `members/<uid>`. Va scritto nelle regole stesse, con una data,
 altrimenti resta lì per sempre e nessuno saprà più se serve.
+
+### Cosa c'è già — 21 settembre
+
+- **`stanza.js`**: l'alfabeto e il generatore del codice (`K7RX-2MQP`), come si
+  legge un codice digitato a mano, la validazione del modulo, i tre ruoli.
+  Puro, fuori da `src/`, 42 verifiche in `unita/stanza`.
+- **`firestore.rules`**: riscritte. I due mondi, il ponte, e l'ingresso senza
+  backend — l'impronta in `rooms/<id>/private/join` che `allow read: if false`
+  rende illeggibile a chiunque, mentre le `get()` delle regole la leggono lo
+  stesso perché girano sul server.
+- **`test/regole/stanze.js`**: 39 verifiche contro l'emulatore Firestore
+  (`npm run regole`), quasi tutte cose che devono fallire. Otto sabotaggi.
+
+Quello che le regole dicono, in breve:
+
+| Chi | Cosa può |
+| --- | --- |
+| chiunque | niente: quello che non è previsto è chiuso |
+| chi ha il codice | scriversi in `members/<uid>`, **da redattore**, e solo portando l'impronta giusta |
+| lettore | guarda i dati, non li scrive |
+| redattore | scrive i dati del campo |
+| proprietario | amministra la stanza e i ruoli; non si toglie da solo né si fa riscrivere |
+| utente condiviso | `camps/<codice>`, finché dura il ponte |
+
+**Cosa manca al § 2:** il modulo di creazione (che è il § 9), lo spostamento
+della sincronizzazione da `camps/` a `rooms/<id>/dati/`, e la migrazione dei
+dati del 2026. E, prima di tutto, incollare le regole nuove in console — cosa
+che non va fatta finché il modulo non esiste, altrimenti si pubblicano regole
+per una parte di app che nessuno può ancora usare.
 
 ### Il vincolo che arriva dal § 1, e che va sciolto qui
 

@@ -83,6 +83,23 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 - **Le regole Firestore a utente condiviso sono il modello scelto** per un campo
   solo. L'isolamento fra campi diversi è previsto per la versione pubblica —
   vedi `ROADMAP.md`, non è una svista.
+- **`firestore.rules` contiene due mondi che convivono di proposito.**
+  `camps/<codice>` è il campo 2026 con l'utente condiviso; `rooms/<id>` è il
+  modello della versione pubblica. A `camps` si accede con l'utente condiviso
+  **oppure** essendo membro della stanza con lo stesso codice: è il *ponte*,
+  deciso il 21 settembre, e serve a non dover aggiornare venti telefoni nello
+  stesso pomeriggio mentre il gruppo chiude i rimborsi. Da rivedere a marzo
+  2027. Segnalarlo come duplicazione da unificare fa danno.
+- **La verifica del codice d'ingresso non ha un backend, ed è voluto.**
+  L'impronta sta in `rooms/<id>/private/join`, che `allow read: if false` rende
+  illeggibile a chiunque — ma le `get()` delle regole girano sul server e la
+  leggono lo stesso. È il meccanismo che sostituisce la Cloud Function
+  `joinRoom` e tiene il progetto sul piano gratuito. "Manca la validazione
+  server-side" è una diagnosi sbagliata: la validazione *è* la regola.
+- **Le regole non si girano con `npm test`.** Hanno bisogno dell'emulatore:
+  `npm run regole`. Una guardia dentro `npm test` controlla però che ogni
+  strada nominata in `firestore.rules` compaia nelle prove, così una
+  collezione nuova non entra senza che nessuno l'abbia guardata.
 - **`FEATURES.auth` è spenta di proposito, e l'account non è un muro.** Il § 1
   della roadmap è scritto e provato (`auth.js` per le regole,
   `src/78-usa-account.jsx` per lo stato, la tessera in Impostazioni), ma
@@ -159,6 +176,7 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 ```
 node build.js          # src/*.jsx -> App.js + CACHE_NAME
 npm test               # tutte e 73 (~10 min)
+npm run regole         # le regole Firestore, contro l'emulatore (~30 s)
 npm test unita         # solo quelle senza browser (~10 s)
 ```
 

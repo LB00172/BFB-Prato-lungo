@@ -82,8 +82,11 @@
   // nell'alfabeto non esistono ne' da una parte ne' dall'altra: chi le ha
   // scritte ha ricopiato male, e questo si dice — non si indovina.
   //
-  // Attenzione a non "aggiungere" Q -> 0 o simili: la Q nell'alfabeto C'E',
-  // e una tabella troppo generosa corromperebbe un codice giusto.
+  // A proteggere le lettere dell'alfabeto non e' questa tabella ma la
+  // PRECEDENZA in normalizza(): la tabella si consulta solo per i caratteri
+  // che nell'alfabeto non ci sono. Aggiungere qui Q -> 0 non romperebbe
+  // niente (l'ho verificato sabotandola), ma girare quella precedenza si',
+  // e corromperebbe ogni codice con la Q dentro.
   const CONFUSE = { U: 'V' };
 
   function normalizza(codice) {

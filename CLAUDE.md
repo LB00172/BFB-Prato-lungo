@@ -27,7 +27,8 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
 4. **Prima di dire "fatto" gira `npm test`.** 73 prove, circa 9 minuti.
-   Verde o non è finito.
+   Verde o non è finito. Se hai toccato `firestore.rules`, anche
+   `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
    diventi rossa, si rimette a posto. Una prova che non sa fallire è peggio
@@ -44,7 +45,13 @@ node build.js          # src/*.jsx -> App.js + CACHE_NAME in sw.js
 npm test               # tutto (~8 min)
 npm test unita         # solo le prove che non aprono il browser (~10 s)
 npm test contabilita   # filtro sul nome della prova
+npm run regole         # le regole Firestore, contro l'emulatore (~30 s)
 ```
+
+`npm run regole` sta **fuori** da `npm test` perché ha bisogno
+dell'emulatore Firestore (Java e `firebase-tools`, già fra le dipendenze di
+sviluppo). Si lancia da sé l'emulatore e lo spegne alla fine. Va girato ogni
+volta che si tocca `firestore.rules` — e prima di incollarle in console.
 
 Le prove e2e usano `playwright-core` con il Chromium già installato e un
 server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
@@ -74,6 +81,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `stanza.js` | **la stanza**: l'alfabeto e il generatore del codice d'ingresso, come si legge un codice digitato a mano, la validazione del modulo, i tre ruoli. Puro e sincrono — la crittografia no, quella è `improntaPassword` in `src/20-blocco-password.jsx`. Dietro `FEATURES.rooms` |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile` |
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
+| `firestore.rules` | **chi può leggere e scrivere cosa** nel cloud. Due mondi che convivono: `camps/<codice>` (il campo 2026, utente condiviso) e `rooms/<id>` (le stanze). Si provano con `npm run regole`, mai a occhio |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
@@ -180,6 +188,20 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   `/Entra con Google/` e **non deve trovarlo** passa, ma per il motivo
   sbagliato, e continuerebbe a passare anche se il bottone ci fosse. Nelle
   prove il confronto sul testo a schermo va sempre con `/i`.
+- **Una regola Firestore sbagliata non dà errore: dà accesso.** È l'unica
+  parte del progetto che non si può provare leggendo il codice, e l'unica che
+  separa i dati di venti persone da chiunque passi di lì. Si provano contro
+  l'emulatore (`npm run regole`), e la prova è fatta quasi tutta di cose che
+  devono **fallire**: una prova che controlla solo che il proprietario possa
+  scrivere passerebbe anche con `allow read, write: if true`. Il diniego in
+  fondo (`match /{document=**}` → `if false`) non è decorazione: togliendolo,
+  ventidue verifiche su trentanove diventano rosse in un colpo.
+- **Una prova che non ripulisce quello che ha scritto passa una volta sola.**
+  Le prove delle regole creavano una stanza e non la cancellavano: al secondo
+  giro la `create` diventava una `update` e la verifica diventava rossa per un
+  motivo che con le regole non c'entrava niente. Se ne è accorto un sabotaggio,
+  non io — due sabotaggi diversi facevano fallire la stessa verifica estranea,
+  ed è quello il segnale. `clearFirestore()` all'inizio, sempre.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.

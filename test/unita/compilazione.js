@@ -370,4 +370,41 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     + (inventate.size ? ' — INVENTATE: ' + [...inventate].join(', ') : ''), inventate.size === 0);
 }
 
+// ---------- Le regole Firestore non restano scoperte in silenzio ----------
+// Le regole si provano con `npm run regole`, che ha bisogno dell'emulatore e
+// quindi sta fuori da `npm test`. Il rischio e' ovvio: qualcuno aggiunge una
+// collezione alle regole, non tocca le prove, e nessuno se ne accorge —
+// perche' la prova che avrebbe dovuto accorgersene non gira mai.
+//
+// Questa guardia gira sempre e non ha bisogno di niente: legge le strade
+// nominate in firestore.rules e chiede che ognuna compaia nelle prove delle
+// regole. Non dice che la regola e' giusta — quello lo dice l'emulatore — ma
+// dice che qualcuno l'ha guardata.
+{
+  const regole = fs.readFileSync(path.join(RADICE, 'firestore.rules'), 'utf8');
+  const prova = fs.readFileSync(path.join(RADICE, 'test', 'regole', 'stanze.js'), 'utf8');
+
+  // I nomi veri dentro i match: 'rooms', 'private', 'members', 'dati',
+  // 'camps'. Le graffe sono variabili, non strade.
+  const strade = new Set();
+  [...regole.matchAll(/match\s+([^\s{]+)\s*\{/g)].forEach((m) => {
+    m[1].split('/').forEach((pezzo) => {
+      if (pezzo && !pezzo.startsWith('{') && pezzo !== 'databases' && pezzo !== 'documents') strade.add(pezzo);
+    });
+  });
+  const scoperte = [...strade].filter((s) => prova.indexOf(s) < 0);
+  ok(`ogni strada nominata in firestore.rules compare nelle prove (${strade.size})`
+    + (scoperte.length ? ' — SCOPERTE: ' + scoperte.join(', ') : ''), scoperte.length === 0);
+
+  // Il diniego finale e' quello che tiene chiuso tutto il resto: togliendolo,
+  // ventidue verifiche delle regole diventano rosse in un colpo (l'ho
+  // sabotato apposta). Vale la pena controllare che ci sia ancora, e che
+  // sia l'ULTIMO — una regola che permette, messa dopo, non lo annulla, ma
+  // una catch-all messa in mezzo nasconde quelle che vengono dopo.
+  const ultimo = regole.lastIndexOf('match /{document=**}');
+  const coda = ultimo >= 0 ? regole.slice(ultimo) : '';
+  ok('firestore.rules finisce con il diniego di tutto il resto',
+    ultimo >= 0 && /allow\s+read,\s*write:\s*if\s+false\s*;/.test(coda));
+}
+
 fine();

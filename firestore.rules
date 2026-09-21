@@ -1,36 +1,162 @@
 // ============================================================================
-//  REGOLE FIRESTORE — Brigata Fabio Bandone
+//  REGOLE FIRESTORE — Brigata Fabio Bandone / versione pubblica
 // ============================================================================
 // Da incollare in: console.firebase.google.com -> progetto brigata-bandone
 // -> Firestore Database -> scheda "Regole" (Rules) -> sostituisci tutto
 // -> Pubblica.
 //
-// Cosa fanno: al database si entra SOLO con l'utente condiviso del campo,
-// quello che l'app usa dietro le quinte con la password del blocco. Chi non ha
-// la password non legge e non scrive niente, nemmeno interrogando Firestore
-// direttamente.
+// **Queste regole si provano prima di pubblicarle**: `npm run regole` le
+// carica in un emulatore Firestore locale e prova a violarle una per una.
+// Una regola di sicurezza scritta e mai vista negare qualcosa non e' una
+// regola: e' una speranza (CLAUDE.md, regola 5).
 //
-// La regola copre il documento del campo e tutte le sue sotto-collezioni:
-// scontrini, snapshot giornalieri, archivi dei campi chiusi, meteo condiviso,
-// classifica del minigioco e galleria (miniature + foto intere).
+// ----------------------------------------------------------------------------
+// Ci sono DUE mondi qui dentro, e per un po' devono convivere.
 //
-// PRIMA di pubblicare: controlla che l'app dica gia' "Database: protetto dalla
-// password" (Impostazioni -> Blocco con password). Se dice ancora "accesso
-// aperto", pubblicando queste regole la sincronizzazione si ferma.
-// DOPO aver pubblicato: Authentication -> Sign-in method -> disabilita Anonimo.
-// ============================================================================
+//   camps/<codice>   il campo 2026, com'e' oggi. Ci si entra con l'utente
+//                    CONDIVISO (campo@brigatabandone.it) e la password del
+//                    blocco. Venti telefoni fanno cosi' in questo momento, e
+//                    i rimborsi si stanno ancora chiudendo: non si tocca.
+//
+//   rooms/<id>       la stanza della versione pubblica (ROADMAP § 2). Ognuno
+//                    entra con il PROPRIO account, e chi puo' fare cosa sta
+//                    scritto in members/<uid>.
+//
+// Il **ponte** (decisione del 21 settembre, ROADMAP § 2): a camps/<codice> si
+// accede con l'utente condiviso OPPURE essendo membro della stanza che porta
+// lo stesso codice. Cosi' i telefoni di oggi continuano a funzionare senza che
+// nessuno debba fare niente, e chi arriva dopo entra con se' stesso.
+//
+// ⚠️ IL PONTE E' TEMPORANEO. Va tolto quando il gruppo e' passato alle
+// stanze — cioe' quando nessuno entra piu' con l'utente condiviso. Da
+// rivedere: **marzo 2027** (prima dell'apertura pubblica, ROADMAP "calendario").
+// Finche' c'e', chi conosce la password del campo legge i dati del campo.
+// ----------------------------------------------------------------------------
+//
+// Come si entra in una stanza, senza backend: l'impronta del codice
+// d'ingresso sta in rooms/<id>/private/join, che **nessun client puo'
+// leggere**. Le get() delle regole pero' girano sul server e non passano dai
+// permessi del client: la regola che autorizza a scriversi in members/<uid>
+// confronta l'impronta portata dal telefono con quella custodita li'.
+// Niente Cloud Function, niente piano Blaze.
+//
+// L'impronta finisce dentro members/<uid> e ci resta. Non e' una perdita:
+// members lo leggono solo i membri, e un membro il codice lo conosce gia' —
+// l'ha digitato per entrare. Quando si toglie qualcuno dalla stanza, pero',
+// il codice va cambiato: lui se lo ricorda.
 
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /camps/{document=**} {
-      allow read, write: if request.auth != null
+    // ---------- Chi sei ----------
+
+    // L'utente condiviso del campo 2026. Non e' una persona: e' la password
+    // del blocco travestita da account, uguale su tutti i telefoni.
+    function utenteCondiviso() {
+      return request.auth != null
         && request.auth.token.email == "campo@brigatabandone.it";
     }
 
-    // Tutto il resto e' chiuso.
+    function scheda(stanza) {
+      return /databases/$(database)/documents/rooms/$(stanza)/members/$(request.auth.uid);
+    }
+
+    function membro(stanza) {
+      return request.auth != null && exists(scheda(stanza));
+    }
+
+    // Il ruolo si legge dalla scheda. Va chiamata solo dopo membro(): su una
+    // scheda che non esiste, get() fa fallire la valutazione — e una regola
+    // che fallisce nega, quindi il risultato e' giusto lo stesso, ma il
+    // messaggio d'errore diventa incomprensibile.
+    function ruolo(stanza) {
+      return get(scheda(stanza)).data.ruolo;
+    }
+
+    function amministra(stanza) {
+      return membro(stanza) && ruolo(stanza) == 'proprietario';
+    }
+
+    function modifica(stanza) {
+      return membro(stanza) && ruolo(stanza) in ['proprietario', 'redattore'];
+    }
+
+    // ---------- Il campo 2026, con il ponte ----------
+    // Il codice del campo e quello della stanza sono lo stesso: e' questo che
+    // permette ai due mondi di indicare gli stessi dati durante il passaggio.
+    match /camps/{codice}/{resto=**} {
+      allow read, write: if utenteCondiviso() || membro(codice);
+    }
+
+    // ---------- Le stanze ----------
+    match /rooms/{stanza} {
+      allow get, list: if membro(stanza);
+
+      // Creare una stanza vuol dire diventarne il proprietario, e un campo
+      // senza un padrone raggiungibile non si amministra: serve un indirizzo
+      // verificato. E' la stessa riga della tabella dei permessi di auth.js
+      // ('creare' vuole REGISTRATO), scritta dove conta davvero.
+      allow create: if request.auth != null
+        && request.auth.token.email_verified == true
+        && request.resource.data.proprietario == request.auth.uid;
+
+      allow update: if amministra(stanza)
+        // Il proprietario non si riscrive: cedere una stanza e' un gesto che
+        // merita una strada sua, non un campo cambiato di nascosto.
+        && request.resource.data.proprietario == resource.data.proprietario;
+
+      allow delete: if amministra(stanza);
+
+      // Il segreto. Non lo legge NESSUNO — nemmeno il proprietario, che
+      // l'impronta non ha motivo di rileggerla: il codice ce l'ha lui.
+      // Le get() delle regole ci arrivano lo stesso: girano sul server.
+      match /private/{doc} {
+        allow read: if false;
+        // Si scrive solo insieme alla stanza (il proprietario la sta creando)
+        // o dopo, per cambiare il codice.
+        allow write: if request.auth != null
+          && (amministra(stanza)
+              || get(/databases/$(database)/documents/rooms/$(stanza)).data.proprietario == request.auth.uid);
+      }
+
+      // ---------- Chi c'e' dentro ----------
+      match /members/{uid} {
+        allow read: if membro(stanza);
+
+        // Entrare: ti scrivi TU, col tuo uid, e solo se porti l'impronta
+        // giusta. Il ruolo non te lo scegli: si entra da redattore, e a
+        // promuovere e' il proprietario.
+        allow create: if request.auth != null
+          && uid == request.auth.uid
+          && request.resource.data.ruolo == 'redattore'
+          && request.resource.data.prova ==
+             get(/databases/$(database)/documents/rooms/$(stanza)/private/join).data.impronta;
+
+        // Il proprietario cambia i ruoli. Ma non il proprio: togliersi il
+        // ruolo da soli lascerebbe una stanza che non amministra piu'
+        // nessuno e che non si puo' nemmeno cancellare.
+        allow update: if amministra(stanza) && uid != request.auth.uid;
+
+        // Si esce da soli, o ti toglie il proprietario. Il proprietario no:
+        // stesso vicolo cieco di sopra.
+        allow delete: if (uid == request.auth.uid || amministra(stanza))
+          && get(/databases/$(database)/documents/rooms/$(stanza)).data.proprietario != uid;
+      }
+
+      // ---------- I dati del campo ----------
+      // Presenze, spese, menu', scontrini, foto: tutto quello che oggi sta
+      // sotto camps/<codice>. Il lettore guarda, il redattore scrive.
+      match /dati/{resto=**} {
+        allow read: if membro(stanza);
+        allow write: if modifica(stanza);
+      }
+    }
+
+    // ---------- Tutto il resto e' chiuso ----------
+    // Va per ultimo e nega: una collezione nuova non nasce aperta per
+    // distrazione. Se domani serve, si scrive la sua regola qui sopra.
     match /{document=**} {
       allow read, write: if false;
     }
