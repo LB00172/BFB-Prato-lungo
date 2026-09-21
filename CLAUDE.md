@@ -14,9 +14,9 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    `frase('chiave')` quando c'è del grassetto dentro — `fraseVestita(classe,
    'chiave')` se quel grassetto ha anche un colore — e `L.data(d, 'forma')`
    per le date. **Mai `'it-IT'` a mano** — ce n'erano 32 sparsi, adesso zero.
-   Quanto manca e dove, lo dice `node test/censimento-testi.js`: sedici
-   sorgenti su diciannove sono passati, restano `80-app.jsx` e
-   `82-schede-conti.jsx`.
+   Tutti e diciannove i sorgenti passano dal dizionario (752 chiavi) e
+   `FEATURES.lingue` è accesa: `node test/censimento-testi.js` dice se
+   qualcuno ha scritto testo nuovo a mano, e una prova lo vieta.
 2. **`App.js` è generato. Non si tocca mai a mano.** Si modificano i sorgenti
    in `src/` e poi si lancia `node build.js`, che li incolla nell'ordine
    dichiarato, ricompila `App.js` e ricalcola `CACHE_NAME` in `sw.js` dall'hash
@@ -139,8 +139,13 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   incollano e girano *prima* che `App()` assegni `L`: una tabella come
   `const SEZIONE_DI = { m: 'Membri', … }` si costruisce una volta sola e
   resterebbe per sempre nella lingua di quel momento. Le tabelle tengono le
-  **chiavi**, il nome si chiede al disegno. `PURCHASE_TYPES` ha ancora il
-  difetto e va sistemato quando si traducono i file della spesa.
+  **chiavi** (`SEZIONE_DI`, `PURCHASE_TYPES`), il nome si chiede al disegno.
+- **Un file puro non sa in che lingua verrà letto.** `conti.js` non
+  restituisce più «cibo e bevande del conto comune, ma nessun pasto segnato»:
+  restituisce `'buchi.ciboComune'`, e la frase la sceglie il disegno. Il
+  prezzo è che un refuso diventa `buchi.logistiche` stampato a schermo — il
+  ripiego di `t()` lo mostra apposta. Una prova legge i sorgenti e chiede che
+  ogni chiave scritta esista, comprese quelle che passano da un file all'altro.
 - **Con `FEATURES.lingue` spenta, lo spagnolo non lo chiama nessuno.**
   Settantatré chiavi sono funzioni: un apostrofo sbagliato dentro un template
   non si vedrebbe fino al giorno in cui qualcuno accende la lingua. Le prove

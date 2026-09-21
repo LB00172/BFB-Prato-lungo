@@ -192,26 +192,28 @@
     // Ora si tengono fuori dal conto e si dicono.
     // Ogni buco sa a quale cassa appartiene: serve a riconciliare le due casse
     // separatamente e a mostrare l'avviso dove il buco è, non su entrambe.
+    // "perche" e' una CHIAVE del dizionario, non una frase: questo file e'
+    // puro e non sa in che lingua verra' letto. La frase la sceglie il disegno.
     const buchi = [];
     if (foodDrinksCommon > 0.005 && adultMealsCommon === 0) {
-      buchi.push({ cassa: 'comune', quanto: foodDrinksCommon, perche: 'cibo e bevande del conto comune, ma nessun pasto segnato nei giorni comuni' });
+      buchi.push({ cassa: 'comune', quanto: foodDrinksCommon, perche: 'buchi.ciboComune' });
     }
     if (foodDrinksSep > 0.005 && adultMealsSep === 0) {
       buchi.push({
         cassa: 'separata',
         quanto: foodDrinksSep,
         perche: sepDays.length === 0
-          ? 'spese segnate "conto separato", ma in Calendario nessun giorno è spuntato come separato'
+          ? 'buchi.separatoSenzaGiorni'
           : sepDays.every((d) => freeSet.has(d))
-          ? 'spese segnate "conto separato", ma i giorni separati sono anche segnati come gratis: non c\'è più nessun pasto su cui dividerle'
-          : 'spese segnate "conto separato", ma nei giorni separati non c\'è nessuna presenza',
+          ? 'buchi.separatoTuttiGratis'
+          : 'buchi.separatoSenzaPresenze',
       });
     }
     if (logisticsPurchases > 0.005 && attendingCommon.size === 0) {
-      buchi.push({ cassa: 'comune', quanto: logisticsPurchases, perche: 'spese di logistica, ma nessun adulto ha presenze nei giorni comuni' });
+      buchi.push({ cassa: 'comune', quanto: logisticsPurchases, perche: 'buchi.logistica' });
     }
     if (equipBought > 0.005 && equipDivisorSet.size === 0) {
-      buchi.push({ cassa: 'comune', quanto: equipBought, perche: 'attrezzatura acquistata, ma nessun adulto ha presenze nei giorni comuni' });
+      buchi.push({ cassa: 'comune', quanto: equipBought, perche: 'buchi.attrezzatura' });
     }
     const somma = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
     const nonRipartito = somma(buchi, (b) => b.quanto);

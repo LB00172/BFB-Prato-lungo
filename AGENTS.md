@@ -118,17 +118,20 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   l'interfaccia si scrive in italiano, ma passando da `lingue.js`: `L.t()`,
   `frase()` (o `fraseVestita()` se il grassetto ha un colore), `L.data()`.
   **Nessun `'it-IT'` scritto a mano** — ce n'erano 32 sparsi in otto file,
-  adesso sono zero e c'e' una prova che li conta. Sedici sorgenti su
-  diciannove sono passati dal dizionario; restano `80-app.jsx` e
-  `82-schede-conti.jsx`, e `node test/censimento-testi.js` dice quanto manca.
-  I file gia' fatti non possono tornare indietro: una prova conta i testi
-  scritti a mano in ognuno e diventa rossa se ne compare uno nuovo.
-  `FEATURES.lingue` e' spenta finche' i dizionari non coprono tutta l'app:
-  non e' un difetto, e' una scelta.
+  adesso sono zero e c'e' una prova che li conta. Tutti e diciannove i
+  sorgenti passano dal dizionario (752 chiavi) e `FEATURES.lingue` e'
+  **accesa**: l'italiano resta predefinito, e quello che scrive l'utente non
+  si traduce mai. I file non possono tornare indietro: una prova conta i testi
+  scritti a mano in ognuno (`node test/censimento-testi.js`) e diventa rossa
+  se ne compare uno nuovo.
 - **Una costante valutata al caricamento congela la lingua.** I sorgenti di
   `src/` girano prima che `App()` assegni `L`. Una tabella di nomi costruita
   a modulo (`const X = { a: 'Membri' }`) resterebbe nella lingua del momento:
   le tabelle tengono le chiavi, il nome si chiede al disegno.
+- **I file puri restituiscono chiavi, non frasi.** `conti.js` dice
+  `'buchi.ciboComune'`, non la frase: non sa in che lingua verra' letto. Un
+  refuso li' finisce a schermo cosi' com'e' (il ripiego di `t()` lo mostra
+  apposta), e una prova unitaria chiede che ogni chiave scritta esista.
 - **Nessun `localStorage.setItem` fuori da `salvaLocale`.** Un'eccezione dentro
   un `useEffect` smonta React e l'app sparisce. E niente immagini là dentro:
   quelle vanno nel magazzino.

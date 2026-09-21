@@ -287,22 +287,28 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
 // contate qui una per una, cosi' il conto e' esatto lo stesso — e se cambia
 // in un senso o nell'altro la prova diventa rossa e si guarda perche'.
 //
-// I file che ancora NON sono stati tradotti non stanno in tabella: il loro
-// conto scende man mano, e congelarlo vorrebbe dire rifare la tabella a ogni
-// passo. Ci entrano quando arrivano in fondo.
+// Adesso ci sono TUTTI e diciannove: il § 18 e' finito, e da qui in poi la
+// tabella serve solo a non tornare indietro.
 {
   const { perFile } = require('../censimento-testi');
   const TRADOTTI = {
     '10-fondamenta.jsx': 3,          // console.warn e due schegge di codice
     '20-blocco-password.jsx': 0,
     '30-tema-e-formati.jsx': 0,
+    // Il marchio, le REGOLE del campo e la DOTAZIONE base: contenuto della
+    // room, non dell'app. Restano in italiano per scelta (ROADMAP § 18).
+    '40-configurazione.jsx': 20,
     '50-interfaccia.jsx': 0,
     '60-gioco.jsx': 3,               // i nomi dei livelli: sono luoghi veri
     '70-schermata-blocco.jsx': 0,
     '75-usa-gioco.jsx': 1,           // una scheggia di codice
     '76-usa-galleria.jsx': 1,        // una scheggia di codice
     '77-usa-scontrini.jsx': 2,       // 'memoria del telefono': e' un valore, non un testo
+    // Un console.warn, il titolo del foglio di condivisione (che porta il
+    // nome del campo) e quattordici schegge di codice.
+    '80-app.jsx': 17,
     '81-schede-giorno.jsx': 1,       // una scheggia di codice
+    '82-schede-conti.jsx': 0,
     '83-schede-gruppo.jsx': 0,
     '84-schede-album.jsx': 0,
     '85-scheda-galleria.jsx': 0,

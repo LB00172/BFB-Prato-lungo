@@ -15,10 +15,11 @@ const BRAND = {
 // esistono le Room (ROADMAP.md § 2): assegnare un compito presuppone un
 // gestore, e senza gestore assegna chiunque. In un gruppo di amici va
 // benissimo — e' come funzionava sugli appunti a mano — ma venderlo cosi' no.
-// "lingue" resta spenta finche' i dizionari non coprono tutta l'app: meta'
-// schermata in spagnolo e meta' in italiano e' peggio che non offrire la
-// scelta. La macchina pero' c'e' gia' ed e' provata (ROADMAP.md § 18).
-const FEATURES = { auth: false, rooms: false, equipExemption: false, compiti: true, lingue: false, ...(CFG.features || {}) };
+// "lingue" e' accesa da settembre 2026: i dizionari coprono tutte e
+// diciannove le schermate (ROADMAP.md § 18). L'italiano resta la lingua
+// predefinita — si cambia da Impostazioni, e la scelta resta sul telefono.
+// Quello che scrive l'utente (nomi, menu', spese) non si traduce mai.
+const FEATURES = { auth: false, rooms: false, equipExemption: false, compiti: true, lingue: true, ...(CFG.features || {}) };
 const LINGUA_KEY = 'cambusa_lingua';
 
 // Periodo del campo. Durante il campo l'app si apre sul giorno corrente.
@@ -30,7 +31,12 @@ const defaultDateStr = () => {
 };
 
 // Tipologie di acquisto e a quale voce di spesa contribuiscono.
-const PURCHASE_TYPES = { alimentare: 'Alimentare', bevande: 'Bevande', logistica: 'Logistica' };
+// La tabella tiene le CHIAVI del dizionario, non i nomi: e' una costante, e
+// si valuta al caricamento — prima che App() assegni L. Con i nomi dentro
+// resterebbero per sempre nella lingua di quel momento. Il nome si chiede a
+// tipoSpesa(), che gira al disegno.
+const PURCHASE_TYPES = { alimentare: 'tipoSpesa.alimentare', bevande: 'tipoSpesa.bevande', logistica: 'tipoSpesa.logistica' };
+const tipoSpesa = (k) => (PURCHASE_TYPES[k] ? L.t(PURCHASE_TYPES[k]) : '');
 
 // Codici meteo WMO (Open-Meteo) -> icona e descrizione.
 const wmoInfo = (code) => {

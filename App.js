@@ -510,15 +510,16 @@ const BRAND = {
 // esistono le Room (ROADMAP.md § 2): assegnare un compito presuppone un
 // gestore, e senza gestore assegna chiunque. In un gruppo di amici va
 // benissimo — e' come funzionava sugli appunti a mano — ma venderlo cosi' no.
-// "lingue" resta spenta finche' i dizionari non coprono tutta l'app: meta'
-// schermata in spagnolo e meta' in italiano e' peggio che non offrire la
-// scelta. La macchina pero' c'e' gia' ed e' provata (ROADMAP.md § 18).
+// "lingue" e' accesa da settembre 2026: i dizionari coprono tutte e
+// diciannove le schermate (ROADMAP.md § 18). L'italiano resta la lingua
+// predefinita — si cambia da Impostazioni, e la scelta resta sul telefono.
+// Quello che scrive l'utente (nomi, menu', spese) non si traduce mai.
 const FEATURES = {
   auth: false,
   rooms: false,
   equipExemption: false,
   compiti: true,
-  lingue: false,
+  lingue: true,
   ...(CFG.features || {})
 };
 const LINGUA_KEY = 'cambusa_lingua';
@@ -532,11 +533,16 @@ const defaultDateStr = () => {
 };
 
 // Tipologie di acquisto e a quale voce di spesa contribuiscono.
+// La tabella tiene le CHIAVI del dizionario, non i nomi: e' una costante, e
+// si valuta al caricamento — prima che App() assegni L. Con i nomi dentro
+// resterebbero per sempre nella lingua di quel momento. Il nome si chiede a
+// tipoSpesa(), che gira al disegno.
 const PURCHASE_TYPES = {
-  alimentare: 'Alimentare',
-  bevande: 'Bevande',
-  logistica: 'Logistica'
+  alimentare: 'tipoSpesa.alimentare',
+  bevande: 'tipoSpesa.bevande',
+  logistica: 'tipoSpesa.logistica'
 };
+const tipoSpesa = k => PURCHASE_TYPES[k] ? L.t(PURCHASE_TYPES[k]) : '';
 
 // Codici meteo WMO (Open-Meteo) -> icona e descrizione.
 const wmoInfo = code => {
@@ -2874,9 +2880,9 @@ function App() {
           at: Date.now()
         });
       };
-      mk(g.food, 'alimentare', 'Totale cibo (importato)');
-      mk(g.drinks, 'bevande', 'Totale bevande (importato)');
-      mk(g.accessory, 'logistica', 'Totale accessori (importato)');
+      mk(g.food, 'alimentare', L.t('import.totaleCibo'));
+      mk(g.drinks, 'bevande', L.t('import.totaleBevande'));
+      mk(g.accessory, 'logistica', L.t('import.totaleAccessori'));
     }
     return seed;
   });
@@ -3020,7 +3026,7 @@ function App() {
   const entraAdmin = async () => {
     const cfg = window.APP_ADMIN;
     if (!cfg || !cfg.hash) {
-      setAdminErr('Modalità tecnica non configurata su questa installazione.');
+      setAdminErr(L.t('tecnica.nonConfigurata'));
       return;
     }
     const im = await improntaPassword(adminPwd, cfg);
@@ -3032,7 +3038,7 @@ function App() {
       setAdminPwd('');
       setAdminErr('');
     } else {
-      setAdminErr(im ? 'Password sbagliata.' : 'Serve https (o localhost) per verificare la password.');
+      setAdminErr(L.t(im ? 'tecnica.passwordSbagliata' : 'tecnica.serveHttps'));
     }
   };
   const esciAdmin = () => {
@@ -3544,17 +3550,16 @@ function App() {
 
   // Frase da mettere nella conferma: dice cosa sparirà, in italiano.
   const avvisoPerdite = perse => {
-    if (!perse.length) return 'Non sparisce nessuna voce: il ripristino aggiunge soltanto.';
-    const che = descriviPerdite(perse, syncStateRef.current);
-    return `ATTENZIONE: spariranno ${perse.length} voci da TUTTI i telefoni` + (che ? `\n(${che})` : '') + '\n\nSi potrà annullare da Impostazioni → Diagnostica.';
+    if (!perse.length) return L.t('perdite.nessuna');
+    return L.t('perdite.avviso', perse.length, descriviPerdite(perse, syncStateRef.current));
   };
 
   // Il registro come file di testo: comodo da mandare quando si deve capire
   // cosa è successo, senza doverlo leggere sullo schermo del telefono.
   const esportaRegistro = () => {
     const st = syncStateRef.current;
-    const righe = logLeggi().map(r => [L.data(new Date(r.at), 'dataOra'), r.o === 'io' ? 'questo telefono' : 'sincronizzazione', r.k === 'd' ? 'cancellata' : 'modificata', sezioneDiPath(r.p), descriviPath(r.p, st), r.p].join('\t'));
-    const testo = `Registro modifiche — ${BRAND.appTitle}\nGenerato il ${L.data(new Date(), 'dataOra')}\n\n` + 'Data e ora\tOrigine\tAzione\tSezione\tVoce\tPercorso\n' + righe.join('\n') + '\n';
+    const righe = logLeggi().map(r => [L.data(new Date(r.at), 'dataOra'), L.t(r.o === 'io' ? 'registro.questoTelefono' : 'registro.sincronizzazione'), L.t(r.k === 'd' ? 'registro.cancellata' : 'registro.modificata'), sezioneDiPath(r.p), descriviPath(r.p, st), r.p].join('\t'));
+    const testo = L.t('registro.testata', BRAND.appTitle, L.data(new Date(), 'dataOra')) + L.t('registro.colonne') + righe.join('\n') + '\n';
     const blob = new Blob([testo], {
       type: 'text/plain;charset=utf-8'
     });
@@ -3576,11 +3581,10 @@ function App() {
   const annullaSync = () => {
     const r = load(RESCUE_KEY, null);
     if (!r || !r.state) {
-      window.alert('Non c\'è nessuna copia di scorta da ripristinare.');
+      window.alert(L.t('diag.senzaScorta'));
       return;
     }
-    const quando = L.data(new Date(r.at), 'dataOra');
-    if (!window.confirm(`Annullare la sincronizzazione del ${quando}?\n\n` + `${r.perse === 1 ? 'Tornerà 1 voce che era sparita' : `Torneranno ${r.perse} voci che erano sparite`}, e la copia di prima verrà ` + 'ripubblicata su TUTTI i dispositivi.\n\n' + 'Le modifiche fatte dopo, da chiunque, restano.')) return;
+    if (!window.confirm(L.t('diag.confermaAnnulla', L.data(new Date(r.at), 'dataOra'), r.perse))) return;
     const s = r.state;
     setMembers(Array.isArray(s.members) ? s.members : []);
     setCampData(applicaBlocchi(s.campData && typeof s.campData === 'object' ? s.campData : {}));
@@ -3594,17 +3598,17 @@ function App() {
     setBlocchi(Array.isArray(s.blocchi) ? s.blocchi : []);
     setLostSync(null);
     localStorage.removeItem(RESCUE_KEY);
-    window.alert('Fatto: fra qualche secondo i dati tornano anche sugli altri telefoni.');
+    window.alert(L.t('diag.annullato'));
   };
   const connectCloud = async code => {
     const CS = window.CloudSync;
     if (!CS || !CS.isConfigured()) {
-      window.alert('Firebase non è configurato. Incolla la config del tuo progetto in firebase-config.js.');
+      window.alert(L.t('cloud.senzaFirebase'));
       return;
     }
     const c = (code || '').trim();
     if (!c) {
-      window.alert('Inserisci il codice del campo.');
+      window.alert(L.t('cloud.senzaCodice'));
       return;
     }
     localStorage.removeItem('cambusa_sync_optout'); // riattiva l'auto-connessione
@@ -3613,7 +3617,7 @@ function App() {
         password: sessionPassword
       });
     } catch (e) {
-      window.alert('Connessione fallita: ' + (e && e.message ? e.message : e));
+      window.alert(L.t('cloud.connessioneFallita', e && e.message ? e.message : e));
     }
   };
   const disconnectCloud = () => {
@@ -3665,7 +3669,7 @@ function App() {
     if (locked || dbAskedRef.current) return;
     if (cloud.authMode !== 'anon-nopass') return;
     dbAskedRef.current = true;
-    lockNow('Per sincronizzare con gli altri serve di nuovo la password del campo. È la stessa di sempre.');
+    lockNow(L.t('blocco.serveDiNuovo'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloud.authMode, locked]);
 
@@ -3818,7 +3822,7 @@ function App() {
     const g = giorniBloccatiDi(id);
     if (!g.length) return false;
     const m = members.find(x => x.id === id);
-    window.alert(`${m ? m.name : 'Questa persona'}: ${azione} non è possibile.\n\n` + `Ha presenze in ${g.length === 1 ? 'un giorno con le presenze bloccate' : `${g.length} giorni con le presenze bloccate`} ` + `(${g.map(nomeGiorno).join(', ')}). Cambiarla adesso riscriverebbe le quote di quei giorni, ` + 'che invece devono restare come sono.\n\n' + 'Se serve davvero, prima sblocca quei giorni dalla scheda Presenze.');
+    window.alert(L.t('blocchi.membroIntoccabile', m ? m.name : L.t('blocchi.questaPersona'), azione, g.length, g.map(nomeGiorno).join(', ')));
     return true;
   };
 
@@ -3911,30 +3915,30 @@ function App() {
   const avvisoBlocchi = nuovo => {
     const g = bloccatiInPericolo(nuovo);
     if (!g.length) return '';
-    return `\n\nATTENZIONE: ${g.length === 1 ? 'un giorno con le presenze bloccate' : `${g.length} giorni con le presenze bloccate`} ` + `(${g.map(nomeGiorno).join(', ')}) ${g.length === 1 ? 'verrà sbloccato o cambiato' : 'verranno sbloccati o cambiati'}. ` + 'Le quote di quei giorni possono cambiare.';
+    return L.t('blocchi.avvisoSblocco', g.length, g.map(nomeGiorno).join(', '));
   };
 
   // Guardia per i due interruttori del giorno.
   const giornoIntoccabile = (dateStr, azione) => {
     if (!giornoBloccato(dateStr)) return false;
-    window.alert(`${nomeGiorno(dateStr)}: ${azione} non è possibile.\n\n` + 'Le presenze di questo giorno sono bloccate, e questo interruttore ne cambierebbe le quote.\n\n' + 'Se serve davvero: sblocca il giorno qui in Presenze, cambia, e ribloccalo.');
+    window.alert(L.t('blocchi.giornoIntoccabile', nomeGiorno(dateStr), azione));
     return true;
   };
   const giornoGratis = dateStr => (freeDays || []).includes(dateStr);
   const chiediGiornoGratis = dateStr => {
-    if (giornoIntoccabile(dateStr, 'cambiare "giorno gratis"')) return;
+    if (giornoIntoccabile(dateStr, L.t('gratis.azione'))) return;
     const gia = giornoGratis(dateStr);
     const meals = (campData[dateStr] || {}).meals || {};
     const quanti = Object.values(meals).filter(v => v && (v.lunch || v.dinner)).length;
     if (gia) {
-      if (!window.confirm(`Rimettere ${nomeGiorno(dateStr)} nei conti?\n\n` + 'I pasti di quel giorno tornano a contare nelle quote di tutti.')) return;
-    } else if (!window.confirm(`Rendere ${nomeGiorno(dateStr)} gratis per tutti?\n\n` + `I pasti di quel giorno (${quanti} ${quanti === 1 ? 'persona' : 'persone'}) restano segnati per la cucina, ` + 'ma escono da TUTTI i conti: nessuno li paga, e chi è venuto solo quel giorno non deve niente.\n\n' + 'Attenzione: la spesa già registrata non sparisce. Se hai comprato del cibo per quel giorno, ' + 'quel costo si divide sugli altri giorni e le quote degli altri salgono. Serve quando quel ' + 'giorno lo ha offerto qualcuno o si è mangiato fuori a spese proprie.')) return;
+      if (!window.confirm(L.t('gratis.confermaRimetti', nomeGiorno(dateStr)))) return;
+    } else if (!window.confirm(L.t('gratis.confermaRendi', nomeGiorno(dateStr), quanti))) return;
     setFreeDays(prev => gia ? prev.filter(d => d !== dateStr) : [...prev, dateStr].sort());
   };
   const bloccaGiorno = dateStr => {
     const meals = (campData[dateStr] || {}).meals || {};
     const n = Object.values(meals).filter(v => v && (v.lunch || v.dinner)).length;
-    if (!window.confirm(`Bloccare le presenze di ${nomeGiorno(dateStr)}?\n\n` + `Restano congelate così come sono adesso (${n} ${n === 1 ? 'persona' : 'persone'} con almeno un pasto). ` + 'Da quel momento non si toccano più: né dai tasti, né da quello che arriva dagli altri telefoni.\n\n' + 'Si può sbloccare da qui, in modalità tecnica.')) return;
+    if (!window.confirm(L.t('blocchi.confermaBlocca', nomeGiorno(dateStr), n))) return;
     setCampData(prev => {
       const day = {
         ...(prev[dateStr] || {})
@@ -3967,7 +3971,7 @@ function App() {
     });
   };
   const sbloccaGiorno = dateStr => {
-    if (!window.confirm(`Sbloccare le presenze di ${nomeGiorno(dateStr)}?\n\n` + 'Tornano modificabili da tutti, e riprendono a sincronizzarsi.')) return;
+    if (!window.confirm(L.t('blocchi.confermaSblocca', nomeGiorno(dateStr)))) return;
     setCampData(prev => {
       const day = {
         ...(prev[dateStr] || {})
@@ -4001,7 +4005,7 @@ function App() {
       const meals = (campData[d] || {}).meals || {};
       return Object.values(meals).some(v => v && (v.lunch || v.dinner)) && !(campData[d] || {}).bloccato;
     });
-    if (!window.confirm('Chiudere i conti del campo?\n\n' + `Spese e attrezzatura si congelano (${purchases.length} spese, ${money(totals.overallTotal)} €), ` + `e le presenze dei giorni ancora aperti vengono bloccate (${giorniAperti.length}).\n\n` + 'Da quel momento gli importi di "chi paga chi" non cambiano più, così i rimborsi già ' + 'segnati come saldati restano validi. Quello che arriva dopo dagli altri telefoni viene ' + 'messo da parte e te lo si dice.\n\n' + 'Si può riaprire da qui, in modalità tecnica.')) return;
+    if (!window.confirm(L.t('chiusura.confermaChiudi', purchases.length, money(totals.overallTotal), giorniAperti.length))) return;
     const adesso = Date.now();
     // Prima i giorni: le quote dipendono dalle presenze quanto dalle spese.
     if (giorniAperti.length) {
@@ -4041,7 +4045,7 @@ function App() {
     setRespinte([]);
   };
   const riapriConti = () => {
-    if (!window.confirm('Riaprire i conti?\n\n' + 'Spese e attrezzatura tornano modificabili, e gli importi di "chi paga chi" ' + 'si ricalcolano: i rimborsi già segnati come saldati potrebbero non combaciare più.\n\n' + 'Le presenze restano bloccate: si sbloccano una per una dalla scheda Presenze.')) return;
+    if (!window.confirm(L.t('chiusura.confermaRiapri'))) return;
     setBlocchi(prev => prev.filter(b => !b || b.id !== 'conti'));
     setRespinte([]);
   };
@@ -4063,12 +4067,12 @@ function App() {
         const vecchia = per.get(String(x.id));
         if (!vecchia) fuori.push({
           che,
-          azione: 'aggiunta',
+          azione: 'azione.aggiunta',
           nome: x.name || x.text || '—',
           quanto: posNum(x.price)
         });else if (JSON.stringify(vecchia) !== JSON.stringify(x)) fuori.push({
           che,
-          azione: 'modificata',
+          azione: 'azione.modificata',
           nome: x.name || x.text || '—',
           quanto: posNum(x.price)
         });
@@ -4077,14 +4081,16 @@ function App() {
       congelate.forEach(x => {
         if (!ora.has(String(x.id))) fuori.push({
           che,
-          azione: 'cancellata',
+          azione: 'azione.cancellata',
           nome: x.name || x.text || '—',
           quanto: posNum(x.price)
         });
       });
     };
-    confronta(stato.purchases, b.purchases, 'spesa');
-    confronta(stato.equipment, b.equipment || [], 'attrezzatura');
+    // "che" e "azione" sono CHIAVI del dizionario: l'avviso si disegna dopo,
+    // e deve poter parlare nella lingua scelta in quel momento.
+    confronta(stato.purchases, b.purchases, 'percorso.spesa');
+    confronta(stato.equipment, b.equipment || [], 'percorso.attrezzatura');
     if (fuori.length === 0) return {
       stato,
       respinte: []
@@ -4106,7 +4112,7 @@ function App() {
   // Guardia per i tasti: dice di no e spiega perché.
   const contiChiusi = azione => {
     if (!bloccoConti()) return false;
-    window.alert(`I conti del campo sono chiusi: ${azione} non è possibile.\n\n` + 'Serve per non far cambiare gli importi dei rimborsi già in corso. ' + 'Per modificare, riapri i conti da Spese Totali → Dati (modalità tecnica).');
+    window.alert(L.t('chiusura.azioneImpossibile', azione));
     return true;
   };
   const getMeal = (dateStr, memberId) => Presenze.pasto(campData, dateStr, memberId);
@@ -4180,11 +4186,11 @@ function App() {
   const riassegnaOrfane = (orfano, nuovoId) => {
     const dest = members.find(m => m.id === nuovoId);
     if (!dest) {
-      window.alert('Scegli a chi assegnarle.');
+      window.alert(L.t('orfane.scegliChi'));
       return;
     }
-    const chi = orfano.nome ? `di ${orfano.nome}` : 'senza padrone';
-    if (!window.confirm(`Assegnare a ${dest.name} le ${orfano.pasti} presenze ${chi}?\n\n` + `Riguardano ${orfano.giorni.length} ${orfano.giorni.length === 1 ? 'giorno' : 'giorni'}. ` + 'Se in quei giorni ha già dei pasti segnati, si sommano (non si perde niente).')) return;
+    const chi = orfano.nome ? L.t('orfane.di', orfano.nome) : L.t('orfane.senzaPadrone');
+    if (!window.confirm(L.t('orfane.confermaAssegna', dest.name, orfano.pasti, chi, orfano.giorni.length))) return;
     setCampData(prev => {
       const out = {
         ...prev
@@ -4265,7 +4271,7 @@ function App() {
     const tengo = ordinati[0];
     const butto = ordinati.slice(1);
     const pasti = butto.reduce((s, m) => s + pastiDi(m.id), 0);
-    if (!window.confirm(`"${tengo.name}" è in elenco ${gruppo.length} volte.\n\n` + 'Succede quando due telefoni senza linea aggiungono la stessa persona: ' + 'per i conti diventano due persone diverse, e la quota sbaglia per tutti.\n\n' + `Unendole resta una scheda sola${pasti ? `, e le ${pasti} presenze segnate sull'altra si sommano a queste` : ''}. ` + 'Non si perde niente.')) return;
+    if (!window.confirm(L.t('membri.confermaUnisci', tengo.name, gruppo.length, pasti))) return;
 
     // Le presenze delle schede scartate si SOMMANO a quelle della tenuta: chi
     // ha segnato il pranzo su una e la cena sull'altra deve ritrovarsi con
@@ -4372,16 +4378,16 @@ function App() {
   const confermaPrezzo = prezzo => {
     const s = prezzoSospetto(prezzo);
     if (!s) return true;
-    return window.confirm(`${money(s.p)} € è una cifra alta.\n\n` + (s.perche === 'relativo' ? `Le altre spese del campo stanno intorno a ${money(s.mediana)} €: questa è più di dieci volte tanto.` : 'Controlla che non ci sia una virgola fuori posto.') + '\n\nUna cifra sbagliata qui si spalma sulle quote di tutti e non si nota più.\n\nÈ giusta?');
+    return window.confirm(L.t('spesa.prezzoAlto', money(s.p), s.perche === 'relativo' ? money(s.mediana) : null));
   };
   const scartaOrfane = orfano => {
-    const chi = orfano.nome ? `di ${orfano.nome}` : 'senza padrone';
+    const chi = orfano.nome ? L.t('orfane.di', orfano.nome) : L.t('orfane.senzaPadrone');
     // I giorni bloccati non si svuotano nemmeno da qui. Riattaccare una
     // presenza alla persona giusta è una riparazione e passa (non cambia CHI
     // ha mangiato); buttarla via è una perdita, e su un giorno chiuso cambia
     // le quote di tutti. Si dice quante ne restano e perché.
     const protetti = giorniBloccatiDi(orfano.id);
-    if (!window.confirm(`Buttare via le ${orfano.pasti} presenze ${chi}?\nNon si potranno recuperare.` + (protetti.length ? `\n\nQuelle dei giorni bloccati (${protetti.map(nomeGiorno).join(', ')}) restano dove sono: ` + 'per toglierle bisogna prima sbloccare quei giorni.' : ''))) return;
+    if (!window.confirm(L.t('orfane.confermaButta', orfano.pasti, chi, protetti.length ? protetti.map(nomeGiorno).join(', ') : null))) return;
     setCampData(prev => {
       const out = {
         ...prev
@@ -4407,17 +4413,17 @@ function App() {
   // modifica arriva su ogni telefono: prima di farlo si chiede.
   const chiediSetAll = mealType => {
     if (members.length === 0) return;
-    const pasto = mealType === 'lunch' ? 'pranzo' : 'cena';
+    const pasto = L.t(mealType === 'lunch' ? 'presenze.pranzo' : 'presenze.cena').toUpperCase();
     const gia = members.every(m => getMeal(selectedDateStr, m.id)[mealType]);
-    const testo = gia ? `Togliere il ${pasto.toUpperCase()} a tutti e ${members.length} i membri di ${nomeGiorno(selectedDateStr)}?` : `Segnare tutti e ${members.length} i membri a ${pasto.toUpperCase()} di ${nomeGiorno(selectedDateStr)}?`;
-    if (!window.confirm(`${testo}\n\nCambia le presenze di tutti, anche sugli altri telefoni.`)) return;
+    const testo = gia ? L.t('presenze.confermaTogli', pasto, members.length, nomeGiorno(selectedDateStr)) : L.t('presenze.confermaSegna', members.length, pasto, nomeGiorno(selectedDateStr));
+    if (!window.confirm(L.t('presenze.cambiaPerTutti', testo))) return;
     setAllMeals(selectedDateStr, mealType);
   };
 
   // Copia le presenze (pranzo e cena) dal giorno precedente.
   const chiediCopiaDaIeri = () => {
     if (giornoBloccato(selectedDateStr)) {
-      window.alert(`Le presenze di ${nomeGiorno(selectedDateStr)} sono bloccate: prima vanno sbloccate.`);
+      window.alert(L.t('presenze.bloccateSblocca', nomeGiorno(selectedDateStr)));
       return;
     }
     const d = parseDate(selectedDateStr);
@@ -4425,7 +4431,7 @@ function App() {
     const prevStr = toDateStr(d);
     const prevMeals = campData[prevStr] && campData[prevStr].meals || {};
     if (!Object.keys(prevMeals).length) {
-      window.alert('Nessuna presenza registrata il giorno precedente.');
+      window.alert(L.t('presenze.nessunaIeri'));
       return;
     }
     const conta = meals => {
@@ -4437,7 +4443,7 @@ function App() {
     };
     const ieri = conta(prevMeals);
     const oggi = conta(campData[selectedDateStr] && campData[selectedDateStr].meals || {});
-    if (!window.confirm(`Copiare le presenze di ${nomeGiorno(prevStr)} su ${nomeGiorno(selectedDateStr)}?\n\n` + `Ieri: ${ieri.p} a pranzo, ${ieri.c} a cena.\n` + `Oggi diventa uguale: quello che c'è adesso (${oggi.p} a pranzo, ${oggi.c} a cena) viene sostituito, ` + 'anche sugli altri telefoni.')) return;
+    if (!window.confirm(L.t('presenze.confermaCopia', nomeGiorno(prevStr), nomeGiorno(selectedDateStr), ieri.p, ieri.c, oggi.p, oggi.c))) return;
     setCampData(prev => {
       const day = {
         ...(prev[selectedDateStr] || {})
@@ -4477,7 +4483,7 @@ function App() {
     // Due persone con lo stesso nome verrebbero trattate come una sola nei
     // saldi (i pagamenti si abbinano per nome): meglio dirlo subito.
     const gia = members.some(m => m.name.trim().toLowerCase() === name.toLowerCase());
-    if (gia && !window.confirm(`C'è già un membro che si chiama "${name}".\n\n` + 'Nei conti finali le due persone verrebbero confuse. Aggiungi un cognome ' + 'o un soprannome per distinguerle.\n\nVuoi aggiungerlo lo stesso?')) return;
+    if (gia && !window.confirm(L.t('membri.confermaOmonimo', name))) return;
     setMembers(prev => [...prev, {
       id: uid(),
       name,
@@ -4487,9 +4493,9 @@ function App() {
     setNewMemberChild(false);
   };
   const removeMember = id => {
-    if (membroIntoccabile(id, 'eliminarla')) return;
+    if (membroIntoccabile(id, L.t('azione.eliminarla'))) return;
     const m = members.find(x => x.id === id);
-    if (m && !window.confirm(`Eliminare ${m.name} dai membri?\nLe sue presenze e i suoi pasti non conteranno più nei calcoli.`)) return;
+    if (m && !window.confirm(L.t('membri.confermaElimina', m.name))) return;
     // Si tiene il nome da parte: se poi qualcuno lo riaggiunge, l'app prende un
     // id nuovo e le vecchie presenze restano appese a un id che non esiste più.
     // Senza questo elenco non si saprebbe nemmeno DI CHI erano.
@@ -4499,7 +4505,7 @@ function App() {
   const toggleChild = id => {
     // Adulto o bambino cambia quanto paga tutto il campo: su un giorno
     // bloccato vale esattamente come modificare le presenze.
-    if (membroIntoccabile(id, 'cambiare adulto/bambino')) return;
+    if (membroIntoccabile(id, L.t('azione.adultoBambino'))) return;
     setMembers(prev => prev.map(m => m.id === id ? {
       ...m,
       isChild: !m.isChild
@@ -4592,7 +4598,7 @@ function App() {
   // prezzo no, quello si scopre alla cassa. Se non si fa, il compito resta
   // fatto lo stesso: registrare la spesa e' un'altra cosa.
   const daCompitoASpesa = c => {
-    if (contiChiusi('registrare una spesa')) return;
+    if (contiChiusi(L.t('azione.registrareSpesa'))) return;
     setPName(c.testo);
     setPBuyer(c.chi || '');
     setPPrice('');
@@ -4612,18 +4618,18 @@ function App() {
   const proponiDalMenu = () => {
     const MS = window.MenuSpesa;
     if (!MS) {
-      window.alert('Il lettore dei menù non è disponibile.');
+      window.alert(L.t('menu.senzaLettore'));
       return;
     }
     const testo = getDayData(selectedDateStr).note || '';
     const tutte = MS.vociDalMenu(testo);
     if (tutte.length === 0) {
-      window.alert('Il menù di questo giorno è vuoto: scrivi cosa si mangia e riprova.');
+      window.alert(L.t('menu.vuoto'));
       return;
     }
     const voci = MS.nuove(tutte, toBuy);
     if (voci.length === 0) {
-      window.alert(`Le ${tutte.length} ${tutte.length === 1 ? 'voce' : 'voci'} di questo menù sono già nella lista della spesa.`);
+      window.alert(L.t('menu.giaInLista', tutte.length));
       return;
     }
     // Tutte spuntate: la maggioranza delle righe è roba da comprare, e togliere
@@ -4655,7 +4661,7 @@ function App() {
   };
   const removeToBuy = id => {
     const it = toBuy.find(x => x.id === id);
-    if (it && !window.confirm(`Eliminare "${it.name}" dalla lista da acquistare?`)) return;
+    if (it && !window.confirm(L.t('lista.confermaTogliVoce', it.name))) return;
     setToBuy(prev => prev.filter(x => x.id !== id));
     setReceipts(prev => {
       if (!prev[id]) return prev;
@@ -4671,11 +4677,11 @@ function App() {
   // Conferma acquisto: la voce esce dalla lista ed entra nella cronologia
   // mantenendo lo stesso id (così la foto scontrino resta collegata).
   const confirmBuy = () => {
-    if (contiChiusi('registrare un acquisto')) return;
+    if (contiChiusi(L.t('azione.registrareAcquisto'))) return;
     if (!buying) return;
     const price = posNum(buying.price);
     if (price <= 0) {
-      window.alert('Inserisci un prezzo maggiore di zero.');
+      window.alert(L.t('spesa.prezzoZero'));
       return;
     }
     if (!confermaPrezzo(price)) return;
@@ -4698,11 +4704,11 @@ function App() {
 
   // ---------- Taccuino delle spese ----------
   const addPurchase = () => {
-    if (contiChiusi('aggiungere una spesa')) return;
+    if (contiChiusi(L.t('azione.aggiungereSpesa'))) return;
     const name = pName.trim();
     const price = posNum(pPrice);
     if (!name || price <= 0) {
-      window.alert('Inserisci il nome del prodotto e un prezzo maggiore di zero.');
+      window.alert(L.t('spesa.nomeEPrezzo'));
       return;
     }
     if (!confermaPrezzo(price)) return;
@@ -4737,7 +4743,7 @@ function App() {
 
   // ---------- Conto separato ----------
   const toggleSepDay = dateStr => {
-    if (giornoIntoccabile(dateStr, 'cambiare il conto separato')) return;
+    if (giornoIntoccabile(dateStr, L.t('azione.contoSeparato'))) return;
     setSepDays(prev => prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr].sort());
   };
 
@@ -4760,16 +4766,16 @@ function App() {
   });
   const saveEdit = () => {
     if (!editing) return;
-    if (contiChiusi('modificare una voce')) return;
+    if (contiChiusi(L.t('azione.modificareVoce'))) return;
     const name = (editing.name || '').trim();
     const price = posNum(editing.price);
     if (!name) {
-      window.alert('Il nome non può restare vuoto.');
+      window.alert(L.t('spesa.nomeVuoto'));
       return;
     }
     if (editing.kind === 'purchase') {
       if (price <= 0) {
-        window.alert('Inserisci un prezzo maggiore di zero.');
+        window.alert(L.t('spesa.prezzoZero'));
         return;
       }
       if (!confermaPrezzo(price)) return;
@@ -4797,9 +4803,9 @@ function App() {
     setEditing(null);
   };
   const removePurchase = id => {
-    if (contiChiusi('cancellare una spesa')) return;
+    if (contiChiusi(L.t('azione.cancellareSpesa'))) return;
     const p = purchases.find(x => x.id === id);
-    if (p && !window.confirm(`Eliminare l'acquisto "${p.name}" (${money(posNum(p.price))} €)?\nVerrà tolto dai totali${receipts[id] ? ' insieme alla foto dello scontrino' : ''}.`)) return;
+    if (p && !window.confirm(L.t('spesa.confermaElimina', p.name, money(posNum(p.price)), !!receipts[id]))) return;
     setPurchases(prev => prev.filter(x => x.id !== id));
     setReceipts(prev => {
       if (!prev[id]) return prev;
@@ -4837,7 +4843,7 @@ function App() {
     }));
     const tutte = locali.concat(soloCloud).sort((a, b) => b.id.localeCompare(a.id));
     if (!tutte.length) {
-      window.alert('Nessun salvataggio disponibile. Se ne crea uno al giorno, dal primo utilizzo della giornata.');
+      window.alert(L.t('ripristino.nessunSalvataggio'));
       return;
     }
     setSnapList(tutte);
@@ -4845,7 +4851,7 @@ function App() {
   const restoreSnapshot = async voce => {
     const id = typeof voce === 'string' ? voce : voce.id;
     const dove = typeof voce === 'string' ? 'cloud' : voce.dove;
-    const quando = id.slice(11) === '00' ? ' (mattina)' : id.slice(11) === '12' ? ' (pomeriggio)' : '';
+    const quando = id.slice(11) === '00' ? L.t('ripristino.mattina') : id.slice(11) === '12' ? L.t('ripristino.pomeriggio') : '';
 
     // Prima si legge la copia, poi si dice cosa costa: chiedere "sei sicuro?"
     // senza sapere quante voci spariranno è chiedere di firmare in bianco.
@@ -4857,22 +4863,22 @@ function App() {
       if (CS && CS.isConnected && CS.isConnected()) json = await CS.getSnapshot(id);
     }
     if (!json) {
-      window.alert('Impossibile leggere questo salvataggio.');
+      window.alert(L.t('ripristino.illeggibile'));
       return;
     }
     let d;
     try {
       d = JSON.parse(json);
     } catch (e) {
-      window.alert('Salvataggio non valido.');
+      window.alert(L.t('ripristino.nonValido'));
       return;
     }
     if (!d || typeof d !== 'object') {
-      window.alert('Salvataggio non valido.');
+      window.alert(L.t('ripristino.nonValido'));
       return;
     }
     const perse = perditeSeApplico(d);
-    if (!window.confirm(`Ripristinare la copia del ${id.slice(0, 10)}${quando}?\n\n` + `${avvisoPerdite(perse)}${avvisoBlocchi(d)}\n\n` + 'Se il problema è una sincronizzazione andata male, guarda prima ' + 'Impostazioni → Diagnostica: spesso basta "Annulla la sincronizzazione".')) return;
+    if (!window.confirm(L.t('ripristino.conferma', id.slice(0, 10), quando, avvisoPerdite(perse), avvisoBlocchi(d)))) return;
     try {
       scortaPrimaDi(perse);
       // Set "normali" (non via applyRemote): così il push parte e propaga
@@ -4888,9 +4894,9 @@ function App() {
       setFreeDays(Array.isArray(d.freeDays) ? d.freeDays : []);
       setBlocchi(Array.isArray(d.blocchi) ? d.blocchi : []);
       setSnapList(null);
-      window.alert('Dati ripristinati: tra qualche secondo saranno su tutti i dispositivi.');
+      window.alert(L.t('ripristino.fatto'));
     } catch (e) {
-      window.alert('Salvataggio non valido.');
+      window.alert(L.t('ripristino.nonValido'));
     }
   };
 
@@ -4898,11 +4904,11 @@ function App() {
   const buildReport = () => {
     const t = totals;
     const lines = [];
-    lines.push(`🏕️ ${BRAND.appTitle} — Conti finali`);
+    lines.push(L.t('report.titolo', BRAND.appTitle));
     lines.push('');
-    lines.push(`💶 Totale spese: ${money(t.overallTotal)} €`);
+    lines.push(L.t('report.totale', money(t.overallTotal)));
     if (t.foodDrinksSep > 0 || t.sepDaysCount > 0) {
-      lines.push(`   di cui conto separato: ${money(t.foodDrinksSep)} € su ${t.sepDaysCount} ${t.sepDaysCount === 1 ? 'giorno' : 'giorni'} (${money(t.costPerMealSep)} € a pasto)`);
+      lines.push(L.t('report.diCuiSeparato', money(t.foodDrinksSep), t.sepDaysCount, money(t.costPerMealSep)));
     }
     // Due casse, due elenchi. Un elenco solo farebbe sembrare che chi ha
     // anticipato sul conto separato debba essere rimborsato da tutti.
@@ -4911,15 +4917,15 @@ function App() {
       if (c.transfers.length === 0 && c.settlement.length === 0) return;
       if (c.transfers.length > 0) {
         lines.push('');
-        lines.push(`👉 Chi paga chi${titolo ? ` — ${titolo}` : ''}:`);
-        c.transfers.forEach(x => lines.push(`• ${x.from} → ${x.to}: ${money(x.amount)} €`));
+        lines.push(L.t('report.chiPagaChi', titolo));
+        c.transfers.forEach(x => lines.push(L.t('report.riga', x.from, x.to, money(x.amount))));
       }
       if (c.settlement.length > 0) {
         lines.push('');
-        lines.push(`📋 Dettaglio a testa${titolo ? ` — ${titolo}` : ''}:`);
+        lines.push(L.t('report.dettaglio', titolo));
         c.settlement.forEach(s => {
-          const stato = s.net > 0.005 ? `riceve ${money(s.net)} €` : s.net < -0.005 ? `deve dare ${money(-s.net)} €` : 'in pari';
-          lines.push(`• ${s.name}: ${stato} (anticipato ${money(s.paid)} €, quota ${money(s.owed)} €)`);
+          const stato = s.net > 0.005 ? L.t('report.riceve', money(s.net)) : s.net < -0.005 ? L.t('report.deveDare', money(-s.net)) : L.t('report.inPari');
+          lines.push(L.t('report.rigaPersona', s.name, stato, money(s.paid), money(s.owed)));
         });
       }
     };
@@ -4932,29 +4938,29 @@ function App() {
         settlement: t.settlement
       }, '');
     } else {
-      blocco(t.casse.comune, sepAttiva ? 'cassa comune' : '');
-      if (sepAttiva) blocco(t.casse.separata, 'cassa separata');
+      blocco(t.casse.comune, sepAttiva ? L.t('report.cassaComune') : '');
+      if (sepAttiva) blocco(t.casse.separata, L.t('report.cassaSeparata'));
     }
     if (t.freeDaysCount > 0) {
-      lines.push(`   🎁 ${t.freeDaysCount} ${t.freeDaysCount === 1 ? 'giorno gratis' : 'giorni gratis'}: ${t.mealsFree} pasti fuori dai conti`);
+      lines.push(L.t('report.giorniGratis', t.freeDaysCount, t.mealsFree));
     }
     if (t.unattributed > 0.005) {
       lines.push('');
-      lines.push(`⚠️ ${money(t.unattributed)} € di spese comuni senza acquirente.`);
+      lines.push(L.t('report.senzaAcquirente', money(t.unattributed)));
     }
     // Un resoconto che non quadra non va mandato nel gruppo senza dirlo: chi
     // lo legge farebbe i bonifici sbagliati.
     if (t.nonRipartito > 0.005) {
       lines.push('');
-      lines.push(`⚠️ CONTI NON COMPLETI: ${money(t.nonRipartito)} € non sono nelle quote di nessuno.`);
-      t.buchi.forEach(b => lines.push(`   • ${money(b.quanto)} € — ${b.perche}`));
-      lines.push('   Chi ha anticipato quella cifra resta scoperto: da sistemare prima di pagare.');
+      lines.push(L.t('report.nonCompleti', money(t.nonRipartito)));
+      t.buchi.forEach(b => lines.push(L.t('report.buco', money(b.quanto), L.t(b.perche))));
+      lines.push(L.t('report.scoperto'));
     }
     return lines.join('\n');
   };
   const shareReport = async () => {
     if (totals.overallTotal <= 0) {
-      window.alert('Nessuna spesa da condividere: registra prima gli acquisti.');
+      window.alert(L.t('report.nienteDaCondividere'));
       return;
     }
     const text = buildReport();
@@ -5043,7 +5049,7 @@ function App() {
   const addEquip = () => {
     const text = newEquipText.trim();
     if (!text) return;
-    if (contiChiusi('aggiungere attrezzatura')) return;
+    if (contiChiusi(L.t('azione.aggiungereAttrezzatura'))) return;
     if (!confermaPrezzo(newEquipPrice)) return;
     setEquipment(prev => [...prev, {
       id: uid(),
@@ -5057,7 +5063,7 @@ function App() {
     setNewEquipBuyer('');
   };
   const toggleEquipBought = id => {
-    if (contiChiusi('cambiare l\'attrezzatura acquistata')) return;
+    if (contiChiusi(L.t('azione.attrezzaturaAcquistata'))) return;
     setEquipment(prev => prev.map(e => e.id === id ? {
       ...e,
       bought: !e.bought
@@ -5065,8 +5071,8 @@ function App() {
   };
   const removeEquip = id => {
     const e = equipment.find(x => x.id === id);
-    if (e && !window.confirm(`Eliminare "${e.text}" dall'attrezzatura?`)) return;
-    if (contiChiusi('cancellare attrezzatura')) return;
+    if (e && !window.confirm(L.t('attrezzatura.confermaElimina', e.text))) return;
+    if (contiChiusi(L.t('azione.cancellareAttrezzatura'))) return;
     setEquipment(prev => prev.filter(x => x.id !== id));
     setReceipts(prev => {
       if (!prev[id]) return prev;
@@ -5091,7 +5097,7 @@ function App() {
   };
   const removeGear = id => {
     const g = gear.find(x => x.id === id);
-    if (g && !window.confirm(`Eliminare "${g.text}" dalle dotazioni?`)) return;
+    if (g && !window.confirm(L.t('dotazioni.confermaElimina', g.text))) return;
     setGear(prev => prev.filter(x => x.id !== id));
   };
 
@@ -5128,13 +5134,13 @@ function App() {
     className: "flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => changeWeek(-7),
-    "aria-label": "Settimana precedente",
+    "aria-label": L.t('settimana.precedente'),
     className: bottoneIcona('tenue')
   }, "\u2190"), /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-sm text-[#2D392C] uppercase font-rustic"
-  }, "Settimana Selezionata"), /*#__PURE__*/React.createElement("button", {
+  }, L.t('settimana.selezionata')), /*#__PURE__*/React.createElement("button", {
     onClick: () => changeWeek(7),
-    "aria-label": "Settimana successiva",
+    "aria-label": L.t('settimana.successiva'),
     className: bottoneIcona('tenue')
   }, "\u2192")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-7 gap-1"
@@ -5215,7 +5221,7 @@ function App() {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
   }, c.avviso)), c.elenco.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
-  }, c.vuoto || 'Aggiungi membri e segna le presenze per vedere la ripartizione.') : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("ul", {
+  }, c.vuoto || L.t('quote.vuoto')) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-[#8F9E8B]/20"
   }, c.elenco.map(b => /*#__PURE__*/React.createElement("li", {
     key: b.id,
@@ -5226,32 +5232,28 @@ function App() {
     className: "text-sm font-bold text-[#2D392C]"
   }, b.name), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-gray-500"
-  }, c.pastiDi(b), " ", c.pastiDi(b) === 1 ? 'pasto' : 'pasti', b.mealsGratis > 0 ? ` · ${b.mealsGratis} gratis` : '', b.isChild ? ' · bambino' : '')), /*#__PURE__*/React.createElement("span", {
+  }, L.t('quote.pastiRiga', c.pastiDi(b), b.mealsGratis, b.isChild))), /*#__PURE__*/React.createElement("span", {
     className: `font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-[#2D392C]'}`
-  }, b.isChild ? 'Gratis' : `${money(c.quotaDi(b))} €`)))), /*#__PURE__*/React.createElement("div", {
+  }, b.isChild ? L.t('quote.gratis') : `${money(c.quotaDi(b))} €`)))), /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center pt-2 mt-1 border-t border-[#8F9E8B]/30"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] uppercase font-bold text-gray-500"
-  }, "Totale raccolto"), /*#__PURE__*/React.createElement("span", {
+  }, L.t('quote.totaleRaccolto')), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C]"
   }, money(c.raccolto), " \u20AC")), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-2"
-  }, "Quote arrotondate a 0,10 \u20AC (niente monetine da 1/2/5 cent).", Math.abs(c.scarto) >= 0.005 ? ` Scarto rispetto al ripartibile: ${c.scarto > 0 ? '+' : ''}${money(c.scarto)} € (sotto 0,50 €, non riconciliato).` : ' Nessuno scarto.')), c.nonRipartito > 0.005 && /*#__PURE__*/React.createElement("div", {
+  }, L.t('quote.arrotondamento', Math.abs(c.scarto) >= 0.005 ? `${c.scarto > 0 ? '+' : ''}${money(c.scarto)}` : null))), c.nonRipartito > 0.005 && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mt-2"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, money(c.nonRipartito), " \u20AC non sono nelle quote di nessuno."), ' ', "Questa cassa vale ", money(c.totale), " \u20AC, ma se ne raccolgono ", money(c.raccolto), " \u20AC: chi ha anticipato quei soldi non li riavrebbe indietro."), /*#__PURE__*/React.createElement("ul", {
+  }, frase('quote.nonRipartito', money(c.nonRipartito), money(c.totale), money(c.raccolto))), /*#__PURE__*/React.createElement("ul", {
     className: "mt-1.5 space-y-1"
   }, c.buchi.map(b => /*#__PURE__*/React.createElement("li", {
     key: b.perche,
     className: "text-[10px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, money(b.quanto), " \u20AC"), " \u2014 ", b.perche, "."))), /*#__PURE__*/React.createElement("p", {
+  }, frase('quote.buco', money(b.quanto), L.t(b.perche))))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-500 italic mt-1.5 leading-snug"
-  }, "Si sistema segnando le presenze mancanti, spuntando i giorni del conto separato in Calendario, oppure rimettendo quelle spese sul conto comune (la matita nel Taccuino).")));
+  }, L.t('quote.siSistema'))));
 
   // Scheda dei saldi di UNA cassa: chi ha anticipato, chi deve, chi paga chi.
   // Le tre cose stanno insieme perché insieme si leggono: separarle
@@ -5268,18 +5270,18 @@ function App() {
       className: "mb-3 pb-3 border-b border-[#8F9E8B]/30"
     }, /*#__PURE__*/React.createElement("h4", {
       className: "font-rustic text-sm text-[#8F9E8B] mb-1"
-    }, "Anticipi per acquirente"), /*#__PURE__*/React.createElement("ul", {
+    }, L.t('saldi.anticipiPerAcquirente')), /*#__PURE__*/React.createElement("ul", {
       className: "divide-y divide-[#8F9E8B]/20"
     }, s.byBuyer.map(b => /*#__PURE__*/React.createElement("li", {
       key: b.name,
       className: "flex items-center justify-between py-1.5"
     }, /*#__PURE__*/React.createElement("span", {
       className: `text-xs font-bold ${b.name === '—' ? 'text-gray-400 italic' : ''}`
-    }, b.name === '—' ? 'Non indicato' : b.name), /*#__PURE__*/React.createElement("span", {
+    }, b.name === '—' ? L.t('saldi.nonIndicato') : b.name), /*#__PURE__*/React.createElement("span", {
       className: "font-rustic font-bold text-sm"
     }, money(b.total), " \u20AC"))))), s.settlement.length === 0 ? /*#__PURE__*/React.createElement("p", {
       className: "text-sm text-gray-400 italic"
-    }, c.vuoto || 'Registra acquisti (con acquirente) e presenze per vedere chi deve dare o ricevere.') : /*#__PURE__*/React.createElement("ul", {
+    }, c.vuoto || L.t('saldi.vuoto')) : /*#__PURE__*/React.createElement("ul", {
       className: "divide-y divide-[#8F9E8B]/20"
     }, s.settlement.map(x => {
       const credito = x.net > 0.005;
@@ -5293,16 +5295,16 @@ function App() {
         className: "text-sm font-bold truncate"
       }, x.name), /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] text-[#8F9E8B]"
-      }, "ha anticipato ", money(x.paid), " \u20AC \xB7 deve ", money(x.owed), " \u20AC")), /*#__PURE__*/React.createElement("span", {
+      }, L.t('saldi.haAnticipatoDeve', money(x.paid), money(x.owed)))), /*#__PURE__*/React.createElement("span", {
         className: `font-rustic font-bold text-sm shrink-0 text-right ${credito ? 'text-[#8FBF8F]' : debito ? 'text-[#D97706]' : 'text-gray-400'}`
-      }, credito ? `riceve ${money(x.net)} €` : debito ? `dà ${money(-x.net)} €` : 'in pari'));
+      }, credito ? L.t('saldi.riceve', money(x.net)) : debito ? L.t('saldi.da', money(-x.net)) : L.t('saldi.inPari')));
     })), s.transfers.length > 0 && /*#__PURE__*/React.createElement("div", {
       className: "mt-3 pt-3 border-t border-[#8F9E8B]/30"
     }, /*#__PURE__*/React.createElement("h4", {
       className: "font-rustic text-sm text-[#8F9E8B] mb-1"
-    }, "Chi paga chi"), /*#__PURE__*/React.createElement("p", {
+    }, L.t('saldi.chiPagaChi')), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-gray-400 mb-2"
-    }, "Tocca una riga quando il rimborso \xE8 stato fatto: resta barrata. Tocca di nuovo per annullare."), /*#__PURE__*/React.createElement("ul", {
+    }, L.t('saldi.toccaRiga')), /*#__PURE__*/React.createElement("ul", {
       className: "space-y-1.5"
     }, s.transfers.map((t, i) => {
       const key = chiaveRimborso(t);
@@ -5345,7 +5347,7 @@ function App() {
           copiaDato(`${r[0]} di ${t.to}`, r[1]);
         },
         className: "ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#2D392C] border border-[#8F9E8B]/30 text-[#8F9E8B] hover:text-white"
-      }, copied === `${r[0]} di ${t.to}` ? 'copiato ✓' : 'copia')))));
+      }, L.t(copied === `${r[0]} di ${t.to}` ? 'saldi.copiato' : 'saldi.copia'))))));
     })), (() => {
       const senza = [...new Set(s.transfers.map(t => t.to))].filter(n => {
         const d = members.find(m => m.name === n);
@@ -5354,36 +5356,26 @@ function App() {
       if (senza.length === 0) return null;
       return /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] text-gray-400 italic mt-2"
-      }, senza.join(', '), " ", senza.length === 1 ? 'deve' : 'devono', " ricevere ma non ", senza.length === 1 ? 'ha' : 'hanno', " inserito PayPal o IBAN: si aggiungono in ", /*#__PURE__*/React.createElement("span", {
-        className: "font-bold"
-      }, "Membri"), ", con la \"i\" accanto al nome.");
+      }, frase('saldi.senzaDati', senza.join(', '), senza.length === 1));
     })()), s.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-[#D97706] italic mt-2"
-    }, "Attenzione: ", money(s.unattributed), " \u20AC di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti."), c.nonRipartito > 0.005 && /*#__PURE__*/React.createElement("div", {
+    }, L.t('saldi.senzaAcquirente', money(s.unattributed))), c.nonRipartito > 0.005 && /*#__PURE__*/React.createElement("div", {
       className: "mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
     }, /*#__PURE__*/React.createElement("p", {
       className: "text-[11px] text-[#5C4A3C] leading-snug"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "font-bold"
-    }, "I rimborsi non quadrano: ", money(c.nonRipartito), " \u20AC non sono nelle quote di nessuno."), ' ', "Chi ha anticipato quella cifra resterebbe scoperto. Guarda l'avviso in", /*#__PURE__*/React.createElement("span", {
-      className: "font-bold"
-    }, " Quote"), ": dice quali spese sono e come sistemarle.")), s.unknownBuyers.length > 0 && /*#__PURE__*/React.createElement("div", {
+    }, frase('saldi.nonQuadrano', money(c.nonRipartito)))), s.unknownBuyers.length > 0 && /*#__PURE__*/React.createElement("div", {
       className: "mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
     }, /*#__PURE__*/React.createElement("p", {
       className: "text-[11px] text-[#5C4A3C] leading-snug"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "font-bold"
-    }, "Da controllare:"), " ci sono spese intestate a", ' ', s.unknownBuyers.map((u, i) => /*#__PURE__*/React.createElement("span", {
+    }, frase('saldi.daControllareTesta'), ' ', s.unknownBuyers.map((u, i) => /*#__PURE__*/React.createElement("span", {
       key: u.name
     }, i > 0 ? ', ' : '', /*#__PURE__*/React.createElement("span", {
       className: "font-bold"
-    }, u.name), " (", money(u.paid), " \u20AC)")), ", che non ", s.unknownBuyers.length === 1 ? 'è' : 'sono', " fra i membri. Compare comunque nei rimborsi: se \xE8 un nome scritto male o una persona eliminata, correggi l'acquirente nella", /*#__PURE__*/React.createElement("span", {
-      className: "font-bold"
-    }, " Lista della Spesa"), ".")), Math.abs(c.scarto) >= 0.005 && s.transfers.length > 0 && /*#__PURE__*/React.createElement("p", {
+    }, u.name), " (", money(u.paid), " \u20AC)")), frase('saldi.daControllareCoda', s.unknownBuyers.length === 1))), Math.abs(c.scarto) >= 0.005 && s.transfers.length > 0 && /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-gray-400 italic mt-2"
-    }, "Arrotondamento: i passaggi qui sopra valgono in tutto ", money(Math.abs(c.scarto)), " \u20AC in meno dei saldi indicati. \xC8 lo scarto delle quote arrotondate a 0,10 \u20AC (cos\xEC non servono monetine da 1, 2 o 5 cent)."), /*#__PURE__*/React.createElement("p", {
+    }, L.t('saldi.arrotondamento', money(Math.abs(c.scarto)))), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-gray-400 italic mt-1"
-    }, "\"Riceve\" = ha anticipato pi\xF9 di quanto deve; \"d\xE0\" = deve versare la differenza."));
+    }, L.t('saldi.legenda')));
   };
 
   // ---------- Backup (Export / Import) ----------
@@ -5447,7 +5439,7 @@ function App() {
       try {
         const d = JSON.parse(reader.result);
         if (!d || typeof d !== 'object' || !Array.isArray(d.members)) {
-          window.alert('File non valido: non è un backup dell\'app.');
+          window.alert(L.t('import.nonValido'));
           return;
         }
         // Importare un backup non aggiunge: SOSTITUISCE, e le voci che spariscono
@@ -5456,10 +5448,10 @@ function App() {
         // tre giorni prima azzerava il campo per tutti senza sapere né la data del
         // file né quanto stava buttando via.
         const quando = d.exportedAt ? new Date(d.exportedAt) : null;
-        const eta = quando && !isNaN(quando.getTime()) ? `Backup del ${L.data(quando, 'dataOra')}` : 'Backup senza data';
-        const dentro = `Contiene ${(d.members || []).length} membri, ${(d.purchases || []).length} spese, ` + `${Object.keys(d.campData || {}).length} giorni.`;
+        const eta = quando && !isNaN(quando.getTime()) ? L.t('import.backupDel', L.data(quando, 'dataOra')) : L.t('import.senzaData');
+        const dentro = L.t('import.contiene', (d.members || []).length, (d.purchases || []).length, Object.keys(d.campData || {}).length);
         const perse = perditeSeApplico(d);
-        if (!window.confirm(`${eta}.\n${dentro}\n\n${avvisoPerdite(perse)}${avvisoBlocchi(d)}\n\nImportare?`)) return;
+        if (!window.confirm(L.t('import.conferma', eta, dentro, avvisoPerdite(perse), avvisoBlocchi(d)))) return;
         scortaPrimaDi(perse);
         setMembers(d.members);
         if (d.campData && typeof d.campData === 'object') setCampData(applicaBlocchi(d.campData));
@@ -5474,7 +5466,7 @@ function App() {
         if (Array.isArray(d.compiti)) setCompiti(d.compiti);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
-        window.alert('File non valido: non è un backup leggibile.');
+        window.alert(L.t('import.nonLeggibile'));
       }
     };
     reader.readAsText(file);
@@ -5487,21 +5479,20 @@ function App() {
   const campRange = () => intervalloCampo(campData);
   const openClose = () => {
     if (!campoInCorso) {
-      window.alert('Non c\'è niente da chiudere: membri e spese sono già vuoti.');
+      window.alert(L.t('campo.nienteDaChiudere'));
       return;
     }
-    setCloseName(BRAND.appTitle || 'Campo');
+    setCloseName(BRAND.appTitle || L.t('campo.nomePredefinito'));
     setClosing(true);
   };
   const closeCamp = async () => {
-    const name = (closeName || '').trim() || 'Campo';
+    const name = (closeName || '').trim() || L.t('campo.nomePredefinito');
     const range = campRange();
     const t = totals;
     const daPagare = saldiOttimizzati ? t.transfersOttimizzati : t.transfers;
     const unpaid = daPagare.filter(x => !settled.includes(chiaveRimborso(x)));
-    const warn = unpaid.length > 0 ? `\n\nATTENZIONE: ci sono ancora ${unpaid.length} rimborsi non segnati come saldati.` : '';
-    const conferma = `Chiudere "${name}"?\n\n` + `Verrà archiviato tutto (spese ${money(t.overallTotal)} €, ${members.length} membri) ` + 'e scaricato un file di salvataggio con foto degli scontrini comprese.\n\n' + 'Poi membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e ' + 'scontrini verranno AZZERATI su tutti i dispositivi, per ripartire con il ' + 'prossimo evento.\n\n' + 'Le foto della Galleria non si perdono: passano nell\'Archivio insieme ai conti.' + warn;
-    if (!window.confirm(conferma)) return;
+    const warn = unpaid.length > 0 ? L.t('campo.rimborsiAperti', unpaid.length) : '';
+    if (!window.confirm(L.t('campo.confermaChiusura', name, money(t.overallTotal), members.length, warn))) return;
     const id = toDateStr(new Date()) + '-' + uid();
     const state = {
       members,
@@ -5580,7 +5571,7 @@ function App() {
     setSelectedDateStr(defaultDateStr());
     setClosing(false);
     setActiveTab('archivio');
-    window.alert('Campo chiuso e archiviato.' + (cloudOk ? ' La copia è anche nel cloud.' : ' (Senza linea: la copia nel cloud verrà fatta a mano quando torna la rete — il file scaricato è già completo.)'));
+    window.alert(L.t('campo.chiuso', cloudOk));
   };
   const downloadArchive = async a => {
     let state = a.state;
@@ -5588,7 +5579,7 @@ function App() {
       const CS = window.CloudSync;
       if (CS && CS.isConnected && CS.isConnected()) state = await CS.getArchive(a.id);
       if (!state) {
-        window.alert('Per scaricare questo archivio serve la connessione.');
+        window.alert(L.t('archivio.serveLinea'));
         return;
       }
     }
@@ -5599,7 +5590,7 @@ function App() {
     });
   };
   const removeArchive = a => {
-    if (!window.confirm(`Eliminare l'archivio "${a.name}"?\nSe non hai il file scaricato, i dati di quel campo andranno persi.`)) return;
+    if (!window.confirm(L.t('archivio.confermaElimina', a.name))) return;
     setArchives(prev => prev.filter(x => x.id !== a.id));
     const CS = window.CloudSync;
     if (CS && CS.deleteArchive) CS.deleteArchive(a.id);
@@ -5607,7 +5598,7 @@ function App() {
   const shareArchive = async a => {
     const text = a.report || '';
     if (!text) {
-      window.alert('Questo archivio non ha un resoconto salvato.');
+      window.alert(L.t('archivio.senzaResoconto'));
       return;
     }
     if (navigator.share) {
@@ -5662,20 +5653,20 @@ function App() {
   const campoInCorso = members.length > 0 || purchases.length > 0 || toBuy.length > 0 || equipment.length > 0;
   const readyChecks = [{
     ok: readiness.sw && readiness.cache,
-    titolo: 'App scaricata sul telefono',
-    no: 'Resta su questa pagina qualche secondo con la linea attiva, poi chiudi e riapri l\'app.'
+    titolo: L.t('pronto.appScaricata'),
+    no: L.t('pronto.appScaricataNo')
   }, {
     ok: members.length > 0,
-    titolo: 'Dati del campo ricevuti',
-    no: 'Apri l\'app con la linea: membri, spese e liste arrivano da soli.'
+    titolo: L.t('pronto.datiRicevuti'),
+    no: L.t('pronto.datiRicevutiNo')
   },
   // Si segnala SOLO un ripiego accertato: 'anon' è anche il valore di
   // partenza, prima ancora di provare a collegarsi, e farebbe lampeggiare
   // un allarme falso a ogni avvio.
   {
     ok: !(LOCK && LOCK.dbEmail && (cloud.authMode === 'anon-nopass' || cloud.authMode === 'anon-fallback')),
-    titolo: 'Accesso al database a posto',
-    no: 'Serve rientrare con la password del campo: l\'app te la chiede da sola quando c\'è linea.'
+    titolo: L.t('pronto.accessoDb'),
+    no: L.t('pronto.accessoDbNo')
   }];
   const readyOk = readyChecks.every(c => c.ok);
 
@@ -5693,8 +5684,8 @@ function App() {
   // Svuota questo telefono. I dati nel cloud NON vengono toccati: alla
   // riapertura, se c'è linea, tornano da soli.
   const wipeLocal = () => {
-    if (!window.confirm('Cancellare tutti i dati dell\'app da QUESTO telefono?\n\n' + 'Il cloud non viene toccato: con la linea i dati tornano da soli alla riapertura. ' + 'Senza linea invece resteresti senza dati.')) return;
-    if (!window.confirm('Confermi? Verrà chiesta di nuovo la password.')) return;
+    if (!window.confirm(L.t('dati.confermaCancella'))) return;
+    if (!window.confirm(L.t('dati.confermaCancella2'))) return;
     try {
       Object.keys(localStorage).filter(k => k.indexOf('cambusa_') === 0).forEach(k => localStorage.removeItem(k));
       sessionStorage.removeItem(UNLOCK_KEY);
@@ -5821,125 +5812,128 @@ function App() {
     className: `w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] ${extraClass || ''}`
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, "\u2014 non indicato \u2014"), members.map(m => /*#__PURE__*/React.createElement("option", {
+  }, L.t('acquirente.nonIndicato')), members.map(m => /*#__PURE__*/React.createElement("option", {
     key: m.id,
     value: m.name
   }, m.name)), value && !members.some(m => m.name === value) && /*#__PURE__*/React.createElement("option", {
     value: value
-  }, value, " (non pi\xF9 fra i membri)")), members.length === 0 && /*#__PURE__*/React.createElement("p", {
+  }, L.t('acquirente.nonPiuMembro', value))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-[#D97706] mt-1"
-  }, "Aggiungi prima le persone nella scheda Membri."));
+  }, L.t('galleria.primaMembri')));
   const goTo = tab => {
     setActiveTab(tab);
     setMenuOpen(false);
   };
 
   // Guida: una "pill" per ogni area di lavoro.
+  // I testi stanno in lingue.js: qui restano la chiave e l'icona. GUIDE e'
+  // una const DENTRO App(), quindi si ricostruisce a ogni disegno e la
+  // lingua la segue (una const di modulo invece la congelerebbe).
   const GUIDE = [{
     k: 'calendario',
     icon: '📅',
-    title: 'Calendario',
-    body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, le note libere del giorno (promemoria, turni, cose da ricordare — il menù invece ha la sua scheda) e il collegamento al Menù. Scorri le settimane con le frecce: meteo, note e cucina si aggiornano sul giorno scelto. In cima, la riga "Conto separato" si apre solo quando serve: dentro ci sono i giorni da spuntare per far cassa a parte.'
+    title: L.t('guida.calendario.titolo'),
+    body: L.t('guida.calendario.corpo')
   }, {
     k: 'menu',
     icon: '🍝',
-    title: 'Menù',
-    body: 'Scheda a parte per scrivere cosa si mangia, giorno per giorno. In alto c\'è la stessa striscia dei giorni del Calendario: il giorno scelto è lo stesso nelle due schede, quindi puoi passare dall\'una all\'altra senza ricercarlo. Sotto vedi quanti pasti preparare a pranzo e a cena, e il foglio a righe dove scrivere una pietanza per riga. In fondo l\'elenco dei giorni del campo con la prima riga del menù già scritto: si vede a colpo d\'occhio cosa manca. Tutto si sincronizza: chi cucina lo trova già pronto.'
+    title: L.t('guida.menu.titolo'),
+    body: L.t('guida.menu.corpo')
   }, {
     k: 'membri',
     icon: '👥',
-    title: 'Membri',
-    body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e la tendina dell\'acquirente quando registri una spesa: i nomi non si scrivono a mano, si scelgono, così un refuso non può creare una persona fantasma nei saldi. La "i" accanto al nome apre PayPal e IBAN: chi li compila se li vede comparire nei Saldi, accanto al rimborso che deve ricevere, con il tasto per copiarli.'
+    title: L.t('guida.membri.titolo'),
+    body: L.t('guida.membri.corpo')
   }, {
     k: 'presenze',
     icon: '🍽️',
-    title: 'Presenze',
-    body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta apri "Segna in blocco": ci sono "Tutti a pranzo", "Tutti a cena" e "Copia da ieri". Stanno chiusi e chiedono conferma, perché cambiano le presenze di tutti su tutti i telefoni in un colpo solo; il conteggio del giorno si legge sulla riga anche da chiusa. Se qualcuno viene eliminato dai Membri e poi riaggiunto, l\'app lo tratta come una persona nuova e i pasti segnati prima restano attaccati alla vecchia: in quel caso compare un avviso arancione che ti fa riassegnare quelle presenze alla persona giusta, invece di lasciarle sparire dai conti. Durante il campo l\'app si apre già sulla data di oggi.'
+    title: L.t('guida.presenze.titolo'),
+    body: L.t('guida.presenze.corpo')
   }, {
     k: 'compiti',
     icon: '✅',
-    title: 'Chi fa cosa',
-    body: 'Chi si prende quale incarico, deciso PRIMA di partire: "prendere gli arrosticini", "prenotare il rifugio", "ritirare la carne". Si scrive quello che serve — il testo è libero — e si sceglie a chi tocca dall\'elenco dei membri. Due soli stati: da fare e fatto. Un compito NON è una spesa e non tocca i conti: quando è stato fatto, dal tasto "Registra la spesa" si apre la Lista già compilata con il nome e con chi l\'ha eseguito, ma il prezzo si scrive lì perché alla cassa non si sapeva ancora. Se una spesa non c\'è (hai prenotato e basta), il compito resta fatto e nei conti non entra niente.'
+    title: L.t('guida.compiti.titolo'),
+    body: L.t('guida.compiti.corpo')
   }, {
     k: 'lista',
     icon: '🧾',
-    title: 'Lista della Spesa',
-    body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; il tasto "Segna come acquistata" apre una maschera che chiede prezzo, acquirente, tipologia e la foto dello scontrino, e sposta la voce in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.'
+    title: L.t('guida.lista.titolo'),
+    body: L.t('guida.lista.corpo')
   }, {
     k: 'attrezzatura',
     icon: '🪛',
-    title: 'Attrezzatura',
-    body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. Con l\'icona 📷 alleghi lo scontrino, anche in un secondo momento. In fondo vedi il totale previsto e quello effettivamente acquistato; se indichi l\'acquirente, gli verrà rimborsata.'
+    title: L.t('guida.attrezzatura.titolo'),
+    body: L.t('guida.attrezzatura.corpo')
   }, {
     k: 'spesa',
     icon: '💶',
-    title: 'Spese Totali',
-    body: 'Quattro sotto-sezioni. Totali: quanto si è speso per cibo, bevande, logistica e attrezzatura. Quote: quanto costa a testa. Saldi: chi deve dare o ricevere. Dati: backup e sincronizzazione. I totali non si scrivono a mano, nascono dalla Lista della Spesa e dall\'attrezzatura acquistata.'
+    title: L.t('guida.spesa.titolo'),
+    body: L.t('guida.spesa.corpo')
   }, {
     k: 'conti',
     icon: '⚖️',
-    title: 'Come si dividono',
-    body: 'Cibo e bevande sono divisi per il numero di pasti: chi mangia di più paga di più. Logistica e attrezzatura sono una quota fissa uguale per ogni adulto presente: nessuno paga più di una quota. Le cifre sono arrotondate a 10 centesimi, così non servono monetine da 1, 2 o 5 cent.'
+    title: L.t('guida.conti.titolo'),
+    body: L.t('guida.conti.corpo')
   }, {
     k: 'separato',
     icon: '🍽️',
-    title: 'Conto separato',
-    body: 'Serve quando in certi giorni un gruppo fa la spesa per conto suo. In Calendario spunta quei giorni nel riquadro "Conto separato": le presenze di quei giorni fanno cassa a parte. Poi, quando registri una spesa di cibo o bevande, nel menu "Conto" scegli "Conto separato" invece di "Conto comune". Quella spesa si dividerà solo fra chi era presente ai pasti dei giorni spuntati, e quei pasti escono dal conto comune, così nessuno paga due volte. Logistica e attrezzatura restano sempre di tutti. Se non spunti nessun giorno non cambia niente: funziona tutto come prima.'
+    title: L.t('guida.separato.titolo'),
+    body: L.t('guida.separato.corpo')
   }, {
     k: 'saldi',
     icon: '🤝',
-    title: 'Saldi e rimborsi',
-    body: 'Per ogni persona l\'app confronta quanto ha anticipato con quanto deve, e dice se riceve o se deve dare. Sotto, in "Chi paga chi", trovi i pochi passaggi di denaro necessari per pareggiare tutto: tocca una riga quando il rimborso è stato fatto e resta barrata. Con "Condividi resoconto" mandi il riepilogo pronto nel gruppo WhatsApp.'
+    title: L.t('guida.saldi.titolo'),
+    body: L.t('guida.saldi.corpo')
   }, {
     k: 'dotazioni',
     icon: '🎒',
-    title: 'Dotazioni personali',
-    body: 'Cosa portarsi da casa: una dotazione base uguale per tutti (sedia personale, stoviglie e posate, borraccia, canovacci, luci LED) che non si modifica, e un elenco di aggiunte per questo campo che potete integrare quando serve.'
+    title: L.t('guida.dotazioni.titolo'),
+    body: L.t('guida.dotazioni.corpo')
   }, {
     k: 'backup',
     icon: '🛟',
-    title: 'Backup e sicurezza',
-    body: 'Ogni giorno viene salvata da sola una copia dei dati nel cloud: se qualcosa va storto, "Ripristino di emergenza" (in Spese Totali → Dati) permette di tornare a un giorno preciso. In più puoi esportare tutto su file con Esporta e ricaricarlo con Importa. Prima di eliminare qualcosa l\'app chiede sempre conferma.'
+    title: L.t('guida.backup.titolo'),
+    body: L.t('guida.backup.corpo')
   }, {
     k: 'sync',
     icon: '☁️',
-    title: 'Sincronizzazione',
-    body: 'La connessione al campo è automatica: quando c\'è linea i dati si allineano da soli fra i telefoni, in tempo reale, foto degli scontrini comprese. Senza linea si continua a lavorare normalmente e tutto viene inviato appena la rete torna. Se in due avete lavorato offline, al ritorno della linea le due versioni si uniscono voce per voce: nessuno cancella il lavoro dell\'altro. Il pallino in alto a destra indica se sei online o offline.'
+    title: L.t('guida.sync.titolo'),
+    body: L.t('guida.sync.corpo')
   }, {
     k: 'chiusura',
     icon: '🏁',
-    title: 'Chiusura e Archivio',
-    body: 'A conti fatti, in Spese Totali → Dati usa "Chiudi il campo": salva tutto (un file sul telefono e una copia nel cloud), lo mette in Archivio e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini su tutti i dispositivi. L\'app resta pronta per il campo dell\'anno dopo. In Archivio rivedi il resoconto di ogni campo chiuso e puoi riscaricarne i dati; il file scaricato alla chiusura è l\'unico che contiene anche le foto degli scontrini, quindi conservalo.'
+    title: L.t('guida.chiusura.titolo'),
+    body: L.t('guida.chiusura.corpo')
   }, {
     k: 'galleria',
     icon: '📸',
-    title: 'Galleria',
-    body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Si guarda in due modi: "Album" sfoglia le foto come polaroid appoggiate su un paesaggio di montagna, una spinta col dito per pagina; "Griglia" le mette tutte in fila, ed è la vista comoda per cercarne una. Il tasto "Crea album completo" fa un PDF con TUTTE le foto della galleria sullo stesso paesaggio, quattro per pagina, dalla prima all\'ultima in ordine di scatto: da mandare nel gruppo o da stampare. Se invece ne vuoi solo alcune c\'è "Scegli tu quali foto", e lì l\'ordine è quello con cui le tocchi. Le foto vengono scaricate a piena qualità una a una, quindi con tante foto ci vuole pazienza e una linea decente: sopra le venti l\'app avvisa prima di partire.'
+    title: L.t('guida.galleria.titolo'),
+    body: L.t('guida.galleria.corpo')
   }, {
     k: 'gioco',
     icon: '🎮',
-    title: 'Aiuta Bandy',
-    body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si parte da Prato Lungo, si passa per Palmiro Togliatti e Rio de Janeiro, e si finisce in Thailandia. Ogni volta la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).'
+    title: L.t('guida.gioco.titolo'),
+    body: L.t('guida.gioco.corpo', LEVEL_EVERY)
   }, {
     k: 'impostazioni',
     icon: '⚙️',
-    title: 'Impostazioni',
-    body: 'Aspetto: tema chiaro, scuro o automatico (segue il telefono) — comodo la sera in tenda. Blocco con password: puoi chiedere la password a ogni apertura e bloccare l\'app subito con "Blocca ora". Dati su questo telefono: backup immediato e, se presti o cambi telefono, "Cancella i dati da questo telefono" — il cloud non viene toccato e con la linea i dati tornano da soli. In fondo trovi la versione installata.'
+    title: L.t('guida.impostazioni.titolo'),
+    body: L.t('guida.impostazioni.corpo')
   }, {
     k: 'pronto',
     icon: '🎒',
-    title: 'Pronto per il campo',
-    body: 'In Impostazioni, in cima, ci sono tre spie: app scaricata sul telefono, dati del campo ricevuti, accesso al database a posto. Devono essere tutte verdi PRIMA di partire, perché a Prato Lungo non c\'è linea e lassù non si sistemano. Finché qualcosa manca, in Calendario compare un avviso che porta lì. Sistemarlo è sempre la stessa cosa: apri l\'app con la linea attiva e aspetta qualche secondo.'
+    title: L.t('guida.pronto.titolo'),
+    body: L.t('guida.pronto.corpo')
   }, {
     k: 'correggi',
     icon: '✏️',
-    title: 'Correggere una spesa',
-    body: 'Sbagliato un prezzo o l\'acquirente? Nella cronologia degli acquisti, e nell\'elenco dell\'attrezzatura, ogni riga ha una matita: apre la voce e permette di correggere nome, acquirente, prezzo, tipologia e conto, tenendo la foto dello scontrino attaccata. Non serve cancellare e rifare, che invece porterebbe via anche la foto. Se le voci sono tante, sopra la cronologia degli acquisti c\'e\' un campo di ricerca che filtra per nome, acquirente o tipologia e mostra il totale di quelle trovate; lo stesso campo c\'e\' anche sopra la lista di "Da acquistare", dove cerca per nome e quantita\'.'
+    title: L.t('guida.correggi.titolo'),
+    body: L.t('guida.correggi.corpo')
   }, {
     k: 'installa',
     icon: '📲',
-    title: 'Installa l\'app',
-    body: 'Conviene installarla, così si apre a schermo intero e funziona anche senza rete. Su iPhone: Condividi (il quadrato con la freccia) e poi "Aggiungi alla schermata Home". Su Android: menu del browser e "Installa app". Quando usciamo un aggiornamento, l\'app si aggiorna da sola: se non vedi una novità, chiudila e riaprila.'
+    title: L.t('guida.installa.titolo'),
+    body: L.t('guida.installa.corpo')
   }];
   return /*#__PURE__*/React.createElement("div", {
     className: "max-w-md mx-auto min-h-screen flex flex-col bg-[#F0F4F1] border-x border-[#8F9E8B]/30 shadow-2xl pb-24"
@@ -5963,11 +5957,11 @@ function App() {
   }, tabs[activeTab]), (() => {
     const foto = cloud.foto || 0;
     const sospeso = !!cloud.pending || foto > 0;
-    const testo = sospeso ? foto > 0 ? `${foto} ${foto === 1 ? 'foto' : 'foto'} da inviare` : 'Da inviare' : isOnline ? 'Online' : 'Offline';
+    const testo = sospeso ? foto > 0 ? L.t('spia.fotoDaInviare', foto) : L.t('spia.daInviare') : L.t(isOnline ? 'spia.online' : 'spia.offline');
     const colore = sospeso ? 'text-[#F6C177]' : isOnline ? 'text-[#8F9E8B]' : 'text-[#D97706]';
     const pallino = sospeso ? 'bg-[#F6C177] animate-pulse' : isOnline ? 'bg-[#8F9E8B]' : 'bg-[#D97706]';
     return /*#__PURE__*/React.createElement("span", {
-      title: sospeso ? 'Qualcosa non è ancora arrivato agli altri: riprovo da solo, non serve fare niente.' : testo,
+      title: sospeso ? L.t('spia.sospeso') : testo,
       className: `absolute top-3 right-3 flex items-center gap-1 text-[9px] uppercase font-bold ${colore}`
     }, /*#__PURE__*/React.createElement("span", {
       className: `w-2 h-2 rounded-full ${pallino}`
@@ -6016,9 +6010,9 @@ function App() {
     className: "flex-grow text-[11px] text-[#5C4A3C] leading-snug"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, isDesktop ? 'Installa l\'app sul computer:' : 'Installa l\'app sul telefono:'), ' ', isIOS ? 'tocca Condividi (il quadrato con la freccia in su) e poi "Aggiungi alla schermata Home".' : isDesktop ? 'clicca l\'icona di installazione nella barra degli indirizzi (o menu ⋮ → "Installa").' : 'apri il menu del browser (⋮) e tocca "Installa app" (o "Aggiungi a schermata Home").', ' ', "Una volta installata funziona anche senza linea."), /*#__PURE__*/React.createElement("button", {
+  }, L.t(isDesktop ? 'installa.computer' : 'installa.telefono')), ' ', L.t(isIOS ? 'installa.ios' : isDesktop ? 'installa.desktop' : 'installa.android'), ' ', L.t('installa.poi')), /*#__PURE__*/React.createElement("button", {
     onClick: dismissInstallHint,
-    "aria-label": "Chiudi avviso",
+    "aria-label": L.t('installa.chiudi'),
     className: bottoneIcona('neutro', 'shrink-0')
   }, "\xD7")), (() => {
     if (!admin) return null;
@@ -6034,14 +6028,12 @@ function App() {
       className: "min-w-0 flex-grow"
     }, /*#__PURE__*/React.createElement("p", {
       className: "text-[11px] text-[#5C4A3C] leading-snug"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "font-bold"
-    }, "Fine giornata."), " Oggi hai fatto ", modifiche, " ", modifiche === 1 ? 'modifica' : 'modifiche', ". Salva il file di backup: se il telefono si perde o si rompe, \xE8 l'unica copia che resta."), /*#__PURE__*/React.createElement("div", {
+    }, frase('backup.fineGiornata', modifiche)), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-2 mt-2"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: exportData,
       className: bottone('bruno', 'minuscolo')
-    }, "Salva il backup"), /*#__PURE__*/React.createElement("button", {
+    }, L.t('backup.salva')), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         const oggi = toDateStr(new Date());
         try {
@@ -6050,16 +6042,12 @@ function App() {
         setBackupOggi(oggi);
       },
       className: bottone('secondario', 'minuscolo')
-    }, "Ho gi\xE0 fatto")))));
+    }, L.t('backup.giaFatto'))))));
   })(), spazioPieno && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "La memoria di questo telefono \xE8 piena."), " L'app continua a funzionare, ma libera un po' di spazio appena puoi (bastano poche foto o un'app in meno), cos\xEC ogni modifica resta al sicuro.", admin && /*#__PURE__*/React.createElement(React.Fragment, null, " In dettaglio: la cronologia delle modifiche non si salva pi\xF9, e alla riapertura questo telefono perderebbe i confronti con gli altri. Si libera qualcosa anche da", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, " Impostazioni \u2192 Registro modifiche \u2192 Svuota"), "."))), membriSalvati.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, frase('spazio.pieno'), admin && /*#__PURE__*/React.createElement(React.Fragment, null, frase('spazio.dettaglio')))), membriSalvati.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"
@@ -6069,14 +6057,10 @@ function App() {
     className: "min-w-0 flex-grow"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, membriSalvati.length === 1 ? `${membriSalvati[0]} è stata rimessa fra i membri.` : `${membriSalvati.length} persone sono state rimesse fra i membri: ${membriSalvati.slice(0, 4).join(', ')}${membriSalvati.length > 4 ? '…' : ''}.`), ' ', membriSalvati.length === 1 ? 'Era stata eliminata' : 'Erano state eliminate', " da un altro telefono, ma ", membriSalvati.length === 1 ? 'ha' : 'hanno', " presenze in giorni con le presenze bloccate: eliminarl", membriSalvati.length === 1 ? 'a' : 'e', " avrebbe cambiato le quote di quei giorni. Per eliminarl", membriSalvati.length === 1 ? 'a' : 'e', " davvero, prima si sbloccano quei giorni dalla scheda ", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Presenze"), "."), /*#__PURE__*/React.createElement("button", {
+  }, frase('membriSalvati.avviso', membriSalvati.length, membriSalvati.length === 1 ? membriSalvati[0] : `${membriSalvati.slice(0, 4).join(', ')}${membriSalvati.length > 4 ? '…' : ''}`)), /*#__PURE__*/React.createElement("button", {
     onClick: () => setMembriSalvati([]),
     className: bottone('secondario', 'minuscolo', 'mt-2')
-  }, "Ho capito")))), respinte.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, L.t('avviso.hoCapito'))))), respinte.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"
@@ -6086,16 +6070,12 @@ function App() {
     className: "min-w-0 flex-grow"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "I conti sono chiusi: ", respinte.length, " ", respinte.length === 1 ? 'modifica è stata respinta' : 'modifiche sono state respinte', "."), ' ', respinte.slice(0, 3).map((r, i) => /*#__PURE__*/React.createElement("span", {
+  }, frase('respinte.testa', respinte.length), ' ', respinte.slice(0, 3).map((r, i) => /*#__PURE__*/React.createElement("span", {
     key: r.che + r.nome + i
-  }, i > 0 ? ' · ' : '', r.che, " \"", r.nome, "\" ", r.azione, " (", money(r.quanto), " \u20AC)")), respinte.length > 3 ? ` …e altre ${respinte.length - 3}` : '', ".", ' ', "Se vanno accettate, riapri i conti da ", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Spese Totali \u2192 Dati"), " e rifalle."), /*#__PURE__*/React.createElement("button", {
+  }, i > 0 ? ' · ' : '', L.t('respinte.riga', L.t(r.che), r.nome, L.t(r.azione), money(r.quanto)))), respinte.length > 3 ? L.t('respinte.altre', respinte.length - 3) : '', ".", ' ', frase('respinte.coda')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setRespinte([]),
     className: bottone('secondario', 'minuscolo', 'mt-2')
-  }, "Ho capito")))), admin && orologioFuori && /*#__PURE__*/React.createElement("div", {
+  }, L.t('avviso.hoCapito'))))), admin && orologioFuori && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"
@@ -6105,9 +6085,7 @@ function App() {
     className: "min-w-0 flex-grow"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Un telefono ha l'orologio avanti di ", Math.round(orologioFuori.avanti / 86400000), " giorni."), ' ', "Le sue modifiche vincono su tutte le altre anche quando sono pi\xF9 vecchie, e le correzioni fatte dagli altri vengono scartate senza dirlo. Chiedete in giro chi ha la data sbagliata e fategliela sistemare (oppure \xE8 questo telefono a essere indietro)."), /*#__PURE__*/React.createElement("button", {
+  }, frase('orologio.avviso', Math.round(orologioFuori.avanti / 86400000))), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setOrologioFuori(null);
       try {
@@ -6115,7 +6093,7 @@ function App() {
       } catch (e) {/* niente */}
     },
     className: bottone('secondario', 'minuscolo', 'mt-2')
-  }, "Sistemato")))), admin && lostSync && /*#__PURE__*/React.createElement("div", {
+  }, L.t('orologio.sistemato'))))), admin && lostSync && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start gap-2"
@@ -6125,17 +6103,15 @@ function App() {
     className: "min-w-0 flex-grow"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Qualcuno ha appena cancellato ", lostSync.n, " voci", lostSync.quando ? ` (${L.data(new Date(lostSync.quando), 'dataOraBreve')})` : '', "."), lostSync.che ? ` ${lostSync.che}.` : '', ' ', "Se non \xE8 stato qualcuno di voi, annulla: torna tutto com'era, su tutti i telefoni."), /*#__PURE__*/React.createElement("div", {
+  }, frase('perdita.avviso', lostSync.n, lostSync.quando ? L.data(new Date(lostSync.quando), 'dataOraBreve') : null, lostSync.che || null)), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mt-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: annullaSync,
     className: bottone('avviso', 'minuscolo')
-  }, "Annulla la sincronizzazione"), /*#__PURE__*/React.createElement("button", {
+  }, L.t('perdita.annulla')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setLostSync(null),
     className: bottone('secondario', 'minuscolo')
-  }, "Va bene cos\xEC"))))), /*#__PURE__*/React.createElement("main", {
+  }, L.t('perdita.vaBene')))))), /*#__PURE__*/React.createElement("main", {
     className: "flex-grow p-4"
   }, activeTab === 'calendario' && schedaCalendario({
     admin,
@@ -6432,13 +6408,13 @@ function App() {
     className: "flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C] min-w-0 break-words"
-  }, "Acquistata: ", buying.name, buying.qty ? ` (${buying.qty})` : ''), receipts[buying.id] ? /*#__PURE__*/React.createElement("button", {
+  }, L.t('lista.acquistataTitolo', buying.name, buying.qty)), receipts[buying.id] ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[buying.id]),
-    "aria-label": "Vedi scontrino",
+    "aria-label": L.t('lista.vediScontrino'),
     className: bottoneIcona('pieno', 'shrink-0')
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
-    title: "Scontrino: scatta una foto o scegli dalla galleria",
-    "aria-label": "Allega scontrino",
+    title: L.t('lista.scontrinoTitolo'),
+    "aria-label": L.t('lista.allegaScontrino'),
     className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
@@ -6447,9 +6423,9 @@ function App() {
     className: "hidden"
   }))), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 -mt-1"
-  }, receipts[buying.id] ? 'Scontrino allegato: tocca 📷 per rivederlo.' : 'Tocca 📷 per allegare lo scontrino: puoi scattarlo o prenderlo dalla galleria.'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, L.t(receipts[buying.id] ? 'lista.scontrinoGiaLi' : 'lista.scontrinoDaMettere')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-  }, "Prezzo (\u20AC)"), /*#__PURE__*/React.createElement("input", {
+  }, L.t('lista.prezzo')), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "0",
     step: "0.01",
@@ -6465,12 +6441,12 @@ function App() {
     className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-  }, "Acquirente"), renderBuyerSelect(buying.buyer, v => setBuying(b => ({
+  }, L.t('lista.acquirente')), renderBuyerSelect(buying.buyer, v => setBuying(b => ({
     ...b,
     buyer: v
   })))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-  }, "Tipologia"), /*#__PURE__*/React.createElement("select", {
+  }, L.t('lista.tipologia')), /*#__PURE__*/React.createElement("select", {
     value: buying.type,
     onChange: e => setBuying(b => ({
       ...b,
@@ -6480,13 +6456,11 @@ function App() {
   }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
     key: k,
     value: k
-  }, PURCHASE_TYPES[k])))), buying.type === 'logistica' && /*#__PURE__*/React.createElement("p", {
+  }, tipoSpesa(k))))), buying.type === 'logistica' && /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2"
-  }, "La ", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "logistica"), " si divide a testa fra chi ha pasti nei giorni a conto comune, non per giorno: chi c'\xE8 stato solo nei giorni a conto separato non la paga, e per questo qui il conto non si applica."), buying.type !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, frase('correggi.notaLogistica')), buying.type !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-  }, "Conto"), /*#__PURE__*/React.createElement("select", {
+  }, L.t('lista.conto')), /*#__PURE__*/React.createElement("select", {
     value: buying.account || 'comune',
     onChange: e => setBuying(b => ({
       ...b,
@@ -6495,19 +6469,19 @@ function App() {
     className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
   }, /*#__PURE__*/React.createElement("option", {
     value: "comune"
-  }, "Conto comune"), /*#__PURE__*/React.createElement("option", {
+  }, L.t('lista.contoComune')), /*#__PURE__*/React.createElement("option", {
     value: "sep"
-  }, "Conto separato")), buying.account === 'sep' && sepDays.length === 0 && /*#__PURE__*/React.createElement("p", {
+  }, L.t('giorno.contoSeparato'))), buying.account === 'sep' && sepDays.length === 0 && /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] mt-1 leading-snug text-[#5C4A3C]"
-  }, "\u26A0 Nessun giorno spuntato come \"conto separato\" in Calendario.")), /*#__PURE__*/React.createElement("div", {
+  }, L.t('lista.senzaGiorniBreve'))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 pt-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setBuying(null),
     className: bottone('secondario', 'normale', 'flex-1')
-  }, "Annulla"), /*#__PURE__*/React.createElement("button", {
+  }, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
     onClick: confirmBuy,
     className: bottone('primario', 'normale', 'flex-1')
-  }, "Conferma")))), editing && /*#__PURE__*/React.createElement("div", {
+  }, L.t('lista.conferma'))))), editing && /*#__PURE__*/React.createElement("div", {
     onClick: () => setEditing(null),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5"
   }, /*#__PURE__*/React.createElement("div", {
@@ -6517,13 +6491,13 @@ function App() {
     className: "flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C]"
-  }, editing.kind === 'purchase' ? 'Correggi la spesa' : 'Correggi la voce'), receipts[editing.id] ? /*#__PURE__*/React.createElement("button", {
+  }, L.t(editing.kind === 'purchase' ? 'correggi.spesa' : 'correggi.voce')), receipts[editing.id] ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[editing.id]),
-    "aria-label": "Vedi scontrino",
+    "aria-label": L.t('lista.vediScontrino'),
     className: bottoneIcona('pieno', 'shrink-0')
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
-    title: "Scontrino: scatta una foto o scegli dalla galleria",
-    "aria-label": "Allega scontrino",
+    title: L.t('lista.scontrinoTitolo'),
+    "aria-label": L.t('lista.allegaScontrino'),
     className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
@@ -6572,9 +6546,9 @@ function App() {
   }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
     key: k,
     value: k
-  }, PURCHASE_TYPES[k]))))), editing.kind === 'purchase' && (editing.type !== 'logistica' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, tipoSpesa(k)))))), editing.kind === 'purchase' && (editing.type !== 'logistica' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-  }, "Conto"), /*#__PURE__*/React.createElement("select", {
+  }, L.t('lista.conto')), /*#__PURE__*/React.createElement("select", {
     value: editing.account,
     onChange: e => setEditing(x => ({
       ...x,
@@ -6583,21 +6557,19 @@ function App() {
     className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
   }, /*#__PURE__*/React.createElement("option", {
     value: "comune"
-  }, "Conto comune"), /*#__PURE__*/React.createElement("option", {
+  }, L.t('lista.contoComune')), /*#__PURE__*/React.createElement("option", {
     value: "sep"
-  }, "Conto separato"))) : /*#__PURE__*/React.createElement("p", {
+  }, L.t('giorno.contoSeparato')))) : /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2"
-  }, "La ", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "logistica"), " si divide a testa fra chi ha pasti nei giorni a conto comune, non per giorno: chi c'\xE8 stato solo nei giorni a conto separato non la paga, e per questo qui il conto non si applica.")), /*#__PURE__*/React.createElement("div", {
+  }, frase('correggi.notaLogistica'))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 pt-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setEditing(null),
     className: bottone('secondario', 'normale', 'flex-1')
-  }, "Annulla"), /*#__PURE__*/React.createElement("button", {
+  }, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
     onClick: saveEdit,
     className: bottone('primario', 'normale', 'flex-1')
-  }, "Salva")))), snapList && /*#__PURE__*/React.createElement("div", {
+  }, L.t('lista.salva'))))), snapList && /*#__PURE__*/React.createElement("div", {
     onClick: () => setSnapList(null),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
   }, /*#__PURE__*/React.createElement("div", {
@@ -6605,13 +6577,11 @@ function App() {
     className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
-  }, "Ripristina un salvataggio"), /*#__PURE__*/React.createElement("p", {
+  }, L.t('ripristino.titolo')), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500"
-  }, "Copie automatiche: due al giorno sul telefono (una dopo mezzanotte e una dopo mezzogiorno, alla prima apertura), pi\xF9 una al giorno nel cloud. Quelle ", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "sul telefono"), " ci sono anche senza linea."), snapList.map(s => {
+  }, frase('ripristino.nota')), snapList.map(s => {
     const giorno = L.data(parseDate(s.id.slice(0, 10)), 'settimanaLunga');
-    const fascia = s.id.slice(11) === '00' ? 'mattina' : s.id.slice(11) === '12' ? 'pomeriggio' : '';
+    const fascia = s.id.slice(11) === '00' ? L.t('ripristino.fasciaMattina') : s.id.slice(11) === '12' ? L.t('ripristino.fasciaPomeriggio') : '';
     const ora = s.at ? L.data(new Date(s.at), 'ora') : '';
     return /*#__PURE__*/React.createElement("button", {
       key: s.dove + s.id,
@@ -6623,13 +6593,13 @@ function App() {
       className: "block text-sm font-bold truncate"
     }, giorno), /*#__PURE__*/React.createElement("span", {
       className: "block text-[9px] text-gray-500"
-    }, fascia ? `${fascia}${ora ? ` · copia delle ${ora}` : ''}` : 'copia del cloud')), /*#__PURE__*/React.createElement("span", {
+    }, fascia ? L.t('ripristino.copiaDelle', fascia, ora) : L.t('ripristino.copiaCloud'))), /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-white border border-[#8F9E8B]/40 text-gray-500"
-    }, s.dove === 'locale' ? 'sul telefono' : 'cloud'));
+    }, L.t(s.dove === 'locale' ? 'ripristino.sulTelefono' : 'ripristino.nelCloud')));
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSnapList(null),
     className: bottone('testuale', 'normale', 'w-full')
-  }, "Annulla"))), closing && /*#__PURE__*/React.createElement("div", {
+  }, L.t('galleria.annulla')))), closing && /*#__PURE__*/React.createElement("div", {
     onClick: () => setClosing(false),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
   }, /*#__PURE__*/React.createElement("div", {
@@ -6637,29 +6607,29 @@ function App() {
     className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
-  }, "Chiudi il campo"), /*#__PURE__*/React.createElement("label", {
+  }, L.t('chiusura.campoTitolo')), /*#__PURE__*/React.createElement("label", {
     className: "block text-[10px] uppercase font-bold text-gray-500"
-  }, "Nome dell'archivio"), /*#__PURE__*/React.createElement("input", {
+  }, L.t('chiusura.nomeArchivio')), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: closeName,
     onChange: e => setCloseName(e.target.value),
-    placeholder: "Es. Prato Lungo 2026",
+    placeholder: L.t('chiusura.esempioNome'),
     className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
   }), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#F0F4F1]/60 rounded p-3 text-[11px] text-gray-600 space-y-1"
   }, /*#__PURE__*/React.createElement("p", {
     className: "font-bold text-[#2D392C]"
-  }, "Verr\xE0 archiviato:"), /*#__PURE__*/React.createElement("p", null, money(totals.overallTotal), " \u20AC di spese \xB7 ", purchases.length, " acquisti \xB7 ", members.length, " membri"), /*#__PURE__*/React.createElement("p", {
+  }, L.t('chiusura.verraArchiviato')), /*#__PURE__*/React.createElement("p", null, L.t('chiusura.riepilogo', money(totals.overallTotal), purchases.length, members.length)), /*#__PURE__*/React.createElement("p", {
     className: "font-bold text-[#2D392C] pt-1"
-  }, "Poi verranno azzerati:"), /*#__PURE__*/React.createElement("p", null, "membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e foto degli scontrini \u2014 su tutti i dispositivi."), /*#__PURE__*/React.createElement("p", {
+  }, L.t('chiusura.poiAzzerati')), /*#__PURE__*/React.createElement("p", null, L.t('chiusura.cosaSiAzzera')), /*#__PURE__*/React.createElement("p", {
     className: "pt-1 italic"
-  }, "Restano: archivio, classifica del gioco e impostazioni.")), /*#__PURE__*/React.createElement("button", {
+  }, L.t('chiusura.cosaResta'))), /*#__PURE__*/React.createElement("button", {
     onClick: closeCamp,
     className: bottone('bruno', 'grande', 'w-full')
-  }, "Archivia e azzera"), /*#__PURE__*/React.createElement("button", {
+  }, L.t('chiusura.archiviaEAzzera')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setClosing(false),
     className: bottone('testuale', 'normale', 'w-full')
-  }, "Annulla"))), viewArchive && /*#__PURE__*/React.createElement("div", {
+  }, L.t('galleria.annulla')))), viewArchive && /*#__PURE__*/React.createElement("div", {
     onClick: () => setViewArchive(null),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
   }, /*#__PURE__*/React.createElement("div", {
@@ -6669,20 +6639,20 @@ function App() {
     className: "font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2"
   }, viewArchive.name), /*#__PURE__*/React.createElement("pre", {
     className: "text-[11px] text-gray-700 whitespace-pre-wrap font-sans leading-relaxed"
-  }, viewArchive.report || 'Nessun resoconto salvato.'), /*#__PURE__*/React.createElement("button", {
+  }, viewArchive.report || L.t('archivio.nessunResoconto')), /*#__PURE__*/React.createElement("button", {
     onClick: () => shareArchive(viewArchive),
     className: bottone('whatsapp', 'normale', 'w-full')
-  }, "\uD83D\uDCE4 Condividi"), /*#__PURE__*/React.createElement("button", {
+  }, L.t('archivio.condividi')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewArchive(null),
     className: bottone('testuale', 'normale', 'w-full')
-  }, "Chiudi"))), viewPhoto && /*#__PURE__*/React.createElement("div", {
+  }, L.t('archivio.chiudi')))), viewPhoto && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex-grow flex items-center justify-center w-full min-h-0",
     onClick: () => setViewPhoto(null)
   }, viewPhoto.full ? /*#__PURE__*/React.createElement("img", {
     src: viewPhoto.full,
-    alt: `Foto di ${viewPhoto.by || 'anonimo'}`,
+    alt: L.t('archivio.fotoDi', viewPhoto.by || L.t('archivio.anonimo')),
     className: "max-w-full max-h-full rounded shadow-2xl"
   }) : /*#__PURE__*/React.createElement("div", {
     className: "text-center"
@@ -6692,28 +6662,28 @@ function App() {
     className: "max-w-full max-h-[60vh] rounded opacity-40 blur-sm"
   }), /*#__PURE__*/React.createElement("p", {
     className: "mt-3 text-[11px] uppercase tracking-widest text-white/60"
-  }, "Scarico la foto\u2026"))), /*#__PURE__*/React.createElement("div", {
+  }, L.t('galleria.scaricoFoto')))), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 w-full max-w-md flex items-center justify-between gap-3 pt-3"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] text-white/70 truncate"
-  }, viewPhoto.by || 'anonimo', viewPhoto.at ? ` · ${L.data(new Date(viewPhoto.at), 'numerica')}` : ''), /*#__PURE__*/React.createElement("span", {
+  }, viewPhoto.by || L.t('archivio.anonimo'), viewPhoto.at ? ` · ${L.data(new Date(viewPhoto.at), 'numerica')}` : ''), /*#__PURE__*/React.createElement("span", {
     className: "flex items-center gap-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => removePhoto(viewPhoto),
     className: "text-[10px] uppercase font-bold px-3 py-2 rounded border border-[#D97706]/60 text-[#D97706]"
-  }, "Elimina"), /*#__PURE__*/React.createElement("button", {
+  }, L.t('archivio.elimina')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewPhoto(null),
     className: "text-[10px] uppercase font-bold px-3 py-2 rounded bg-[#F0F4F1] text-[#2D392C]"
-  }, "Chiudi")))), viewReceipt && /*#__PURE__*/React.createElement("div", {
+  }, L.t('archivio.chiudi'))))), viewReceipt && /*#__PURE__*/React.createElement("div", {
     onClick: () => setViewReceipt(null),
     className: "fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 cursor-pointer"
   }, /*#__PURE__*/React.createElement("img", {
     src: viewReceipt,
-    alt: "Scontrino",
+    alt: L.t('lista.scontrino'),
     className: "max-w-full max-h-full rounded shadow-2xl"
   }), /*#__PURE__*/React.createElement("span", {
     className: "absolute bottom-6 left-0 right-0 text-center text-[10px] uppercase tracking-widest text-white/60"
-  }, "Tocca per chiudere")), /*#__PURE__*/React.createElement("footer", {
+  }, L.t('galleria.toccaPerChiudere'))), /*#__PURE__*/React.createElement("footer", {
     className: "fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#F0F4F1] border-t-2 border-[#5C4A3C] py-3 px-4 text-center z-10"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-[#2D392C] tracking-widest text-sm uppercase font-bold"
@@ -7225,7 +7195,7 @@ const schedaSpesa = ({
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-4 gap-1.5"
-}, [['totali', 'Totali'], ['quote', 'Quote'], ['saldi', 'Saldi'], ['dati', 'Dati']].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
+}, [['totali', L.t('spesa.totali')], ['quote', L.t('spesa.quote')], ['saldi', L.t('spesa.saldi')], ['dati', L.t('spesa.dati')]].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
   key: k,
   onClick: () => setSpesaSection(k),
   className: bottoneScelta('linguetta', 'sezione', spesaSection === k, 'minuscolo')
@@ -7235,15 +7205,11 @@ const schedaSpesa = ({
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-4"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-}, "Cassa Globale Campo"), /*#__PURE__*/React.createElement("p", {
+}, L.t('spesa.cassaGlobale')), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 -mt-1"
-}, "Totali generati automaticamente da quello che registri in ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Lista della Spesa"), " e ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Attrezzatura"), "."), /*#__PURE__*/React.createElement("div", {
+}, frase('spesa.cassaNota')), /*#__PURE__*/React.createElement("div", {
   className: "space-y-2"
-}, [['Spesa Cibo (Alimentare)', totals.totalFood], ['Spesa Bevande', totals.totalDrinks], ['Logistica e attrezzatura', totals.totalAccessory]].map(([label, val]) => /*#__PURE__*/React.createElement("div", {
+}, [[L.t('spesa.cibo'), totals.totalFood], [L.t('spesa.bevande'), totals.totalDrinks], [L.t('spesa.logisticaEAttrezzatura'), totals.totalAccessory]].map(([label, val]) => /*#__PURE__*/React.createElement("div", {
   key: label,
   className: "flex justify-between items-center bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
@@ -7254,79 +7220,73 @@ const schedaSpesa = ({
   className: "flex justify-between items-center bg-[#5C4A3C]/10 px-3 py-2 rounded border border-[#5C4A3C]/30"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] uppercase font-bold text-[#5C4A3C]"
-}, "di cui sul conto separato"), /*#__PURE__*/React.createElement("span", {
+}, L.t('spesa.diCuiSeparato')), /*#__PURE__*/React.createElement("span", {
   className: "font-bold text-[#5C4A3C]"
 }, money(totals.foodDrinksSep), " \u20AC")), /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C]/10 p-3 rounded border border-[#2D392C]/20 flex justify-between items-center mt-2"
 }, /*#__PURE__*/React.createElement("span", {
   className: "font-bold text-xs uppercase"
-}, "Importo Complessivo:"), /*#__PURE__*/React.createElement("span", {
+}, L.t('spesa.importoComplessivo')), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic font-bold text-lg text-[#2D392C]"
 }, money(totals.overallTotal), " \u20AC"))), /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-4"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1"
-}, "Il Conto della Serva"), /*#__PURE__*/React.createElement("div", {
+}, L.t('spesa.contoDellaServa')), /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-2 gap-3"
 }, /*#__PURE__*/React.createElement("div", {
   className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] uppercase text-[#8F9E8B] block"
-}, "Quota Singolo Pasto"), /*#__PURE__*/React.createElement("span", {
+}, L.t('spesa.quotaPasto')), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic text-xl text-[#D97706]"
 }, money(totals.costPerMeal), " \u20AC"), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 mt-1"
-}, "Cibo+bevande (", money(totals.foodDrinksCommon), " \u20AC) / ", totals.adultMealsCommon, " pasti adulti", totals.sepDaysCount > 0 ? ' dei giorni comuni' : '', ".")), !(FEATURES.equipExemption && totals.equipPayersCount !== totals.accessoryPayersCount) ? /*#__PURE__*/React.createElement("div", {
+}, L.t('spesa.quotaPastoNota', money(totals.foodDrinksCommon), totals.adultMealsCommon, totals.sepDaysCount > 0))), !(FEATURES.equipExemption && totals.equipPayersCount !== totals.accessoryPayersCount) ? /*#__PURE__*/React.createElement("div", {
   className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] uppercase text-[#8F9E8B] block"
-}, "Quota a persona"), /*#__PURE__*/React.createElement("span", {
+}, L.t('spesa.quotaPersona')), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic text-xl text-[#D97706]"
 }, money(totals.accessoryPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 mt-1"
-}, "Logistica e attrezzatura (", money(totals.totalAccessory), " \u20AC) / ", totals.accessoryPayersCount, " ", totals.accessoryPayersCount === 1 ? 'adulto' : 'adulti', " dei giorni comuni.")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+}, L.t('spesa.quotaPersonaNota', money(totals.totalAccessory), totals.accessoryPayersCount))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
   className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] uppercase text-[#8F9E8B] block"
-}, "Logistica a testa"), /*#__PURE__*/React.createElement("span", {
+}, L.t('spesa.logisticaTesta')), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic text-xl text-[#D97706]"
 }, money(totals.logisticsPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 mt-1"
-}, "Logistica (", money(totals.logisticsPurchases), " \u20AC) / ", totals.accessoryPayersCount, " adulti dei giorni comuni.")), /*#__PURE__*/React.createElement("div", {
+}, L.t('spesa.logisticaTestaNota', money(totals.logisticsPurchases), totals.accessoryPayersCount))), /*#__PURE__*/React.createElement("div", {
   className: "bg-[#1F271E] p-3 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] uppercase text-[#8F9E8B] block"
-}, "Attrezzatura a testa"), /*#__PURE__*/React.createElement("span", {
+}, L.t('spesa.attrezzaturaTesta')), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic text-xl text-[#D97706]"
 }, money(totals.equipPerAdult), " \u20AC"), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 mt-1"
-}, "Attrezzatura (", money(totals.equipBought), " \u20AC) / ", totals.equipPayersCount, " ", totals.equipPayersCount === 1 ? 'persona non esente' : 'persone non esenti', "."))), (totals.sepDaysCount > 0 || totals.foodDrinksSep > 0) && /*#__PURE__*/React.createElement("div", {
+}, L.t('spesa.attrezzaturaTestaNota', money(totals.equipBought), totals.equipPayersCount)))), (totals.sepDaysCount > 0 || totals.foodDrinksSep > 0) && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#1F271E] p-3 rounded border border-[#5C4A3C] col-span-2"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] uppercase text-[#8F9E8B] block"
-}, "Conto separato \u2014 quota pasto"), /*#__PURE__*/React.createElement("span", {
+}, L.t('spesa.separatoQuotaPasto')), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic text-xl text-[#D97706]"
 }, money(totals.costPerMealSep), " \u20AC"), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 mt-1"
-}, "Cibo+bevande separati (", money(totals.foodDrinksSep), " \u20AC) / ", totals.adultMealsSep, " pasti adulti su ", totals.sepDaysCount, " ", totals.sepDaysCount === 1 ? 'giorno' : 'giorni', ",", ' ', totals.sepPeopleCount, " ", totals.sepPeopleCount === 1 ? 'persona' : 'persone', "."))), /*#__PURE__*/React.createElement("p", {
+}, L.t('spesa.separatoQuotaNota', money(totals.foodDrinksSep), totals.adultMealsSep, totals.sepDaysCount, totals.sepPeopleCount)))), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic"
-}, "I pasti dei bambini sono gratis: il loro costo \xE8 ripartito sugli adulti."))), spesaSection === 'quote' && /*#__PURE__*/React.createElement("div", {
+}, L.t('spesa.bambiniGratis')))), spesaSection === 'quote' && /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, totals.overallTotal > 0 && totals.adultMealsTotal === 0 && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
 }, /*#__PURE__*/React.createElement("p", {
   className: "text-[11px] text-[#5C4A3C] leading-snug"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Attenzione:"), " ci sono spese per ", money(totals.overallTotal), " \u20AC ma nessun pasto registrato. Le quote restano a zero finch\xE9 non segni le presenze nella scheda ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Presenze"), ".")), totals.freeDaysCount > 0 && /*#__PURE__*/React.createElement("p", {
+}, frase('quote.senzaPasti', money(totals.overallTotal)))), totals.freeDaysCount > 0 && /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-[#2D392C] leading-snug bg-[#2D392C]/8 border border-[#2D392C]/25 rounded p-2.5"
-}, "\uD83C\uDF81 ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, totals.freeDaysCount, " ", totals.freeDaysCount === 1 ? 'giorno gratis' : 'giorni gratis'), ":", ' ', totals.mealsFree, " ", totals.mealsFree === 1 ? 'pasto è escluso' : 'pasti sono esclusi', " dai conti. Restano segnati nel calendario per la cucina, ma nessuno li paga \u2014 per questo i pasti contati qui sotto possono essere meno di quelli che vedi in Presenze."), schedaQuote({
-  titolo: 'Quote cassa comune',
-  sottotitolo: cassaSepAttiva ? 'Cibo e bevande dei giorni di tutti, più logistica e attrezzatura.' : null,
+}, frase('quote.giorniGratis', totals.freeDaysCount, totals.mealsFree)), schedaQuote({
+  titolo: L.t('quote.cassaComune'),
+  sottotitolo: cassaSepAttiva ? L.t('quote.cassaComuneNota') : null,
   elenco: totals.breakdown,
   quotaDi: b => b.payComune,
   pastiDi: b => b.mealsCommon,
@@ -7335,12 +7295,10 @@ const schedaSpesa = ({
   scarto: totals.roundingDiffComune,
   buchi: totals.buchi.filter(x => x.cassa === 'comune'),
   nonRipartito: totals.nonRipartitoComune,
-  avviso: totals.foodDrinksCommon > 0 && totals.adultMealsCommon === 0 && totals.adultMealsTotal > 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Attenzione:"), " tutti i giorni con presenze sono spuntati come conto separato, ma ci sono ", money(totals.foodDrinksCommon), " \u20AC di cibo e bevande sul conto comune. Sposta quelle spese sul conto separato, oppure togli la spunta ai giorni che sono di tutti.") : null
+  avviso: totals.foodDrinksCommon > 0 && totals.adultMealsCommon === 0 && totals.adultMealsTotal > 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, frase('quote.tuttiSeparati', money(totals.foodDrinksCommon))) : null
 }), cassaSepAttiva && schedaQuote({
-  titolo: 'Quote cassa separata',
-  sottotitolo: `Solo cibo e bevande dei ${totals.sepDaysCount} ${totals.sepDaysCount === 1 ? 'giorno spuntato' : 'giorni spuntati'} in Calendario, a carico di chi c'era.`,
+  titolo: L.t('quote.cassaSeparata'),
+  sottotitolo: L.t('quote.cassaSeparataNota', totals.sepDaysCount),
   elenco: totals.breakdown.filter(b => b.mealsSep > 0 || b.paySep > 0.005),
   quotaDi: b => b.paySep,
   pastiDi: b => b.mealsSep,
@@ -7349,21 +7307,15 @@ const schedaSpesa = ({
   scarto: totals.roundingDiffSep,
   buchi: totals.buchi.filter(x => x.cassa === 'separata'),
   nonRipartito: totals.nonRipartitoSep,
-  vuoto: 'Nessuno ha pasti nei giorni spuntati: qui non c\'è niente da dividere.',
-  avviso: totals.foodDrinksSep > 0 && totals.adultMealsSep === 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Attenzione:"), " ci sono ", money(totals.foodDrinksSep), " \u20AC sul conto separato ma nessun pasto nei giorni spuntati. Spunta i giorni in", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, " Calendario"), " e segna le", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, " Presenze"), ", altrimenti quella spesa non entra nelle quote.") : null
+  vuoto: L.t('quote.separataVuota'),
+  avviso: totals.foodDrinksSep > 0 && totals.adultMealsSep === 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, frase('quote.separataSenzaPasti', money(totals.foodDrinksSep))) : null
 }), cassaSepAttiva && totals.breakdown.length > 0 && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
-}, "Totale a persona"), /*#__PURE__*/React.createElement("p", {
+}, L.t('quote.totaleAPersona')), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug mb-2"
-}, "Le due casse sommate: \xE8 la cifra che ciascuno tira fuori in tutto."), /*#__PURE__*/React.createElement("ul", {
+}, L.t('quote.totaleNota')), /*#__PURE__*/React.createElement("ul", {
   className: "divide-y divide-[#8F9E8B]/20"
 }, totals.breakdown.map(b => /*#__PURE__*/React.createElement("li", {
   key: b.id,
@@ -7374,81 +7326,77 @@ const schedaSpesa = ({
   className: "text-sm font-bold text-[#2D392C]"
 }, b.name), /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] text-gray-500"
-}, b.isChild ? 'bambino' : `${money(b.payComune)} € comune + ${money(b.paySep)} € separata`)), /*#__PURE__*/React.createElement("span", {
+}, b.isChild ? L.t('quote.bambino') : L.t('quote.comunePiuSeparata', money(b.payComune), money(b.paySep)))), /*#__PURE__*/React.createElement("span", {
   className: `font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-[#2D392C]'}`
-}, b.isChild ? 'Gratis' : `${money(b.pay)} €`)))), /*#__PURE__*/React.createElement("div", {
+}, b.isChild ? L.t('quote.gratis') : `${money(b.pay)} €`)))), /*#__PURE__*/React.createElement("div", {
   className: "flex justify-between items-center pt-2 mt-1 border-t border-[#8F9E8B]/30"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[11px] uppercase font-bold text-gray-500"
-}, "Totale raccolto"), /*#__PURE__*/React.createElement("span", {
+}, L.t('quote.totaleRaccolto')), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic font-bold text-[#2D392C]"
 }, money(totals.collected), " \u20AC")))), spesaSection === 'saldi' && /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, cassaSepAttiva && (risparmio > 0 || saldiOttimizzati) && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
   onClick: () => setSaldiOttimizzati(!saldiOttimizzati),
   className: bottoneScelta('interruttore', 'bordato', saldiOttimizzati, 'normale', 'w-full')
-}, saldiOttimizzati ? '↩ Torna ai saldi per cassa' : `⚡ Ottimizza i passaggi (${totals.transfers.length} → ${totals.transfersOttimizzati.length})`), /*#__PURE__*/React.createElement("p", {
+}, saldiOttimizzati ? L.t('saldi.tornaPerCassa') : L.t('saldi.ottimizza', totals.transfers.length, totals.transfersOttimizzati.length)), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic mt-1 leading-snug"
-}, saldiOttimizzati ? 'Stai vedendo le due casse messe insieme. Per capire da dove viene una cifra, torna ai saldi per cassa.' : 'Unisce le due casse in un elenco solo di bonifici: nessuno paga un centesimo in più o in meno, sono solo meno passaggi.')), saldiOttimizzati ? schedaSaldi({
+}, L.t(saldiOttimizzati ? 'saldi.notaOttimizzati' : 'saldi.notaPerCassa'))), saldiOttimizzati ? schedaSaldi({
   cassa: cassaUnica,
-  titolo: 'Passaggi ottimizzati',
-  sottotitolo: 'Le due casse insieme. Le cifre dovute sono le stesse: cambia solo chi gira i soldi a chi, per farne meno. Le spunte di questa vista sono separate da quelle per cassa.',
+  titolo: L.t('saldi.passaggiOttimizzati'),
+  sottotitolo: L.t('saldi.passaggiNota'),
   scarto: totals.roundingDiff,
   nonRipartito: totals.nonRipartito
 }) : /*#__PURE__*/React.createElement(React.Fragment, null, schedaSaldi({
   cassa: totals.casse.comune,
-  titolo: cassaSepAttiva ? 'Saldi cassa comune' : 'Saldo finale',
-  sottotitolo: cassaSepAttiva ? 'Cibo e bevande dei giorni di tutti, logistica e attrezzatura.' : null,
+  titolo: L.t(cassaSepAttiva ? 'saldi.cassaComune' : 'saldi.finale'),
+  sottotitolo: cassaSepAttiva ? L.t('saldi.cassaComuneNota') : null,
   scarto: totals.roundingDiffComune,
   nonRipartito: totals.nonRipartitoComune
 }), cassaSepAttiva && schedaSaldi({
   cassa: totals.casse.separata,
-  titolo: 'Saldi cassa separata',
-  sottotitolo: `Solo cibo e bevande dei ${totals.sepDaysCount} ${totals.sepDaysCount === 1 ? 'giorno spuntato' : 'giorni spuntati'}: chi ha anticipato lì viene rimborsato da chi c'era.`,
+  titolo: L.t('saldi.cassaSeparata'),
+  sottotitolo: L.t('saldi.cassaSeparataNota', totals.sepDaysCount),
   scarto: totals.roundingDiffSep,
   nonRipartito: totals.nonRipartitoSep,
-  vuoto: 'Nessun anticipo e nessuna quota su questa cassa.'
+  vuoto: L.t('saldi.separataVuota')
 })), /*#__PURE__*/React.createElement("button", {
   onClick: shareReport,
   className: bottone('whatsapp', 'grande', 'w-full flex items-center justify-center gap-2')
-}, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDCE4"), " Condividi resoconto"), /*#__PURE__*/React.createElement("p", {
+}, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDCE4"), " ", L.t('saldi.condividi')), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic text-center"
-}, "Genera un messaggio pronto con totale e \"chi paga chi\" da mandare nel gruppo.")), spesaSection === 'dati' && /*#__PURE__*/React.createElement("div", {
+}, L.t('saldi.condividiNota'))), spesaSection === 'dati' && /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, admin && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2"
-}, /*#__PURE__*/React.createElement("span", null, "Chiusura dei conti"), bloccoConti() && /*#__PURE__*/React.createElement("span", {
+}, /*#__PURE__*/React.createElement("span", null, L.t('chiusura.contiTitolo')), bloccoConti() && /*#__PURE__*/React.createElement("span", {
   className: "ml-auto text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white"
-}, "\uD83D\uDD12 Chiusi")), bloccoConti() ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+}, L.t('chiusura.chiusi'))), bloccoConti() ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug"
-}, "Conti chiusi il ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, L.data(new Date(bloccoConti().at), 'dataOra')), ". Spese e attrezzatura sono congelate: gli importi di \"chi paga chi\" non cambiano pi\xF9, quindi i rimborsi gi\xE0 segnati come saldati restano validi. Quello che arriva dagli altri telefoni viene messo da parte e segnalato qui sopra."), /*#__PURE__*/React.createElement("button", {
+}, frase('chiusura.contiChiusiNota', L.data(new Date(bloccoConti().at), 'dataOra'))), /*#__PURE__*/React.createElement("button", {
   onClick: riapriConti,
   className: bottone('secondario', 'normale', 'w-full')
-}, "\uD83D\uDD13 Riapri i conti")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+}, L.t('chiusura.riapri'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug"
-}, "Da fare ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "quando i conti sono definitivi e la gente comincia a pagarsi"), ". I passaggi di pareggio sono segnati come saldati con una chiave che contiene l'importo: basta una spesa aggiunta dopo perch\xE9 tutti gli importi si ricalcolino e i bonifici gi\xE0 fatti spariscano dall'elenco. Chiudendo, spese e attrezzatura si congelano e le presenze ancora aperte si bloccano."), /*#__PURE__*/React.createElement("button", {
+}, frase('chiusura.daFare')), /*#__PURE__*/React.createElement("button", {
   onClick: chiudiConti,
   className: bottone('bruno', 'normale', 'w-full')
-}, "\uD83D\uDD12 Chiudi i conti"))), /*#__PURE__*/React.createElement("div", {
+}, L.t('chiusura.chiudi')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-}, "Backup Dati"), /*#__PURE__*/React.createElement("p", {
+}, L.t('backup.titolo')), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500"
-}, "Ogni giorno viene salvata da sola una copia di sicurezza nel cloud. Esporta/Importa serve per un backup manuale su file."), /*#__PURE__*/React.createElement("div", {
+}, L.t('backup.nota')), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: exportData,
   className: bottone('primario', 'normale', 'flex-1')
-}, "Esporta"), admin && /*#__PURE__*/React.createElement("label", {
+}, L.t('backup.esporta')), admin && /*#__PURE__*/React.createElement("label", {
   className: "flex-1 py-2.5 bg-[#5C4A3C] text-white rounded text-xs font-bold uppercase text-center cursor-pointer hover:bg-[#463628]"
-}, "Importa", /*#__PURE__*/React.createElement("input", {
+}, L.t('backup.importa'), /*#__PURE__*/React.createElement("input", {
   type: "file",
   accept: "application/json,.json",
   onChange: importData,
@@ -7456,58 +7404,54 @@ const schedaSpesa = ({
 }))), admin && /*#__PURE__*/React.createElement("button", {
   onClick: openRestore,
   className: "w-full py-2.5 bg-white border-2 border-[#D97706]/50 text-[#D97706] rounded text-xs font-bold uppercase hover:bg-[#D97706]/10"
-}, "Ripristino di emergenza")), /*#__PURE__*/React.createElement("div", {
+}, L.t('backup.ripristino'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#5C4A3C]/30 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-}, "Chiusura del campo"), /*#__PURE__*/React.createElement("p", {
+}, L.t('campo.chiusuraTitolo')), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500"
-}, "A conti fatti e rimborsi saldati: salva tutto (file + cloud), lo mette in ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Archivio"), " e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini. L'app resta pronta per il prossimo evento. I dati archiviati restano consultabili."), admin ? /*#__PURE__*/React.createElement("button", {
+}, frase('campo.chiusuraNota')), admin ? /*#__PURE__*/React.createElement("button", {
   onClick: openClose,
   className: bottone('bruno', 'grande', 'w-full')
-}, "\uD83C\uDFC1 Chiudi il campo e archivia") : /*#__PURE__*/React.createElement("p", {
+}, L.t('campo.chiudiEArchivia')) : /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-400 italic"
-}, "La chiusura del campo la fa chi tiene i conti."), archives.length > 0 && /*#__PURE__*/React.createElement("button", {
+}, L.t('campo.laFaChiTieneIConti')), archives.length > 0 && /*#__PURE__*/React.createElement("button", {
   onClick: () => goTo('archivio'),
   className: bottone('testuale', 'piccolo', 'w-full')
-}, "Vedi l'archivio (", archives.length, ")")), /*#__PURE__*/React.createElement("div", {
+}, L.t('campo.vediArchivio', archives.length))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg text-[#2D392C]"
-}, "Sincronizzazione Cloud"), /*#__PURE__*/React.createElement("span", {
+}, L.t('cloud.titolo')), /*#__PURE__*/React.createElement("span", {
   className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
-}, cloud.connected ? 'Connesso' : 'Non connesso')), !(window.CloudSync && window.CloudSync.isConfigured()) ? /*#__PURE__*/React.createElement("p", {
+}, L.t(cloud.connected ? 'cloud.connesso' : 'cloud.nonConnesso'))), !(window.CloudSync && window.CloudSync.isConfigured()) ? /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 italic"
-}, "Firebase non configurato. Incolla la config del tuo progetto in ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "firebase-config.js"), " per abilitare la sincronizzazione online tra dispositivi.") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+}, frase('cloud.nonConfigurato')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500"
-}, "La sincronizzazione si attiva da sola all'avvio quando c'\xE8 linea. Offline si continua a lavorare in locale. Premi Disconnetti solo se vuoi lavorare senza condividere i dati."), /*#__PURE__*/React.createElement("div", {
+}, L.t('cloud.notaAuto')), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: campCodeInput,
   onChange: e => setCampCodeInput(e.target.value),
-  placeholder: "Codice campo",
+  placeholder: L.t('cloud.codiceCampo'),
   disabled: cloud.connected,
   className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] disabled:opacity-60"
 }), cloud.connected ? /*#__PURE__*/React.createElement("button", {
   onClick: disconnectCloud,
   className: bottone('bruno', 'normale')
-}, "Disconnetti") : /*#__PURE__*/React.createElement("button", {
+}, L.t('cloud.disconnetti')) : /*#__PURE__*/React.createElement("button", {
   onClick: () => connectCloud(campCodeInput),
   className: bottone('primario', 'normale')
-}, "Connetti")), /*#__PURE__*/React.createElement("div", {
+}, L.t('cloud.connetti'))), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between text-[10px] text-gray-500"
-}, /*#__PURE__*/React.createElement("span", null, cloud.status === 'connecting' && 'Connessione in corso…', cloud.status === 'saving' && 'Salvataggio…', cloud.status === 'connected' && (cloud.lastSync ? `Ultima sync: ${L.data(new Date(cloud.lastSync), 'oraPiena')}` : 'In ascolto…'), cloud.status === 'error' && /*#__PURE__*/React.createElement("span", {
+}, /*#__PURE__*/React.createElement("span", null, cloud.status === 'connecting' && L.t('cloud.inCorso'), cloud.status === 'saving' && L.t('cloud.salvataggio'), cloud.status === 'connected' && (cloud.lastSync ? L.t('cloud.ultimaSync', L.data(new Date(cloud.lastSync), 'oraPiena')) : L.t('cloud.inAscolto')), cloud.status === 'error' && /*#__PURE__*/React.createElement("span", {
   className: "text-red-700"
-}, "Errore: ", cloud.error), cloud.status === 'idle' && (localStorage.getItem('cambusa_sync_optout') === '1' ? 'Sincronizzazione disattivata: premi Connetti per riattivarla.' : 'In attesa di connessione automatica…')), !isOnline && /*#__PURE__*/React.createElement("span", {
+}, L.t('cloud.errore', cloud.error)), cloud.status === 'idle' && L.t(localStorage.getItem('cambusa_sync_optout') === '1' ? 'cloud.disattivata' : 'cloud.inAttesa')), !isOnline && /*#__PURE__*/React.createElement("span", {
   className: "text-[#D97706] font-bold"
-}, "offline"))))));
+}, L.t('cloud.offline')))))));
 const schedaLista = ({
   addPurchase,
   addToBuy,
@@ -7553,7 +7497,7 @@ const schedaLista = ({
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-2 gap-2"
-}, [['daacquistare', 'Da acquistare', toBuy.length], ['acquistato', 'Acquistato', purchases.length]].map(([k, l, n]) => /*#__PURE__*/React.createElement("button", {
+}, [['daacquistare', L.t('sezione.daAcquistare'), toBuy.length], ['acquistato', L.t('lista.acquistato'), purchases.length]].map(([k, l, n]) => /*#__PURE__*/React.createElement("button", {
   key: k,
   onClick: () => setListaSection(k),
   className: bottoneScelta('linguetta', 'sezione', listaSection === k, 'piccolo')
@@ -7563,27 +7507,27 @@ const schedaLista = ({
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg text-[#2D392C]"
-}, "Da Acquistare"), toBuy.length > 0 && /*#__PURE__*/React.createElement("span", {
+}, L.t('lista.daAcquistareTitolo')), toBuy.length > 0 && /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] uppercase font-bold text-gray-500"
-}, toBuy.length, " ", toBuy.length === 1 ? 'voce' : 'voci')), /*#__PURE__*/React.createElement("div", {
+}, L.t('lista.quanteVoci', toBuy.length))), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: newBuyName,
   onChange: e => setNewBuyName(e.target.value),
   onKeyDown: e => e.key === 'Enter' && addToBuy(),
-  placeholder: "Cosa serve\u2026",
+  placeholder: L.t('lista.cosaServe'),
   className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
 }), /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: newBuyQty,
   onChange: e => setNewBuyQty(e.target.value),
   onKeyDown: e => e.key === 'Enter' && addToBuy(),
-  placeholder: "Q.t\xE0",
+  placeholder: L.t('lista.qta'),
   className: "w-20 shrink-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm text-center focus:outline-none focus:border-[#2D392C]"
 }), /*#__PURE__*/React.createElement("button", {
   onClick: addToBuy,
-  "aria-label": "Aggiungi alla lista",
+  "aria-label": L.t('lista.aggiungiAllaLista'),
   className: bottoneIcona('pieno', 'shrink-0')
 }, "+")), toBuy.length > 4 && /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
@@ -7591,24 +7535,24 @@ const schedaLista = ({
   type: "text",
   value: toBuyQuery,
   onChange: e => setToBuyQuery(e.target.value),
-  placeholder: "Cerca nella lista\u2026",
+  placeholder: L.t('lista.cerca'),
   className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
 }), toBuyQuery && /*#__PURE__*/React.createElement("button", {
   onClick: () => setToBuyQuery(''),
-  "aria-label": "Azzera la ricerca",
+  "aria-label": L.t('lista.azzeraRicerca'),
   className: bottoneIcona('neutro', 'shrink-0')
 }, "\xD7")), toBuy.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
-}, "Lista vuota. Scrivi cosa serve e premi +.") : (() => {
+}, L.t('lista.vuota')) : (() => {
   const q = toBuyQuery.trim().toLowerCase();
   const visibili = toBuy.filter(it => !q || (it.name || '').toLowerCase().includes(q) || (it.qty || '').toLowerCase().includes(q));
   return /*#__PURE__*/React.createElement(React.Fragment, null, q && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] uppercase font-bold text-gray-500"
-  }, visibili.length, " ", visibili.length === 1 ? 'voce trovata' : 'voci trovate', " su ", toBuy.length)), visibili.length === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, L.t('lista.trovate', visibili.length, toBuy.length))), visibili.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
-  }, "Niente in lista corrisponde a \"", toBuyQuery, "\".") : /*#__PURE__*/React.createElement("ul", {
+  }, L.t('lista.nienteCorrisponde', toBuyQuery)) : /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
   }, visibili.map(it => /*#__PURE__*/React.createElement("li", {
     key: it.id,
@@ -7621,13 +7565,13 @@ const schedaLista = ({
     className: "text-sm font-bold text-[#2D392C] leading-snug break-words"
   }, it.name), it.qty && /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-gray-500"
-  }, "Quantit\xE0: ", it.qty)), receipts[it.id] && /*#__PURE__*/React.createElement("button", {
+  }, L.t('lista.quantita', it.qty))), receipts[it.id] && /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[it.id]),
-    "aria-label": "Vedi scontrino",
+    "aria-label": L.t('lista.vediScontrino'),
     className: bottoneIcona('pieno', 'shrink-0')
   }, "\uD83D\uDCF7"), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeToBuy(it.id),
-    "aria-label": "Rimuovi",
+    "aria-label": L.t('dotazioni.rimuovi'),
     className: bottoneIcona('distruttivo', 'shrink-0')
   }, "\xD7")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setBuying({
@@ -7640,27 +7584,27 @@ const schedaLista = ({
       account: 'comune'
     }),
     className: bottone('bruno', 'piccolo', 'mt-2 w-full')
-  }, "Segna come acquistata")))));
+  }, L.t('lista.segnaAcquistata'))))));
 })(), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic"
-}, "Quando una voce viene acquistata passa in \"Acquistato\": l\xEC si mettono prezzo, acquirente e la foto dello scontrino.")), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, !manualOpen ? /*#__PURE__*/React.createElement("button", {
+}, L.t('lista.notaPassaggio'))), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, !manualOpen ? /*#__PURE__*/React.createElement("button", {
   onClick: () => setManualOpen(true),
   className: "w-full bg-white p-3 rounded-lg border-2 border-dashed border-[#8F9E8B]/60 text-[#2D392C] hover:bg-[#E2EAE4] flex items-center justify-center gap-2"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-lg leading-none"
 }, "\uFF0B"), /*#__PURE__*/React.createElement("span", {
   className: "font-bold uppercase text-xs tracking-wide"
-}, "Aggiungi un prodotto a mano")) : /*#__PURE__*/React.createElement("div", {
+}, L.t('lista.aggiungiAMano'))) : /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg text-[#2D392C]"
-}, "Prodotto acquistato"), /*#__PURE__*/React.createElement("div", {
+}, L.t('lista.prodottoAcquistato')), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center gap-2 shrink-0"
 }, /*#__PURE__*/React.createElement("label", {
-  title: "Scontrino: scatta una foto o scegli dalla galleria",
-  "aria-label": "Allega scontrino",
+  title: L.t('lista.scontrinoTitolo'),
+  "aria-label": L.t('lista.allegaScontrino'),
   className: `cursor-pointer px-3 py-2 rounded border-2 text-lg leading-none ${pReceipt ? 'bg-[#2D392C] border-[#2D392C]' : 'bg-white border-[#8F9E8B]/50 hover:bg-[#E2EAE4]'}`
 }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
   type: "file",
@@ -7669,37 +7613,37 @@ const schedaLista = ({
   className: "hidden"
 })), /*#__PURE__*/React.createElement("button", {
   onClick: () => setManualOpen(false),
-  "aria-label": "Chiudi la maschera",
+  "aria-label": L.t('lista.chiudiMaschera'),
   className: bottoneIcona('neutro')
 }, "\xD7"))), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 -mt-1"
-}, "Per un prodotto che non era in \"Da acquistare\"."), pReceipt && /*#__PURE__*/React.createElement("div", {
+}, L.t('lista.nonEraInLista')), pReceipt && /*#__PURE__*/React.createElement("div", {
   className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-2 rounded border border-[#8F9E8B]/30"
 }, /*#__PURE__*/React.createElement("img", {
   src: pReceipt,
-  alt: "Scontrino",
+  alt: L.t('lista.scontrino'),
   className: "w-12 h-12 object-cover rounded"
 }), /*#__PURE__*/React.createElement("span", {
   className: "flex-grow text-xs text-[#2D392C] font-bold"
-}, "Scontrino allegato \u2713"), /*#__PURE__*/React.createElement("button", {
+}, L.t('lista.scontrinoAllegato')), /*#__PURE__*/React.createElement("button", {
   onClick: () => setPReceipt(null),
-  "aria-label": "Rimuovi foto",
+  "aria-label": L.t('lista.rimuoviFoto'),
   className: bottoneIcona('distruttivo')
 }, "\xD7")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-}, "Nome"), /*#__PURE__*/React.createElement("input", {
+}, L.t('lista.nome')), /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: pName,
   onChange: e => setPName(e.target.value),
-  placeholder: "Es. Pasta, Acqua, Piatti\u2026",
+  placeholder: L.t('lista.esempioNome'),
   className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
 })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-}, "Acquirente"), renderBuyerSelect(pBuyer, setPBuyer)), /*#__PURE__*/React.createElement("div", {
+}, L.t('lista.acquirente')), renderBuyerSelect(pBuyer, setPBuyer)), /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-2 gap-3"
 }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-}, "Prezzo (\u20AC)"), /*#__PURE__*/React.createElement("input", {
+}, L.t('lista.prezzo')), /*#__PURE__*/React.createElement("input", {
   type: "number",
   min: "0",
   step: "0.01",
@@ -7711,35 +7655,35 @@ const schedaLista = ({
   className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
 })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-}, "Tipologia"), /*#__PURE__*/React.createElement("select", {
+}, L.t('lista.tipologia')), /*#__PURE__*/React.createElement("select", {
   value: pType,
   onChange: e => setPType(e.target.value),
   className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold focus:outline-none focus:border-[#2D392C]"
 }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
   key: k,
   value: k
-}, PURCHASE_TYPES[k]))))), pType !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+}, tipoSpesa(k)))))), pType !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-}, "Conto"), /*#__PURE__*/React.createElement("select", {
+}, L.t('lista.conto')), /*#__PURE__*/React.createElement("select", {
   value: pAccount,
   onChange: e => setPAccount(e.target.value),
   className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold focus:outline-none focus:border-[#2D392C]"
 }, /*#__PURE__*/React.createElement("option", {
   value: "comune"
-}, "Conto comune"), /*#__PURE__*/React.createElement("option", {
+}, L.t('lista.contoComune')), /*#__PURE__*/React.createElement("option", {
   value: "sep"
-}, "Conto separato")), pAccount === 'sep' && /*#__PURE__*/React.createElement("p", {
+}, L.t('giorno.contoSeparato'))), pAccount === 'sep' && /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] mt-1 leading-snug text-[#5C4A3C]"
-}, sepDays.length === 0 ? '⚠ Nessun giorno spuntato come "conto separato": vai in Calendario e spunta i giorni, altrimenti questa spesa non sa fra chi dividersi.' : `Si dividerà solo fra chi era presente ai pasti dei ${sepDays.length} giorni spuntati in Calendario.`)), /*#__PURE__*/React.createElement("button", {
+}, sepDays.length === 0 ? L.t('lista.senzaGiorniSpuntati') : L.t('lista.siDivide', sepDays.length))), /*#__PURE__*/React.createElement("button", {
   onClick: addPurchase,
   className: bottone('primario', 'grande', 'w-full')
-}, "Salva")), /*#__PURE__*/React.createElement("div", {
+}, L.t('lista.salva'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg text-[#2D392C]"
-}, "Cronologia acquisti"), purchases.length > 0 && /*#__PURE__*/React.createElement("span", {
+}, L.t('lista.cronologia')), purchases.length > 0 && /*#__PURE__*/React.createElement("span", {
   className: "font-rustic font-bold text-[#2D392C]"
 }, money(totals.overallTotal), " \u20AC")), purchases.length > 4 && /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2 mb-3"
@@ -7747,36 +7691,32 @@ const schedaLista = ({
   type: "text",
   value: purchaseQuery,
   onChange: e => setPurchaseQuery(e.target.value),
-  placeholder: "Cerca fra le spese\u2026",
+  placeholder: L.t('lista.cercaSpese'),
   className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
 }), purchaseQuery && /*#__PURE__*/React.createElement("button", {
   onClick: () => setPurchaseQuery(''),
-  "aria-label": "Azzera la ricerca",
+  "aria-label": L.t('lista.azzeraRicerca'),
   className: bottoneIcona('neutro', 'shrink-0')
 }, "\xD7")), spesePotenzialmenteDoppie().map(g => /*#__PURE__*/React.createElement("div", {
   key: g[0].id,
   className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mb-3"
 }, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-[#5C4A3C] leading-snug"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "\"", g[0].name, "\" da ", money(posNum(g[0].price)), " \u20AC \xE8 registrata ", g.length, " volte"), g.some(x => (x.buyer || '') !== (g[0].buyer || '')) ? /*#__PURE__*/React.createElement(React.Fragment, null, " (da ", [...new Set(g.map(x => x.buyer || '—'))].join(' e '), ")") : null, ".", ' ', "Se \xE8 la stessa spesa messa da due persone, il totale \xE8 gonfiato e la quota di tutti sale: cancellane una qui sotto con la ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "\xD7"), ". Se sono due spese davvero diverse, lascia stare \u2014 o cambia un nome per non ricascarci."))), purchases.length === 0 ? /*#__PURE__*/React.createElement("p", {
+}, frase('lista.doppia', g[0].name, money(posNum(g[0].price)), g.length, g.some(x => (x.buyer || '') !== (g[0].buyer || '')) ? [...new Set(g.map(x => x.buyer || '—'))].join(' e ') : null)))), purchases.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
-}, "Nessun acquisto registrato. Compila il form qui sopra e premi Salva.") : (() => {
+}, L.t('lista.nessunAcquisto')) : (() => {
   const q = purchaseQuery.trim().toLowerCase();
-  const visibili = purchases.slice().reverse().filter(p => !q || (p.name || '').toLowerCase().includes(q) || (p.buyer || '').toLowerCase().includes(q) || (PURCHASE_TYPES[p.type] || '').toLowerCase().includes(q));
+  const visibili = purchases.slice().reverse().filter(p => !q || (p.name || '').toLowerCase().includes(q) || (p.buyer || '').toLowerCase().includes(q) || tipoSpesa(p.type).toLowerCase().includes(q));
   const sommaVisibili = visibili.reduce((s, p) => s + posNum(p.price), 0);
   return /*#__PURE__*/React.createElement(React.Fragment, null, q && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20 mb-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] uppercase font-bold text-gray-500"
-  }, visibili.length, " ", visibili.length === 1 ? 'voce trovata' : 'voci trovate', " su ", purchases.length), /*#__PURE__*/React.createElement("span", {
+  }, L.t('lista.trovate', visibili.length, purchases.length)), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C] text-sm"
   }, money(sommaVisibili), " \u20AC")), visibili.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
-  }, "Nessuna spesa corrisponde a \"", purchaseQuery, "\".") : /*#__PURE__*/React.createElement("ul", {
+  }, L.t('lista.nessunaSpesaCorrisponde', purchaseQuery)) : /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
   }, visibili.map(p =>
   /*#__PURE__*/
@@ -7798,23 +7738,23 @@ const schedaLista = ({
     className: "flex flex-wrap items-center gap-1 min-w-0 flex-grow"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B]"
-  }, PURCHASE_TYPES[p.type] || p.type), p.account === 'sep' && p.type !== 'logistica' && /*#__PURE__*/React.createElement("span", {
+  }, tipoSpesa(p.type) || p.type), p.account === 'sep' && p.type !== 'logistica' && /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
-  }, "Separato"), p.fromList && /*#__PURE__*/React.createElement("span", {
+  }, L.t('lista.separatoEtichetta')), p.fromList && /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
-  }, "acquistata"), /*#__PURE__*/React.createElement("span", {
+  }, L.t('lista.acquistataEtichetta')), /*#__PURE__*/React.createElement("span", {
     className: "text-[9px] text-gray-400 basis-full"
   }, p.buyer ? /*#__PURE__*/React.createElement("span", {
     className: "text-[#5C4A3C] font-bold"
   }, p.buyer) : /*#__PURE__*/React.createElement("span", {
     className: "italic"
-  }, "acquirente non indicato"), p.at && ` · ${L.data(new Date(p.at), 'breve')} ${L.data(new Date(p.at), 'ora')}`)), receipts[p.id] ? /*#__PURE__*/React.createElement("button", {
+  }, L.t('lista.acquirenteIgnoto')), p.at && ` · ${L.data(new Date(p.at), 'breve')} ${L.data(new Date(p.at), 'ora')}`)), receipts[p.id] ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[p.id]),
-    "aria-label": "Vedi scontrino",
+    "aria-label": L.t('lista.vediScontrino'),
     className: bottoneIcona('pieno', 'shrink-0')
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
-    title: "Scontrino: scatta una foto o scegli dalla galleria",
-    "aria-label": "Allega scontrino",
+    title: L.t('lista.scontrinoTitolo'),
+    "aria-label": L.t('lista.allegaScontrino'),
     className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
@@ -7823,17 +7763,17 @@ const schedaLista = ({
     className: "hidden"
   })), /*#__PURE__*/React.createElement("button", {
     onClick: () => openEditPurchase(p),
-    "aria-label": "Correggi",
-    title: "Correggi questa spesa",
+    "aria-label": L.t('lista.correggi'),
+    title: L.t('lista.correggiSpesa'),
     className: bottoneIcona('neutro', 'shrink-0')
   }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
     onClick: () => removePurchase(p.id),
-    "aria-label": "Rimuovi",
+    "aria-label": L.t('dotazioni.rimuovi'),
     className: bottoneIcona('distruttivo', 'shrink-0')
   }, "\xD7"))))));
 })(), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic mt-2"
-}, "Manca uno scontrino? Tocca \uD83D\uDCF7 sulla voce: puoi scattarlo o scegliere una foto dalla galleria, anche dopo. Le foto si sincronizzano tra i dispositivi del campo e sono incluse nel backup."))));
+}, L.t('lista.notaScontrini')))));
 const schedaAttrezzatura = ({
   addEquip,
   attachReceiptTo,
@@ -7859,15 +7799,15 @@ const schedaAttrezzatura = ({
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-  }, "Aggiungi attrezzatura"), /*#__PURE__*/React.createElement("input", {
+  }, L.t('attrezzatura.aggiungiTitolo')), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: newEquipText,
     onChange: e => setNewEquipText(e.target.value),
-    placeholder: "Es. Corda, gazebo, tanica\u2026",
+    placeholder: L.t('attrezzatura.esempio'),
     className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
   }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-[10px] uppercase font-bold text-gray-500 mb-1"
-  }, "Acquirente (facoltativo)"), renderBuyerSelect(newEquipBuyer, setNewEquipBuyer)), /*#__PURE__*/React.createElement("div", {
+  }, L.t('attrezzatura.acquirenteFacoltativo')), renderBuyerSelect(newEquipBuyer, setNewEquipBuyer)), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("input", {
     type: "number",
@@ -7877,24 +7817,24 @@ const schedaAttrezzatura = ({
     value: newEquipPrice,
     onChange: e => setNewEquipPrice(e.target.value),
     onKeyDown: e => e.key === 'Enter' && addEquip(),
-    placeholder: "Prezzo (\u20AC)",
+    placeholder: L.t('lista.prezzo'),
     className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: addEquip,
     className: bottone('primario', 'normale', 'shrink-0')
-  }, "Aggiungi")), /*#__PURE__*/React.createElement("p", {
+  }, L.t('attrezzatura.aggiungi'))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400"
-  }, "Spunta una voce quando l'hai acquistata: il suo prezzo entra nelle Spese Totali (come logistica). Con \uD83D\uDCF7 alleghi lo scontrino (foto o galleria), anche dopo.")), /*#__PURE__*/React.createElement("div", {
+  }, L.t('attrezzatura.nota'))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-lg text-[#2D392C]"
-  }, "Attrezzatura"), equipment.length > 0 && /*#__PURE__*/React.createElement("span", {
+  }, L.t('area.attrezzatura')), equipment.length > 0 && /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] uppercase font-bold text-gray-500"
-  }, equipment.filter(e => !e.bought).length, " da comprare")), equipment.length === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, L.t('attrezzatura.daComprare', equipment.filter(e => !e.bought).length))), equipment.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-gray-400 italic"
-  }, "Nessuna attrezzatura. Aggiungi la prima voce qui sopra.") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ul", {
+  }, L.t('attrezzatura.vuota')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
   }, equipment.map(e =>
   /*#__PURE__*/
@@ -7908,7 +7848,7 @@ const schedaAttrezzatura = ({
     className: "flex items-start gap-3"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleEquipBought(e.id),
-    "aria-label": e.bought ? 'Segna da comprare' : 'Segna acquistato',
+    "aria-label": L.t(e.bought ? 'attrezzatura.segnaDaComprare' : 'attrezzatura.segnaAcquistato'),
     className: bottoneScelta('casella', 'casella', e.bought, 'simbolo', 'mt-0.5')
   }, "\u2713"), /*#__PURE__*/React.createElement("div", {
     className: "flex-grow min-w-0"
@@ -7922,11 +7862,11 @@ const schedaAttrezzatura = ({
     className: "flex items-center justify-end gap-2 mt-2 pt-2 border-t border-[#8F9E8B]/20"
   }, receipts[e.id] ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setViewReceipt(receipts[e.id]),
-    "aria-label": "Vedi scontrino",
+    "aria-label": L.t('lista.vediScontrino'),
     className: bottoneIcona('pieno', 'shrink-0')
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
-    title: "Scontrino: scatta una foto o scegli dalla galleria",
-    "aria-label": "Allega scontrino",
+    title: L.t('lista.scontrinoTitolo'),
+    "aria-label": L.t('lista.allegaScontrino'),
     className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-[#8F9E8B]/50 bg-white text-sm leading-none hover:bg-[#E2EAE4]"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
@@ -7935,12 +7875,12 @@ const schedaAttrezzatura = ({
     className: "hidden"
   })), /*#__PURE__*/React.createElement("button", {
     onClick: () => openEditEquip(e),
-    "aria-label": "Correggi",
-    title: "Correggi questa voce",
+    "aria-label": L.t('lista.correggi'),
+    title: L.t('attrezzatura.correggiVoce'),
     className: bottoneIcona('neutro', 'shrink-0')
   }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeEquip(e.id),
-    "aria-label": "Rimuovi",
+    "aria-label": L.t('dotazioni.rimuovi'),
     className: bottoneIcona('distruttivo', 'shrink-0')
   }, "\xD7"))))), /*#__PURE__*/React.createElement("div", {
     className: "mt-3 pt-2 border-t border-[#8F9E8B]/30 space-y-1"
@@ -7948,13 +7888,13 @@ const schedaAttrezzatura = ({
     className: "flex justify-between text-[11px] text-gray-500"
   }, /*#__PURE__*/React.createElement("span", {
     className: "uppercase font-bold"
-  }, "Previsto (tutto)"), /*#__PURE__*/React.createElement("span", {
+  }, L.t('attrezzatura.previsto')), /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
   }, money(equipPlannedTotal), " \u20AC")), /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] uppercase font-bold text-[#2D392C]"
-  }, "Acquistato (nelle spese)"), /*#__PURE__*/React.createElement("span", {
+  }, L.t('attrezzatura.acquistatoNelleSpese')), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-[#2D392C]"
   }, money(equipBoughtTotal), " \u20AC"))))));
 };

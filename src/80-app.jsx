@@ -32,9 +32,9 @@ function App() {
         const n = Math.max(0, parseFloat(amt) || 0);
         if (n > 0) seed.push({ id: uid(), name, price: n, type, at: Date.now() });
       };
-      mk(g.food, 'alimentare', 'Totale cibo (importato)');
-      mk(g.drinks, 'bevande', 'Totale bevande (importato)');
-      mk(g.accessory, 'logistica', 'Totale accessori (importato)');
+      mk(g.food, 'alimentare', L.t('import.totaleCibo'));
+      mk(g.drinks, 'bevande', L.t('import.totaleBevande'));
+      mk(g.accessory, 'logistica', L.t('import.totaleAccessori'));
     }
     return seed;
   });
@@ -161,7 +161,7 @@ function App() {
   // una configurazione mancante si può aggiungere senza rompere niente.
   const entraAdmin = async () => {
     const cfg = window.APP_ADMIN;
-    if (!cfg || !cfg.hash) { setAdminErr('Modalità tecnica non configurata su questa installazione.'); return; }
+    if (!cfg || !cfg.hash) { setAdminErr(L.t('tecnica.nonConfigurata')); return; }
     const im = await improntaPassword(adminPwd, cfg);
     if (im && im === cfg.hash) {
       try { localStorage.setItem(ADMIN_KEY, '1'); } catch (e) { /* resta accesa solo finché l'app è aperta */ }
@@ -169,7 +169,7 @@ function App() {
       setAdminPwd('');
       setAdminErr('');
     } else {
-      setAdminErr(im ? 'Password sbagliata.' : 'Serve https (o localhost) per verificare la password.');
+      setAdminErr(L.t(im ? 'tecnica.passwordSbagliata' : 'tecnica.serveHttps'));
     }
   };
   const esciAdmin = () => {
@@ -614,11 +614,8 @@ function App() {
 
   // Frase da mettere nella conferma: dice cosa sparirà, in italiano.
   const avvisoPerdite = (perse) => {
-    if (!perse.length) return 'Non sparisce nessuna voce: il ripristino aggiunge soltanto.';
-    const che = descriviPerdite(perse, syncStateRef.current);
-    return `ATTENZIONE: spariranno ${perse.length} voci da TUTTI i telefoni` +
-      (che ? `\n(${che})` : '') +
-      '\n\nSi potrà annullare da Impostazioni → Diagnostica.';
+    if (!perse.length) return L.t('perdite.nessuna');
+    return L.t('perdite.avviso', perse.length, descriviPerdite(perse, syncStateRef.current));
   };
 
   // Il registro come file di testo: comodo da mandare quando si deve capire
@@ -627,14 +624,14 @@ function App() {
     const st = syncStateRef.current;
     const righe = logLeggi().map((r) => [
       L.data(new Date(r.at), 'dataOra'),
-      r.o === 'io' ? 'questo telefono' : 'sincronizzazione',
-      r.k === 'd' ? 'cancellata' : 'modificata',
+      L.t(r.o === 'io' ? 'registro.questoTelefono' : 'registro.sincronizzazione'),
+      L.t(r.k === 'd' ? 'registro.cancellata' : 'registro.modificata'),
       sezioneDiPath(r.p),
       descriviPath(r.p, st),
       r.p,
     ].join('\t'));
-    const testo = `Registro modifiche — ${BRAND.appTitle}\nGenerato il ${L.data(new Date(), 'dataOra')}\n\n` +
-      'Data e ora\tOrigine\tAzione\tSezione\tVoce\tPercorso\n' + righe.join('\n') + '\n';
+    const testo = L.t('registro.testata', BRAND.appTitle, L.data(new Date(), 'dataOra'))
+      + L.t('registro.colonne') + righe.join('\n') + '\n';
     const blob = new Blob([testo], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -653,14 +650,8 @@ function App() {
   // sbagliata cancella il lavoro di tutti.
   const annullaSync = () => {
     const r = load(RESCUE_KEY, null);
-    if (!r || !r.state) { window.alert('Non c\'è nessuna copia di scorta da ripristinare.'); return; }
-    const quando = L.data(new Date(r.at), 'dataOra');
-    if (!window.confirm(
-      `Annullare la sincronizzazione del ${quando}?\n\n` +
-      `${r.perse === 1 ? 'Tornerà 1 voce che era sparita' : `Torneranno ${r.perse} voci che erano sparite`}, e la copia di prima verrà ` +
-      'ripubblicata su TUTTI i dispositivi.\n\n' +
-      'Le modifiche fatte dopo, da chiunque, restano.'
-    )) return;
+    if (!r || !r.state) { window.alert(L.t('diag.senzaScorta')); return; }
+    if (!window.confirm(L.t('diag.confermaAnnulla', L.data(new Date(r.at), 'dataOra'), r.perse))) return;
     const s = r.state;
     setMembers(Array.isArray(s.members) ? s.members : []);
     setCampData(applicaBlocchi(s.campData && typeof s.campData === 'object' ? s.campData : {}));
@@ -674,22 +665,22 @@ function App() {
     setBlocchi(Array.isArray(s.blocchi) ? s.blocchi : []);
     setLostSync(null);
     localStorage.removeItem(RESCUE_KEY);
-    window.alert('Fatto: fra qualche secondo i dati tornano anche sugli altri telefoni.');
+    window.alert(L.t('diag.annullato'));
   };
 
   const connectCloud = async (code) => {
     const CS = window.CloudSync;
     if (!CS || !CS.isConfigured()) {
-      window.alert('Firebase non è configurato. Incolla la config del tuo progetto in firebase-config.js.');
+      window.alert(L.t('cloud.senzaFirebase'));
       return;
     }
     const c = (code || '').trim();
-    if (!c) { window.alert('Inserisci il codice del campo.'); return; }
+    if (!c) { window.alert(L.t('cloud.senzaCodice')); return; }
     localStorage.removeItem('cambusa_sync_optout'); // riattiva l'auto-connessione
     try {
       await CS.connect(window.FIREBASE_CONFIG, c, applyRemote, { password: sessionPassword });
     } catch (e) {
-      window.alert('Connessione fallita: ' + (e && e.message ? e.message : e));
+      window.alert(L.t('cloud.connessioneFallita', e && e.message ? e.message : e));
     }
   };
 
@@ -737,7 +728,7 @@ function App() {
     if (locked || dbAskedRef.current) return;
     if (cloud.authMode !== 'anon-nopass') return;
     dbAskedRef.current = true;
-    lockNow('Per sincronizzare con gli altri serve di nuovo la password del campo. È la stessa di sempre.');
+    lockNow(L.t('blocco.serveDiNuovo'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloud.authMode, locked]);
 
@@ -873,13 +864,8 @@ function App() {
     const g = giorniBloccatiDi(id);
     if (!g.length) return false;
     const m = members.find((x) => x.id === id);
-    window.alert(
-      `${m ? m.name : 'Questa persona'}: ${azione} non è possibile.\n\n` +
-      `Ha presenze in ${g.length === 1 ? 'un giorno con le presenze bloccate' : `${g.length} giorni con le presenze bloccate`} ` +
-      `(${g.map(nomeGiorno).join(', ')}). Cambiarla adesso riscriverebbe le quote di quei giorni, ` +
-      'che invece devono restare come sono.\n\n' +
-      'Se serve davvero, prima sblocca quei giorni dalla scheda Presenze.'
-    );
+    window.alert(L.t('blocchi.membroIntoccabile',
+      m ? m.name : L.t('blocchi.questaPersona'), azione, g.length, g.map(nomeGiorno).join(', ')));
     return true;
   };
 
@@ -958,54 +944,33 @@ function App() {
   const avvisoBlocchi = (nuovo) => {
     const g = bloccatiInPericolo(nuovo);
     if (!g.length) return '';
-    return `\n\nATTENZIONE: ${g.length === 1 ? 'un giorno con le presenze bloccate' : `${g.length} giorni con le presenze bloccate`} ` +
-      `(${g.map(nomeGiorno).join(', ')}) ${g.length === 1 ? 'verrà sbloccato o cambiato' : 'verranno sbloccati o cambiati'}. ` +
-      'Le quote di quei giorni possono cambiare.';
+    return L.t('blocchi.avvisoSblocco', g.length, g.map(nomeGiorno).join(', '));
   };
 
   // Guardia per i due interruttori del giorno.
   const giornoIntoccabile = (dateStr, azione) => {
     if (!giornoBloccato(dateStr)) return false;
-    window.alert(
-      `${nomeGiorno(dateStr)}: ${azione} non è possibile.\n\n` +
-      'Le presenze di questo giorno sono bloccate, e questo interruttore ne cambierebbe le quote.\n\n' +
-      'Se serve davvero: sblocca il giorno qui in Presenze, cambia, e ribloccalo.'
-    );
+    window.alert(L.t('blocchi.giornoIntoccabile', nomeGiorno(dateStr), azione));
     return true;
   };
 
   const giornoGratis = (dateStr) => (freeDays || []).includes(dateStr);
 
   const chiediGiornoGratis = (dateStr) => {
-    if (giornoIntoccabile(dateStr, 'cambiare "giorno gratis"')) return;
+    if (giornoIntoccabile(dateStr, L.t('gratis.azione'))) return;
     const gia = giornoGratis(dateStr);
     const meals = (campData[dateStr] || {}).meals || {};
     const quanti = Object.values(meals).filter((v) => v && (v.lunch || v.dinner)).length;
     if (gia) {
-      if (!window.confirm(
-        `Rimettere ${nomeGiorno(dateStr)} nei conti?\n\n` +
-        'I pasti di quel giorno tornano a contare nelle quote di tutti.'
-      )) return;
-    } else if (!window.confirm(
-      `Rendere ${nomeGiorno(dateStr)} gratis per tutti?\n\n` +
-      `I pasti di quel giorno (${quanti} ${quanti === 1 ? 'persona' : 'persone'}) restano segnati per la cucina, ` +
-      'ma escono da TUTTI i conti: nessuno li paga, e chi è venuto solo quel giorno non deve niente.\n\n' +
-      'Attenzione: la spesa già registrata non sparisce. Se hai comprato del cibo per quel giorno, ' +
-      'quel costo si divide sugli altri giorni e le quote degli altri salgono. Serve quando quel ' +
-      'giorno lo ha offerto qualcuno o si è mangiato fuori a spese proprie.'
-    )) return;
+      if (!window.confirm(L.t('gratis.confermaRimetti', nomeGiorno(dateStr)))) return;
+    } else if (!window.confirm(L.t('gratis.confermaRendi', nomeGiorno(dateStr), quanti))) return;
     setFreeDays((prev) => (gia ? prev.filter((d) => d !== dateStr) : [...prev, dateStr].sort()));
   };
 
   const bloccaGiorno = (dateStr) => {
     const meals = (campData[dateStr] || {}).meals || {};
     const n = Object.values(meals).filter((v) => v && (v.lunch || v.dinner)).length;
-    if (!window.confirm(
-      `Bloccare le presenze di ${nomeGiorno(dateStr)}?\n\n` +
-      `Restano congelate così come sono adesso (${n} ${n === 1 ? 'persona' : 'persone'} con almeno un pasto). ` +
-      'Da quel momento non si toccano più: né dai tasti, né da quello che arriva dagli altri telefoni.\n\n' +
-      'Si può sbloccare da qui, in modalità tecnica.'
-    )) return;
+    if (!window.confirm(L.t('blocchi.confermaBlocca', nomeGiorno(dateStr), n))) return;
     setCampData((prev) => {
       const day = { ...(prev[dateStr] || {}) };
       const copia = { ...(day.meals || {}) };
@@ -1023,10 +988,7 @@ function App() {
   };
 
   const sbloccaGiorno = (dateStr) => {
-    if (!window.confirm(
-      `Sbloccare le presenze di ${nomeGiorno(dateStr)}?\n\n` +
-      'Tornano modificabili da tutti, e riprendono a sincronizzarsi.'
-    )) return;
+    if (!window.confirm(L.t('blocchi.confermaSblocca', nomeGiorno(dateStr)))) return;
     setCampData((prev) => {
       const day = { ...(prev[dateStr] || {}) };
       const b = day.bloccato;
@@ -1054,15 +1016,7 @@ function App() {
       const meals = (campData[d] || {}).meals || {};
       return Object.values(meals).some((v) => v && (v.lunch || v.dinner)) && !(campData[d] || {}).bloccato;
     });
-    if (!window.confirm(
-      'Chiudere i conti del campo?\n\n' +
-      `Spese e attrezzatura si congelano (${purchases.length} spese, ${money(totals.overallTotal)} €), ` +
-      `e le presenze dei giorni ancora aperti vengono bloccate (${giorniAperti.length}).\n\n` +
-      'Da quel momento gli importi di "chi paga chi" non cambiano più, così i rimborsi già ' +
-      'segnati come saldati restano validi. Quello che arriva dopo dagli altri telefoni viene ' +
-      'messo da parte e te lo si dice.\n\n' +
-      'Si può riaprire da qui, in modalità tecnica.'
-    )) return;
+    if (!window.confirm(L.t('chiusura.confermaChiudi', purchases.length, money(totals.overallTotal), giorniAperti.length))) return;
     const adesso = Date.now();
     // Prima i giorni: le quote dipendono dalle presenze quanto dalle spese.
     if (giorniAperti.length) {
@@ -1084,12 +1038,7 @@ function App() {
   };
 
   const riapriConti = () => {
-    if (!window.confirm(
-      'Riaprire i conti?\n\n' +
-      'Spese e attrezzatura tornano modificabili, e gli importi di "chi paga chi" ' +
-      'si ricalcolano: i rimborsi già segnati come saldati potrebbero non combaciare più.\n\n' +
-      'Le presenze restano bloccate: si sbloccano una per una dalla scheda Presenze.'
-    )) return;
+    if (!window.confirm(L.t('chiusura.confermaRiapri'))) return;
     setBlocchi((prev) => prev.filter((b) => !b || b.id !== 'conti'));
     setRespinte([]);
   };
@@ -1106,16 +1055,18 @@ function App() {
       (attuali || []).forEach((x) => {
         if (!x || x.id == null) return;
         const vecchia = per.get(String(x.id));
-        if (!vecchia) fuori.push({ che, azione: 'aggiunta', nome: x.name || x.text || '—', quanto: posNum(x.price) });
-        else if (JSON.stringify(vecchia) !== JSON.stringify(x)) fuori.push({ che, azione: 'modificata', nome: x.name || x.text || '—', quanto: posNum(x.price) });
+        if (!vecchia) fuori.push({ che, azione: 'azione.aggiunta', nome: x.name || x.text || '—', quanto: posNum(x.price) });
+        else if (JSON.stringify(vecchia) !== JSON.stringify(x)) fuori.push({ che, azione: 'azione.modificata', nome: x.name || x.text || '—', quanto: posNum(x.price) });
       });
       const ora = new Set((attuali || []).map((x) => String(x && x.id)));
       congelate.forEach((x) => {
-        if (!ora.has(String(x.id))) fuori.push({ che, azione: 'cancellata', nome: x.name || x.text || '—', quanto: posNum(x.price) });
+        if (!ora.has(String(x.id))) fuori.push({ che, azione: 'azione.cancellata', nome: x.name || x.text || '—', quanto: posNum(x.price) });
       });
     };
-    confronta(stato.purchases, b.purchases, 'spesa');
-    confronta(stato.equipment, b.equipment || [], 'attrezzatura');
+    // "che" e "azione" sono CHIAVI del dizionario: l'avviso si disegna dopo,
+    // e deve poter parlare nella lingua scelta in quel momento.
+    confronta(stato.purchases, b.purchases, 'percorso.spesa');
+    confronta(stato.equipment, b.equipment || [], 'percorso.attrezzatura');
     if (fuori.length === 0) return { stato, respinte: [] };
     return {
       stato: { ...stato, purchases: b.purchases.map((x) => ({ ...x })), equipment: (b.equipment || []).map((x) => ({ ...x })) },
@@ -1126,11 +1077,7 @@ function App() {
   // Guardia per i tasti: dice di no e spiega perché.
   const contiChiusi = (azione) => {
     if (!bloccoConti()) return false;
-    window.alert(
-      `I conti del campo sono chiusi: ${azione} non è possibile.\n\n` +
-      'Serve per non far cambiare gli importi dei rimborsi già in corso. ' +
-      'Per modificare, riapri i conti da Spese Totali → Dati (modalità tecnica).'
-    );
+    window.alert(L.t('chiusura.azioneImpossibile', azione));
     return true;
   };
 
@@ -1174,13 +1121,9 @@ function App() {
 
   const riassegnaOrfane = (orfano, nuovoId) => {
     const dest = members.find((m) => m.id === nuovoId);
-    if (!dest) { window.alert('Scegli a chi assegnarle.'); return; }
-    const chi = orfano.nome ? `di ${orfano.nome}` : 'senza padrone';
-    if (!window.confirm(
-      `Assegnare a ${dest.name} le ${orfano.pasti} presenze ${chi}?\n\n` +
-      `Riguardano ${orfano.giorni.length} ${orfano.giorni.length === 1 ? 'giorno' : 'giorni'}. ` +
-      'Se in quei giorni ha già dei pasti segnati, si sommano (non si perde niente).'
-    )) return;
+    if (!dest) { window.alert(L.t('orfane.scegliChi')); return; }
+    const chi = orfano.nome ? L.t('orfane.di', orfano.nome) : L.t('orfane.senzaPadrone');
+    if (!window.confirm(L.t('orfane.confermaAssegna', dest.name, orfano.pasti, chi, orfano.giorni.length))) return;
     setCampData((prev) => {
       const out = { ...prev };
       Object.keys(out).forEach((d) => {
@@ -1247,13 +1190,7 @@ function App() {
     const tengo = ordinati[0];
     const butto = ordinati.slice(1);
     const pasti = butto.reduce((s, m) => s + pastiDi(m.id), 0);
-    if (!window.confirm(
-      `"${tengo.name}" è in elenco ${gruppo.length} volte.\n\n` +
-      'Succede quando due telefoni senza linea aggiungono la stessa persona: ' +
-      'per i conti diventano due persone diverse, e la quota sbaglia per tutti.\n\n' +
-      `Unendole resta una scheda sola${pasti ? `, e le ${pasti} presenze segnate sull'altra si sommano a queste` : ''}. ` +
-      'Non si perde niente.'
-    )) return;
+    if (!window.confirm(L.t('membri.confermaUnisci', tengo.name, gruppo.length, pasti))) return;
 
     // Le presenze delle schede scartate si SOMMANO a quelle della tenuta: chi
     // ha segnato il pranzo su una e la cena sull'altra deve ritrovarsi con
@@ -1342,29 +1279,19 @@ function App() {
   const confermaPrezzo = (prezzo) => {
     const s = prezzoSospetto(prezzo);
     if (!s) return true;
-    return window.confirm(
-      `${money(s.p)} € è una cifra alta.\n\n` +
-      (s.perche === 'relativo'
-        ? `Le altre spese del campo stanno intorno a ${money(s.mediana)} €: questa è più di dieci volte tanto.`
-        : 'Controlla che non ci sia una virgola fuori posto.') +
-      '\n\nUna cifra sbagliata qui si spalma sulle quote di tutti e non si nota più.\n\nÈ giusta?'
-    );
+    return window.confirm(L.t('spesa.prezzoAlto', money(s.p),
+      s.perche === 'relativo' ? money(s.mediana) : null));
   };
 
   const scartaOrfane = (orfano) => {
-    const chi = orfano.nome ? `di ${orfano.nome}` : 'senza padrone';
+    const chi = orfano.nome ? L.t('orfane.di', orfano.nome) : L.t('orfane.senzaPadrone');
     // I giorni bloccati non si svuotano nemmeno da qui. Riattaccare una
     // presenza alla persona giusta è una riparazione e passa (non cambia CHI
     // ha mangiato); buttarla via è una perdita, e su un giorno chiuso cambia
     // le quote di tutti. Si dice quante ne restano e perché.
     const protetti = giorniBloccatiDi(orfano.id);
-    if (!window.confirm(
-      `Buttare via le ${orfano.pasti} presenze ${chi}?\nNon si potranno recuperare.` +
-      (protetti.length
-        ? `\n\nQuelle dei giorni bloccati (${protetti.map(nomeGiorno).join(', ')}) restano dove sono: ` +
-          'per toglierle bisogna prima sbloccare quei giorni.'
-        : '')
-    )) return;
+    if (!window.confirm(L.t('orfane.confermaButta', orfano.pasti, chi,
+      protetti.length ? protetti.map(nomeGiorno).join(', ') : null))) return;
     setCampData((prev) => {
       const out = { ...prev };
       Object.keys(out).forEach((d) => {
@@ -1386,19 +1313,19 @@ function App() {
   // modifica arriva su ogni telefono: prima di farlo si chiede.
   const chiediSetAll = (mealType) => {
     if (members.length === 0) return;
-    const pasto = mealType === 'lunch' ? 'pranzo' : 'cena';
+    const pasto = L.t(mealType === 'lunch' ? 'presenze.pranzo' : 'presenze.cena').toUpperCase();
     const gia = members.every((m) => getMeal(selectedDateStr, m.id)[mealType]);
     const testo = gia
-      ? `Togliere il ${pasto.toUpperCase()} a tutti e ${members.length} i membri di ${nomeGiorno(selectedDateStr)}?`
-      : `Segnare tutti e ${members.length} i membri a ${pasto.toUpperCase()} di ${nomeGiorno(selectedDateStr)}?`;
-    if (!window.confirm(`${testo}\n\nCambia le presenze di tutti, anche sugli altri telefoni.`)) return;
+      ? L.t('presenze.confermaTogli', pasto, members.length, nomeGiorno(selectedDateStr))
+      : L.t('presenze.confermaSegna', members.length, pasto, nomeGiorno(selectedDateStr));
+    if (!window.confirm(L.t('presenze.cambiaPerTutti', testo))) return;
     setAllMeals(selectedDateStr, mealType);
   };
 
   // Copia le presenze (pranzo e cena) dal giorno precedente.
   const chiediCopiaDaIeri = () => {
     if (giornoBloccato(selectedDateStr)) {
-      window.alert(`Le presenze di ${nomeGiorno(selectedDateStr)} sono bloccate: prima vanno sbloccate.`);
+      window.alert(L.t('presenze.bloccateSblocca', nomeGiorno(selectedDateStr)));
       return;
     }
     const d = parseDate(selectedDateStr);
@@ -1406,7 +1333,7 @@ function App() {
     const prevStr = toDateStr(d);
     const prevMeals = (campData[prevStr] && campData[prevStr].meals) || {};
     if (!Object.keys(prevMeals).length) {
-      window.alert('Nessuna presenza registrata il giorno precedente.');
+      window.alert(L.t('presenze.nessunaIeri'));
       return;
     }
     const conta = (meals) => {
@@ -1415,12 +1342,8 @@ function App() {
     };
     const ieri = conta(prevMeals);
     const oggi = conta((campData[selectedDateStr] && campData[selectedDateStr].meals) || {});
-    if (!window.confirm(
-      `Copiare le presenze di ${nomeGiorno(prevStr)} su ${nomeGiorno(selectedDateStr)}?\n\n` +
-      `Ieri: ${ieri.p} a pranzo, ${ieri.c} a cena.\n` +
-      `Oggi diventa uguale: quello che c'è adesso (${oggi.p} a pranzo, ${oggi.c} a cena) viene sostituito, ` +
-      'anche sugli altri telefoni.'
-    )) return;
+    if (!window.confirm(L.t('presenze.confermaCopia', nomeGiorno(prevStr), nomeGiorno(selectedDateStr),
+      ieri.p, ieri.c, oggi.p, oggi.c))) return;
     setCampData((prev) => {
       const day = { ...(prev[selectedDateStr] || {}) };
       // SOVRASCRIVE le presenze di ieri su quelle di oggi, ma non CANCELLA le
@@ -1443,20 +1366,16 @@ function App() {
     // Due persone con lo stesso nome verrebbero trattate come una sola nei
     // saldi (i pagamenti si abbinano per nome): meglio dirlo subito.
     const gia = members.some((m) => m.name.trim().toLowerCase() === name.toLowerCase());
-    if (gia && !window.confirm(
-      `C'è già un membro che si chiama "${name}".\n\n` +
-      'Nei conti finali le due persone verrebbero confuse. Aggiungi un cognome ' +
-      'o un soprannome per distinguerle.\n\nVuoi aggiungerlo lo stesso?'
-    )) return;
+    if (gia && !window.confirm(L.t('membri.confermaOmonimo', name))) return;
     setMembers((prev) => [...prev, { id: uid(), name, isChild: newMemberChild }]);
     setNewMemberName('');
     setNewMemberChild(false);
   };
 
   const removeMember = (id) => {
-    if (membroIntoccabile(id, 'eliminarla')) return;
+    if (membroIntoccabile(id, L.t('azione.eliminarla'))) return;
     const m = members.find((x) => x.id === id);
-    if (m && !window.confirm(`Eliminare ${m.name} dai membri?\nLe sue presenze e i suoi pasti non conteranno più nei calcoli.`)) return;
+    if (m && !window.confirm(L.t('membri.confermaElimina', m.name))) return;
     // Si tiene il nome da parte: se poi qualcuno lo riaggiunge, l'app prende un
     // id nuovo e le vecchie presenze restano appese a un id che non esiste più.
     // Senza questo elenco non si saprebbe nemmeno DI CHI erano.
@@ -1467,7 +1386,7 @@ function App() {
   const toggleChild = (id) => {
     // Adulto o bambino cambia quanto paga tutto il campo: su un giorno
     // bloccato vale esattamente come modificare le presenze.
-    if (membroIntoccabile(id, 'cambiare adulto/bambino')) return;
+    if (membroIntoccabile(id, L.t('azione.adultoBambino'))) return;
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, isChild: !m.isChild } : m)));
   };
 
@@ -1539,7 +1458,7 @@ function App() {
   // prezzo no, quello si scopre alla cassa. Se non si fa, il compito resta
   // fatto lo stesso: registrare la spesa e' un'altra cosa.
   const daCompitoASpesa = (c) => {
-    if (contiChiusi('registrare una spesa')) return;
+    if (contiChiusi(L.t('azione.registrareSpesa'))) return;
     setPName(c.testo);
     setPBuyer(c.chi || '');
     setPPrice('');
@@ -1558,16 +1477,16 @@ function App() {
 
   const proponiDalMenu = () => {
     const MS = window.MenuSpesa;
-    if (!MS) { window.alert('Il lettore dei menù non è disponibile.'); return; }
+    if (!MS) { window.alert(L.t('menu.senzaLettore')); return; }
     const testo = getDayData(selectedDateStr).note || '';
     const tutte = MS.vociDalMenu(testo);
     if (tutte.length === 0) {
-      window.alert('Il menù di questo giorno è vuoto: scrivi cosa si mangia e riprova.');
+      window.alert(L.t('menu.vuoto'));
       return;
     }
     const voci = MS.nuove(tutte, toBuy);
     if (voci.length === 0) {
-      window.alert(`Le ${tutte.length} ${tutte.length === 1 ? 'voce' : 'voci'} di questo menù sono già nella lista della spesa.`);
+      window.alert(L.t('menu.giaInLista', tutte.length));
       return;
     }
     // Tutte spuntate: la maggioranza delle righe è roba da comprare, e togliere
@@ -1588,7 +1507,7 @@ function App() {
 
   const removeToBuy = (id) => {
     const it = toBuy.find((x) => x.id === id);
-    if (it && !window.confirm(`Eliminare "${it.name}" dalla lista da acquistare?`)) return;
+    if (it && !window.confirm(L.t('lista.confermaTogliVoce', it.name))) return;
     setToBuy((prev) => prev.filter((x) => x.id !== id));
     setReceipts((prev) => {
       if (!prev[id]) return prev;
@@ -1600,10 +1519,10 @@ function App() {
   // Conferma acquisto: la voce esce dalla lista ed entra nella cronologia
   // mantenendo lo stesso id (così la foto scontrino resta collegata).
   const confirmBuy = () => {
-    if (contiChiusi('registrare un acquisto')) return;
+    if (contiChiusi(L.t('azione.registrareAcquisto'))) return;
     if (!buying) return;
     const price = posNum(buying.price);
-    if (price <= 0) { window.alert('Inserisci un prezzo maggiore di zero.'); return; }
+    if (price <= 0) { window.alert(L.t('spesa.prezzoZero')); return; }
     if (!confermaPrezzo(price)) return;
     const fullName = buying.qty ? `${buying.name} (${buying.qty})` : buying.name;
     setPurchases((prev) => [...prev, {
@@ -1617,11 +1536,11 @@ function App() {
 
   // ---------- Taccuino delle spese ----------
   const addPurchase = () => {
-    if (contiChiusi('aggiungere una spesa')) return;
+    if (contiChiusi(L.t('azione.aggiungereSpesa'))) return;
     const name = pName.trim();
     const price = posNum(pPrice);
     if (!name || price <= 0) {
-      window.alert('Inserisci il nome del prodotto e un prezzo maggiore di zero.');
+      window.alert(L.t('spesa.nomeEPrezzo'));
       return;
     }
     if (!confermaPrezzo(price)) return;
@@ -1646,7 +1565,7 @@ function App() {
 
   // ---------- Conto separato ----------
   const toggleSepDay = (dateStr) => {
-    if (giornoIntoccabile(dateStr, 'cambiare il conto separato')) return;
+    if (giornoIntoccabile(dateStr, L.t('azione.contoSeparato'))) return;
     setSepDays((prev) => (prev.includes(dateStr) ? prev.filter((d) => d !== dateStr) : [...prev, dateStr].sort()));
   };
 
@@ -1661,12 +1580,12 @@ function App() {
 
   const saveEdit = () => {
     if (!editing) return;
-    if (contiChiusi('modificare una voce')) return;
+    if (contiChiusi(L.t('azione.modificareVoce'))) return;
     const name = (editing.name || '').trim();
     const price = posNum(editing.price);
-    if (!name) { window.alert('Il nome non può restare vuoto.'); return; }
+    if (!name) { window.alert(L.t('spesa.nomeVuoto')); return; }
     if (editing.kind === 'purchase') {
-      if (price <= 0) { window.alert('Inserisci un prezzo maggiore di zero.'); return; }
+      if (price <= 0) { window.alert(L.t('spesa.prezzoZero')); return; }
       if (!confermaPrezzo(price)) return;
       setPurchases((prev) => prev.map((p) => (p.id !== editing.id ? p : {
         ...p, name, price, type: editing.type, buyer: (editing.buyer || '').trim(),
@@ -1682,9 +1601,9 @@ function App() {
   };
 
   const removePurchase = (id) => {
-    if (contiChiusi('cancellare una spesa')) return;
+    if (contiChiusi(L.t('azione.cancellareSpesa'))) return;
     const p = purchases.find((x) => x.id === id);
-    if (p && !window.confirm(`Eliminare l'acquisto "${p.name}" (${money(posNum(p.price))} €)?\nVerrà tolto dai totali${receipts[id] ? ' insieme alla foto dello scontrino' : ''}.`)) return;
+    if (p && !window.confirm(L.t('spesa.confermaElimina', p.name, money(posNum(p.price)), !!receipts[id]))) return;
     setPurchases((prev) => prev.filter((x) => x.id !== id));
     setReceipts((prev) => {
       if (!prev[id]) return prev;
@@ -1710,7 +1629,7 @@ function App() {
     const soloCloud = cloudIds.filter((id) => !locali.some((l) => l.id === id)).map((id) => ({ id, dove: 'cloud' }));
     const tutte = locali.concat(soloCloud).sort((a, b) => b.id.localeCompare(a.id));
     if (!tutte.length) {
-      window.alert('Nessun salvataggio disponibile. Se ne crea uno al giorno, dal primo utilizzo della giornata.');
+      window.alert(L.t('ripristino.nessunSalvataggio'));
       return;
     }
     setSnapList(tutte);
@@ -1719,7 +1638,7 @@ function App() {
   const restoreSnapshot = async (voce) => {
     const id = typeof voce === 'string' ? voce : voce.id;
     const dove = typeof voce === 'string' ? 'cloud' : voce.dove;
-    const quando = id.slice(11) === '00' ? ' (mattina)' : id.slice(11) === '12' ? ' (pomeriggio)' : '';
+    const quando = id.slice(11) === '00' ? L.t('ripristino.mattina') : id.slice(11) === '12' ? L.t('ripristino.pomeriggio') : '';
 
     // Prima si legge la copia, poi si dice cosa costa: chiedere "sei sicuro?"
     // senza sapere quante voci spariranno è chiedere di firmare in bianco.
@@ -1730,19 +1649,14 @@ function App() {
       const CS = window.CloudSync;
       if (CS && CS.isConnected && CS.isConnected()) json = await CS.getSnapshot(id);
     }
-    if (!json) { window.alert('Impossibile leggere questo salvataggio.'); return; }
+    if (!json) { window.alert(L.t('ripristino.illeggibile')); return; }
 
     let d;
-    try { d = JSON.parse(json); } catch (e) { window.alert('Salvataggio non valido.'); return; }
-    if (!d || typeof d !== 'object') { window.alert('Salvataggio non valido.'); return; }
+    try { d = JSON.parse(json); } catch (e) { window.alert(L.t('ripristino.nonValido')); return; }
+    if (!d || typeof d !== 'object') { window.alert(L.t('ripristino.nonValido')); return; }
 
     const perse = perditeSeApplico(d);
-    if (!window.confirm(
-      `Ripristinare la copia del ${id.slice(0, 10)}${quando}?\n\n` +
-      `${avvisoPerdite(perse)}${avvisoBlocchi(d)}\n\n` +
-      'Se il problema è una sincronizzazione andata male, guarda prima ' +
-      'Impostazioni → Diagnostica: spesso basta "Annulla la sincronizzazione".'
-    )) return;
+    if (!window.confirm(L.t('ripristino.conferma', id.slice(0, 10), quando, avvisoPerdite(perse), avvisoBlocchi(d)))) return;
     try {
       scortaPrimaDi(perse);
       // Set "normali" (non via applyRemote): così il push parte e propaga
@@ -1758,9 +1672,9 @@ function App() {
       setFreeDays(Array.isArray(d.freeDays) ? d.freeDays : []);
       setBlocchi(Array.isArray(d.blocchi) ? d.blocchi : []);
       setSnapList(null);
-      window.alert('Dati ripristinati: tra qualche secondo saranno su tutti i dispositivi.');
+      window.alert(L.t('ripristino.fatto'));
     } catch (e) {
-      window.alert('Salvataggio non valido.');
+      window.alert(L.t('ripristino.nonValido'));
     }
   };
 
@@ -1768,11 +1682,11 @@ function App() {
   const buildReport = () => {
     const t = totals;
     const lines = [];
-    lines.push(`🏕️ ${BRAND.appTitle} — Conti finali`);
+    lines.push(L.t('report.titolo', BRAND.appTitle));
     lines.push('');
-    lines.push(`💶 Totale spese: ${money(t.overallTotal)} €`);
+    lines.push(L.t('report.totale', money(t.overallTotal)));
     if (t.foodDrinksSep > 0 || t.sepDaysCount > 0) {
-      lines.push(`   di cui conto separato: ${money(t.foodDrinksSep)} € su ${t.sepDaysCount} ${t.sepDaysCount === 1 ? 'giorno' : 'giorni'} (${money(t.costPerMealSep)} € a pasto)`);
+      lines.push(L.t('report.diCuiSeparato', money(t.foodDrinksSep), t.sepDaysCount, money(t.costPerMealSep)));
     }
     // Due casse, due elenchi. Un elenco solo farebbe sembrare che chi ha
     // anticipato sul conto separato debba essere rimborsato da tutti.
@@ -1781,15 +1695,17 @@ function App() {
       if (c.transfers.length === 0 && c.settlement.length === 0) return;
       if (c.transfers.length > 0) {
         lines.push('');
-        lines.push(`👉 Chi paga chi${titolo ? ` — ${titolo}` : ''}:`);
-        c.transfers.forEach((x) => lines.push(`• ${x.from} → ${x.to}: ${money(x.amount)} €`));
+        lines.push(L.t('report.chiPagaChi', titolo));
+        c.transfers.forEach((x) => lines.push(L.t('report.riga', x.from, x.to, money(x.amount))));
       }
       if (c.settlement.length > 0) {
         lines.push('');
-        lines.push(`📋 Dettaglio a testa${titolo ? ` — ${titolo}` : ''}:`);
+        lines.push(L.t('report.dettaglio', titolo));
         c.settlement.forEach((s) => {
-          const stato = s.net > 0.005 ? `riceve ${money(s.net)} €` : s.net < -0.005 ? `deve dare ${money(-s.net)} €` : 'in pari';
-          lines.push(`• ${s.name}: ${stato} (anticipato ${money(s.paid)} €, quota ${money(s.owed)} €)`);
+          const stato = s.net > 0.005 ? L.t('report.riceve', money(s.net))
+            : s.net < -0.005 ? L.t('report.deveDare', money(-s.net))
+            : L.t('report.inPari');
+          lines.push(L.t('report.rigaPersona', s.name, stato, money(s.paid), money(s.owed)));
         });
       }
     };
@@ -1799,30 +1715,30 @@ function App() {
     if (sepAttiva && saldiOttimizzati) {
       blocco({ transfers: t.transfersOttimizzati, settlement: t.settlement }, '');
     } else {
-      blocco(t.casse.comune, sepAttiva ? 'cassa comune' : '');
-      if (sepAttiva) blocco(t.casse.separata, 'cassa separata');
+      blocco(t.casse.comune, sepAttiva ? L.t('report.cassaComune') : '');
+      if (sepAttiva) blocco(t.casse.separata, L.t('report.cassaSeparata'));
     }
     if (t.freeDaysCount > 0) {
-      lines.push(`   🎁 ${t.freeDaysCount} ${t.freeDaysCount === 1 ? 'giorno gratis' : 'giorni gratis'}: ${t.mealsFree} pasti fuori dai conti`);
+      lines.push(L.t('report.giorniGratis', t.freeDaysCount, t.mealsFree));
     }
     if (t.unattributed > 0.005) {
       lines.push('');
-      lines.push(`⚠️ ${money(t.unattributed)} € di spese comuni senza acquirente.`);
+      lines.push(L.t('report.senzaAcquirente', money(t.unattributed)));
     }
     // Un resoconto che non quadra non va mandato nel gruppo senza dirlo: chi
     // lo legge farebbe i bonifici sbagliati.
     if (t.nonRipartito > 0.005) {
       lines.push('');
-      lines.push(`⚠️ CONTI NON COMPLETI: ${money(t.nonRipartito)} € non sono nelle quote di nessuno.`);
-      t.buchi.forEach((b) => lines.push(`   • ${money(b.quanto)} € — ${b.perche}`));
-      lines.push('   Chi ha anticipato quella cifra resta scoperto: da sistemare prima di pagare.');
+      lines.push(L.t('report.nonCompleti', money(t.nonRipartito)));
+      t.buchi.forEach((b) => lines.push(L.t('report.buco', money(b.quanto), L.t(b.perche))));
+      lines.push(L.t('report.scoperto'));
     }
     return lines.join('\n');
   };
 
   const shareReport = async () => {
     if (totals.overallTotal <= 0) {
-      window.alert('Nessuna spesa da condividere: registra prima gli acquisti.');
+      window.alert(L.t('report.nienteDaCondividere'));
       return;
     }
     const text = buildReport();
@@ -1865,7 +1781,7 @@ function App() {
   const addEquip = () => {
     const text = newEquipText.trim();
     if (!text) return;
-    if (contiChiusi('aggiungere attrezzatura')) return;
+    if (contiChiusi(L.t('azione.aggiungereAttrezzatura'))) return;
     if (!confermaPrezzo(newEquipPrice)) return;
     setEquipment((prev) => [...prev, { id: uid(), text, price: posNum(newEquipPrice), bought: false, buyer: newEquipBuyer.trim() }]);
     setNewEquipText('');
@@ -1874,14 +1790,14 @@ function App() {
   };
 
   const toggleEquipBought = (id) => {
-    if (contiChiusi('cambiare l\'attrezzatura acquistata')) return;
+    if (contiChiusi(L.t('azione.attrezzaturaAcquistata'))) return;
     setEquipment((prev) => prev.map((e) => (e.id === id ? { ...e, bought: !e.bought } : e)));
   };
 
   const removeEquip = (id) => {
     const e = equipment.find((x) => x.id === id);
-    if (e && !window.confirm(`Eliminare "${e.text}" dall'attrezzatura?`)) return;
-    if (contiChiusi('cancellare attrezzatura')) return;
+    if (e && !window.confirm(L.t('attrezzatura.confermaElimina', e.text))) return;
+    if (contiChiusi(L.t('azione.cancellareAttrezzatura'))) return;
     setEquipment((prev) => prev.filter((x) => x.id !== id));
     setReceipts((prev) => {
       if (!prev[id]) return prev;
@@ -1900,7 +1816,7 @@ function App() {
 
   const removeGear = (id) => {
     const g = gear.find((x) => x.id === id);
-    if (g && !window.confirm(`Eliminare "${g.text}" dalle dotazioni?`)) return;
+    if (g && !window.confirm(L.t('dotazioni.confermaElimina', g.text))) return;
     setGear((prev) => prev.filter((x) => x.id !== id));
   };
 
@@ -1939,9 +1855,9 @@ function App() {
   const renderWeekStrip = () => (
     <>
       <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm">
-        <button onClick={() => changeWeek(-7)} aria-label="Settimana precedente" className={bottoneIcona('tenue')}>&larr;</button>
-        <span className="font-bold text-sm text-[#2D392C] uppercase font-rustic">Settimana Selezionata</span>
-        <button onClick={() => changeWeek(7)} aria-label="Settimana successiva" className={bottoneIcona('tenue')}>&rarr;</button>
+        <button onClick={() => changeWeek(-7)} aria-label={L.t('settimana.precedente')} className={bottoneIcona('tenue')}>&larr;</button>
+        <span className="font-bold text-sm text-[#2D392C] uppercase font-rustic">{L.t('settimana.selezionata')}</span>
+        <button onClick={() => changeWeek(7)} aria-label={L.t('settimana.successiva')} className={bottoneIcona('tenue')}>&rarr;</button>
       </div>
 
       <div className="grid grid-cols-7 gap-1">
@@ -2022,7 +1938,7 @@ function App() {
         </div>
       )}
       {c.elenco.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">{c.vuoto || 'Aggiungi membri e segna le presenze per vedere la ripartizione.'}</p>
+        <p className="text-sm text-gray-400 italic">{c.vuoto || L.t('quote.vuoto')}</p>
       ) : (
         <div>
           <ul className="divide-y divide-[#8F9E8B]/20">
@@ -2031,26 +1947,23 @@ function App() {
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-[#2D392C]">{b.name}</span>
                   <span className="text-[10px] text-gray-500">
-                    {c.pastiDi(b)} {c.pastiDi(b) === 1 ? 'pasto' : 'pasti'}
-                    {b.mealsGratis > 0 ? ` · ${b.mealsGratis} gratis` : ''}
-                    {b.isChild ? ' · bambino' : ''}
+                    {L.t('quote.pastiRiga', c.pastiDi(b), b.mealsGratis, b.isChild)}
                   </span>
                 </div>
                 <span className={`font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-[#2D392C]'}`}>
-                  {b.isChild ? 'Gratis' : `${money(c.quotaDi(b))} €`}
+                  {b.isChild ? L.t('quote.gratis') : `${money(c.quotaDi(b))} €`}
                 </span>
               </li>
             ))}
           </ul>
           <div className="flex justify-between items-center pt-2 mt-1 border-t border-[#8F9E8B]/30">
-            <span className="text-[11px] uppercase font-bold text-gray-500">Totale raccolto</span>
+            <span className="text-[11px] uppercase font-bold text-gray-500">{L.t('quote.totaleRaccolto')}</span>
             <span className="font-rustic font-bold text-[#2D392C]">{money(c.raccolto)} €</span>
           </div>
           <p className="text-[9px] text-gray-400 italic mt-2">
-            Quote arrotondate a 0,10 € (niente monetine da 1/2/5 cent).
-            {Math.abs(c.scarto) >= 0.005
-              ? ` Scarto rispetto al ripartibile: ${c.scarto > 0 ? '+' : ''}${money(c.scarto)} € (sotto 0,50 €, non riconciliato).`
-              : ' Nessuno scarto.'}
+            {L.t('quote.arrotondamento', Math.abs(c.scarto) >= 0.005
+              ? `${c.scarto > 0 ? '+' : ''}${money(c.scarto)}`
+              : null)}
           </p>
         </div>
       )}
@@ -2062,20 +1975,17 @@ function App() {
       {c.nonRipartito > 0.005 && (
         <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mt-2">
           <p className="text-[10px] text-[#5C4A3C] leading-snug">
-            <span className="font-bold">{money(c.nonRipartito)} € non sono nelle quote di nessuno.</span>{' '}
-            Questa cassa vale {money(c.totale)} €, ma se ne raccolgono {money(c.raccolto)} €:
-            chi ha anticipato quei soldi non li riavrebbe indietro.
+            {frase('quote.nonRipartito', money(c.nonRipartito), money(c.totale), money(c.raccolto))}
           </p>
           <ul className="mt-1.5 space-y-1">
             {c.buchi.map((b) => (
               <li key={b.perche} className="text-[10px] text-[#5C4A3C] leading-snug">
-                <span className="font-bold">{money(b.quanto)} €</span> — {b.perche}.
+                {frase('quote.buco', money(b.quanto), L.t(b.perche))}
               </li>
             ))}
           </ul>
           <p className="text-[9px] text-gray-500 italic mt-1.5 leading-snug">
-            Si sistema segnando le presenze mancanti, spuntando i giorni del conto separato in
-            Calendario, oppure rimettendo quelle spese sul conto comune (la matita nel Taccuino).
+            {L.t('quote.siSistema')}
           </p>
         </div>
       )}
@@ -2093,12 +2003,12 @@ function App() {
         {c.sottotitolo && <p className="text-[9px] text-[#8F9E8B] leading-snug mb-3">{c.sottotitolo}</p>}
         {s.byBuyer.length > 0 && (
           <div className="mb-3 pb-3 border-b border-[#8F9E8B]/30">
-            <h4 className="font-rustic text-sm text-[#8F9E8B] mb-1">Anticipi per acquirente</h4>
+            <h4 className="font-rustic text-sm text-[#8F9E8B] mb-1">{L.t('saldi.anticipiPerAcquirente')}</h4>
             <ul className="divide-y divide-[#8F9E8B]/20">
               {s.byBuyer.map((b) => (
                 <li key={b.name} className="flex items-center justify-between py-1.5">
                   <span className={`text-xs font-bold ${b.name === '—' ? 'text-gray-400 italic' : ''}`}>
-                    {b.name === '—' ? 'Non indicato' : b.name}
+                    {b.name === '—' ? L.t('saldi.nonIndicato') : b.name}
                   </span>
                   <span className="font-rustic font-bold text-sm">{money(b.total)} €</span>
                 </li>
@@ -2107,7 +2017,7 @@ function App() {
           </div>
         )}
         {s.settlement.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">{c.vuoto || 'Registra acquisti (con acquirente) e presenze per vedere chi deve dare o ricevere.'}</p>
+          <p className="text-sm text-gray-400 italic">{c.vuoto || L.t('saldi.vuoto')}</p>
         ) : (
           <ul className="divide-y divide-[#8F9E8B]/20">
             {s.settlement.map((x) => {
@@ -2117,10 +2027,10 @@ function App() {
                 <li key={x.name} className="flex items-center justify-between py-2 gap-2">
                   <div className="flex flex-col min-w-0">
                     <span className="text-sm font-bold truncate">{x.name}</span>
-                    <span className="text-[9px] text-[#8F9E8B]">ha anticipato {money(x.paid)} € · deve {money(x.owed)} €</span>
+                    <span className="text-[9px] text-[#8F9E8B]">{L.t('saldi.haAnticipatoDeve', money(x.paid), money(x.owed))}</span>
                   </div>
                   <span className={`font-rustic font-bold text-sm shrink-0 text-right ${credito ? 'text-[#8FBF8F]' : debito ? 'text-[#D97706]' : 'text-gray-400'}`}>
-                    {credito ? `riceve ${money(x.net)} €` : debito ? `dà ${money(-x.net)} €` : 'in pari'}
+                    {credito ? L.t('saldi.riceve', money(x.net)) : debito ? L.t('saldi.da', money(-x.net)) : L.t('saldi.inPari')}
                   </span>
                 </li>
               );
@@ -2129,8 +2039,8 @@ function App() {
         )}
         {s.transfers.length > 0 && (
           <div className="mt-3 pt-3 border-t border-[#8F9E8B]/30">
-            <h4 className="font-rustic text-sm text-[#8F9E8B] mb-1">Chi paga chi</h4>
-            <p className="text-[9px] text-gray-400 mb-2">Tocca una riga quando il rimborso è stato fatto: resta barrata. Tocca di nuovo per annullare.</p>
+            <h4 className="font-rustic text-sm text-[#8F9E8B] mb-1">{L.t('saldi.chiPagaChi')}</h4>
+            <p className="text-[9px] text-gray-400 mb-2">{L.t('saldi.toccaRiga')}</p>
             <ul className="space-y-1.5">
               {s.transfers.map((t, i) => {
                 const key = chiaveRimborso(t);
@@ -2165,7 +2075,7 @@ function App() {
                               onClick={(e) => { e.stopPropagation(); copiaDato(`${r[0]} di ${t.to}`, r[1]); }}
                               className="ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#2D392C] border border-[#8F9E8B]/30 text-[#8F9E8B] hover:text-white"
                             >
-                              {copied === `${r[0]} di ${t.to}` ? 'copiato ✓' : 'copia'}
+                              {L.t(copied === `${r[0]} di ${t.to}` ? 'saldi.copiato' : 'saldi.copia')}
                             </button>
                           </div>
                         ))}
@@ -2182,8 +2092,7 @@ function App() {
               if (senza.length === 0) return null;
               return (
                 <p className="text-[9px] text-gray-400 italic mt-2">
-                  {senza.join(', ')} {senza.length === 1 ? 'deve' : 'devono'} ricevere ma non {senza.length === 1 ? 'ha' : 'hanno'} inserito
-                  PayPal o IBAN: si aggiungono in <span className="font-bold">Membri</span>, con la "i" accanto al nome.
+                  {frase('saldi.senzaDati', senza.join(', '), senza.length === 1)}
                 </p>
               );
             })()}
@@ -2191,7 +2100,7 @@ function App() {
         )}
         {s.unattributed > 0.005 && (
           <p className="text-[9px] text-[#D97706] italic mt-2">
-            Attenzione: {money(s.unattributed)} € di acquisti sono senza acquirente. Assegna un acquirente nel Taccuino per far quadrare i conti.
+            {L.t('saldi.senzaAcquirente', money(s.unattributed))}
           </p>
         )}
         {/* Se dei soldi non sono in nessuna quota, i rimborsi NON possono
@@ -2200,24 +2109,20 @@ function App() {
         {c.nonRipartito > 0.005 && (
           <div className="mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
             <p className="text-[11px] text-[#5C4A3C] leading-snug">
-              <span className="font-bold">I rimborsi non quadrano: {money(c.nonRipartito)} € non sono nelle quote di nessuno.</span>{' '}
-              Chi ha anticipato quella cifra resterebbe scoperto. Guarda l'avviso in
-              <span className="font-bold"> Quote</span>: dice quali spese sono e come sistemarle.
+              {frase('saldi.nonQuadrano', money(c.nonRipartito))}
             </p>
           </div>
         )}
         {s.unknownBuyers.length > 0 && (
           <div className="mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
             <p className="text-[11px] text-[#5C4A3C] leading-snug">
-              <span className="font-bold">Da controllare:</span> ci sono spese intestate a{' '}
+              {frase('saldi.daControllareTesta')}{' '}
               {s.unknownBuyers.map((u, i) => (
                 <span key={u.name}>
                   {i > 0 ? ', ' : ''}<span className="font-bold">{u.name}</span> ({money(u.paid)} €)
                 </span>
               ))}
-              , che non {s.unknownBuyers.length === 1 ? 'è' : 'sono'} fra i membri. Compare comunque nei
-              rimborsi: se è un nome scritto male o una persona eliminata, correggi l'acquirente nella
-              <span className="font-bold"> Lista della Spesa</span>.
+              {frase('saldi.daControllareCoda', s.unknownBuyers.length === 1)}
             </p>
           </div>
         )}
@@ -2227,11 +2132,10 @@ function App() {
             Senza spiegarlo sembra un errore di conto. */}
         {Math.abs(c.scarto) >= 0.005 && s.transfers.length > 0 && (
           <p className="text-[9px] text-gray-400 italic mt-2">
-            Arrotondamento: i passaggi qui sopra valgono in tutto {money(Math.abs(c.scarto))} € in meno
-            dei saldi indicati. È lo scarto delle quote arrotondate a 0,10 € (così non servono monetine da 1, 2 o 5 cent).
+            {L.t('saldi.arrotondamento', money(Math.abs(c.scarto)))}
           </p>
         )}
-        <p className="text-[9px] text-gray-400 italic mt-1">"Riceve" = ha anticipato più di quanto deve; "dà" = deve versare la differenza.</p>
+        <p className="text-[9px] text-gray-400 italic mt-1">{L.t('saldi.legenda')}</p>
       </div>
     );
   };
@@ -2283,7 +2187,7 @@ function App() {
       try {
         const d = JSON.parse(reader.result);
         if (!d || typeof d !== 'object' || !Array.isArray(d.members)) {
-          window.alert('File non valido: non è un backup dell\'app.');
+          window.alert(L.t('import.nonValido'));
           return;
         }
         // Importare un backup non aggiunge: SOSTITUISCE, e le voci che spariscono
@@ -2293,12 +2197,12 @@ function App() {
         // file né quanto stava buttando via.
         const quando = d.exportedAt ? new Date(d.exportedAt) : null;
         const eta = quando && !isNaN(quando.getTime())
-          ? `Backup del ${L.data(quando, 'dataOra')}`
-          : 'Backup senza data';
-        const dentro = `Contiene ${(d.members || []).length} membri, ${(d.purchases || []).length} spese, ` +
-          `${Object.keys(d.campData || {}).length} giorni.`;
+          ? L.t('import.backupDel', L.data(quando, 'dataOra'))
+          : L.t('import.senzaData');
+        const dentro = L.t('import.contiene', (d.members || []).length, (d.purchases || []).length,
+          Object.keys(d.campData || {}).length);
         const perse = perditeSeApplico(d);
-        if (!window.confirm(`${eta}.\n${dentro}\n\n${avvisoPerdite(perse)}${avvisoBlocchi(d)}\n\nImportare?`)) return;
+        if (!window.confirm(L.t('import.conferma', eta, dentro, avvisoPerdite(perse), avvisoBlocchi(d)))) return;
         scortaPrimaDi(perse);
         setMembers(d.members);
         if (d.campData && typeof d.campData === 'object') setCampData(applicaBlocchi(d.campData));
@@ -2313,7 +2217,7 @@ function App() {
         if (Array.isArray(d.compiti)) setCompiti(d.compiti);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
-        window.alert('File non valido: non è un backup leggibile.');
+        window.alert(L.t('import.nonLeggibile'));
       }
     };
     reader.readAsText(file);
@@ -2327,31 +2231,21 @@ function App() {
 
   const openClose = () => {
     if (!campoInCorso) {
-      window.alert('Non c\'è niente da chiudere: membri e spese sono già vuoti.');
+      window.alert(L.t('campo.nienteDaChiudere'));
       return;
     }
-    setCloseName(BRAND.appTitle || 'Campo');
+    setCloseName(BRAND.appTitle || L.t('campo.nomePredefinito'));
     setClosing(true);
   };
 
   const closeCamp = async () => {
-    const name = (closeName || '').trim() || 'Campo';
+    const name = (closeName || '').trim() || L.t('campo.nomePredefinito');
     const range = campRange();
     const t = totals;
     const daPagare = saldiOttimizzati ? t.transfersOttimizzati : t.transfers;
     const unpaid = daPagare.filter((x) => !settled.includes(chiaveRimborso(x)));
-    const warn = unpaid.length > 0
-      ? `\n\nATTENZIONE: ci sono ancora ${unpaid.length} rimborsi non segnati come saldati.`
-      : '';
-    const conferma =
-      `Chiudere "${name}"?\n\n` +
-      `Verrà archiviato tutto (spese ${money(t.overallTotal)} €, ${members.length} membri) ` +
-      'e scaricato un file di salvataggio con foto degli scontrini comprese.\n\n' +
-      'Poi membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e ' +
-      'scontrini verranno AZZERATI su tutti i dispositivi, per ripartire con il ' +
-      'prossimo evento.\n\n' +
-      'Le foto della Galleria non si perdono: passano nell\'Archivio insieme ai conti.' + warn;
-    if (!window.confirm(conferma)) return;
+    const warn = unpaid.length > 0 ? L.t('campo.rimborsiAperti', unpaid.length) : '';
+    if (!window.confirm(L.t('campo.confermaChiusura', name, money(t.overallTotal), members.length, warn))) return;
 
     const id = toDateStr(new Date()) + '-' + uid();
     const state = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays };
@@ -2413,10 +2307,7 @@ function App() {
     setSelectedDateStr(defaultDateStr());
     setClosing(false);
     setActiveTab('archivio');
-    window.alert(
-      'Campo chiuso e archiviato.' +
-      (cloudOk ? ' La copia è anche nel cloud.' : ' (Senza linea: la copia nel cloud verrà fatta a mano quando torna la rete — il file scaricato è già completo.)')
-    );
+    window.alert(L.t('campo.chiuso', cloudOk));
   };
 
   const downloadArchive = async (a) => {
@@ -2424,13 +2315,13 @@ function App() {
     if (!state) {
       const CS = window.CloudSync;
       if (CS && CS.isConnected && CS.isConnected()) state = await CS.getArchive(a.id);
-      if (!state) { window.alert('Per scaricare questo archivio serve la connessione.'); return; }
+      if (!state) { window.alert(L.t('archivio.serveLinea')); return; }
     }
     downloadJson(`bandone-archivio-${a.id}.json`, { version: 6, archive: a, ...state });
   };
 
   const removeArchive = (a) => {
-    if (!window.confirm(`Eliminare l'archivio "${a.name}"?\nSe non hai il file scaricato, i dati di quel campo andranno persi.`)) return;
+    if (!window.confirm(L.t('archivio.confermaElimina', a.name))) return;
     setArchives((prev) => prev.filter((x) => x.id !== a.id));
     const CS = window.CloudSync;
     if (CS && CS.deleteArchive) CS.deleteArchive(a.id);
@@ -2438,7 +2329,7 @@ function App() {
 
   const shareArchive = async (a) => {
     const text = a.report || '';
-    if (!text) { window.alert('Questo archivio non ha un resoconto salvato.'); return; }
+    if (!text) { window.alert(L.t('archivio.senzaResoconto')); return; }
     if (navigator.share) {
       try { await navigator.share({ title: a.name, text }); return; }
       catch (e) { if (e && e.name === 'AbortError') return; }
@@ -2476,16 +2367,16 @@ function App() {
     || toBuy.length > 0 || equipment.length > 0;
 
   const readyChecks = [
-    { ok: readiness.sw && readiness.cache, titolo: 'App scaricata sul telefono',
-      no: 'Resta su questa pagina qualche secondo con la linea attiva, poi chiudi e riapri l\'app.' },
-    { ok: members.length > 0, titolo: 'Dati del campo ricevuti',
-      no: 'Apri l\'app con la linea: membri, spese e liste arrivano da soli.' },
+    { ok: readiness.sw && readiness.cache, titolo: L.t('pronto.appScaricata'),
+      no: L.t('pronto.appScaricataNo') },
+    { ok: members.length > 0, titolo: L.t('pronto.datiRicevuti'),
+      no: L.t('pronto.datiRicevutiNo') },
     // Si segnala SOLO un ripiego accertato: 'anon' è anche il valore di
     // partenza, prima ancora di provare a collegarsi, e farebbe lampeggiare
     // un allarme falso a ogni avvio.
     { ok: !(LOCK && LOCK.dbEmail && (cloud.authMode === 'anon-nopass' || cloud.authMode === 'anon-fallback')),
-      titolo: 'Accesso al database a posto',
-      no: 'Serve rientrare con la password del campo: l\'app te la chiede da sola quando c\'è linea.' },
+      titolo: L.t('pronto.accessoDb'),
+      no: L.t('pronto.accessoDbNo') },
   ];
   const readyOk = readyChecks.every((c) => c.ok);
 
@@ -2505,12 +2396,8 @@ function App() {
   // Svuota questo telefono. I dati nel cloud NON vengono toccati: alla
   // riapertura, se c'è linea, tornano da soli.
   const wipeLocal = () => {
-    if (!window.confirm(
-      'Cancellare tutti i dati dell\'app da QUESTO telefono?\n\n' +
-      'Il cloud non viene toccato: con la linea i dati tornano da soli alla riapertura. ' +
-      'Senza linea invece resteresti senza dati.'
-    )) return;
-    if (!window.confirm('Confermi? Verrà chiesta di nuovo la password.')) return;
+    if (!window.confirm(L.t('dati.confermaCancella'))) return;
+    if (!window.confirm(L.t('dati.confermaCancella2'))) return;
     try {
       Object.keys(localStorage)
         .filter((k) => k.indexOf('cambusa_') === 0)
@@ -2614,16 +2501,16 @@ function App() {
         onChange={(e) => onChange(e.target.value)}
         className={`w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] ${extraClass || ''}`}
       >
-        <option value="">— non indicato —</option>
+        <option value="">{L.t('acquirente.nonIndicato')}</option>
         {members.map((m) => (<option key={m.id} value={m.name}>{m.name}</option>))}
         {/* Un acquirente registrato prima e non più fra i membri resta
             selezionabile, altrimenti aprendo la scheda si perderebbe. */}
         {value && !members.some((m) => m.name === value) && (
-          <option value={value}>{value} (non più fra i membri)</option>
+          <option value={value}>{L.t('acquirente.nonPiuMembro', value)}</option>
         )}
       </select>
       {members.length === 0 && (
-        <p className="text-[9px] text-[#D97706] mt-1">Aggiungi prima le persone nella scheda Membri.</p>
+        <p className="text-[9px] text-[#D97706] mt-1">{L.t('galleria.primaMembri')}</p>
       )}
     </>
   );
@@ -2631,28 +2518,31 @@ function App() {
   const goTo = (tab) => { setActiveTab(tab); setMenuOpen(false); };
 
   // Guida: una "pill" per ogni area di lavoro.
+  // I testi stanno in lingue.js: qui restano la chiave e l'icona. GUIDE e'
+  // una const DENTRO App(), quindi si ricostruisce a ogni disegno e la
+  // lingua la segue (una const di modulo invece la congelerebbe).
   const GUIDE = [
-    { k: 'calendario', icon: '📅', title: 'Calendario', body: 'Per ogni giorno: il meteo previsto di Pereto (massima, minima e probabilità di pioggia), il riepilogo cucina con quanti pasti preparare a pranzo e a cena, le note libere del giorno (promemoria, turni, cose da ricordare — il menù invece ha la sua scheda) e il collegamento al Menù. Scorri le settimane con le frecce: meteo, note e cucina si aggiornano sul giorno scelto. In cima, la riga "Conto separato" si apre solo quando serve: dentro ci sono i giorni da spuntare per far cassa a parte.' },
-    { k: 'menu', icon: '🍝', title: 'Menù', body: 'Scheda a parte per scrivere cosa si mangia, giorno per giorno. In alto c\'è la stessa striscia dei giorni del Calendario: il giorno scelto è lo stesso nelle due schede, quindi puoi passare dall\'una all\'altra senza ricercarlo. Sotto vedi quanti pasti preparare a pranzo e a cena, e il foglio a righe dove scrivere una pietanza per riga. In fondo l\'elenco dei giorni del campo con la prima riga del menù già scritto: si vede a colpo d\'occhio cosa manca. Tutto si sincronizza: chi cucina lo trova già pronto.' },
-    { k: 'membri', icon: '👥', title: 'Membri', body: 'Aggiungi tutte le persone del campo. Il pulsante Adulto/Bambino decide chi paga: i bambini mangiano gratis e il loro costo è ripartito sugli adulti. L\'elenco alimenta presenze, conti e la tendina dell\'acquirente quando registri una spesa: i nomi non si scrivono a mano, si scelgono, così un refuso non può creare una persona fantasma nei saldi. La "i" accanto al nome apre PayPal e IBAN: chi li compila se li vede comparire nei Saldi, accanto al rimborso che deve ricevere, con il tasto per copiarli.' },
-    { k: 'presenze', icon: '🍽️', title: 'Presenze', body: 'Segna chi c\'è a pranzo e a cena, giorno per giorno: è la base del calcolo delle quote. Per fare in fretta apri "Segna in blocco": ci sono "Tutti a pranzo", "Tutti a cena" e "Copia da ieri". Stanno chiusi e chiedono conferma, perché cambiano le presenze di tutti su tutti i telefoni in un colpo solo; il conteggio del giorno si legge sulla riga anche da chiusa. Se qualcuno viene eliminato dai Membri e poi riaggiunto, l\'app lo tratta come una persona nuova e i pasti segnati prima restano attaccati alla vecchia: in quel caso compare un avviso arancione che ti fa riassegnare quelle presenze alla persona giusta, invece di lasciarle sparire dai conti. Durante il campo l\'app si apre già sulla data di oggi.' },
-    { k: 'compiti', icon: '✅', title: 'Chi fa cosa', body: 'Chi si prende quale incarico, deciso PRIMA di partire: "prendere gli arrosticini", "prenotare il rifugio", "ritirare la carne". Si scrive quello che serve — il testo è libero — e si sceglie a chi tocca dall\'elenco dei membri. Due soli stati: da fare e fatto. Un compito NON è una spesa e non tocca i conti: quando è stato fatto, dal tasto "Registra la spesa" si apre la Lista già compilata con il nome e con chi l\'ha eseguito, ma il prezzo si scrive lì perché alla cassa non si sapeva ancora. Se una spesa non c\'è (hai prenotato e basta), il compito resta fatto e nei conti non entra niente.' },
-    { k: 'lista', icon: '🧾', title: 'Lista della Spesa', body: 'Due sezioni. "Da acquistare": la lista di cosa serve, con nome e quantità; il tasto "Segna come acquistata" apre una maschera che chiede prezzo, acquirente, tipologia e la foto dello scontrino, e sposta la voce in "Acquistato". "Acquistato": la cronologia di tutte le spese, più una maschera per registrare a mano ciò che non era in lista. Hai dimenticato lo scontrino? Tocca 📷 sulla voce anche dopo: puoi scattarlo o prenderlo dalla galleria.' },
-    { k: 'attrezzatura', icon: '🪛', title: 'Attrezzatura', body: 'Elenco dell\'attrezzatura da comprare, con prezzo ed eventuale acquirente. Spunta una voce quando è acquistata: solo allora il costo entra nelle spese, come logistica. Con l\'icona 📷 alleghi lo scontrino, anche in un secondo momento. In fondo vedi il totale previsto e quello effettivamente acquistato; se indichi l\'acquirente, gli verrà rimborsata.' },
-    { k: 'spesa', icon: '💶', title: 'Spese Totali', body: 'Quattro sotto-sezioni. Totali: quanto si è speso per cibo, bevande, logistica e attrezzatura. Quote: quanto costa a testa. Saldi: chi deve dare o ricevere. Dati: backup e sincronizzazione. I totali non si scrivono a mano, nascono dalla Lista della Spesa e dall\'attrezzatura acquistata.' },
-    { k: 'conti', icon: '⚖️', title: 'Come si dividono', body: 'Cibo e bevande sono divisi per il numero di pasti: chi mangia di più paga di più. Logistica e attrezzatura sono una quota fissa uguale per ogni adulto presente: nessuno paga più di una quota. Le cifre sono arrotondate a 10 centesimi, così non servono monetine da 1, 2 o 5 cent.' },
-    { k: 'separato', icon: '🍽️', title: 'Conto separato', body: 'Serve quando in certi giorni un gruppo fa la spesa per conto suo. In Calendario spunta quei giorni nel riquadro "Conto separato": le presenze di quei giorni fanno cassa a parte. Poi, quando registri una spesa di cibo o bevande, nel menu "Conto" scegli "Conto separato" invece di "Conto comune". Quella spesa si dividerà solo fra chi era presente ai pasti dei giorni spuntati, e quei pasti escono dal conto comune, così nessuno paga due volte. Logistica e attrezzatura restano sempre di tutti. Se non spunti nessun giorno non cambia niente: funziona tutto come prima.' },
-    { k: 'saldi', icon: '🤝', title: 'Saldi e rimborsi', body: 'Per ogni persona l\'app confronta quanto ha anticipato con quanto deve, e dice se riceve o se deve dare. Sotto, in "Chi paga chi", trovi i pochi passaggi di denaro necessari per pareggiare tutto: tocca una riga quando il rimborso è stato fatto e resta barrata. Con "Condividi resoconto" mandi il riepilogo pronto nel gruppo WhatsApp.' },
-    { k: 'dotazioni', icon: '🎒', title: 'Dotazioni personali', body: 'Cosa portarsi da casa: una dotazione base uguale per tutti (sedia personale, stoviglie e posate, borraccia, canovacci, luci LED) che non si modifica, e un elenco di aggiunte per questo campo che potete integrare quando serve.' },
-    { k: 'backup', icon: '🛟', title: 'Backup e sicurezza', body: 'Ogni giorno viene salvata da sola una copia dei dati nel cloud: se qualcosa va storto, "Ripristino di emergenza" (in Spese Totali → Dati) permette di tornare a un giorno preciso. In più puoi esportare tutto su file con Esporta e ricaricarlo con Importa. Prima di eliminare qualcosa l\'app chiede sempre conferma.' },
-    { k: 'sync', icon: '☁️', title: 'Sincronizzazione', body: 'La connessione al campo è automatica: quando c\'è linea i dati si allineano da soli fra i telefoni, in tempo reale, foto degli scontrini comprese. Senza linea si continua a lavorare normalmente e tutto viene inviato appena la rete torna. Se in due avete lavorato offline, al ritorno della linea le due versioni si uniscono voce per voce: nessuno cancella il lavoro dell\'altro. Il pallino in alto a destra indica se sei online o offline.' },
-    { k: 'chiusura', icon: '🏁', title: 'Chiusura e Archivio', body: 'A conti fatti, in Spese Totali → Dati usa "Chiudi il campo": salva tutto (un file sul telefono e una copia nel cloud), lo mette in Archivio e azzera membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e scontrini su tutti i dispositivi. L\'app resta pronta per il campo dell\'anno dopo. In Archivio rivedi il resoconto di ogni campo chiuso e puoi riscaricarne i dati; il file scaricato alla chiusura è l\'unico che contiene anche le foto degli scontrini, quindi conservalo.' },
-    { k: 'galleria', icon: '📸', title: 'Galleria', body: 'L\'album del campo, da riempire una volta riscesi: scegli il tuo nome, scegli le foto e partono. È l\'unica scheda che ha bisogno della linea — le foto stanno solo nel cloud, perché tenerle anche sul telefono riempirebbe lo spazio che serve a presenze e spese. Ognuno può caricarne un numero fisso (si cambia in Impostazioni): non è un controllo, è un modo per far scegliere le foto belle invece di svuotare il rullino. Tocca una miniatura per vederla grande; da lì si può anche eliminare, e il posto liberato torna disponibile. Si guarda in due modi: "Album" sfoglia le foto come polaroid appoggiate su un paesaggio di montagna, una spinta col dito per pagina; "Griglia" le mette tutte in fila, ed è la vista comoda per cercarne una. Il tasto "Crea album completo" fa un PDF con TUTTE le foto della galleria sullo stesso paesaggio, quattro per pagina, dalla prima all\'ultima in ordine di scatto: da mandare nel gruppo o da stampare. Se invece ne vuoi solo alcune c\'è "Scegli tu quali foto", e lì l\'ordine è quello con cui le tocchi. Le foto vengono scaricate a piena qualità una a una, quindi con tante foto ci vuole pazienza e una linea decente: sopra le venti l\'app avvisa prima di partire.' },
-    { k: 'gioco', icon: '🎮', title: 'Aiuta Bandy', body: 'Il passatempo del campo, in stile snake: scrivi il tuo nome, premi Gioca e il gioco parte a schermo intero. Si guida con le frecce a fondo schermo o scorrendo il dito sul campo da gioco. Devi raggiungere Bandy più volte che puoi: ogni Bandy preso allunga la canna e fa un punto. Si perde sbattendo contro un bordo o contro sé stessi. Ogni ' + LEVEL_EVERY + ' Bandy si cambia livello: si parte da Prato Lungo, si passa per Palmiro Togliatti e Rio de Janeiro, e si finisce in Thailandia. Ogni volta la velocità aumenta di una volta e mezzo e la lunghezza riparte da capo. Il punteggio migliore di ogni giocatore finisce in classifica, condivisa con tutto il campo quando c\'è linea. Il primo classificato sarà premiato da El Presidente in una sontuosa cerimonia (regola numero 2).' },
-    { k: 'impostazioni', icon: '⚙️', title: 'Impostazioni', body: 'Aspetto: tema chiaro, scuro o automatico (segue il telefono) — comodo la sera in tenda. Blocco con password: puoi chiedere la password a ogni apertura e bloccare l\'app subito con "Blocca ora". Dati su questo telefono: backup immediato e, se presti o cambi telefono, "Cancella i dati da questo telefono" — il cloud non viene toccato e con la linea i dati tornano da soli. In fondo trovi la versione installata.' },
-    { k: 'pronto', icon: '🎒', title: 'Pronto per il campo', body: 'In Impostazioni, in cima, ci sono tre spie: app scaricata sul telefono, dati del campo ricevuti, accesso al database a posto. Devono essere tutte verdi PRIMA di partire, perché a Prato Lungo non c\'è linea e lassù non si sistemano. Finché qualcosa manca, in Calendario compare un avviso che porta lì. Sistemarlo è sempre la stessa cosa: apri l\'app con la linea attiva e aspetta qualche secondo.' },
-    { k: 'correggi', icon: '✏️', title: 'Correggere una spesa', body: 'Sbagliato un prezzo o l\'acquirente? Nella cronologia degli acquisti, e nell\'elenco dell\'attrezzatura, ogni riga ha una matita: apre la voce e permette di correggere nome, acquirente, prezzo, tipologia e conto, tenendo la foto dello scontrino attaccata. Non serve cancellare e rifare, che invece porterebbe via anche la foto. Se le voci sono tante, sopra la cronologia degli acquisti c\'e\' un campo di ricerca che filtra per nome, acquirente o tipologia e mostra il totale di quelle trovate; lo stesso campo c\'e\' anche sopra la lista di "Da acquistare", dove cerca per nome e quantita\'.' },
-    { k: 'installa', icon: '📲', title: 'Installa l\'app', body: 'Conviene installarla, così si apre a schermo intero e funziona anche senza rete. Su iPhone: Condividi (il quadrato con la freccia) e poi "Aggiungi alla schermata Home". Su Android: menu del browser e "Installa app". Quando usciamo un aggiornamento, l\'app si aggiorna da sola: se non vedi una novità, chiudila e riaprila.' },
+    { k: 'calendario', icon: '📅', title: L.t('guida.calendario.titolo'), body: L.t('guida.calendario.corpo') },
+    { k: 'menu', icon: '🍝', title: L.t('guida.menu.titolo'), body: L.t('guida.menu.corpo') },
+    { k: 'membri', icon: '👥', title: L.t('guida.membri.titolo'), body: L.t('guida.membri.corpo') },
+    { k: 'presenze', icon: '🍽️', title: L.t('guida.presenze.titolo'), body: L.t('guida.presenze.corpo') },
+    { k: 'compiti', icon: '✅', title: L.t('guida.compiti.titolo'), body: L.t('guida.compiti.corpo') },
+    { k: 'lista', icon: '🧾', title: L.t('guida.lista.titolo'), body: L.t('guida.lista.corpo') },
+    { k: 'attrezzatura', icon: '🪛', title: L.t('guida.attrezzatura.titolo'), body: L.t('guida.attrezzatura.corpo') },
+    { k: 'spesa', icon: '💶', title: L.t('guida.spesa.titolo'), body: L.t('guida.spesa.corpo') },
+    { k: 'conti', icon: '⚖️', title: L.t('guida.conti.titolo'), body: L.t('guida.conti.corpo') },
+    { k: 'separato', icon: '🍽️', title: L.t('guida.separato.titolo'), body: L.t('guida.separato.corpo') },
+    { k: 'saldi', icon: '🤝', title: L.t('guida.saldi.titolo'), body: L.t('guida.saldi.corpo') },
+    { k: 'dotazioni', icon: '🎒', title: L.t('guida.dotazioni.titolo'), body: L.t('guida.dotazioni.corpo') },
+    { k: 'backup', icon: '🛟', title: L.t('guida.backup.titolo'), body: L.t('guida.backup.corpo') },
+    { k: 'sync', icon: '☁️', title: L.t('guida.sync.titolo'), body: L.t('guida.sync.corpo') },
+    { k: 'chiusura', icon: '🏁', title: L.t('guida.chiusura.titolo'), body: L.t('guida.chiusura.corpo') },
+    { k: 'galleria', icon: '📸', title: L.t('guida.galleria.titolo'), body: L.t('guida.galleria.corpo') },
+    { k: 'gioco', icon: '🎮', title: L.t('guida.gioco.titolo'), body: L.t('guida.gioco.corpo', LEVEL_EVERY) },
+    { k: 'impostazioni', icon: '⚙️', title: L.t('guida.impostazioni.titolo'), body: L.t('guida.impostazioni.corpo') },
+    { k: 'pronto', icon: '🎒', title: L.t('guida.pronto.titolo'), body: L.t('guida.pronto.corpo') },
+    { k: 'correggi', icon: '✏️', title: L.t('guida.correggi.titolo'), body: L.t('guida.correggi.corpo') },
+    { k: 'installa', icon: '📲', title: L.t('guida.installa.titolo'), body: L.t('guida.installa.corpo') },
   ];
 
   return (
@@ -2677,13 +2567,13 @@ function App() {
           const foto = cloud.foto || 0;
           const sospeso = !!cloud.pending || foto > 0;
           const testo = sospeso
-            ? (foto > 0 ? `${foto} ${foto === 1 ? 'foto' : 'foto'} da inviare` : 'Da inviare')
-            : isOnline ? 'Online' : 'Offline';
+            ? (foto > 0 ? L.t('spia.fotoDaInviare', foto) : L.t('spia.daInviare'))
+            : L.t(isOnline ? 'spia.online' : 'spia.offline');
           const colore = sospeso ? 'text-[#F6C177]' : isOnline ? 'text-[#8F9E8B]' : 'text-[#D97706]';
           const pallino = sospeso ? 'bg-[#F6C177] animate-pulse' : isOnline ? 'bg-[#8F9E8B]' : 'bg-[#D97706]';
           return (
             <span
-              title={sospeso ? 'Qualcosa non è ancora arrivato agli altri: riprovo da solo, non serve fare niente.' : testo}
+              title={sospeso ? L.t('spia.sospeso') : testo}
               className={`absolute top-3 right-3 flex items-center gap-1 text-[9px] uppercase font-bold ${colore}`}
             >
               <span className={`w-2 h-2 rounded-full ${pallino}`}></span>
@@ -2741,15 +2631,11 @@ function App() {
         <div className="bg-[#D97706]/15 border-b border-[#D97706]/40 px-4 py-2.5 flex items-start gap-2">
           <span className="text-base leading-none mt-0.5">📲</span>
           <p className="flex-grow text-[11px] text-[#5C4A3C] leading-snug">
-            <span className="font-bold">{isDesktop ? 'Installa l\'app sul computer:' : 'Installa l\'app sul telefono:'}</span>{' '}
-            {isIOS
-              ? 'tocca Condividi (il quadrato con la freccia in su) e poi "Aggiungi alla schermata Home".'
-              : isDesktop
-              ? 'clicca l\'icona di installazione nella barra degli indirizzi (o menu ⋮ → "Installa").'
-              : 'apri il menu del browser (⋮) e tocca "Installa app" (o "Aggiungi a schermata Home").'}
-            {' '}Una volta installata funziona anche senza linea.
+            <span className="font-bold">{L.t(isDesktop ? 'installa.computer' : 'installa.telefono')}</span>{' '}
+            {L.t(isIOS ? 'installa.ios' : isDesktop ? 'installa.desktop' : 'installa.android')}
+            {' '}{L.t('installa.poi')}
           </p>
-          <button onClick={dismissInstallHint} aria-label="Chiudi avviso" className={bottoneIcona('neutro', 'shrink-0')}>&times;</button>
+          <button onClick={dismissInstallHint} aria-label={L.t('installa.chiudi')} className={bottoneIcona('neutro', 'shrink-0')}>&times;</button>
         </div>
       )}
 
@@ -2766,12 +2652,11 @@ function App() {
               <span className="text-base leading-none mt-0.5">🎒</span>
               <div className="min-w-0 flex-grow">
                 <p className="text-[11px] text-[#5C4A3C] leading-snug">
-                  <span className="font-bold">Fine giornata.</span> Oggi hai fatto {modifiche} {modifiche === 1 ? 'modifica' : 'modifiche'}.
-                  Salva il file di backup: se il telefono si perde o si rompe, è l'unica copia che resta.
+                  {frase('backup.fineGiornata', modifiche)}
                 </p>
                 <div className="flex gap-2 mt-2">
                   <button onClick={exportData} className={bottone('bruno', 'minuscolo')}>
-                    Salva il backup
+                    {L.t('backup.salva')}
                   </button>
                   <button
                     onClick={() => {
@@ -2781,7 +2666,7 @@ function App() {
                     }}
                     className={bottone('secondario', 'minuscolo')}
                   >
-                    Ho già fatto
+                    {L.t('backup.giaFatto')}
                   </button>
                 </div>
               </div>
@@ -2796,14 +2681,8 @@ function App() {
       {spazioPieno && (
         <div className="bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3">
           <p className="text-[11px] text-[#5C4A3C] leading-snug">
-            <span className="font-bold">La memoria di questo telefono è piena.</span> L'app continua a
-            funzionare, ma libera un po' di spazio appena puoi (bastano poche foto o un'app in meno), così
-            ogni modifica resta al sicuro.
-            {admin && (
-              <> In dettaglio: la cronologia delle modifiche non si salva più, e alla riapertura questo
-              telefono perderebbe i confronti con gli altri. Si libera qualcosa anche da
-              <span className="font-bold"> Impostazioni → Registro modifiche → Svuota</span>.</>
-            )}
+            {frase('spazio.pieno')}
+            {admin && <>{frase('spazio.dettaglio')}</>}
           </p>
         </div>
       )}
@@ -2817,22 +2696,16 @@ function App() {
             <span className="text-base leading-none mt-0.5">🔒</span>
             <div className="min-w-0 flex-grow">
               <p className="text-[11px] text-[#5C4A3C] leading-snug">
-                <span className="font-bold">
-                  {membriSalvati.length === 1
-                    ? `${membriSalvati[0]} è stata rimessa fra i membri.`
-                    : `${membriSalvati.length} persone sono state rimesse fra i membri: ${membriSalvati.slice(0, 4).join(', ')}${membriSalvati.length > 4 ? '…' : ''}.`}
-                </span>{' '}
-                {membriSalvati.length === 1 ? 'Era stata eliminata' : 'Erano state eliminate'} da un altro
-                telefono, ma {membriSalvati.length === 1 ? 'ha' : 'hanno'} presenze in giorni con le
-                presenze bloccate: eliminarl{membriSalvati.length === 1 ? 'a' : 'e'} avrebbe cambiato le
-                quote di quei giorni. Per eliminarl{membriSalvati.length === 1 ? 'a' : 'e'} davvero, prima
-                si sbloccano quei giorni dalla scheda <span className="font-bold">Presenze</span>.
+                {frase('membriSalvati.avviso', membriSalvati.length,
+                  membriSalvati.length === 1
+                    ? membriSalvati[0]
+                    : `${membriSalvati.slice(0, 4).join(', ')}${membriSalvati.length > 4 ? '…' : ''}`)}
               </p>
               <button
                 onClick={() => setMembriSalvati([])}
                 className={bottone('secondario', 'minuscolo', 'mt-2')}
               >
-                Ho capito
+                {L.t('avviso.hoCapito')}
               </button>
             </div>
           </div>
@@ -2848,20 +2721,20 @@ function App() {
             <span className="text-base leading-none mt-0.5">🔒</span>
             <div className="min-w-0 flex-grow">
               <p className="text-[11px] text-[#5C4A3C] leading-snug">
-                <span className="font-bold">I conti sono chiusi: {respinte.length} {respinte.length === 1 ? 'modifica è stata respinta' : 'modifiche sono state respinte'}.</span>{' '}
+                {frase('respinte.testa', respinte.length)}{' '}
                 {respinte.slice(0, 3).map((r, i) => (
                   <span key={r.che + r.nome + i}>
-                    {i > 0 ? ' · ' : ''}{r.che} "{r.nome}" {r.azione} ({money(r.quanto)} €)
+                    {i > 0 ? ' · ' : ''}{L.t('respinte.riga', L.t(r.che), r.nome, L.t(r.azione), money(r.quanto))}
                   </span>
                 ))}
-                {respinte.length > 3 ? ` …e altre ${respinte.length - 3}` : ''}.
-                {' '}Se vanno accettate, riapri i conti da <span className="font-bold">Spese Totali → Dati</span> e rifalle.
+                {respinte.length > 3 ? L.t('respinte.altre', respinte.length - 3) : ''}.
+                {' '}{frase('respinte.coda')}
               </p>
               <button
                 onClick={() => setRespinte([])}
                 className={bottone('secondario', 'minuscolo', 'mt-2')}
               >
-                Ho capito
+                {L.t('avviso.hoCapito')}
               </button>
             </div>
           </div>
@@ -2877,18 +2750,13 @@ function App() {
             <span className="text-base leading-none mt-0.5">🕐</span>
             <div className="min-w-0 flex-grow">
               <p className="text-[11px] text-[#5C4A3C] leading-snug">
-                <span className="font-bold">
-                  Un telefono ha l'orologio avanti di {Math.round(orologioFuori.avanti / 86400000)} giorni.
-                </span>{' '}
-                Le sue modifiche vincono su tutte le altre anche quando sono più vecchie, e le correzioni
-                fatte dagli altri vengono scartate senza dirlo. Chiedete in giro chi ha la data sbagliata e
-                fategliela sistemare (oppure è questo telefono a essere indietro).
+                {frase('orologio.avviso', Math.round(orologioFuori.avanti / 86400000))}
               </p>
               <button
                 onClick={() => { setOrologioFuori(null); try { localStorage.removeItem(OROLOGIO_KEY); } catch (e) { /* niente */ } }}
                 className={bottone('secondario', 'minuscolo', 'mt-2')}
               >
-                Sistemato
+                {L.t('orologio.sistemato')}
               </button>
             </div>
           </div>
@@ -2907,19 +2775,16 @@ function App() {
             <span className="text-base leading-none mt-0.5">⚠️</span>
             <div className="min-w-0 flex-grow">
               <p className="text-[11px] text-[#5C4A3C] leading-snug">
-                <span className="font-bold">
-                  Qualcuno ha appena cancellato {lostSync.n} voci
-                  {lostSync.quando ? ` (${L.data(new Date(lostSync.quando), 'dataOraBreve')})` : ''}.
-                </span>
-                {lostSync.che ? ` ${lostSync.che}.` : ''}
-                {' '}Se non è stato qualcuno di voi, annulla: torna tutto com'era, su tutti i telefoni.
+                {frase('perdita.avviso', lostSync.n,
+                  lostSync.quando ? L.data(new Date(lostSync.quando), 'dataOraBreve') : null,
+                  lostSync.che || null)}
               </p>
               <div className="flex gap-2 mt-2">
                 <button onClick={annullaSync} className={bottone('avviso', 'minuscolo')}>
-                  Annulla la sincronizzazione
+                  {L.t('perdita.annulla')}
                 </button>
                 <button onClick={() => setLostSync(null)} className={bottone('secondario', 'minuscolo')}>
-                  Va bene così
+                  {L.t('perdita.vaBene')}
                 </button>
               </div>
             </div>
@@ -3009,21 +2874,21 @@ function App() {
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 shadow-2xl">
             <div className="flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2">
               <h3 className="font-rustic text-lg text-[#2D392C] min-w-0 break-words">
-                Acquistata: {buying.name}{buying.qty ? ` (${buying.qty})` : ''}
+                {L.t('lista.acquistataTitolo', buying.name, buying.qty)}
               </h3>
               {/* Foto dello scontrino: si allega qui, con lo scontrino in mano */}
               {receipts[buying.id] ? (
                 <button
                   onClick={() => setViewReceipt(receipts[buying.id])}
-                  aria-label="Vedi scontrino"
+                  aria-label={L.t('lista.vediScontrino')}
                   className={bottoneIcona('pieno', 'shrink-0')}
                 >
                   📷
                 </button>
               ) : (
                 <label
-                  title="Scontrino: scatta una foto o scegli dalla galleria"
-                  aria-label="Allega scontrino"
+                  title={L.t('lista.scontrinoTitolo')}
+                  aria-label={L.t('lista.allegaScontrino')}
                   className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]"
                 >
                   📷
@@ -3032,12 +2897,10 @@ function App() {
               )}
             </div>
             <p className="text-[10px] text-gray-500 -mt-1">
-              {receipts[buying.id]
-                ? 'Scontrino allegato: tocca 📷 per rivederlo.'
-                : 'Tocca 📷 per allegare lo scontrino: puoi scattarlo o prenderlo dalla galleria.'}
+              {L.t(receipts[buying.id] ? 'lista.scontrinoGiaLi' : 'lista.scontrinoDaMettere')}
             </p>
             <div>
-              <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Prezzo (€)</label>
+              <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">{L.t('lista.prezzo')}</label>
               <input
                 type="number" min="0" step="0.01" inputMode="decimal" autoFocus
                 value={buying.price}
@@ -3048,47 +2911,45 @@ function App() {
               />
             </div>
             <div>
-              <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Acquirente</label>
+              <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">{L.t('lista.acquirente')}</label>
               {renderBuyerSelect(buying.buyer, (v) => setBuying((b) => ({ ...b, buyer: v })))}
             </div>
             <div>
-              <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Tipologia</label>
+              <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">{L.t('lista.tipologia')}</label>
               <select
                 value={buying.type}
                 onChange={(e) => setBuying((b) => ({ ...b, type: e.target.value }))}
                 className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
               >
-                {Object.keys(PURCHASE_TYPES).map((k) => (<option key={k} value={k}>{PURCHASE_TYPES[k]}</option>))}
+                {Object.keys(PURCHASE_TYPES).map((k) => (<option key={k} value={k}>{tipoSpesa(k)}</option>))}
               </select>
             </div>
             {buying.type === 'logistica' && (
                 <p className="text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2">
-                  La <span className="font-bold">logistica</span> si divide a testa fra chi ha pasti nei
-                  giorni a conto comune, non per giorno: chi c'è stato solo nei giorni a conto separato
-                  non la paga, e per questo qui il conto non si applica.
+                  {frase('correggi.notaLogistica')}
                 </p>
             )}
             {buying.type !== 'logistica' && (
               <div>
-                <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Conto</label>
+                <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">{L.t('lista.conto')}</label>
                 <select
                   value={buying.account || 'comune'}
                   onChange={(e) => setBuying((b) => ({ ...b, account: e.target.value }))}
                   className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
                 >
-                  <option value="comune">Conto comune</option>
-                  <option value="sep">Conto separato</option>
+                  <option value="comune">{L.t('lista.contoComune')}</option>
+                  <option value="sep">{L.t('giorno.contoSeparato')}</option>
                 </select>
                 {buying.account === 'sep' && sepDays.length === 0 && (
                   <p className="text-[9px] mt-1 leading-snug text-[#5C4A3C]">
-                    ⚠ Nessun giorno spuntato come "conto separato" in Calendario.
+                    {L.t('lista.senzaGiorniBreve')}
                   </p>
                 )}
               </div>
             )}
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setBuying(null)} className={bottone('secondario', 'normale', 'flex-1')}>Annulla</button>
-              <button onClick={confirmBuy} className={bottone('primario', 'normale', 'flex-1')}>Conferma</button>
+              <button onClick={() => setBuying(null)} className={bottone('secondario', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
+              <button onClick={confirmBuy} className={bottone('primario', 'normale', 'flex-1')}>{L.t('lista.conferma')}</button>
             </div>
           </div>
         </div>
@@ -3100,13 +2961,13 @@ function App() {
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[85vh] overflow-y-auto shadow-2xl">
             <div className="flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2">
               <h3 className="font-rustic text-lg text-[#2D392C]">
-                {editing.kind === 'purchase' ? 'Correggi la spesa' : 'Correggi la voce'}
+                {L.t(editing.kind === 'purchase' ? 'correggi.spesa' : 'correggi.voce')}
               </h3>
               {/* Anche in correzione si può mettere o rivedere lo scontrino */}
               {receipts[editing.id] ? (
-                <button onClick={() => setViewReceipt(receipts[editing.id])} aria-label="Vedi scontrino" className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
+                <button onClick={() => setViewReceipt(receipts[editing.id])} aria-label={L.t('lista.vediScontrino')} className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
               ) : (
-                <label title="Scontrino: scatta una foto o scegli dalla galleria" aria-label="Allega scontrino" className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]">
+                <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-lg leading-none hover:bg-[#E2EAE4]">
                   📷
                   <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, editing.id)} className="hidden" />
                 </label>
@@ -3146,7 +3007,7 @@ function App() {
                     onChange={(e) => setEditing((x) => ({ ...x, type: e.target.value }))}
                     className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
                   >
-                    {Object.keys(PURCHASE_TYPES).map((k) => (<option key={k} value={k}>{PURCHASE_TYPES[k]}</option>))}
+                    {Object.keys(PURCHASE_TYPES).map((k) => (<option key={k} value={k}>{tipoSpesa(k)}</option>))}
                   </select>
                 </div>
               )}
@@ -3157,27 +3018,25 @@ function App() {
                 non trovava niente e non poteva sapere perche'. Ora si dice. */}
             {editing.kind === 'purchase' && (editing.type !== 'logistica' ? (
               <div>
-                <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Conto</label>
+                <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">{L.t('lista.conto')}</label>
                 <select
                   value={editing.account}
                   onChange={(e) => setEditing((x) => ({ ...x, account: e.target.value }))}
                   className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm font-bold"
                 >
-                  <option value="comune">Conto comune</option>
-                  <option value="sep">Conto separato</option>
+                  <option value="comune">{L.t('lista.contoComune')}</option>
+                  <option value="sep">{L.t('giorno.contoSeparato')}</option>
                 </select>
               </div>
             ) : (
                 <p className="text-[10px] text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2">
-                  La <span className="font-bold">logistica</span> si divide a testa fra chi ha pasti nei
-                  giorni a conto comune, non per giorno: chi c'è stato solo nei giorni a conto separato
-                  non la paga, e per questo qui il conto non si applica.
+                  {frase('correggi.notaLogistica')}
                 </p>
             ))}
 
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setEditing(null)} className={bottone('secondario', 'normale', 'flex-1')}>Annulla</button>
-              <button onClick={saveEdit} className={bottone('primario', 'normale', 'flex-1')}>Salva</button>
+              <button onClick={() => setEditing(null)} className={bottone('secondario', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
+              <button onClick={saveEdit} className={bottone('primario', 'normale', 'flex-1')}>{L.t('lista.salva')}</button>
             </div>
           </div>
         </div>
@@ -3187,15 +3046,13 @@ function App() {
       {snapList && (
         <div onClick={() => setSnapList(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl">
-            <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">Ripristina un salvataggio</h3>
+            <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">{L.t('ripristino.titolo')}</h3>
             <p className="text-[10px] text-gray-500">
-              Copie automatiche: due al giorno sul telefono (una dopo mezzanotte e una dopo
-              mezzogiorno, alla prima apertura), più una al giorno nel cloud.
-              Quelle <span className="font-bold">sul telefono</span> ci sono anche senza linea.
+              {frase('ripristino.nota')}
             </p>
             {snapList.map((s) => {
               const giorno = L.data(parseDate(s.id.slice(0, 10)), 'settimanaLunga');
-              const fascia = s.id.slice(11) === '00' ? 'mattina' : s.id.slice(11) === '12' ? 'pomeriggio' : '';
+              const fascia = s.id.slice(11) === '00' ? L.t('ripristino.fasciaMattina') : s.id.slice(11) === '12' ? L.t('ripristino.fasciaPomeriggio') : '';
               const ora = s.at ? L.data(new Date(s.at), 'ora') : '';
               return (
                 <button
@@ -3206,16 +3063,16 @@ function App() {
                   <span className="min-w-0">
                     <span className="block text-sm font-bold truncate">{giorno}</span>
                     <span className="block text-[9px] text-gray-500">
-                      {fascia ? `${fascia}${ora ? ` · copia delle ${ora}` : ''}` : 'copia del cloud'}
+                      {fascia ? L.t('ripristino.copiaDelle', fascia, ora) : L.t('ripristino.copiaCloud')}
                     </span>
                   </span>
                   <span className="text-[8px] uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-white border border-[#8F9E8B]/40 text-gray-500">
-                    {s.dove === 'locale' ? 'sul telefono' : 'cloud'}
+                    {L.t(s.dove === 'locale' ? 'ripristino.sulTelefono' : 'ripristino.nelCloud')}
                   </span>
                 </button>
               );
             })}
-            <button onClick={() => setSnapList(null)} className={bottone('testuale', 'normale', 'w-full')}>Annulla</button>
+            <button onClick={() => setSnapList(null)} className={bottone('testuale', 'normale', 'w-full')}>{L.t('galleria.annulla')}</button>
           </div>
         </div>
       )}
@@ -3224,26 +3081,26 @@ function App() {
       {closing && (
         <div onClick={() => setClosing(false)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl">
-            <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">Chiudi il campo</h3>
-            <label className="block text-[10px] uppercase font-bold text-gray-500">Nome dell'archivio</label>
+            <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">{L.t('chiusura.campoTitolo')}</h3>
+            <label className="block text-[10px] uppercase font-bold text-gray-500">{L.t('chiusura.nomeArchivio')}</label>
             <input
               type="text"
               value={closeName}
               onChange={(e) => setCloseName(e.target.value)}
-              placeholder="Es. Prato Lungo 2026"
+              placeholder={L.t('chiusura.esempioNome')}
               className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
             />
             <div className="bg-[#F0F4F1]/60 rounded p-3 text-[11px] text-gray-600 space-y-1">
-              <p className="font-bold text-[#2D392C]">Verrà archiviato:</p>
-              <p>{money(totals.overallTotal)} € di spese · {purchases.length} acquisti · {members.length} membri</p>
-              <p className="font-bold text-[#2D392C] pt-1">Poi verranno azzerati:</p>
-              <p>membri, presenze, spese, lista, attrezzatura, dotazioni aggiuntive e foto degli scontrini — su tutti i dispositivi.</p>
-              <p className="pt-1 italic">Restano: archivio, classifica del gioco e impostazioni.</p>
+              <p className="font-bold text-[#2D392C]">{L.t('chiusura.verraArchiviato')}</p>
+              <p>{L.t('chiusura.riepilogo', money(totals.overallTotal), purchases.length, members.length)}</p>
+              <p className="font-bold text-[#2D392C] pt-1">{L.t('chiusura.poiAzzerati')}</p>
+              <p>{L.t('chiusura.cosaSiAzzera')}</p>
+              <p className="pt-1 italic">{L.t('chiusura.cosaResta')}</p>
             </div>
             <button onClick={closeCamp} className={bottone('bruno', 'grande', 'w-full')}>
-              Archivia e azzera
+              {L.t('chiusura.archiviaEAzzera')}
             </button>
-            <button onClick={() => setClosing(false)} className={bottone('testuale', 'normale', 'w-full')}>Annulla</button>
+            <button onClick={() => setClosing(false)} className={bottone('testuale', 'normale', 'w-full')}>{L.t('galleria.annulla')}</button>
           </div>
         </div>
       )}
@@ -3253,9 +3110,9 @@ function App() {
         <div onClick={() => setViewArchive(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl">
             <h3 className="font-rustic text-lg text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">{viewArchive.name}</h3>
-            <pre className="text-[11px] text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">{viewArchive.report || 'Nessun resoconto salvato.'}</pre>
-            <button onClick={() => shareArchive(viewArchive)} className={bottone('whatsapp', 'normale', 'w-full')}>📤 Condividi</button>
-            <button onClick={() => setViewArchive(null)} className={bottone('testuale', 'normale', 'w-full')}>Chiudi</button>
+            <pre className="text-[11px] text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">{viewArchive.report || L.t('archivio.nessunResoconto')}</pre>
+            <button onClick={() => shareArchive(viewArchive)} className={bottone('whatsapp', 'normale', 'w-full')}>{L.t('archivio.condividi')}</button>
+            <button onClick={() => setViewArchive(null)} className={bottone('testuale', 'normale', 'w-full')}>{L.t('archivio.chiudi')}</button>
           </div>
         </div>
       )}
@@ -3266,15 +3123,15 @@ function App() {
         <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4">
           <div className="flex-grow flex items-center justify-center w-full min-h-0" onClick={() => setViewPhoto(null)}>
             {viewPhoto.full
-              ? <img src={viewPhoto.full} alt={`Foto di ${viewPhoto.by || 'anonimo'}`} className="max-w-full max-h-full rounded shadow-2xl" />
+              ? <img src={viewPhoto.full} alt={L.t('archivio.fotoDi', viewPhoto.by || L.t('archivio.anonimo'))} className="max-w-full max-h-full rounded shadow-2xl" />
               : <div className="text-center">
                   <img src={viewPhoto.thumb} alt="" className="max-w-full max-h-[60vh] rounded opacity-40 blur-sm" />
-                  <p className="mt-3 text-[11px] uppercase tracking-widest text-white/60">Scarico la foto…</p>
+                  <p className="mt-3 text-[11px] uppercase tracking-widest text-white/60">{L.t('galleria.scaricoFoto')}</p>
                 </div>}
           </div>
           <div className="shrink-0 w-full max-w-md flex items-center justify-between gap-3 pt-3">
             <span className="text-[11px] text-white/70 truncate">
-              {viewPhoto.by || 'anonimo'}
+              {viewPhoto.by || L.t('archivio.anonimo')}
               {viewPhoto.at ? ` · ${L.data(new Date(viewPhoto.at), 'numerica')}` : ''}
             </span>
             <span className="flex items-center gap-2 shrink-0">
@@ -3282,13 +3139,13 @@ function App() {
                 onClick={() => removePhoto(viewPhoto)}
                 className="text-[10px] uppercase font-bold px-3 py-2 rounded border border-[#D97706]/60 text-[#D97706]"
               >
-                Elimina
+                {L.t('archivio.elimina')}
               </button>
               <button
                 onClick={() => setViewPhoto(null)}
                 className="text-[10px] uppercase font-bold px-3 py-2 rounded bg-[#F0F4F1] text-[#2D392C]"
               >
-                Chiudi
+                {L.t('archivio.chiudi')}
               </button>
             </span>
           </div>
@@ -3300,8 +3157,8 @@ function App() {
           onClick={() => setViewReceipt(null)}
           className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 cursor-pointer"
         >
-          <img src={viewReceipt} alt="Scontrino" className="max-w-full max-h-full rounded shadow-2xl" />
-          <span className="absolute bottom-6 left-0 right-0 text-center text-[10px] uppercase tracking-widest text-white/60">Tocca per chiudere</span>
+          <img src={viewReceipt} alt={L.t('lista.scontrino')} className="max-w-full max-h-full rounded shadow-2xl" />
+          <span className="absolute bottom-6 left-0 right-0 text-center text-[10px] uppercase tracking-widest text-white/60">{L.t('galleria.toccaPerChiudere')}</span>
         </div>
       )}
 

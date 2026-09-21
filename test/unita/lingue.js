@@ -73,6 +73,9 @@ ok(`il dizionario italiano ha ${CHIAVI.length} voci`, CHIAVI.length > 20);
     'es:gioco.pausa',                              // "Pausa" e' anche spagnolo
     'es:info.titolo',                              // "Info" e' anche spagnolo
     'es:registro.sync', 'fr:registro.sync',        // "sync" e' una sigla, non una parola
+    'es:quote.gratis',                             // "Gratis" e' anche spagnolo
+    'es:guida.calendario.titolo',                  // "Calendario" e' anche spagnolo
+    'es:guida.gioco.titolo', 'fr:guida.gioco.titolo', // nome proprio del gioco
   ];
   const copiate = [];
   CODICI.filter((c) => c !== 'it').forEach((c) => {
@@ -225,6 +228,53 @@ const UN_GIORNO = new Date(2026, 7, 11, 14, 5);  // martedì 11 agosto 2026, 14:
     rotte.length === 0);
   ok(`nessuna chiave-funzione restituisce il vuoto (${vuote.length})${vuote.length ? ' — ' + vuote.slice(0, 5).join('; ') : ''}`,
     vuote.length === 0);
+}
+
+// ---------- Nessuna chiave inventata ----------
+// Da quando i file puri (conti.js, 10-fondamenta) restituiscono CHIAVI invece
+// di frasi, un refuso non e' piu' un errore di battitura: e' "buchi.ciboComune"
+// stampato a schermo in mezzo a un avviso. Il ripiego di t() lo nasconde
+// apposta — meglio la chiave di un buco — ma una prova deve vederlo.
+//
+// Due regole, e servono tutte e due:
+//   1. ogni chiave scritta dentro L.t(), frase() o fraseVestita() esiste;
+//   2. ogni stringa che SEMBRA una chiave (prefisso noto, punto, nome) lo e'
+//      davvero — e' cosi' che si prendono quelle passate di mano in mano,
+//      come 'buchi.ciboComune' che nasce in conti.js e si legge in 80-app.
+{
+  const fs = require('fs');
+  const path = require('path');
+  const RADICE = path.join(__dirname, '..', '..');
+  const files = fs.readdirSync(path.join(RADICE, 'src'))
+    .filter((f) => f.endsWith('.jsx'))
+    .map((f) => path.join('src', f))
+    .concat(['conti.js', 'presenze.js', 'allarmi.js', 'menu-spesa.js']);
+
+  const prefissi = {};
+  Object.keys(IT).forEach((k) => { if (k.includes('.')) prefissi[k.split('.')[0]] = 1; });
+
+  const dirette = [];
+  const indirette = [];
+  files.forEach((rel) => {
+    const src = fs.readFileSync(path.join(RADICE, rel), 'utf8');
+    [...src.matchAll(/(?:L\.t|frase|L\.pezzi)\(\s*'([^']+)'/g)].forEach((m) => {
+      if (!(m[1] in IT)) dirette.push(rel + ': ' + m[1]);
+    });
+    [...src.matchAll(/fraseVestita\(\s*'[^']*',\s*'([^']+)'/g)].forEach((m) => {
+      if (!(m[1] in IT)) dirette.push(rel + ': ' + m[1]);
+    });
+    [...src.matchAll(/'([a-z][a-zA-Z]*\.[a-zA-Z][a-zA-Z0-9.]*)'/g)].forEach((m) => {
+      const k = m[1];
+      if (k in IT) return;
+      if (!(k.split('.')[0] in prefissi)) return;   // non e' una chiave nostra
+      indirette.push(rel + ': ' + k);
+    });
+  });
+
+  ok(`ogni chiave scritta in L.t()/frase() esiste (${dirette.length})`
+    + (dirette.length ? ' — ' + dirette.slice(0, 6).join(', ') : ''), dirette.length === 0);
+  ok(`nessuna chiave inventata passata di mano (${indirette.length})`
+    + (indirette.length ? ' — ' + indirette.slice(0, 6).join(', ') : ''), indirette.length === 0);
 }
 
 fine();

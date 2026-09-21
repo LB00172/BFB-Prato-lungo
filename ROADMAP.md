@@ -1465,7 +1465,7 @@ assegnando, non solo **a chi**.
 
 ---
 
-## 18. Più lingue — la macchina c'è, e i due terzi dell'app ci sono passati (21 settembre 2026)
+## 18. Più lingue — fatto: l'app parla italiano, spagnolo e francese (21 settembre 2026)
 
 **Decisione presa, e cambia un intento iniziale.** L'app era stata scritta in
 italiano e basta, per una ragione buona: la usavano venti amici italiani. Il
@@ -1555,24 +1555,28 @@ di sempre: la regola fuori, il JSX dentro.
 
 ### Cosa è tradotto, e cosa no
 
-**Tradotto: sedici sorgenti su diciannove.** Calendario, Menù, Presenze,
-Membri, Regole, Dotazioni, Galleria, Archivio, Aiuta Bandy, Come funziona,
-Chi fa cosa, Impostazioni, la schermata di blocco, le condizioni del meteo e
-le descrizioni della diagnostica. **357 chiavi**, di cui **73 funzioni**
-(plurali e frasi con dei numeri dentro), in italiano, spagnolo e francese.
+**Tutti e diciannove i sorgenti.** 752 chiavi, di cui 174 funzioni (plurali e
+frasi con dei numeri dentro), in italiano, spagnolo e francese. L'ultimo terzo
+erano i due file che toccano i soldi — `80-app.jsx` e `82-schede-conti.jsx` —
+e dentro c'era anche il **manuale dell'app**: le ventuno voci di «Come
+funziona», che da sole sono un terzo di tutta la prosa dell'interfaccia.
 
-**Non tradotto: i due file che toccano i soldi** — `80-app.jsx` (385 testi) e
-`82-schede-conti.jsx` (158). Sono l'ultimo terzo, ed è il terzo dove un errore
-si vede nei conti e non solo a schermo: Spese Totali, Lista della Spesa,
-Attrezzatura, Saldi, e tutti gli `alert` e `confirm` dei gestori.
+`FEATURES.lingue` è **accesa**. L'italiano resta la lingua predefinita; la
+scelta si fa da Impostazioni e resta su quel telefono. **Quello che scrive
+l'utente non si traduce mai**: nomi, menù, spese, note restano come li ha
+messi. Accendendola, il DOM è cambiato **in un punto solo su diciassette
+schermate** — il selettore che compare in Impostazioni.
 
-Restano fuori per scelta, non per dimenticanza: le **regole del campo** e la
-**dotazione base** (testo verbatim di Lorenzo, contenuto della room e non
+Restano in italiano per scelta, non per dimenticanza: le **regole del campo**
+e la **dotazione base** (testo verbatim di Lorenzo, contenuto della room e non
 dell'app), il **marchio**, e i **nomi dei livelli** del gioco — Prato Lungo,
 Palmiro Togliatti, Rio de Janeiro sono luoghi, e la battuta è la geografia.
+Nella versione pubblica non esistono proprio.
 
-`FEATURES.lingue` resta **spenta** finché non finisce anche quel terzo: mezza
-schermata in spagnolo e mezza in italiano è peggio che non offrire la scelta.
+**Quello che il machine non garantisce:** che lo spagnolo e il francese siano
+*belli*. Le prove controllano che ogni chiave ci sia, che nessuna sia rimasta
+in italiano, che ogni funzione giri e non torni vuota. Nessuna prova sa se una
+frase suona bene: quello lo dirà chi le legge.
 
 ### Il metro: `test/censimento-testi.js`
 
@@ -1588,7 +1592,7 @@ da un accento o da una parola italiana, e scarta le classi Tailwind e le
 schegge di codice. Un paio di falsi positivi per file restano, ed è voluto —
 meglio guardarne uno di troppo che perderne uno.
 
-### Tre trappole nuove
+### Quattro trappole nuove
 
 - **Una costante valutata al caricamento congela la lingua.** `SEZIONE_DI`
   era una tabella di nomi (`{ m: 'Membri', … }`) costruita una volta sola,
@@ -1606,6 +1610,15 @@ meglio guardarne uno di troppo che perderne uno.
   argomento di troppo sarebbe rimasto lì fino al giorno in cui qualcuno
   accende la lingua. Adesso la prova le chiama **tutte**, in tutte le lingue,
   con lo zero, l'uno e il due — i tre numeri su cui i plurali si dividono.
+- **Un file puro che restituisce una frase non sa in che lingua verrà letta.**
+  `conti.js` diceva *«cibo e bevande del conto comune, ma nessun pasto segnato
+  nei giorni comuni»*. Adesso restituisce `'buchi.ciboComune'` e la frase la
+  sceglie il disegno. Lo stesso per le modifiche respinte a conti chiusi. Il
+  prezzo è che un refuso non è più un errore di battitura: è `buchi.logistiche`
+  stampato in mezzo a un avviso — e il ripiego di `t()` lo mostra *apposta*,
+  perché una chiave a schermo è meglio di un buco. Per questo c'è una prova che
+  legge i sorgenti e chiede che **ogni chiave scritta esista**, comprese quelle
+  che passano di mano fra un file e l'altro.
 
 ### La prova che protegge il resto del lavoro
 
@@ -1635,10 +1648,11 @@ con l'aria di un dato. Adesso resta vuota.
 
 | | |
 | --- | --- |
-| chiavi nel dizionario | 357 (73 funzioni) |
-| sorgenti passati dal dizionario | 16 su 19 |
-| testi ancora da portare nel dizionario | 543, tutti in `80-app.jsx` e `82-schede-conti.jsx` |
+| chiavi nel dizionario | 752 (174 funzioni) |
+| sorgenti passati dal dizionario | 19 su 19 |
+| testi ancora da portare nel dizionario | nessuno |
 | date centralizzate | 32 su 32 |
+| `FEATURES.lingue` | accesa |
 
 Il lavoro che resta è **meccanico e a fette**: una scheda alla volta, con la
 prova unitaria che diventa rossa appena una traduzione manca. Le misure di
