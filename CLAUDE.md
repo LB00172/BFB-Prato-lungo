@@ -26,7 +26,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 72 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 73 prove, circa 9 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -71,12 +71,13 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `lingue.js` | **le lingue**: dizionario (it/es/fr), plurali come funzioni, le dodici forme di data, e la regola che si prova — ogni chiave italiana esiste altrove e viceversa. Fuori da `src/` |
 | `allarmi.js` | **quando svegliare qualcuno**: orologio di un altro telefono avanti di giorni, e perdite che meritano un allarme invece di essere il recupero di un ritardo. Pure, fuori da `src/` |
 | `auth.js` | **chi sei, e cosa ti lascia fare l'app**: `Auth` sono le regole (stati, permessi, validazione, codici d'errore tradotti), `AuthCloud` è il trasporto verso Firebase Authentication. Fuori da `src/`. Dietro `FEATURES.auth` |
+| `stanza.js` | **la stanza**: l'alfabeto e il generatore del codice d'ingresso, come si legge un codice digitato a mano, la validazione del modulo, i tre ruoli. Puro e sincrono — la crittografia no, quella è `improntaPassword` in `src/20-blocco-password.jsx`. Dietro `FEATURES.rooms` |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile` |
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
-| `test/` | 13 prove unitarie + 59 end‑to‑end |
+| `test/` | 14 prove unitarie + 59 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -265,7 +266,7 @@ priorità) e la fila in cui affrontarle, con scritto cosa blocca cosa.
 Le tre cose da sapere senza aprirlo:
 
 - **L'iPhone è verificato** (`ROADMAP.md` §10): ad agosto 2026, a mano, e
-  l'aggiornamento del service worker arriva. Le 72 prove girano comunque solo
+  l'aggiornamento del service worker arriva. Le 73 prove girano comunque solo
   su Chromium, quindi quel giro va rifatto ogni volta che si tocca `sw.js` o
   `build.js` — sono i due file che decidono se un rilascio arriva o resta in
   cache. Si comincia invece dalle immagini fuori da `localStorage` (§19): nel

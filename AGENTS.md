@@ -105,7 +105,8 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   tagliando righe. Non è una scoperta, è la voce §14 di `ROADMAP.md`.
 - **Le regole stanno fuori da `src/`: `conti.js` (i conti), `presenze.js`
   (giorno, pasto, blocco, orfane), `allarmi.js` (quando svegliare qualcuno),
-  `lingue.js` (dizionario, plurali, date).** Non e' un vezzo di
+  `lingue.js` (dizionario, plurali, date), `auth.js` (chi sei), `stanza.js`
+  (il codice d'ingresso e i ruoli).** Non e' un vezzo di
   organizzazione: e' l'unica parte dell'app che maneggia i soldi di venti
   persone, ed e' una funzione pura di sei cose. Da li' si prova con una prova
   unitaria sui numeri veri del campo 2026 (`test/fixture/campo-2026.json`)
@@ -157,7 +158,7 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 
 ```
 node build.js          # src/*.jsx -> App.js + CACHE_NAME
-npm test               # tutte e 72 (~10 min)
+npm test               # tutte e 73 (~10 min)
 npm test unita         # solo quelle senza browser (~10 s)
 ```
 

@@ -194,6 +194,37 @@ rooms/<roomId>
 - **Ruoli**: chi crea la room la amministra (cambia date, luogo, rimuove
   membri); gli altri possono modificare i dati del campo.
 
+### Le due decisioni prese il 21 settembre, da non rimettere in discussione
+
+**1. La password d'ingresso la verificano le REGOLE, non una Cloud Function.**
+Dentro `firestore.rules` una `get()` legge documenti che il client **non**
+può leggere: le letture delle regole girano sul server e non passano dai
+permessi del client. Quindi l'impronta del codice d'ingresso sta in
+`rooms/<id>/private/join`, invisibile a chiunque, e la regola che autorizza la
+creazione di `members/<uid>` confronta l'impronta mandata dal telefono con
+quella custodita lì.
+
+Cosa si guadagna: niente backend, niente piano Blaze, niente carta di credito —
+si resta sul piano gratuito. Cosa si perde: il limite ai tentativi lo dà solo
+Firestore, non lo possiamo scrivere noi. Con un codice casuale di otto
+caratteri su un alfabeto senza lettere ambigue (~10¹² combinazioni) la forza
+bruta non è una minaccia reale, e ogni tentativo costa comunque una lettura a
+chi la tenta.
+
+La Cloud Function non è esclusa per sempre: quando servirà davvero per altro
+(§ 5 la chiave dell'IA, § 15 le notifiche) l'ingresso si potrà spostare lì. Ma
+il § 2 non aspetta il Blaze.
+
+**2. L'utente condiviso non sparisce: si fa un ponte.** Le regole accettano
+`campo@brigatabandone.it` **oppure** un membro della stanza. I venti telefoni
+del campo 2026 continuano a funzionare senza che nessuno debba fare niente —
+e i rimborsi si stanno ancora chiudendo, quindi questo non è un dettaglio. Chi
+arriva dopo entra col proprio account.
+
+Il ponte è temporaneo e va tolto: quando il gruppo è passato, le regole tornano
+a guardare solo `members/<uid>`. Va scritto nelle regole stesse, con una data,
+altrimenti resta lì per sempre e nessuno saprà più se serve.
+
 ### Il vincolo che arriva dal § 1, e che va sciolto qui
 
 Trovato il 21 settembre guardando `firestore.rules` riga per riga. **Non si
@@ -215,18 +246,9 @@ personale per l'utente condiviso (`sessioneDelCampo()`, provata in
 `unita/limiti-cloud`). Prima ci cascava e **non lo diceva** — l'app si svuotava
 e basta. Adesso fallisce dichiarandolo, che è il minimo sindacale.
 
-L'altra metà è lavoro di questa sezione, e sono due strade:
-
-1. **Le regole guardano `members/<uid>` invece dell'indirizzo.** È il modello
-   già scritto qui sopra, ed è la strada giusta: l'utente condiviso sparisce e
-   ognuno entra con sé stesso. Costa la migrazione di chi oggi usa l'app.
-2. **Le regole accettano l'utente condiviso *oppure* un membro della room.** È
-   il ponte: i telefoni di oggi continuano a funzionare mentre i nuovi passano
-   al proprio account.
-
-La 2 non è un ripiego da evitare — è quello che permette di non dover
-aggiornare venti telefoni nello stesso pomeriggio. Ma va scritta sapendo che è
-temporanea, con una data.
+L'altra metà è il **ponte** deciso qui sopra: le regole accettano l'utente
+condiviso oppure un membro della stanza, e il giorno in cui il gruppo è passato
+si toglie il primo ramo.
 
 ⚠️ E c'è un dettaglio che non va dimenticato: anche risolte le regole, chi
 entra col proprio account **sostituisce** la sessione condivisa su quel

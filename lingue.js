@@ -1009,6 +1009,18 @@
     'auth.giaCollegato': 'Questo account è già collegato a un altro accesso.',
     'auth.rientra': 'Per farlo serve rientrare: esci e rientra, poi riprova.',
     'auth.nonRiuscito': 'Non è riuscito. Riprova.',
+
+    // ---------- La stanza (§ 2) ----------
+    'stanza.serveNome': 'Il campo ha bisogno di un nome.',
+    'stanza.nomeLungo': 'Il nome è troppo lungo: al massimo 60 caratteri.',
+    'stanza.serveInizio': 'Manca il giorno di inizio.',
+    'stanza.serveFine': 'Manca il giorno di fine.',
+    'stanza.inizioNonValido': 'Il giorno di inizio non è una data.',
+    'stanza.fineNonValida': 'Il giorno di fine non è una data.',
+    'stanza.finePrimaDiInizio': 'Il campo finisce prima di cominciare: controlla le date.',
+    'stanza.luogoNonValido': 'Il luogo non è un punto sulla Terra: controlla le coordinate.',
+    'stanza.codiceNonValido': 'Questo codice non ha la forma giusta. Sono otto caratteri, come *K7RX-2MQP*.',
+    'stanza.senzaCaso': 'Questo browser non sa generare un codice sicuro. Serve una connessione https.',
   };
 
   const ES = {
@@ -1883,6 +1895,18 @@
     'auth.giaCollegato': 'Esta cuenta ya está vinculada a otro acceso.',
     'auth.rientra': 'Para hacerlo hay que volver a entrar: sal y entra otra vez, luego vuelve a probar.',
     'auth.nonRiuscito': 'No ha salido. Vuelve a probar.',
+
+    // ---------- La habitación (§ 2) ----------
+    'stanza.serveNome': 'El campamento necesita un nombre.',
+    'stanza.nomeLungo': 'El nombre es demasiado largo: 60 caracteres como máximo.',
+    'stanza.serveInizio': 'Falta el día de inicio.',
+    'stanza.serveFine': 'Falta el día de fin.',
+    'stanza.inizioNonValido': 'El día de inicio no es una fecha.',
+    'stanza.fineNonValida': 'El día de fin no es una fecha.',
+    'stanza.finePrimaDiInizio': 'El campamento termina antes de empezar: revisa las fechas.',
+    'stanza.luogoNonValido': 'El lugar no es un punto de la Tierra: revisa las coordenadas.',
+    'stanza.codiceNonValido': 'Este código no tiene la forma correcta. Son ocho caracteres, como *K7RX-2MQP*.',
+    'stanza.senzaCaso': 'Este navegador no sabe generar un código seguro. Hace falta una conexión https.',
   };
 
   const FR = {
@@ -2759,6 +2783,18 @@
     'auth.giaCollegato': 'Ce compte est déjà lié à un autre accès.',
     'auth.rientra': 'Pour ça il faut se reconnecter : déconnecte-toi, reviens, puis réessaie.',
     'auth.nonRiuscito': "Ça n'a pas marché. Réessaie.",
+
+    // ---------- La chambre (§ 2) ----------
+    'stanza.serveNome': "Le camp a besoin d'un nom.",
+    'stanza.nomeLungo': 'Le nom est trop long : 60 caractères au maximum.',
+    'stanza.serveInizio': 'Il manque le jour de début.',
+    'stanza.serveFine': 'Il manque le jour de fin.',
+    'stanza.inizioNonValido': "Le jour de début n'est pas une date.",
+    'stanza.fineNonValida': "Le jour de fin n'est pas une date.",
+    'stanza.finePrimaDiInizio': 'Le camp finit avant de commencer : vérifie les dates.',
+    'stanza.luogoNonValido': "Le lieu n'est pas un point sur la Terre : vérifie les coordonnées.",
+    'stanza.codiceNonValido': "Ce code n'a pas la bonne forme. Ce sont huit caractères, comme *K7RX-2MQP*.",
+    'stanza.senzaCaso': "Ce navigateur ne sait pas créer un code sûr. Il faut une connexion https.",
   };
 
   const DIZIONARI = { it: IT, es: ES, fr: FR };
