@@ -49,7 +49,10 @@ const { chromium } = require('playwright-core');
   // --- 4. Ricarica: resta sbloccata ---
   await p.reload({ waitUntil: 'load' });
   await p.waitForTimeout(600);
-  const splash = await p.locator('h1', { hasText: 'BRIGATA' }).count();
+  // La prima riga dello splash si chiede alla configurazione: e' il marchio,
+  // e il marchio cambia fra la versione privata e quella pubblica.
+  const rigaSplash = await p.evaluate(() => window.APP_CONFIG.brand.splashLine1);
+  const splash = await p.locator('h1', { hasText: rigaSplash }).count();
   await p.waitForTimeout(2200);   // lo splash dura 2 secondi
   console.log('dopo lo sblocco si vede lo splash, non il blocco:', splash > 0 && (await p.locator('input[placeholder="••••••••"]').count()) === 0 ? 'OK' : 'PROBLEMA');
   console.log('dopo il ricarico resta sbloccata:', (await p.locator('button[aria-label="Menu"]').count()) > 0 ? 'OK' : 'PROBLEMA');

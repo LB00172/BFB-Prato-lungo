@@ -75,19 +75,31 @@ fs.writeFileSync(path.join(root, 'App.js'), banner + code);
 console.log('Compilato src/*.jsx -> App.js (' + SORGENTI.length + ' sorgenti)');
 
 // 2) Calcola una versione dal contenuto degli asset cacheati e la scrive in sw.js
-const filesToHash = [
-  'App.js', 'index.html', 'manifest.json',
-  'firebase-config.js', 'sync-merge.js', 'pdf-ricordo.js', 'conti.js', 'presenze.js', 'allarmi.js', 'lingue.js', 'auth.js', 'stanza.js', 'menu-spesa.js', 'magazzino-foto.js', 'firebase-sync.js',
-  'vendor/tailwind.js', 'vendor/fonts.css',
-];
+//
+// L'elenco dei file che contano NON si scrive a mano: si chiede al precache,
+// che li elenca gia' tutti. Scritto a mano invecchiava, e invecchiava in
+// silenzio — le icone e il logo erano nel precache ma fuori da qui, quindi
+// cambiare il logo non cambiava CACHE_NAME e ogni telefono gia' installato
+// avrebbe continuato a mostrare quello vecchio, dalla cache, per sempre.
+// La regola giusta e' semplice: **se sta nel precache, conta per la
+// versione**. Una prova in unita/compilazione lo sorveglia.
+const swPath = path.join(root, 'sw.js');
+const swTesto = fs.readFileSync(swPath, 'utf8');
+const bloccoAssets = swTesto.slice(swTesto.indexOf('const ASSETS = ['), swTesto.indexOf('];', swTesto.indexOf('const ASSETS = [')));
+const filesToHash = [...bloccoAssets.matchAll(/'\.\/([^']+)'/g)]
+  .map((m) => m[1])
+  .filter((f) => f && f !== 'index.html')      // la radice './' e './index.html' sono lo stesso file
+  .concat(['index.html']);
 const h = crypto.createHash('sha1');
 for (const f of filesToHash) {
   try { h.update(fs.readFileSync(path.join(root, f))); } catch (e) { /* file assente: ignora */ }
 }
-const version = 'brigata-bandone-' + h.digest('hex').slice(0, 10);
+// Il prefisso e' il nome del prodotto: su questo ramo e' Camp Ops, sulla
+// versione privata resta brigata-bandone. Due nomi diversi vuol dire anche
+// due cache diverse, che e' giusto: sono due app.
+const version = 'camp-ops-' + h.digest('hex').slice(0, 10);
 
-const swPath = path.join(root, 'sw.js');
-let sw = fs.readFileSync(swPath, 'utf8');
+let sw = swTesto;
 sw = sw.replace(/const CACHE_NAME = '[^']*';/, `const CACHE_NAME = '${version}';`);
 fs.writeFileSync(swPath, sw);
 console.log('CACHE_NAME =', version);

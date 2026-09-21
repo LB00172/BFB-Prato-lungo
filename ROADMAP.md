@@ -344,11 +344,21 @@ Checklist:
 - [ ] Icone e splash già presenti (`apple-touch-icon`, 192, 512).
 - [ ] **Privacy policy** pubblica (obbligatoria) + scheda "Sicurezza dei dati".
 - [ ] Percorso di **cancellazione account** (requisito Play).
-- [ ] **De-branding**: modificare `window.APP_CONFIG.brand` in
-      `firebase-config.js` e i tre punti statici rimasti:
-      `index.html` (`<title>`), `manifest.json` (`name`, `short_name`), `logo.png`.
-      Il resto dell'interfaccia legge già dalla configurazione.
-- [ ] Nome prodotto neutro + logo generico (da decidere).
+- [x] **Nome e marchio: Camp Ops** (21 settembre). `APP_CONFIG.brand`,
+      `<title>`, `manifest.json` e le quattro immagini (`logo.png`,
+      `icon-512`, `icon-192`, `apple-touch-icon`) sono ricavate dal logo a
+      2000 px in `marca/`. Il prefisso di `CACHE_NAME` è diventato
+      `camp-ops-`: due nomi, due cache, due app.
+- [ ] **La tavolozza non è ancora quella del logo.** Il logo è verde petrolio,
+      arancione e crema; l'app è verde scuro `#2D392C` su `#F0F4F1`. Non
+      stonano, ma non sono la stessa cosa. Rifare i colori è lavoro del § 13
+      (c'è `RICOGNIZIONE-UI.md`), e il confronto del DOM lì è cieco: serve
+      guardare quello che disegna il browser.
+- [ ] **Il gioco e Bandy vanno tolti da questo ramo.** `src/60-gioco.jsx`,
+      `src/75-usa-gioco.jsx` e `bandy.png` sono roba della Brigata e non
+      devono finire sullo store. Togliere un sorgente da `build.js` è facile;
+      quello che costa sono le prove che lo guardano (`e2e/gioco`,
+      `e2e/livelli`, e la classifica dentro la sincronizzazione).
 
 **Su Apple App Store**: Apple rifiuta di norma i "wrapper" di siti web
 (linea guida 4.2). Sull'ecosistema iOS la strada realistica resta

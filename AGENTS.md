@@ -100,6 +100,12 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   `npm run regole`. Una guardia dentro `npm test` controlla però che ogni
   strada nominata in `firestore.rules` compaia nelle prove, così una
   collezione nuova non entra senza che nessuno l'abbia guardata.
+- **Questo ramo si chiama Camp Ops, e non è un refuso.** `feature/public-app`
+  è la versione pubblica: marchio neutro, icone Camp Ops, `CACHE_NAME` con
+  prefisso `camp-ops-`. La Brigata, Prato Lungo e Bandy vivono su `main`, che è
+  l'app privata del gruppo. Sono **due prodotti**, non uno con il marchio
+  cambiato: riportare qui un nome del gruppo — o "allineare" i due rami — non è
+  una pulizia, è rimettere insieme quello che è stato diviso apposta.
 - **`FEATURES.auth` è spenta di proposito, e l'account non è un muro.** Il § 1
   della roadmap è scritto e provato (`auth.js` per le regole,
   `src/78-usa-account.jsx` per lo stato, la tessera in Impostazioni), ma

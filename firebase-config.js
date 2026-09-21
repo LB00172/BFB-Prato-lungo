@@ -89,14 +89,19 @@ window.CAMP_LOCATION = { lat: 42.0486, lon: 13.14855, alt: 1337, label: "Prato L
 // finché non vengono attivate.
 // ============================================================================
 window.APP_CONFIG = {
+  // ATTENZIONE: questo e' il ramo PUBBLICO (feature/public-app). Il marchio
+  // qui e' neutro — "Camp Ops" — e ci resta. La Brigata, Prato Lungo e Bandy
+  // vivono su `main`, che e' l'app privata del gruppo: sono due prodotti, non
+  // uno con il marchio cambiato (CLAUDE.md). Chi riporta qui un nome del
+  // gruppo sta rimettendo insieme quello che e' stato diviso apposta.
   brand: {
-    appTitle: "PRATO LUNGO 2026",        // titolo nell'header
-    groupName: "Brigata Fabio Bandone",  // sottotitolo / nome gruppo
-    splashLine1: "BRIGATA",              // splash: prima riga
-    splashLine2: "FABIO BANDONE",        // splash: seconda riga
-    splashTagline: "Prato Lungo Forever",
-    footerMotto: "In BANDY we Trust",
-    credits: "Web app prodotta da Lorenzo Ballerini · Tutti i diritti riservati © 2026",
+    appTitle: "CAMP OPS",                // titolo nell'header
+    groupName: "",                       // sottotitolo: lo scrive la stanza
+    splashLine1: "CAMP",                 // splash: prima riga
+    splashLine2: "OPS",                  // splash: seconda riga
+    splashTagline: "Le spese del campo, divise bene",
+    footerMotto: "",
+    credits: "Camp Ops · Lorenzo Ballerini · © 2026",
   },
   features: {
     auth: false,           // login con Google / email+password (roadmap settembre)

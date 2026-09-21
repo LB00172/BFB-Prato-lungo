@@ -282,7 +282,11 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
     ok(`il file è un PDF valido (${(dati.length / 1024).toFixed(0)} KB)`, t.startsWith('%PDF-') && t.trimEnd().endsWith('%%EOF'));
     ok('contiene le due foto scelte, non tutte', (t.match(/\/Subtype \/Image/g) || []).length === 2);
     ok('le foto sono incorporate come JPEG', t.includes('/Filter /DCTDecode'));
-    ok('porta il titolo del campo', t.includes('(PRATO LUNGO 2026) Tj'));
+    // Il titolo NON si scrive a mano qui: si chiede alla configurazione.
+    // Scritto a mano vale su un ramo solo, e le versioni sono due — questa
+    // verifica era rossa su Camp Ops mentre il PDF era giusto.
+    const titolo = await p.evaluate(() => window.APP_CONFIG.brand.appTitle);
+    ok(`porta il titolo del campo (${titolo})`, t.includes(`(${titolo}) Tj`));
     ok('porta il nome di chi ha scattato', /\(Lorenzo · /.test(t) || t.includes('(Lorenzo'));
   }
   ok('finita la stampa si esce dalla modalità di scelta',

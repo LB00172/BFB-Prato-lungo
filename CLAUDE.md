@@ -85,6 +85,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `firestore.rules` | **chi può leggere e scrivere cosa** nel cloud. Due mondi che convivono: `camps/<codice>` (il campo 2026, utente condiviso) e `rooms/<id>` (le stanze). Si provano con `npm run regole`, mai a occhio |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
+| `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
 | `test/` | 14 prove unitarie + 60 end‑to‑end, più `regole/` (fuori da `npm test`) |
 
@@ -172,6 +173,14 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   spostare codice senza cambiare comportamento; quando il lavoro È cambiare
   l'aspetto (la scala del testo, i colori), non dice niente di utile. Lì la
   rete è un'altra: si guarda quello che disegna il browser.
+- **Se sta nel precache, deve contare per `CACHE_NAME`.** `logo.png` e le tre
+  icone stavano nel precache ma fuori dall'elenco che calcola la versione, che
+  era scritto a mano. Cambiare il logo non avrebbe cambiato la versione, e ogni
+  telefono già installato avrebbe continuato a mostrare quello vecchio, dalla
+  cache, **per sempre** — finché qualcos'altro non avesse cambiato l'hash. Il
+  codice giusto in produzione che non arriva a nessuno è già successo una
+  volta. Adesso `build.js` l'elenco lo chiede al precache, e una prova
+  ricalcola la versione e la confronta con quella scritta in `sw.js`.
 - **Un elenco di file scritto a mano dentro una prova invecchia da solo.**
   La guardia sulle chiavi inventate leggeva `['conti.js', 'presenze.js',
   'allarmi.js', 'menu-spesa.js']`: è nato `auth.js`, che restituisce chiavi

@@ -9,6 +9,7 @@
 // di riscriverlo: due elenchi separati prima o poi divergono.
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const Babel = require('@babel/standalone');
 const { ok, fine } = require('../lib/app');
 
@@ -234,7 +235,11 @@ ok('nessuna data scritta a mano nei sorgenti'
 // Il nome della cache del service worker cambia a ogni build: se resta
 // indietro, i telefoni non ricevono l'aggiornamento.
 const sw = fs.readFileSync(path.join(RADICE, 'sw.js'), 'utf8');
-ok('sw.js ha un CACHE_NAME con impronta', /const CACHE_NAME = 'brigata-bandone-[0-9a-f]{10}'/.test(sw));
+// Il prefisso e' il nome del prodotto, e sui due rami e' diverso: qui e'
+// camp-ops, sulla versione privata brigata-bandone. Due nomi vuol dire due
+// cache separate, ed e' giusto — sono due app.
+ok(`sw.js ha un CACHE_NAME con impronta (${(sw.match(/const CACHE_NAME = '([^']*)'/) || [])[1]})`,
+  /const CACHE_NAME = '[a-z-]+-[0-9a-f]{10}'/.test(sw));
 
 // Ogni file che l'app carica dal proprio dominio deve stare nel precache:
 // offline quello che non è in cache semplicemente non arriva, e al campo non
@@ -406,6 +411,47 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
   const coda = ultimo >= 0 ? regole.slice(ultimo) : '';
   ok('firestore.rules finisce con il diniego di tutto il resto',
     ultimo >= 0 && /allow\s+read,\s*write:\s*if\s+false\s*;/.test(coda));
+}
+
+// ---------- Tutto quello che sta nel precache conta per la versione --------
+// Il service worker serve cache-first: un file cambiato che non fa cambiare
+// CACHE_NAME e' un file che in produzione c'e' e che nessuno riceve, perche'
+// i telefoni continuano a servire quello vecchio dalla cache. E' gia'
+// successo (CLAUDE.md), e stava per succedere di nuovo: logo.png e le tre
+// icone erano nel precache ma fuori dall'elenco che calcola la versione, che
+// era scritto a mano. Cambiare il logo non avrebbe cambiato niente per chi
+// aveva gia' l'app installata.
+//
+// Adesso build.js l'elenco lo chiede al precache. Questa prova verifica che
+// continui a farlo — cioe' che il legame non venga sciolto di nuovo.
+{
+  const sw = fs.readFileSync(path.join(RADICE, 'sw.js'), 'utf8');
+  const blocco = sw.slice(sw.indexOf('const ASSETS = ['), sw.indexOf('];', sw.indexOf('const ASSETS = [')));
+  const precache = [...blocco.matchAll(/'\.\/([^']*)'/g)].map((m) => m[1]).filter(Boolean);
+
+  // Si ricalcola la versione come fa build.js e si confronta con quella
+  // scritta in sw.js: se qualcuno rimette un elenco a mano che dimentica un
+  // file, i due numeri non combaciano.
+  const h = crypto.createHash('sha1');
+  const ordine = precache.filter((f) => f !== 'index.html').concat(['index.html']);
+  ordine.forEach((f) => {
+    try { h.update(fs.readFileSync(path.join(RADICE, f))); } catch (e) { /* assente */ }
+  });
+  const atteso = h.digest('hex').slice(0, 10);
+  // L'impronta e' l'ultimo pezzo dopo il trattino: il prefisso puo' avere
+  // dei trattini dentro ("camp-ops"), e un'espressione che non lo prevede
+  // torna undefined — cosa che mi e' appena successa.
+  const scritto = (sw.match(/const CACHE_NAME = '[a-z-]+-([0-9a-f]{10})'/) || [])[1];
+  ok(`CACHE_NAME nasce da TUTTO il precache, ${precache.length} file (${scritto})`
+    + (scritto === atteso ? '' : ` — ATTESO ${atteso}: qualcosa nel precache non conta per la versione`),
+    scritto === atteso);
+
+  // E in particolare le immagini, che sono il caso in cui l'errore non si
+  // vede: il codice e' giusto, la pagina funziona, e l'icona resta quella di
+  // prima su ogni telefono che aveva gia' l'app.
+  const immagini = precache.filter((f) => /\.(png|jpg|svg|ico)$/.test(f));
+  ok(`e le ${immagini.length} immagini del precache sono fra quelle contate`,
+    immagini.length > 0 && immagini.every((f) => ordine.includes(f)));
 }
 
 // ---------- I due rami non divergono sui soldi ----------
