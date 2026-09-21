@@ -52,27 +52,27 @@ const usaGalleria = ({ activeTab, cloudConnesso, campData }) => {
     if (files.length === 0) return;
 
     const chi = photoWho.trim();
-    if (!chi) { window.alert('Scegli prima a nome di chi stai caricando le foto.'); return; }
+    if (!chi) { window.alert(L.t('galleria.diChi')); return; }
 
     const CS = window.CloudSync;
     if (!CS || !CS.isConnected()) {
-      window.alert('La galleria ha bisogno della linea: le foto si caricano al ritorno a casa, non al campo.');
+      window.alert(L.t('galleria.servelaLinea'));
       return;
     }
 
     const restanti = photoCap - photosBy(chi);
     if (restanti <= 0) {
-      window.alert(`${chi} ha già caricato le sue ${photoCap} foto.\n\nPer farne entrare altre, cancellane qualcuna: si tocca la foto e poi "Elimina".`);
+      window.alert(L.t('galleria.giaPiene', chi, photoCap));
       return;
     }
     const daCaricare = files.slice(0, restanti);
     if (files.length > restanti) {
-      window.alert(`${chi} può caricare ancora ${restanti} ${restanti === 1 ? 'foto' : 'foto'}: ne carico ${restanti} di ${files.length}.`);
+      window.alert(L.t('galleria.soloAlcune', chi, restanti, files.length));
     }
 
     let fatte = 0;
     for (let i = 0; i < daCaricare.length; i++) {
-      setPhotoBusy(`Carico ${i + 1} di ${daCaricare.length}…`);
+      setPhotoBusy(L.t('galleria.carico', i + 1, daCaricare.length));
       try {
         // Due versioni: la miniatura per la griglia, l'originale per la
         // visione a schermo pieno. Entrambe devono stare sotto il limite di
@@ -88,13 +88,7 @@ const usaGalleria = ({ activeTab, cloudConnesso, campData }) => {
     setPhotoBusy('');
     const rimaste = daCaricare.length - fatte;
     if (rimaste > 0) {
-      window.alert(
-        `${fatte} ${fatte === 1 ? 'foto caricata' : 'foto caricate'} su ${daCaricare.length}.\n\n` +
-        `${rimaste === 1 ? 'Quella che manca è' : `Le altre ${rimaste} sono`} in coda: ` +
-        'partono da sole appena la linea regge. Puoi chiudere l\'app, ma non prima che la spia ' +
-        'in alto smetta di dire "da inviare": quella coda vive solo finché l\'app è aperta, ' +
-        'e chiudendola prima le foto vanno riprese dal rullino.'
-      );
+      window.alert(L.t('galleria.rimasteInCoda', fatte, daCaricare.length, rimaste));
     }
   };
 
@@ -146,29 +140,25 @@ const usaGalleria = ({ activeTab, cloudConnesso, campData }) => {
   // l'ordine è invece quello con cui si tocca, che è una scelta di chi compone.
   const generaRicordo = async (elenco, tutte) => {
     const PDF = window.PdfRicordo;
-    if (!PDF) { window.alert('Il generatore del ricordo non è disponibile.'); return; }
+    if (!PDF) { window.alert(L.t('galleria.senzaGeneratore')); return; }
     const CS = window.CloudSync;
-    if (!CS || !CS.isConnected()) { window.alert('Per creare il ricordo servono le foto originali, quindi la linea.'); return; }
+    if (!CS || !CS.isConnected()) { window.alert(L.t('galleria.ricordoSenzaLinea')); return; }
 
     const scelte = tutte
       ? [...elenco].sort((a, b) => (a.at || 0) - (b.at || 0))
       : elenco.filter((p) => picked.includes(p.id));
-    if (scelte.length === 0) { window.alert(tutte ? 'Non c\'è ancora nessuna foto nella galleria.' : 'Scegli almeno una foto.'); return; }
+    if (scelte.length === 0) { window.alert(L.t(tutte ? 'galleria.nessunaInGalleria' : 'galleria.almenoUna')); return; }
     // Le foto si scaricano a piena qualità una a una: con molte foto è una
     // cosa lunga, e su una linea che va e viene va detto prima di partire.
     if (scelte.length >= TANTE_FOTO) {
       const pagine = Math.ceil(scelte.length / PER_PAGINA_ALBUM);
-      if (!window.confirm(
-        `L'album completo ha ${scelte.length} foto (${pagine} pagine).\n\n` +
-        'Le foto vengono scaricate una a una a piena qualità: con una linea debole ci vogliono ' +
-        'diversi minuti e il PDF sarà pesante da mandare.\n\nVado avanti?'
-      )) return;
+      if (!window.confirm(L.t('galleria.tanteFoto', scelte.length, pagine))) return;
     }
 
     try {
       const foto = [];
       for (let i = 0; i < scelte.length; i++) {
-        setPdfBusy(`Scarico ${i + 1} di ${scelte.length}…`);
+        setPdfBusy(L.t('galleria.scarico', i + 1, scelte.length));
         const full = await CS.getPhotoFull(scelte[i].id);
         if (!full) continue;
         foto.push({
@@ -178,9 +168,9 @@ const usaGalleria = ({ activeTab, cloudConnesso, campData }) => {
             .filter(Boolean).join(' · '),
         });
       }
-      if (foto.length === 0) { window.alert('Non sono riuscito a scaricare le foto: riprova con una linea migliore.'); return; }
+      if (foto.length === 0) { window.alert(L.t('galleria.nessunaScaricata')); return; }
 
-      setPdfBusy('Compongo la pagina…');
+      setPdfBusy(L.t('galleria.compongo'));
       const r = intervalloCampo(campData);
       const bytes = PDF.crea({
         titolo: BRAND.appTitle,
@@ -219,7 +209,7 @@ const usaGalleria = ({ activeTab, cloudConnesso, campData }) => {
   const openAlbum = async (a) => {
     const CS = window.CloudSync;
     if (!CS || !CS.listPhotos || !CS.isConnected()) {
-      window.alert('Per rivedere l\'album di un campo chiuso serve la linea.');
+      window.alert(L.t('galleria.albumChiusoSenzaLinea'));
       return;
     }
     setAlbum({ id: a.id, name: a.name, photos: [], loading: true });
@@ -228,7 +218,7 @@ const usaGalleria = ({ activeTab, cloudConnesso, campData }) => {
   };
 
   const removePhoto = async (p) => {
-    if (!window.confirm(`Eliminare questa foto di ${p.by || 'anonimo'}?\nLibera un posto per un'altra.`)) return;
+    if (!window.confirm(L.t('galleria.confermaElimina', p.by || L.t('archivio.anonimo')))) return;
     const CS = window.CloudSync;
     if (CS && CS.deletePhoto) await CS.deletePhoto(p.id);
     setViewPhoto(null);

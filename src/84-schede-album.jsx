@@ -19,11 +19,10 @@ const schedaArchivio = ({
 }) => (
   <div className="space-y-4">
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Archivio</h3>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">{L.t('area.archivio')}</h3>
       {archives.length === 0 ? (
         <p className="text-sm text-gray-400 italic">
-          Nessun campo archiviato. Quando i conti sono chiusi, usa <span className="font-bold">Spese Totali → Dati → Chiudi il campo</span>:
-          tutto finisce qui e l'app riparte pulita per l'evento successivo.
+          {frase('archivio.vuoto')}
         </p>
       ) : (
         <ul className="space-y-3">
@@ -33,25 +32,25 @@ const schedaArchivio = ({
                 <div className="min-w-0">
                   <p className="font-rustic text-base text-[#2D392C] truncate">{a.name}</p>
                   <p className="text-[10px] text-gray-500">
-                    {a.from === a.to ? a.from : `${a.from} → ${a.to}`} · chiuso il {L.data(new Date(a.closedAt), 'numerica')}
+                    {L.t('archivio.periodoChiuso', a.from === a.to ? a.from : `${a.from} → ${a.to}`, L.data(new Date(a.closedAt), 'numerica'))}
                   </p>
                 </div>
                 <span className="font-rustic font-bold text-[#2D392C] shrink-0">{money((a.totals && a.totals.overall) || 0)} €</span>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500">
-                <span>{(a.totals && a.totals.members) || 0} membri</span>
-                <span>{(a.totals && a.totals.purchases) || 0} spese</span>
-                <span>{(a.totals && a.totals.meals) || 0} pasti</span>
-                {a.photos > 0 && <span>{a.photos} foto</span>}
-                {!a.state && <span className="text-[#8F9E8B] italic">solo cloud</span>}
+                <span>{L.t('archivio.membri', (a.totals && a.totals.members) || 0)}</span>
+                <span>{L.t('archivio.spese', (a.totals && a.totals.purchases) || 0)}</span>
+                <span>{L.t('archivio.pasti', (a.totals && a.totals.meals) || 0)}</span>
+                {a.photos > 0 && <span>{L.t('archivio.foto', a.photos)}</span>}
+                {!a.state && <span className="text-[#8F9E8B] italic">{L.t('archivio.soloCloud')}</span>}
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setViewArchive(a)} className={bottone('primario', 'piccolo', 'flex-1')}>Resoconto</button>
+                <button onClick={() => setViewArchive(a)} className={bottone('primario', 'piccolo', 'flex-1')}>{L.t('archivio.resoconto')}</button>
                 {a.photos > 0 && (
-                  <button onClick={() => openAlbum(a)} className="flex-1 py-2 bg-[#8F9E8B] text-white rounded text-[10px] font-bold uppercase hover:brightness-95">Album</button>
+                  <button onClick={() => openAlbum(a)} className="flex-1 py-2 bg-[#8F9E8B] text-white rounded text-[10px] font-bold uppercase hover:brightness-95">{L.t('archivio.album')}</button>
                 )}
-                <button onClick={() => downloadArchive(a)} className={bottone('bruno', 'piccolo', 'flex-1')}>Scarica</button>
-                <button onClick={() => removeArchive(a)} aria-label="Elimina archivio" className={bottone('distruttivo', 'minuscolo')}>Elimina</button>
+                <button onClick={() => downloadArchive(a)} className={bottone('bruno', 'piccolo', 'flex-1')}>{L.t('archivio.scarica')}</button>
+                <button onClick={() => removeArchive(a)} aria-label={L.t('archivio.eliminaArchivio')} className={bottone('distruttivo', 'minuscolo')}>{L.t('archivio.elimina')}</button>
               </div>
             </li>
           ))}
@@ -63,13 +62,13 @@ const schedaArchivio = ({
     {album && (
       <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
         <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3">
-          <h3 className="font-rustic text-lg text-[#2D392C] truncate">Album · {album.name}</h3>
-          <button onClick={() => setAlbum(null)} className={bottone('testuale', 'minuscolo', 'shrink-0')}>Chiudi</button>
+          <h3 className="font-rustic text-lg text-[#2D392C] truncate">{L.t('archivio.albumDi', album.name)}</h3>
+          <button onClick={() => setAlbum(null)} className={bottone('testuale', 'minuscolo', 'shrink-0')}>{L.t('archivio.chiudi')}</button>
         </div>
         {album.loading ? (
-          <p className="text-sm text-gray-400 italic">Carico l'album…</p>
+          <p className="text-sm text-gray-400 italic">{L.t('archivio.carico')}</p>
         ) : album.photos.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">Nessuna foto trovata: serve la linea per scaricarle.</p>
+          <p className="text-sm text-gray-400 italic">{L.t('archivio.senzaFoto')}</p>
         ) : (
           <div className="grid grid-cols-3 gap-1.5">
             {album.photos.map((p) => (
@@ -77,7 +76,7 @@ const schedaArchivio = ({
                 key={p.id}
                 onClick={() => openPhoto(p)}
                 className="relative aspect-square overflow-hidden rounded border border-[#8F9E8B]/30 bg-[#F0F4F1]"
-                aria-label={`Foto di ${p.by || 'anonimo'}`}
+                aria-label={L.t('archivio.fotoDi', p.by || L.t('archivio.anonimo'))}
               >
                 <img src={p.thumb} alt="" className="w-full h-full object-cover" loading="lazy" />
                 {p.by && (
@@ -90,7 +89,7 @@ const schedaArchivio = ({
       </div>
     )}
     <p className="text-[9px] text-gray-400 italic text-center px-4">
-      Il file scaricato alla chiusura è l'unica copia che contiene anche le foto degli scontrini: conservalo.
+      {L.t('archivio.conservalo')}
     </p>
   </div>
 );
@@ -110,42 +109,42 @@ const schedaGioco = ({
     {!gameRunning ? (
       <>
         <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-          <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Aiuta Bandy</h3>
+          <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('area.gioco')}</h3>
           <div className="flex items-center gap-3">
             <img src="./bandy.png" alt="Bandy" className="w-14 h-14 rounded border-2 border-[#8F9E8B]/40 bg-[#F0F4F1]" style={{ imageRendering: 'pixelated' }} />
             <p className="text-[11px] text-gray-600 leading-snug">
-              Bandy è in montagna e non è ancora fatto: raggiungilo con la canna più volte che puoi. Ogni volta che lo prendi la canna si allunga — se sbatti contro i bordi o contro te stesso, GAME OVER.
+              {L.t('gioco.spiegazione')}
             </p>
           </div>
           <div>
-            <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">Nome giocatore</label>
+            <label className="block text-[11px] uppercase font-bold text-gray-500 mb-1">{L.t('gioco.nomeGiocatore')}</label>
             <input
               type="text"
               value={gamePlayer}
               onChange={(e) => setGamePlayer(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && startGame()}
-              placeholder="Come ti chiami?"
+              placeholder={L.t('gioco.comeTiChiami')}
               maxLength={24}
               className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
             />
           </div>
           <button onClick={startGame} className={bottone('primario', 'grande', 'w-full')}>
-            Gioca
+            {L.t('gioco.gioca')}
           </button>
-          <p className="text-[9px] text-gray-400 italic">Comandi: scorri il dito sul campo o usa le frecce sotto. Da computer: frecce o WASD.</p>
+          <p className="text-[9px] text-gray-400 italic">{L.t('gioco.comandi')}</p>
         </div>
 
         <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md">
           <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3">
-            <h3 className="font-rustic text-lg">Classifica</h3>
-            <button onClick={refreshLeaderboard} className="text-[9px] uppercase font-bold text-[#8F9E8B] hover:text-white">Aggiorna</button>
+            <h3 className="font-rustic text-lg">{L.t('gioco.classifica')}</h3>
+            <button onClick={refreshLeaderboard} className="text-[9px] uppercase font-bold text-[#8F9E8B] hover:text-white">{L.t('gioco.aggiorna')}</button>
           </div>
           <div className="flex justify-between text-xs mb-3 pb-2 border-b border-[#8F9E8B]/20">
-            <span className="text-[#8F9E8B]">Il tuo record</span>
+            <span className="text-[#8F9E8B]">{L.t('gioco.tuoRecord')}</span>
             <span className="font-rustic text-[#D97706] text-lg leading-none">{gameBest}</span>
           </div>
           {leaderboard.length === 0 ? (
-            <p className="text-[11px] text-gray-400 italic">Nessun punteggio condiviso ancora. Gioca una partita: con la linea il tuo record finisce qui per tutti.</p>
+            <p className="text-[11px] text-gray-400 italic">{L.t('gioco.senzaPunteggi')}</p>
           ) : (
             <ul className="space-y-1">
               {leaderboard.map((r, i) => (
@@ -179,8 +178,8 @@ const schedaGuida = ({
 }) => (
   <div className="space-y-4">
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-1">Come funziona l'app</h3>
-      <p className="text-[11px] text-gray-500 mb-3">Tocca un'area per vedere a cosa serve. In sintesi: segni presenze e spese, l'app calcola quanto deve ciascuno e chi rimborsa chi.</p>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-1">{L.t('guida.titolo')}</h3>
+      <p className="text-[11px] text-gray-500 mb-3">{L.t('guida.sottotitolo')}</p>
 
       {/* Pills */}
       <div className="flex flex-wrap gap-1.5">
@@ -211,11 +210,11 @@ const schedaGuida = ({
     </div>
 
     <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md">
-      <h4 className="font-rustic text-base mb-2">In tre passi</h4>
+      <h4 className="font-rustic text-base mb-2">{L.t('guida.trePassi')}</h4>
       <ol className="text-xs space-y-1.5 list-decimal list-inside text-[#F0F4F1]/90">
-        <li>In <span className="font-bold">Membri</span> aggiungi le persone (e segna chi è bambino).</li>
-        <li>Ogni giorno segna le <span className="font-bold">Presenze</span> e registra le spese nella <span className="font-bold">Lista della Spesa</span>: prima cosa serve in "Da acquistare", poi la sposti in "Acquistato" con prezzo e acquirente.</li>
-        <li>In <span className="font-bold">Spese Totali → Saldi</span> vedi chi deve dare o ricevere e chi paga chi, e con <span className="font-bold">Condividi resoconto</span> lo mandi nel gruppo.</li>
+        <li>{frase('guida.passo1')}</li>
+        <li>{frase('guida.passo2')}</li>
+        <li>{frase('guida.passo3')}</li>
       </ol>
     </div>
   </div>

@@ -229,20 +229,23 @@ const diffFlat = (prima, dopo) => {
 
 // Sezione dell'app a cui appartiene un percorso: serve a raggruppare il
 // registro per area invece di mostrare una lista piatta di sigle.
+// La tabella tiene le CHIAVI, non i nomi: e' una costante, e si valuta una
+// volta sola al caricamento — se ci mettessimo i nomi tradotti resterebbero
+// per sempre nella lingua di quel momento. Il nome si chiede al disegno.
 const SEZIONE_DI = {
-  m: 'Membri',
-  p: 'Lista della Spesa',
-  t: 'Da acquistare',
-  e: 'Attrezzatura',
-  g: 'Dotazioni',
-  s: 'Saldi',
-  x: 'Conto separato',
-  f: 'Giorni gratis'
+  m: 'sezione.membri',
+  p: 'sezione.lista',
+  t: 'sezione.daAcquistare',
+  e: 'sezione.attrezzatura',
+  g: 'sezione.dotazioni',
+  s: 'sezione.saldi',
+  x: 'sezione.contoSeparato',
+  f: 'sezione.giorniGratis'
 };
 const sezioneDiPath = p => {
   const parti = String(p).split('|');
-  if (parti[0] === 'c') return parti[2] === 'meals' ? 'Presenze' : parti[3] === 'note' ? 'Menù' : 'Calendario';
-  return SEZIONE_DI[parti[0]] || 'Altro';
+  if (parti[0] === 'c') return L.t(parti[2] === 'meals' ? 'sezione.presenze' : parti[3] === 'note' ? 'sezione.menu' : 'sezione.calendario');
+  return L.t(SEZIONE_DI[parti[0]] || 'sezione.altro');
 };
 
 // Nomi dei membri eliminati (id -> nome). Le presenze sono legate all'id, non
@@ -273,7 +276,7 @@ const descriviPath = (p, stato) => {
   const parti = String(p).split('|');
   const nomeMembro = id => {
     const m = (stato.members || []).find(x => x.id === id);
-    return m ? m.name : 'una persona non più in elenco';
+    return m ? m.name : L.t('percorso.exMembro');
   };
   const giorno = d => {
     try {
@@ -288,27 +291,27 @@ const descriviPath = (p, stato) => {
   };
   switch (parti[0]) {
     case 'c':
-      if (parti[2] === 'meals') return `presenza di ${nomeMembro(parti[3])} — ${giorno(parti[1])}`;
-      if (parti[3] === 'note') return `menù del ${giorno(parti[1])}`;
-      if (parti[3] === 'appunti') return `note del ${giorno(parti[1])}`;
-      if (parti[3] === 'guestsNames') return `ospiti del ${giorno(parti[1])}`;
-      return `${parti[3]} del ${giorno(parti[1])}`;
+      if (parti[2] === 'meals') return L.t('percorso.presenzaDi', nomeMembro(parti[3]), giorno(parti[1]));
+      if (parti[3] === 'note') return L.t('percorso.menuDel', giorno(parti[1]));
+      if (parti[3] === 'appunti') return L.t('percorso.noteDel', giorno(parti[1]));
+      if (parti[3] === 'guestsNames') return L.t('percorso.ospitiDel', giorno(parti[1]));
+      return L.t('percorso.campoDel', parti[3], giorno(parti[1]));
     case 'm':
-      return voce('members', parti[1], 'membro');
+      return voce('members', parti[1], L.t('percorso.membro'));
     case 'p':
-      return voce('purchases', parti[1], 'spesa');
+      return voce('purchases', parti[1], L.t('percorso.spesa'));
     case 't':
-      return voce('toBuy', parti[1], 'voce da acquistare');
+      return voce('toBuy', parti[1], L.t('percorso.daAcquistare'));
     case 'e':
-      return voce('equipment', parti[1], 'attrezzatura');
+      return voce('equipment', parti[1], L.t('percorso.attrezzatura'));
     case 'g':
-      return voce('gear', parti[1], 'dotazione');
+      return voce('gear', parti[1], L.t('percorso.dotazione'));
     case 's':
-      return 'rimborso segnato come saldato';
+      return L.t('percorso.rimborsoSaldato');
     case 'x':
-      return `giorno del conto separato — ${giorno(parti[1])}`;
+      return L.t('percorso.giornoSeparato', giorno(parti[1]));
     case 'f':
-      return `giorno gratis — ${giorno(parti[1])}`;
+      return L.t('percorso.giornoGratis', giorno(parti[1]));
     default:
       return p;
   }
@@ -316,7 +319,7 @@ const descriviPath = (p, stato) => {
 const descriviPerdite = (paths, stato) => {
   const nome = id => {
     const m = (stato.members || []).find(x => x.id === id);
-    return m ? m.name : 'qualcuno';
+    return m ? m.name : L.t('percorso.qualcuno');
   };
   const conta = {
     presenze: 0,
@@ -339,14 +342,14 @@ const descriviPerdite = (paths, stato) => {
   });
   const pezzi = [];
   if (conta.presenze) {
-    pezzi.push(`${conta.presenze} presenze (${giorni.size} ${giorni.size === 1 ? 'giorno' : 'giorni'}, ${[...chi].slice(0, 4).join(', ')}${chi.size > 4 ? '…' : ''})`);
+    pezzi.push(L.t('perdite.presenze', conta.presenze, giorni.size, `${[...chi].slice(0, 4).join(', ')}${chi.size > 4 ? '…' : ''}`));
   }
-  if (conta.membri) pezzi.push(`${conta.membri} membri`);
-  if (conta.spese) pezzi.push(`${conta.spese} spese`);
-  if (conta.lista) pezzi.push(`${conta.lista} voci da acquistare`);
-  if (conta.attrezzatura) pezzi.push(`${conta.attrezzatura} attrezzature`);
-  if (conta.dotazioni) pezzi.push(`${conta.dotazioni} dotazioni`);
-  if (conta.altro) pezzi.push(`${conta.altro} altre voci`);
+  if (conta.membri) pezzi.push(L.t('perdite.membri', conta.membri));
+  if (conta.spese) pezzi.push(L.t('perdite.spese', conta.spese));
+  if (conta.lista) pezzi.push(L.t('perdite.lista', conta.lista));
+  if (conta.attrezzatura) pezzi.push(L.t('perdite.attrezzatura', conta.attrezzatura));
+  if (conta.dotazioni) pezzi.push(L.t('perdite.dotazioni', conta.dotazioni));
+  if (conta.altro) pezzi.push(L.t('perdite.altro', conta.altro));
   return pezzi.join(' · ');
 };
 
@@ -539,47 +542,47 @@ const PURCHASE_TYPES = {
 const wmoInfo = code => {
   if (code === 0) return {
     icon: '☀️',
-    label: 'Sereno'
+    label: L.t('cielo.sereno')
   };
   if (code === 1 || code === 2) return {
     icon: '🌤️',
-    label: 'Poco nuvoloso'
+    label: L.t('cielo.pocoNuvoloso')
   };
   if (code === 3) return {
     icon: '☁️',
-    label: 'Coperto'
+    label: L.t('cielo.coperto')
   };
   if (code === 45 || code === 48) return {
     icon: '🌫️',
-    label: 'Nebbia'
+    label: L.t('cielo.nebbia')
   };
   if (code >= 51 && code <= 57) return {
     icon: '🌦️',
-    label: 'Pioviggine'
+    label: L.t('cielo.pioviggine')
   };
   if (code >= 61 && code <= 67) return {
     icon: '🌧️',
-    label: 'Pioggia'
+    label: L.t('cielo.pioggia')
   };
   if (code >= 71 && code <= 77) return {
     icon: '🌨️',
-    label: 'Neve'
+    label: L.t('cielo.neve')
   };
   if (code >= 80 && code <= 82) return {
     icon: '🌦️',
-    label: 'Rovesci'
+    label: L.t('cielo.rovesci')
   };
   if (code === 85 || code === 86) return {
     icon: '🌨️',
-    label: 'Rovesci di neve'
+    label: L.t('cielo.rovesciNeve')
   };
   if (code >= 95) return {
     icon: '⛈️',
-    label: 'Temporale'
+    label: L.t('cielo.temporale')
   };
   return {
     icon: '🌡️',
-    label: 'Meteo'
+    label: L.t('cielo.ignoto')
   };
 };
 
@@ -589,7 +592,7 @@ const gravitaWmo = c => c >= 95 ? 5 : c >= 80 ? 4 : c >= 71 ? 4 : c >= 61 ? 3 : 
 
 // Le ore in cui si sta fuori: e' su quelle che si giudica una giornata di campo.
 const ORE_FUORI = [8, 21];
-const momentoDelGiorno = ora => ora == null ? '' : ora < 6 ? 'nella notte' : ora < 12 ? 'in mattinata' : ora < 18 ? 'nel pomeriggio' : 'in serata';
+const momentoDelGiorno = ora => ora == null ? '' : L.t(ora < 6 ? 'momento.notte' : ora < 12 ? 'momento.mattina' : ora < 18 ? 'momento.pomeriggio' : 'momento.sera');
 
 // Come si racconta una giornata a chi deve decidere se fare la camminata.
 // Il codice WMO GIORNALIERO di Open-Meteo e' il piu' severo delle 24 ore: una
@@ -897,12 +900,16 @@ const bottoneScelta = (forma, tono, acceso, misura, extra) => {
 // lingua e il pezzo in mezzo finirebbe nel posto sbagliato.
 //
 // Uso: {frase('compiti.spiegazione')}
-const frase = (chiave, ...resto) => L.pezzi(chiave, ...resto).map((p, i) => p.grassetto ? /*#__PURE__*/React.createElement("span", {
+// Il grassetto non e' sempre vestito uguale: dentro un paragrafo grigio il
+// pezzo in evidenza a volte e' anche verde. Il vestito sta qui, non nel
+// dizionario: il traduttore dice DOVE va l'enfasi, non di che colore e'.
+const fraseVestita = (classe, chiave, ...resto) => L.pezzi(chiave, ...resto).map((p, i) => p.grassetto ? /*#__PURE__*/React.createElement("span", {
   key: i,
-  className: "font-bold"
+  className: classe
 }, p.testo) : /*#__PURE__*/React.createElement(React.Fragment, {
   key: i
 }, p.testo));
+const frase = (chiave, ...resto) => fraseVestita('font-bold', chiave, ...resto);
 // ============================================================================
 //  MINI GIOCO "Aiuta Bandy" — snake in canvas, tutto offline.
 //  La canna cresce ogni volta che raccoglie Bandy. Sfondo: bosco visto
@@ -2121,61 +2128,61 @@ function BandyGame({
     className: "bg-black/70 px-5 py-3 rounded-lg text-center"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] uppercase tracking-widest text-[#8F9E8B]"
-  }, "Livello ", level), /*#__PURE__*/React.createElement("div", {
+  }, L.t('gioco.livello', level)), /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-2xl text-[#D97706] leading-tight"
   }, livelloInfo(level).icona, " ", livelloInfo(level).nome), level > LIVELLI.length && /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] uppercase tracking-widest text-[#F0F4F1]"
-  }, "Ancora pi\xF9 veloce!"))), (over || paused) && /*#__PURE__*/React.createElement("div", {
+  }, L.t('gioco.ancoraPiuVeloce')))), (over || paused) && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 bg-black/70 rounded-lg flex flex-col items-center justify-center text-center p-4"
   }, over ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-2xl text-[#F0F4F1]"
-  }, "Bandy \xE8 scappato!"), /*#__PURE__*/React.createElement("div", {
+  }, L.t('gioco.scappato')), /*#__PURE__*/React.createElement("div", {
     className: "text-[#D97706] font-rustic text-3xl my-2"
   }, score), /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-gray-300 mb-4"
-  }, score > bestLocal ? 'Nuovo record personale! 🎉' : `Il tuo record resta ${bestLocal}`), /*#__PURE__*/React.createElement("button", {
+  }, score > bestLocal ? L.t('gioco.nuovoRecord') : L.t('gioco.recordResta', bestLocal)), /*#__PURE__*/React.createElement("button", {
     onClick: onExit,
     className: "px-6 py-2.5 bg-[#2D392C] text-white rounded font-bold uppercase text-xs"
-  }, "Chiudi")) : /*#__PURE__*/React.createElement("div", {
+  }, L.t('archivio.chiudi'))) : /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-xl text-[#F0F4F1]"
-  }, "In pausa"))), /*#__PURE__*/React.createElement("div", {
+  }, L.t('gioco.inPausa')))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-2 max-w-[240px] w-full mx-auto shrink-0"
   }, /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("button", {
     onPointerDown: e => {
       e.preventDefault();
       nudge(0, -1);
     },
-    "aria-label": "Su",
+    "aria-label": L.t('gioco.su'),
     className: "py-3 bg-[#2D392C] text-white rounded font-bold"
   }, "\u25B2"), /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("button", {
     onPointerDown: e => {
       e.preventDefault();
       nudge(-1, 0);
     },
-    "aria-label": "Sinistra",
+    "aria-label": L.t('gioco.sinistra'),
     className: "py-3 bg-[#2D392C] text-white rounded font-bold"
   }, "\u25C0"), /*#__PURE__*/React.createElement("button", {
     onClick: togglePause,
-    "aria-label": "Pausa",
+    "aria-label": L.t('gioco.pausa'),
     className: "py-3 bg-[#5C4A3C] text-white rounded font-bold text-xs"
   }, paused ? '▶' : '❚❚'), /*#__PURE__*/React.createElement("button", {
     onPointerDown: e => {
       e.preventDefault();
       nudge(1, 0);
     },
-    "aria-label": "Destra",
+    "aria-label": L.t('gioco.destra'),
     className: "py-3 bg-[#2D392C] text-white rounded font-bold"
   }, "\u25B6"), /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("button", {
     onPointerDown: e => {
       e.preventDefault();
       nudge(0, 1);
     },
-    "aria-label": "Gi\xF9",
+    "aria-label": L.t('gioco.giu'),
     className: "py-3 bg-[#2D392C] text-white rounded font-bold"
   }, "\u25BC"), /*#__PURE__*/React.createElement("span", null)), /*#__PURE__*/React.createElement("button", {
     onClick: onExit,
     className: "w-full py-1.5 text-[11px] uppercase font-bold text-[#8F9E8B] hover:text-white shrink-0"
-  }, "Esci dal gioco"));
+  }, L.t('gioco.esci')));
 }
 
 // ============================================================================
@@ -2205,7 +2212,7 @@ function LockScreen({
   const submit = async () => {
     if (busy || waitLeft > 0) return;
     if (!pwd) {
-      setError('Scrivi la password.');
+      setError(L.t('blocco.scrivi'));
       return;
     }
     setBusy(true);
@@ -2213,7 +2220,7 @@ function LockScreen({
     try {
       const digest = await derivePassword(pwd);
       if (digest === null) {
-        setError('Questo browser non può verificare la password: apri l\'app su https (l\'indirizzo pubblicato) invece di una copia locale.');
+        setError(L.t('blocco.senzaHttps'));
         return;
       }
       if (digest === LOCK.hash) {
@@ -2228,13 +2235,13 @@ function LockScreen({
       if (fails >= 5) {
         const secs = Math.min(600, 30 * Math.pow(2, fails - 5));
         scriviLocale(UNTIL_KEY, String(Date.now() + secs * 1000));
-        setError(`Password sbagliata. Troppi tentativi: riprova fra ${secs} secondi.`);
+        setError(L.t('blocco.attesa', secs));
       } else {
-        setError(`Password sbagliata. ${5 - fails} ${5 - fails === 1 ? 'tentativo' : 'tentativi'} prima dell'attesa.`);
+        setError(L.t('blocco.restano', 5 - fails));
       }
       setPwd('');
     } catch (e) {
-      setError('Verifica non riuscita. Riprova.');
+      setError(L.t('blocco.nonRiuscita'));
     } finally {
       setBusy(false);
     }
@@ -2245,7 +2252,7 @@ function LockScreen({
     className: "w-28 h-28 mb-5 rounded-full overflow-hidden shadow-2xl border-4 border-[#8F9E8B] bg-[#F0F4F1] shrink-0"
   }, /*#__PURE__*/React.createElement("img", {
     src: "./logo.png",
-    alt: `Logo ${BRAND.groupName}`,
+    alt: L.t('blocco.logo', BRAND.groupName),
     className: "w-full h-full object-cover"
   })), /*#__PURE__*/React.createElement("h1", {
     className: "font-rustic text-2xl tracking-widest text-[#8F9E8B] text-center"
@@ -2259,7 +2266,7 @@ function LockScreen({
     className: "text-[11px] text-[#F0F4F1] leading-snug"
   }, reason)), /*#__PURE__*/React.createElement("label", {
     className: "block text-[10px] uppercase tracking-widest text-[#8F9E8B] font-bold"
-  }, "Password del campo"), /*#__PURE__*/React.createElement("div", {
+  }, L.t('blocco.password')), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("input", {
     type: show ? 'text' : 'password',
@@ -2273,17 +2280,17 @@ function LockScreen({
     className: "flex-grow min-w-0 p-3 rounded bg-[#1F271E] border-2 border-[#8F9E8B]/40 text-[#F0F4F1] placeholder-[#8F9E8B]/50 focus:outline-none focus:border-[#8F9E8B] disabled:opacity-50"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShow(s => !s),
-    "aria-label": show ? 'Nascondi la password' : 'Mostra la password',
+    "aria-label": L.t(show ? 'blocco.nascondi' : 'blocco.mostra'),
     className: "shrink-0 px-3 rounded bg-[#1F271E] border-2 border-[#8F9E8B]/40 text-lg leading-none hover:border-[#8F9E8B]"
   }, show ? '🙈' : '👁️')), /*#__PURE__*/React.createElement("button", {
     onClick: submit,
     disabled: busy || waitLeft > 0,
     className: "w-full py-3 rounded bg-[#8F9E8B] text-[#1F271E] font-bold uppercase text-sm tracking-widest hover:brightness-110 disabled:opacity-50"
-  }, busy ? 'Verifica…' : waitLeft > 0 ? `Attendi ${waitLeft} s` : 'Entra'), error && /*#__PURE__*/React.createElement("p", {
+  }, busy ? L.t('blocco.verifica') : waitLeft > 0 ? L.t('blocco.attendi', waitLeft) : L.t('blocco.entra')), error && /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-[#F0A0A0] leading-snug"
   }, error), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-[#8F9E8B]/80 leading-snug"
-  }, LOCK && LOCK.hint || 'Chiedi la password a chi organizza il campo.')), /*#__PURE__*/React.createElement("p", {
+  }, LOCK && LOCK.hint || L.t('blocco.chiedi'))), /*#__PURE__*/React.createElement("p", {
     className: "absolute bottom-4 left-0 right-0 text-center text-[9px] tracking-wide text-[#8F9E8B]/70 px-6"
   }, BRAND.credits));
 }
@@ -2324,7 +2331,7 @@ const usaGioco = ({
   const startGame = () => {
     const n = gamePlayer.trim();
     if (!n) {
-      window.alert('Scrivi il tuo nome per entrare in classifica.');
+      window.alert(L.t('gioco.scriviNome'));
       return;
     }
     scriviLocale('cambusa_player', n);
@@ -2419,26 +2426,26 @@ const usaGalleria = ({
     if (files.length === 0) return;
     const chi = photoWho.trim();
     if (!chi) {
-      window.alert('Scegli prima a nome di chi stai caricando le foto.');
+      window.alert(L.t('galleria.diChi'));
       return;
     }
     const CS = window.CloudSync;
     if (!CS || !CS.isConnected()) {
-      window.alert('La galleria ha bisogno della linea: le foto si caricano al ritorno a casa, non al campo.');
+      window.alert(L.t('galleria.servelaLinea'));
       return;
     }
     const restanti = photoCap - photosBy(chi);
     if (restanti <= 0) {
-      window.alert(`${chi} ha già caricato le sue ${photoCap} foto.\n\nPer farne entrare altre, cancellane qualcuna: si tocca la foto e poi "Elimina".`);
+      window.alert(L.t('galleria.giaPiene', chi, photoCap));
       return;
     }
     const daCaricare = files.slice(0, restanti);
     if (files.length > restanti) {
-      window.alert(`${chi} può caricare ancora ${restanti} ${restanti === 1 ? 'foto' : 'foto'}: ne carico ${restanti} di ${files.length}.`);
+      window.alert(L.t('galleria.soloAlcune', chi, restanti, files.length));
     }
     let fatte = 0;
     for (let i = 0; i < daCaricare.length; i++) {
-      setPhotoBusy(`Carico ${i + 1} di ${daCaricare.length}…`);
+      setPhotoBusy(L.t('galleria.carico', i + 1, daCaricare.length));
       try {
         // Due versioni: la miniatura per la griglia, l'originale per la
         // visione a schermo pieno. Entrambe devono stare sotto il limite di
@@ -2454,7 +2461,7 @@ const usaGalleria = ({
     setPhotoBusy('');
     const rimaste = daCaricare.length - fatte;
     if (rimaste > 0) {
-      window.alert(`${fatte} ${fatte === 1 ? 'foto caricata' : 'foto caricate'} su ${daCaricare.length}.\n\n` + `${rimaste === 1 ? 'Quella che manca è' : `Le altre ${rimaste} sono`} in coda: ` + 'partono da sole appena la linea regge. Puoi chiudere l\'app, ma non prima che la spia ' + 'in alto smetta di dire "da inviare": quella coda vive solo finché l\'app è aperta, ' + 'e chiudendola prima le foto vanno riprese dal rullino.');
+      window.alert(L.t('galleria.rimasteInCoda', fatte, daCaricare.length, rimaste));
     }
   };
   const openPhoto = async p => {
@@ -2514,29 +2521,29 @@ const usaGalleria = ({
   const generaRicordo = async (elenco, tutte) => {
     const PDF = window.PdfRicordo;
     if (!PDF) {
-      window.alert('Il generatore del ricordo non è disponibile.');
+      window.alert(L.t('galleria.senzaGeneratore'));
       return;
     }
     const CS = window.CloudSync;
     if (!CS || !CS.isConnected()) {
-      window.alert('Per creare il ricordo servono le foto originali, quindi la linea.');
+      window.alert(L.t('galleria.ricordoSenzaLinea'));
       return;
     }
     const scelte = tutte ? [...elenco].sort((a, b) => (a.at || 0) - (b.at || 0)) : elenco.filter(p => picked.includes(p.id));
     if (scelte.length === 0) {
-      window.alert(tutte ? 'Non c\'è ancora nessuna foto nella galleria.' : 'Scegli almeno una foto.');
+      window.alert(L.t(tutte ? 'galleria.nessunaInGalleria' : 'galleria.almenoUna'));
       return;
     }
     // Le foto si scaricano a piena qualità una a una: con molte foto è una
     // cosa lunga, e su una linea che va e viene va detto prima di partire.
     if (scelte.length >= TANTE_FOTO) {
       const pagine = Math.ceil(scelte.length / PER_PAGINA_ALBUM);
-      if (!window.confirm(`L'album completo ha ${scelte.length} foto (${pagine} pagine).\n\n` + 'Le foto vengono scaricate una a una a piena qualità: con una linea debole ci vogliono ' + 'diversi minuti e il PDF sarà pesante da mandare.\n\nVado avanti?')) return;
+      if (!window.confirm(L.t('galleria.tanteFoto', scelte.length, pagine))) return;
     }
     try {
       const foto = [];
       for (let i = 0; i < scelte.length; i++) {
-        setPdfBusy(`Scarico ${i + 1} di ${scelte.length}…`);
+        setPdfBusy(L.t('galleria.scarico', i + 1, scelte.length));
         const full = await CS.getPhotoFull(scelte[i].id);
         if (!full) continue;
         foto.push({
@@ -2546,10 +2553,10 @@ const usaGalleria = ({
         });
       }
       if (foto.length === 0) {
-        window.alert('Non sono riuscito a scaricare le foto: riprova con una linea migliore.');
+        window.alert(L.t('galleria.nessunaScaricata'));
         return;
       }
-      setPdfBusy('Compongo la pagina…');
+      setPdfBusy(L.t('galleria.compongo'));
       const r = intervalloCampo(campData);
       const bytes = PDF.crea({
         titolo: BRAND.appTitle,
@@ -2601,7 +2608,7 @@ const usaGalleria = ({
   const openAlbum = async a => {
     const CS = window.CloudSync;
     if (!CS || !CS.listPhotos || !CS.isConnected()) {
-      window.alert('Per rivedere l\'album di un campo chiuso serve la linea.');
+      window.alert(L.t('galleria.albumChiusoSenzaLinea'));
       return;
     }
     setAlbum({
@@ -2618,7 +2625,7 @@ const usaGalleria = ({
     } : cur);
   };
   const removePhoto = async p => {
-    if (!window.confirm(`Eliminare questa foto di ${p.by || 'anonimo'}?\nLibera un posto per un'altra.`)) return;
+    if (!window.confirm(L.t('galleria.confermaElimina', p.by || L.t('archivio.anonimo')))) return;
     const CS = window.CloudSync;
     if (CS && CS.deletePhoto) await CS.deletePhoto(p.id);
     setViewPhoto(null);
@@ -2796,7 +2803,7 @@ const usaScontrini = ({
       }));
       if (window.CloudSync) window.CloudSync.putReceipt(id, dataUrl);
     } catch (err) {
-      window.alert('Impossibile leggere la foto. Riprova.');
+      window.alert(L.t('scontrino.fotoIllegibile'));
     }
   };
 
@@ -2813,7 +2820,7 @@ const usaScontrini = ({
       if (dataUrl.length > 900000) dataUrl = await compressImage(file, 800, 0.4);
       setPReceipt(dataUrl);
     } catch (err) {
-      window.alert('Impossibile leggere la foto. Riprova.');
+      window.alert(L.t('scontrino.fotoIllegibile'));
     }
   };
   return {
@@ -6749,9 +6756,7 @@ const schedaCalendario = ({
   className: "text-base leading-none mt-0.5"
 }, "\u26A0\uFE0F"), /*#__PURE__*/React.createElement("span", {
   className: "text-[11px] text-[#5C4A3C] leading-snug"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Questo telefono non \xE8 ancora pronto per il campo."), ' ', "Al campo non c'\xE8 linea: tocca qui per vedere cosa manca, finch\xE9 sei collegato.")), (() => {
+}, frase('giorno.nonPronto'))), (() => {
   const orfane = presenzeOrfane();
   if (orfane.length === 0) return null;
   const totale = orfane.reduce((s, o) => s + o.pasti, 0);
@@ -6762,9 +6767,7 @@ const schedaCalendario = ({
     className: "text-base leading-none mt-0.5"
   }, "\uD83C\uDF7D\uFE0F"), /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, totale, " presenze non contano nei conti."), ' ', "Sono di ", orfane.length === 1 ? 'una persona' : `${orfane.length} persone`, " eliminate e riaggiunte fra i Membri: tocca qui per riattaccarle a chi di dovere."));
+  }, frase('giorno.orfaneAvviso', totale, orfane.length)));
 })(), renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
   className: "bg-white rounded-lg border border-[#8F9E8B]/30 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
@@ -6772,9 +6775,9 @@ const schedaCalendario = ({
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0"
-}, "Conto separato"), /*#__PURE__*/React.createElement("span", {
+}, L.t('giorno.contoSeparato')), /*#__PURE__*/React.createElement("span", {
   className: "ml-auto text-[9px] text-gray-500 truncate"
-}, sepDays.length === 0 ? 'nessun giorno' : `${sepDays.length} ${sepDays.length === 1 ? 'giorno' : 'giorni'} in totale`), /*#__PURE__*/React.createElement("span", {
+}, sepDays.length === 0 ? L.t('giorno.nessunGiorno') : L.t('giorno.giorniInTotale', sepDays.length)), /*#__PURE__*/React.createElement("span", {
   className: `text-[10px] text-[#5C4A3C] shrink-0 transition-transform ${sepOpen ? 'rotate-180' : ''}`
 }, "\u25BE")), sepOpen && /*#__PURE__*/React.createElement("div", {
   className: "px-3 pb-3"
@@ -6785,7 +6788,7 @@ const schedaCalendario = ({
   const on = sepDays.includes(dateStr);
   return /*#__PURE__*/React.createElement("label", {
     key: dateStr,
-    title: `${L.data(d, 'completa')}: conto separato`,
+    title: L.t('giorno.separatoTitolo', L.data(d, 'completa')),
     className: `flex flex-col items-center gap-0.5 py-1.5 rounded cursor-pointer border ${on ? 'bg-[#5C4A3C]/15 border-[#5C4A3C]/50' : 'bg-[#F0F4F1]/50 border-transparent hover:bg-[#E2EAE4]'}`
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
@@ -6797,9 +6800,7 @@ const schedaCalendario = ({
   }, d.getDate()));
 })), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic mt-2 leading-snug"
-}, "Spunta i giorni che fanno cassa a parte: cibo e bevande registrati sul", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, " conto separato"), " si dividono solo fra chi era presente ai pasti di quei giorni. Gli altri giorni restano nel conto comune. Logistica e attrezzatura restano sempre in comune."))), /*#__PURE__*/React.createElement("div", {
+}, frase('giorno.separatoNota')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-dashed border-[#8F9E8B] pb-1"
@@ -6813,7 +6814,7 @@ const schedaCalendario = ({
     className: "flex items-center gap-2"
   }, !locOk ? /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-gray-400 italic"
-  }, "Meteo: localit\xE0 del campo da impostare.") : wx ? (() => {
+  }, L.t('meteo.senzaLuogo')) : wx ? (() => {
     // La faccia della giornata e', quando si sa, la
     // condizione prevalente delle ore diurne; il brutto si
     // nomina a parte col suo momento. I millimetri dicono
@@ -6838,20 +6839,20 @@ const schedaCalendario = ({
     }, " \xB7 \uD83D\uDCA7", wx.rain, "%") : null));
   })() : /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-gray-400 italic"
-  }, "Previsione non ancora disponibile per questo giorno", isOnline ? ' (copre 16 giorni in avanti)' : ' (offline)', ".")), locOk && /*#__PURE__*/React.createElement("div", {
+  }, L.t('meteo.nonDisponibile', isOnline))), locOk && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2 pt-1 border-t border-[#8F9E8B]/20"
   }, (() => {
     const vecchia = weather.fetchedAt && Date.now() - weather.fetchedAt > METEO_VECCHIO;
     return /*#__PURE__*/React.createElement("span", {
       className: `text-[9px] ${vecchia ? 'text-[#D97706] font-bold' : 'text-gray-400'}`
-    }, weather.fetchedAt ? `${vecchia ? '⚠ Previsioni vecchie, del' : 'Previsioni del'} ${L.data(new Date(weather.fetchedAt), 'breve')} alle ${L.data(new Date(weather.fetchedAt), 'ora')}${vecchia ? ': altrove ne trovi di più fresche.' : ' · uguali per tutto il campo'}` : 'Previsioni non ancora scaricate.');
+    }, weather.fetchedAt ? L.t('meteo.previsioniDel', vecchia, L.data(new Date(weather.fetchedAt), 'breve'), L.data(new Date(weather.fetchedAt), 'ora')) : L.t('meteo.nonScaricate'));
   })(), /*#__PURE__*/React.createElement("button", {
     onClick: () => fetchWeather(true),
     disabled: !isOnline || wxBusy,
     className: bottone('secondario', 'minuscolo', 'shrink-0')
-  }, wxBusy ? '…' : 'Aggiorna')), admin && locOk && /*#__PURE__*/React.createElement("div", {
+  }, wxBusy ? '…' : L.t('gioco.aggiorna'))), admin && locOk && /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] text-gray-400 font-mono pt-0.5"
-  }, "\uD83D\uDCCD ", loc.lat, ", ", loc.lon, typeof loc.alt === 'number' ? ` · quota dichiarata ${loc.alt} m` : ' · quota non dichiarata', typeof weather.quota === 'number' ? ` · modello a ${Math.round(weather.quota)} m` : ''));
+  }, "\uD83D\uDCCD ", loc.lat, ", ", loc.lon, L.t('meteo.quote', loc.alt, weather.quota)));
 })(), (() => {
   const lunch = members.filter(m => getMeal(selectedDateStr, m.id).lunch).length;
   const dinner = members.filter(m => getMeal(selectedDateStr, m.id).dinner).length;
@@ -6861,35 +6862,33 @@ const schedaCalendario = ({
     className: "text-xl leading-none"
   }, "\uD83C\uDF72"), /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] uppercase font-bold text-gray-500"
-  }, "Cucina"), /*#__PURE__*/React.createElement("span", {
+  }, L.t('giorno.cucina')), /*#__PURE__*/React.createElement("span", {
     className: "ml-auto text-sm font-bold text-[#2D392C]"
   }, lunch, " ", /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-normal text-gray-500"
-  }, "a pranzo"), /*#__PURE__*/React.createElement("span", {
+  }, L.t('giorno.aPranzo')), /*#__PURE__*/React.createElement("span", {
     className: "text-gray-300"
   }, " \xB7 "), dinner, " ", /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-normal text-gray-500"
-  }, "a cena")));
+  }, L.t('giorno.aCena'))));
 })(), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "flex items-center justify-between mb-1"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] uppercase font-bold text-gray-500 tracking-wide"
-}, "Note del giorno"), (getDayData(selectedDateStr).appunti || '').trim() && /*#__PURE__*/React.createElement("span", {
+}, L.t('giorno.note')), (getDayData(selectedDateStr).appunti || '').trim() && /*#__PURE__*/React.createElement("span", {
   className: "text-[9px] text-[#2D392C]"
-}, "\u2714 scritte")), /*#__PURE__*/React.createElement("textarea", {
+}, L.t('giorno.scritte'))), /*#__PURE__*/React.createElement("textarea", {
   value: getDayData(selectedDateStr).appunti || '',
   onChange: e => updateDayData(selectedDateStr, 'appunti', e.target.value),
   rows: 3,
-  placeholder: "Promemoria del giorno\u2026",
+  placeholder: L.t('giorno.promemoria'),
   className: "w-full p-3 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm leading-snug focus:outline-none focus:border-[#2D392C] resize-y"
 }), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic mt-1"
-}, "Promemoria del giorno, visibili a tutti. Il ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "men\xF9"), " ha la sua scheda: qui ci vanno le altre cose.")), /*#__PURE__*/React.createElement("button", {
+}, frase('giorno.noteNota'))), /*#__PURE__*/React.createElement("button", {
   onClick: () => goTo('menu'),
   className: bottone('secondario', 'piccolo', 'w-full')
-}, "\uD83C\uDF5D Men\xF9 del giorno", (getDayData(selectedDateStr).note || '').trim() ? ' · già scritto' : ' · da scrivere')));
+}, L.t('giorno.vaiAlMenu', !!(getDayData(selectedDateStr).note || '').trim()))));
 const schedaMenu = ({
   confermaPropostaSpesa,
   getDayData,
@@ -6912,7 +6911,7 @@ const schedaMenu = ({
   className: "flex items-baseline justify-between border-b border-dashed border-[#8F9E8B] pb-1"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg text-[#2D392C]"
-}, "Men\xF9 di ", L.data(parseDate(selectedDateStr), 'completa'))), (() => {
+}, L.t('menu.diGiorno', L.data(parseDate(selectedDateStr), 'completa')))), (() => {
   const lunch = members.filter(m => getMeal(selectedDateStr, m.id).lunch).length;
   const dinner = members.filter(m => getMeal(selectedDateStr, m.id).dinner).length;
   return /*#__PURE__*/React.createElement("div", {
@@ -6921,30 +6920,28 @@ const schedaMenu = ({
     className: "text-xl leading-none"
   }, "\uD83C\uDF72"), /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] uppercase font-bold text-gray-500"
-  }, "Da preparare"), /*#__PURE__*/React.createElement("span", {
+  }, L.t('menu.daPreparare')), /*#__PURE__*/React.createElement("span", {
     className: "ml-auto text-sm font-bold text-[#2D392C]"
   }, lunch, " ", /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-normal text-gray-500"
-  }, "a pranzo"), /*#__PURE__*/React.createElement("span", {
+  }, L.t('giorno.aPranzo')), /*#__PURE__*/React.createElement("span", {
     className: "text-gray-300"
   }, " \xB7 "), dinner, " ", /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-normal text-gray-500"
-  }, "a cena")));
+  }, L.t('giorno.aCena'))));
 })(), /*#__PURE__*/React.createElement("textarea", {
   value: getDayData(selectedDateStr).note,
   onChange: e => updateDayData(selectedDateStr, 'note', e.target.value),
-  placeholder: "Cosa si mangia\u2026",
+  placeholder: L.t('menu.cosaSiMangia'),
   className: "lined-paper w-full p-3 rounded-lg border border-[#8F9E8B]/30 focus:outline-none focus:border-[#2D392C] resize-y"
 }), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic"
-}, "Una pietanza per riga. Si sincronizza con gli altri: chi cucina lo trova gi\xE0 scritto."), /*#__PURE__*/React.createElement("button", {
+}, L.t('menu.unaPerRiga')), /*#__PURE__*/React.createElement("button", {
   onClick: proponiDalMenu,
   className: bottone('secondario', 'piccolo', 'w-full mt-1')
-}, "\uD83E\uDDFE Porta nella lista della spesa"), /*#__PURE__*/React.createElement("p", {
+}, L.t('menu.portaInLista')), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic"
-}, "Legge le righe qui sopra e le propone in ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Lista della Spesa \u2192 Da acquistare"), ". Prima di aggiungerle te le fa vedere: niente entra senza la tua spunta.", toBuy.length > 0 && ` Adesso in lista ce ne sono ${toBuy.length}.`)), propostaSpesa && /*#__PURE__*/React.createElement("div", {
+}, frase('menu.ponteNota', toBuy.length))), propostaSpesa && /*#__PURE__*/React.createElement("div", {
   className: "fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-3 z-50",
   onClick: () => setPropostaSpesa(null)
 }, /*#__PURE__*/React.createElement("div", {
@@ -6954,9 +6951,9 @@ const schedaMenu = ({
   className: "p-4 border-b border-[#8F9E8B]/30"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg text-[#2D392C]"
-}, "Dal men\xF9 alla spesa"), /*#__PURE__*/React.createElement("p", {
+}, L.t('menu.dallaSpesa')), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug mt-1"
-}, propostaSpesa.voci.length, " ", propostaSpesa.voci.length === 1 ? 'voce trovata' : 'voci trovate', " nel men\xF9 di", ' ', L.data(parseDate(selectedDateStr), 'lunga'), ". Togli la spunta a quello che non serve comprare.", propostaSpesa.scartate > 0 && ` (${propostaSpesa.scartate} ${propostaSpesa.scartate === 1 ? 'era già' : 'erano già'} in lista.)`)), /*#__PURE__*/React.createElement("ul", {
+}, L.t('menu.trovate', propostaSpesa.voci.length, L.data(parseDate(selectedDateStr), 'lunga'), propostaSpesa.scartate))), /*#__PURE__*/React.createElement("ul", {
   className: "overflow-y-auto divide-y divide-[#8F9E8B]/15 px-4"
 }, propostaSpesa.voci.map((v, i) => /*#__PURE__*/React.createElement("li", {
   key: i
@@ -6982,14 +6979,14 @@ const schedaMenu = ({
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setPropostaSpesa(null),
   className: bottone('testuale', 'normale', 'flex-1')
-}, "Annulla"), /*#__PURE__*/React.createElement("button", {
+}, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
   onClick: confermaPropostaSpesa,
   className: bottone('primario', 'normale', 'flex-1')
-}, "Aggiungi (", propostaSpesa.voci.filter((_, i) => propostaSpesa.scelte[i]).length, ")")))), /*#__PURE__*/React.createElement("div", {
+}, L.t('menu.aggiungiN', propostaSpesa.voci.filter((_, i) => propostaSpesa.scelte[i]).length))))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
-}, "Giorni del campo"), /*#__PURE__*/React.createElement("ul", {
+}, L.t('menu.giorniDelCampo')), /*#__PURE__*/React.createElement("ul", {
   className: "space-y-1.5"
 }, (() => {
   const giorni = [];
@@ -7011,7 +7008,7 @@ const schedaMenu = ({
       className: "text-[11px] font-bold text-[#2D392C] shrink-0 w-16"
     }, L.data(parseDate(ds), 'settimanaGiorno')), /*#__PURE__*/React.createElement("span", {
       className: `text-[10px] truncate ${testo ? 'text-gray-600' : 'text-gray-400 italic'}`
-    }, testo ? prima : 'da scrivere'), testo && /*#__PURE__*/React.createElement("span", {
+    }, testo ? prima : L.t('menu.daScrivere')), testo && /*#__PURE__*/React.createElement("span", {
       className: "ml-auto text-[10px] shrink-0"
     }, "\u2714")));
   });
@@ -7069,9 +7066,7 @@ const schedaPresenze = ({
     className: "bg-[#D97706]/10 border-2 border-[#D97706]/50 rounded-lg p-3 space-y-3"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Ci sono ", totale, " presenze senza padrone."), " Succede quando una persona viene eliminata dai Membri e poi riaggiunta: per l'app \xE8 una persona nuova, e i pasti segnati prima restano attaccati alla vecchia \u2014 spariti dall'elenco e dai conti. Riattaccali alla persona giusta."), /*#__PURE__*/React.createElement("ul", {
+  }, frase('presenze.orfaneTitolo', totale)), /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
   }, orfane.map(o => /*#__PURE__*/React.createElement("li", {
     key: o.id,
@@ -7080,7 +7075,7 @@ const schedaPresenze = ({
     className: "text-[11px] text-[#2D392C] leading-snug"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, o.nome || 'Persona non più in elenco'), ' — ', o.pasti, " ", o.pasti === 1 ? 'pasto' : 'pasti', " su ", o.giorni.length, " ", o.giorni.length === 1 ? 'giorno' : 'giorni', /*#__PURE__*/React.createElement("span", {
+  }, o.nome || L.t('presenze.personaSparita')), ' — ', L.t('presenze.pastiSuGiorni', o.pasti, o.giorni.length), /*#__PURE__*/React.createElement("span", {
     className: "block text-[9px] text-gray-500"
   }, o.giorni.slice(0, 6).map(d => L.data(parseDate(d), 'breve')).join(' · '), o.giorni.length > 6 ? ' …' : '')), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
@@ -7093,56 +7088,52 @@ const schedaPresenze = ({
     className: "flex-grow min-w-0 p-2 bg-white border border-[#8F9E8B]/40 rounded text-xs focus:outline-none focus:border-[#2D392C]"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, "\u2014 a chi sono? \u2014"), members.map(m => /*#__PURE__*/React.createElement("option", {
+  }, L.t('presenze.aChiSono')), members.map(m => /*#__PURE__*/React.createElement("option", {
     key: m.id,
     value: m.id
   }, m.name))), /*#__PURE__*/React.createElement("button", {
     onClick: () => riassegnaOrfane(o, orfanoScelte[o.id]),
     disabled: !orfanoScelte[o.id],
     className: bottone('primario', 'minuscolo', 'shrink-0')
-  }, "Riassegna"), /*#__PURE__*/React.createElement("button", {
+  }, L.t('presenze.riassegna')), /*#__PURE__*/React.createElement("button", {
     onClick: () => scartaOrfane(o),
-    "aria-label": "Butta via queste presenze",
+    "aria-label": L.t('presenze.buttaVia'),
     className: bottone('distruttivo', 'minuscolo', 'shrink-0')
-  }, "Butta"))))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
+  }, L.t('presenze.butta')))))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-[#5C4A3C] italic"
-  }, "Aggiungi prima le persone nella scheda Membri."));
+  }, L.t('galleria.primaMembri')));
 })(), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2"
 }, /*#__PURE__*/React.createElement("span", {
   className: "min-w-0 truncate"
-}, "Presenze del ", L.data(parseDate(selectedDateStr), 'lunga')), giornoBloccato(selectedDateStr) && /*#__PURE__*/React.createElement("span", {
+}, L.t('presenze.delGiorno', L.data(parseDate(selectedDateStr), 'lunga'))), giornoBloccato(selectedDateStr) && /*#__PURE__*/React.createElement("span", {
   className: "ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white"
-}, "\uD83D\uDD12 Bloccate")), giornoGratis(selectedDateStr) && /*#__PURE__*/React.createElement("div", {
+}, L.t('presenze.bloccate'))), giornoGratis(selectedDateStr) && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C]/10 border border-[#2D392C]/35 rounded p-2.5"
 }, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-[#2D392C] leading-snug"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "\uD83C\uDF81 Giorno gratis."), " Le presenze restano segnate per la cucina, ma non entrano in nessun conto: nessuno paga i pasti di oggi, e chi \xE8 venuto solo oggi non deve niente.")), admin && members.length > 0 && /*#__PURE__*/React.createElement("button", {
+}, frase('presenze.gratis'))), admin && members.length > 0 && /*#__PURE__*/React.createElement("button", {
   onClick: () => chiediGiornoGratis(selectedDateStr),
   disabled: !!giornoBloccato(selectedDateStr),
   className: bottoneScelta('interruttore', 'bordato', giornoGratis(selectedDateStr), 'minuscolo', 'w-full' + (giornoBloccato(selectedDateStr) ? ' opacity-50 cursor-not-allowed' : ''))
-}, giornoGratis(selectedDateStr) ? '🎁 Giorno gratis — rimettilo nei conti' : '🎁 Rendi questo giorno gratis'), giornoBloccato(selectedDateStr) && /*#__PURE__*/React.createElement("div", {
+}, L.t(giornoGratis(selectedDateStr) ? 'presenze.gratisTogli' : 'presenze.gratisMetti')), giornoBloccato(selectedDateStr) && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#5C4A3C]/10 border border-[#5C4A3C]/40 rounded p-2.5"
 }, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-[#5C4A3C] leading-snug"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Presenze chiuse."), " Sono state bloccate il", ' ', L.data(new Date(giornoBloccato(selectedDateStr).at), 'dataOra'), " e non cambiano pi\xF9: n\xE9 dai tasti, n\xE9 da quello che arriva dagli altri telefoni. Se un telefono prova a modificarle, l'app le rimette com'erano.")), members.length === 0 ? /*#__PURE__*/React.createElement("p", {
+}, frase('presenze.chiuse', L.data(new Date(giornoBloccato(selectedDateStr).at), 'dataOra')))), members.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
-}, "Aggiungi prima i membri nella scheda \"Membri\".") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+}, L.t('presenze.primaIMembri')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
   className: `bg-[#F0F4F1]/60 rounded border border-[#8F9E8B]/30 overflow-hidden ${giornoBloccato(selectedDateStr) ? 'opacity-50 pointer-events-none' : ''}`
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setAzioniOpen(v => !v),
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0"
-}, "Segna in blocco"), /*#__PURE__*/React.createElement("span", {
+}, L.t('presenze.segnaInBlocco')), /*#__PURE__*/React.createElement("span", {
   className: "ml-auto text-[9px] text-gray-500 truncate"
-}, members.filter(m => getMeal(selectedDateStr, m.id).lunch).length, " a pranzo \xB7 ", members.filter(m => getMeal(selectedDateStr, m.id).dinner).length, " a cena"), /*#__PURE__*/React.createElement("span", {
+}, L.t('presenze.pranzoCena', members.filter(m => getMeal(selectedDateStr, m.id).lunch).length, members.filter(m => getMeal(selectedDateStr, m.id).dinner).length)), /*#__PURE__*/React.createElement("span", {
   className: `text-[10px] text-[#5C4A3C] shrink-0 transition-transform ${azioniOpen ? 'rotate-180' : ''}`
 }, "\u25BE")), azioniOpen && /*#__PURE__*/React.createElement("div", {
   className: "px-3 pb-3 space-y-2"
@@ -7151,15 +7142,15 @@ const schedaPresenze = ({
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => chiediSetAll('lunch'),
   className: bottone('primario', 'piccolo')
-}, "Tutti a pranzo"), /*#__PURE__*/React.createElement("button", {
+}, L.t('presenze.tuttiPranzo')), /*#__PURE__*/React.createElement("button", {
   onClick: () => chiediSetAll('dinner'),
   className: bottone('bruno', 'piccolo')
-}, "Tutti a cena"), /*#__PURE__*/React.createElement("button", {
+}, L.t('presenze.tuttiCena')), /*#__PURE__*/React.createElement("button", {
   onClick: chiediCopiaDaIeri,
   className: bottone('secondario', 'piccolo')
-}, "Copia da ieri")), /*#__PURE__*/React.createElement("p", {
+}, L.t('presenze.copiaIeri'))), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 leading-snug"
-}, "Segna tutti, poi togli i pochi assenti. Se sono gi\xE0 tutti segnati, il bottone li toglie tutti. Ognuno di questi tasti chiede conferma: cambia le presenze di tutti, su tutti i telefoni."))), /*#__PURE__*/React.createElement("ul", {
+}, L.t('presenze.bloccoNota')))), /*#__PURE__*/React.createElement("ul", {
   className: "space-y-2"
 }, members.map(m => {
   const meal = getMeal(selectedDateStr, m.id);
@@ -7171,31 +7162,31 @@ const schedaPresenze = ({
     className: "text-sm font-bold text-[#2D392C] truncate flex items-center gap-1"
   }, m.name, m.isChild && /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] uppercase bg-[#D97706] text-white px-1 rounded"
-  }, "gratis")), /*#__PURE__*/React.createElement("div", {
+  }, L.t('presenze.gratisEtichetta'))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1.5 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleMeal(selectedDateStr, m.id, 'lunch'),
     disabled: chiuso,
     className: bottoneScelta('spunta', 'pranzo', meal.lunch, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')
-  }, "Pranzo"), /*#__PURE__*/React.createElement("button", {
+  }, L.t('presenze.pranzo')), /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleMeal(selectedDateStr, m.id, 'dinner'),
     disabled: chiuso,
     className: bottoneScelta('spunta', 'cena', meal.dinner, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')
-  }, "Cena")));
+  }, L.t('presenze.cena'))));
 }))), admin && members.length > 0 && (giornoBloccato(selectedDateStr) ? /*#__PURE__*/React.createElement("button", {
   onClick: () => sbloccaGiorno(selectedDateStr),
   className: bottone('secondario', 'piccolo', 'w-full')
-}, "\uD83D\uDD13 Sblocca le presenze di questo giorno") : /*#__PURE__*/React.createElement("button", {
+}, L.t('presenze.sblocca')) : /*#__PURE__*/React.createElement("button", {
   onClick: () => bloccaGiorno(selectedDateStr),
   className: bottone('bruno', 'piccolo', 'w-full')
-}, "\uD83D\uDD12 Blocca le presenze di questo giorno"))), /*#__PURE__*/React.createElement("div", {
+}, L.t('presenze.blocca')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-2"
 }, /*#__PURE__*/React.createElement("h4", {
   className: "font-rustic text-sm text-[#5C4A3C]"
-}, "Note / Ospiti del giorno"), /*#__PURE__*/React.createElement("textarea", {
+}, L.t('presenze.noteOspiti')), /*#__PURE__*/React.createElement("textarea", {
   value: getDayData(selectedDateStr).guestsNames,
   onChange: e => updateDayData(selectedDateStr, 'guestsNames', e.target.value),
-  placeholder: "Ospiti occasionali o note sulle presenze...",
+  placeholder: L.t('presenze.ospitiSegno'),
   className: "w-full h-20 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] resize-none"
 })));
 // ---------- Schede dei conti: Spese Totali, Lista della Spesa, Attrezzatura ----------
@@ -7992,27 +7983,23 @@ const schedaMembri = ({
   className: "bg-[#D97706]/10 border-2 border-[#D97706]/40 rounded-lg p-3 space-y-2"
 }, /*#__PURE__*/React.createElement("p", {
   className: "text-[11px] text-[#5C4A3C] leading-snug"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "\"", g[0].name, "\" \xE8 in elenco ", g.length, " volte."), ' ', "Capita quando due telefoni senza linea aggiungono la stessa persona. Cos\xEC nei conti vale ", g.length, " persone: ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "la quota di tutti sbaglia"), "."), /*#__PURE__*/React.createElement("button", {
+}, frase('membri.doppia', g[0].name, g.length)), /*#__PURE__*/React.createElement("button", {
   onClick: () => unisciDoppi(g),
   className: bottone('avviso', 'piccolo', 'w-full')
-}, "Unisci in una sola scheda"), /*#__PURE__*/React.createElement("p", {
+}, L.t('membri.unisci')), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-500 italic leading-snug"
-}, "Le presenze segnate sulle due schede si sommano: non si perde niente. Se invece sono davvero due persone diverse, aggiungi un cognome o un soprannome a una delle due."))), /*#__PURE__*/React.createElement("div", {
+}, L.t('membri.unisciNota')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-}, "Aggiungi Membro"), /*#__PURE__*/React.createElement("div", {
+}, L.t('membri.aggiungiTitolo')), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: newMemberName,
   onChange: e => setNewMemberName(e.target.value),
   onKeyDown: e => e.key === 'Enter' && addMember(),
-  placeholder: "Nome e cognome",
+  placeholder: L.t('membri.nome'),
   className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
 }), /*#__PURE__*/React.createElement("button", {
   onClick: addMember,
@@ -8023,13 +8010,13 @@ const schedaMembri = ({
   type: "checkbox",
   checked: newMemberChild,
   onChange: e => setNewMemberChild(e.target.checked)
-}), "Bambino (pasti gratis)")), /*#__PURE__*/React.createElement("div", {
+}), L.t('membri.bambinoGratis'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
-}, "Membri (", members.length, ")"), members.length === 0 ? /*#__PURE__*/React.createElement("p", {
+}, L.t('membri.quanti', members.length)), members.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
-}, "Nessun membro. Aggiungine uno per iniziare a segnare le presenze.") : /*#__PURE__*/React.createElement("ul", {
+}, L.t('membri.vuoto')) : /*#__PURE__*/React.createElement("ul", {
   className: "space-y-2"
 }, members.map(m => /*#__PURE__*/React.createElement("li", {
   key: m.id,
@@ -8040,34 +8027,32 @@ const schedaMembri = ({
   className: "font-bold text-sm text-[#2D392C] truncate"
 }, m.name, (m.paypal || m.iban) && /*#__PURE__*/React.createElement("span", {
   className: "ml-1.5 text-[9px] text-[#8F9E8B]",
-  title: "Ha inserito i dati per il rimborso"
+  title: L.t('membri.haRimborso')
 }, "\uD83D\uDCB3")), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center gap-2 shrink-0"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setInfoMember(v => v === m.id ? null : m.id),
-  "aria-label": `Dati di pagamento di ${m.name}`,
-  title: "Dati per il rimborso (PayPal / IBAN)",
+  "aria-label": L.t('membri.datiDi', m.name),
+  title: L.t('membri.datiRimborso'),
   className: `w-6 h-6 rounded-full border-2 font-serif italic font-bold text-[11px] leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B] text-[#5C4A3C]'}`
 }, "i"), /*#__PURE__*/React.createElement("button", {
   onClick: () => toggleChild(m.id),
   className: bottoneScelta('etichetta', 'ambra', m.isChild, 'minimo')
-}, m.isChild ? 'Bambino' : 'Adulto'), /*#__PURE__*/React.createElement("button", {
+}, L.t(m.isChild ? 'membri.bambino' : 'membri.adulto')), /*#__PURE__*/React.createElement("button", {
   onClick: () => removeMember(m.id),
   className: bottoneIcona('distruttivo')
 }, "\xD7"))), infoMember === m.id && /*#__PURE__*/React.createElement("div", {
   className: "mt-2.5 pt-2.5 border-t border-[#8F9E8B]/30 space-y-2"
 }, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug"
-}, "Come farsi rimborsare a campo finito. Facoltativi: si vedono in", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, " Spese Totali \u2192 Saldi"), ", accanto a chi deve ricevere."), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+}, frase('membri.comeRimborso')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1"
 }, "PayPal"), /*#__PURE__*/React.createElement("input", {
   type: "text",
   inputMode: "email",
   value: m.paypal || '',
   onChange: e => setMemberField(m.id, 'paypal', e.target.value),
-  placeholder: "paypal.me/nome oppure email",
+  placeholder: L.t('membri.paypalSegno'),
   className: "w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-sm focus:outline-none focus:border-[#2D392C]"
 })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1"
@@ -8079,23 +8064,23 @@ const schedaMembri = ({
     const p = ibanPretty(e.target.value);
     if (p !== (m.iban || '')) setMemberField(m.id, 'iban', p);
   },
-  placeholder: "IT00 X000 0000 0000 0000 0000 000",
+  placeholder: L.t('membri.ibanSegno'),
   className: "w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-xs font-mono focus:outline-none focus:border-[#2D392C]"
 }), (m.iban || '').trim() !== '' && (ibanValid(m.iban) ? /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-[#2D392C] mt-1"
-}, "\u2714 IBAN formalmente corretto") : /*#__PURE__*/React.createElement("p", {
+}, L.t('membri.ibanOk')) : /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-[#D97706] mt-1"
-}, "Controlla l'IBAN: non supera la verifica standard (manca o \xE8 sbagliato un carattere)."))), /*#__PURE__*/React.createElement("p", {
+}, L.t('membri.ibanNo')))), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic leading-snug"
-}, "Finiscono nel database del campo, come tutto il resto: li vede chi ha la password dell'app. Alla chiusura del campo vengono azzerati insieme ai membri.")), FEATURES.equipExemption && /*#__PURE__*/React.createElement("button", {
+}, L.t('membri.datiDove'))), FEATURES.equipExemption && /*#__PURE__*/React.createElement("button", {
   onClick: () => toggleEquipExempt(m.id),
-  "aria-label": "Esenzione attrezzatura",
+  "aria-label": L.t('membri.esenzione'),
   className: "mt-1.5 flex items-center gap-2 text-left"
 }, /*#__PURE__*/React.createElement("span", {
   className: `w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-[10px] font-bold ${m.equipExempt ? 'bg-[#5C4A3C] border-[#5C4A3C] text-white' : 'bg-white border-[#8F9E8B]'}`
 }, m.equipExempt ? '✓' : ''), /*#__PURE__*/React.createElement("span", {
   className: `text-[10px] ${m.equipExempt ? 'font-bold text-[#5C4A3C]' : 'text-gray-500'}`
-}, "Esente attrezzatura")))))));
+}, L.t('membri.esente'))))))));
 
 // Le Regole non dipendono da niente: e' l'unica scheda che si disegna da
 // sola, e infatti l'elenco delle dipendenze e' vuoto.
@@ -8105,7 +8090,7 @@ const schedaRegole = () => /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
-}, "Regole dell'accampamento"), /*#__PURE__*/React.createElement("ol", {
+}, L.t('regole.titolo')), /*#__PURE__*/React.createElement("ol", {
   className: "space-y-3"
 }, CAMP_RULES.map((text, i) => /*#__PURE__*/React.createElement("li", {
   key: i,
@@ -8127,7 +8112,7 @@ const schedaDotazioni = ({
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
-}, "Dotazione base"), /*#__PURE__*/React.createElement("ul", {
+}, L.t('dotazioni.base')), /*#__PURE__*/React.createElement("ul", {
   className: "space-y-2"
 }, BASE_GEAR.map(item => /*#__PURE__*/React.createElement("li", {
   key: item.text,
@@ -8138,26 +8123,26 @@ const schedaDotazioni = ({
   className: item.emphasis ? 'text-base font-bold uppercase underline decoration-2 underline-offset-2 text-[#2D392C] leading-snug' : 'text-sm text-[#2D392C]'
 }, item.text)))), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic mt-2"
-}, "Dotazione obbligatoria per ogni partecipante.")), /*#__PURE__*/React.createElement("div", {
+}, L.t('dotazioni.obbligo'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-}, "Aggiunte per questo campo"), /*#__PURE__*/React.createElement("div", {
+}, L.t('dotazioni.aggiunte')), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: newGearText,
   onChange: e => setNewGearText(e.target.value),
   onKeyDown: e => e.key === 'Enter' && addGear(),
-  placeholder: "Es. costume, torcia frontale\u2026",
+  placeholder: L.t('dotazioni.esempio'),
   className: "flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
 }), /*#__PURE__*/React.createElement("button", {
   onClick: addGear,
-  "aria-label": "Aggiungi dotazione",
+  "aria-label": L.t('dotazioni.aggiungi'),
   className: bottoneIcona('pieno')
 }, "+")), gear.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
-}, "Nessuna aggiunta. Inserisci qui le dotazioni extra per questo campo.") : /*#__PURE__*/React.createElement("ul", {
+}, L.t('dotazioni.vuoto')) : /*#__PURE__*/React.createElement("ul", {
   className: "space-y-2"
 }, gear.map(g => /*#__PURE__*/React.createElement("li", {
   key: g.id,
@@ -8168,7 +8153,7 @@ const schedaDotazioni = ({
   className: "flex-grow text-sm text-[#2D392C]"
 }, g.text), /*#__PURE__*/React.createElement("button", {
   onClick: () => removeGear(g.id),
-  "aria-label": "Rimuovi",
+  "aria-label": L.t('dotazioni.rimuovi'),
   className: bottoneIcona('distruttivo')
 }, "\xD7"))))));
 // ---------- Archivio, gioco e guida ----------
@@ -8195,11 +8180,9 @@ const schedaArchivio = ({
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3"
-}, "Archivio"), archives.length === 0 ? /*#__PURE__*/React.createElement("p", {
+}, L.t('area.archivio')), archives.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
-}, "Nessun campo archiviato. Quando i conti sono chiusi, usa ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Spese Totali \u2192 Dati \u2192 Chiudi il campo"), ": tutto finisce qui e l'app riparte pulita per l'evento successivo.") : /*#__PURE__*/React.createElement("ul", {
+}, frase('archivio.vuoto')) : /*#__PURE__*/React.createElement("ul", {
   className: "space-y-3"
 }, archives.map(a => /*#__PURE__*/React.createElement("li", {
   key: a.id,
@@ -8212,47 +8195,47 @@ const schedaArchivio = ({
   className: "font-rustic text-base text-[#2D392C] truncate"
 }, a.name), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500"
-}, a.from === a.to ? a.from : `${a.from} → ${a.to}`, " \xB7 chiuso il ", L.data(new Date(a.closedAt), 'numerica'))), /*#__PURE__*/React.createElement("span", {
+}, L.t('archivio.periodoChiuso', a.from === a.to ? a.from : `${a.from} → ${a.to}`, L.data(new Date(a.closedAt), 'numerica')))), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic font-bold text-[#2D392C] shrink-0"
 }, money(a.totals && a.totals.overall || 0), " \u20AC")), /*#__PURE__*/React.createElement("div", {
   className: "flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500"
-}, /*#__PURE__*/React.createElement("span", null, a.totals && a.totals.members || 0, " membri"), /*#__PURE__*/React.createElement("span", null, a.totals && a.totals.purchases || 0, " spese"), /*#__PURE__*/React.createElement("span", null, a.totals && a.totals.meals || 0, " pasti"), a.photos > 0 && /*#__PURE__*/React.createElement("span", null, a.photos, " foto"), !a.state && /*#__PURE__*/React.createElement("span", {
+}, /*#__PURE__*/React.createElement("span", null, L.t('archivio.membri', a.totals && a.totals.members || 0)), /*#__PURE__*/React.createElement("span", null, L.t('archivio.spese', a.totals && a.totals.purchases || 0)), /*#__PURE__*/React.createElement("span", null, L.t('archivio.pasti', a.totals && a.totals.meals || 0)), a.photos > 0 && /*#__PURE__*/React.createElement("span", null, L.t('archivio.foto', a.photos)), !a.state && /*#__PURE__*/React.createElement("span", {
   className: "text-[#8F9E8B] italic"
-}, "solo cloud")), /*#__PURE__*/React.createElement("div", {
+}, L.t('archivio.soloCloud'))), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setViewArchive(a),
   className: bottone('primario', 'piccolo', 'flex-1')
-}, "Resoconto"), a.photos > 0 && /*#__PURE__*/React.createElement("button", {
+}, L.t('archivio.resoconto')), a.photos > 0 && /*#__PURE__*/React.createElement("button", {
   onClick: () => openAlbum(a),
   className: "flex-1 py-2 bg-[#8F9E8B] text-white rounded text-[10px] font-bold uppercase hover:brightness-95"
-}, "Album"), /*#__PURE__*/React.createElement("button", {
+}, L.t('archivio.album')), /*#__PURE__*/React.createElement("button", {
   onClick: () => downloadArchive(a),
   className: bottone('bruno', 'piccolo', 'flex-1')
-}, "Scarica"), /*#__PURE__*/React.createElement("button", {
+}, L.t('archivio.scarica')), /*#__PURE__*/React.createElement("button", {
   onClick: () => removeArchive(a),
-  "aria-label": "Elimina archivio",
+  "aria-label": L.t('archivio.eliminaArchivio'),
   className: bottone('distruttivo', 'minuscolo')
-}, "Elimina")))))), album && /*#__PURE__*/React.createElement("div", {
+}, L.t('archivio.elimina'))))))), album && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg text-[#2D392C] truncate"
-}, "Album \xB7 ", album.name), /*#__PURE__*/React.createElement("button", {
+}, L.t('archivio.albumDi', album.name)), /*#__PURE__*/React.createElement("button", {
   onClick: () => setAlbum(null),
   className: bottone('testuale', 'minuscolo', 'shrink-0')
-}, "Chiudi")), album.loading ? /*#__PURE__*/React.createElement("p", {
+}, L.t('archivio.chiudi'))), album.loading ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
-}, "Carico l'album\u2026") : album.photos.length === 0 ? /*#__PURE__*/React.createElement("p", {
+}, L.t('archivio.carico')) : album.photos.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
-}, "Nessuna foto trovata: serve la linea per scaricarle.") : /*#__PURE__*/React.createElement("div", {
+}, L.t('archivio.senzaFoto')) : /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-3 gap-1.5"
 }, album.photos.map(p => /*#__PURE__*/React.createElement("button", {
   key: p.id,
   onClick: () => openPhoto(p),
   className: "relative aspect-square overflow-hidden rounded border border-[#8F9E8B]/30 bg-[#F0F4F1]",
-  "aria-label": `Foto di ${p.by || 'anonimo'}`
+  "aria-label": L.t('archivio.fotoDi', p.by || L.t('archivio.anonimo'))
 }, /*#__PURE__*/React.createElement("img", {
   src: p.thumb,
   alt: "",
@@ -8262,7 +8245,7 @@ const schedaArchivio = ({
   className: "absolute bottom-0 left-0 right-0 bg-black/55 text-white text-[8px] px-1 py-0.5 truncate text-left"
 }, p.by))))), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic text-center px-4"
-}, "Il file scaricato alla chiusura \xE8 l'unica copia che contiene anche le foto degli scontrini: conservalo."));
+}, L.t('archivio.conservalo')));
 const schedaGioco = ({
   endGame,
   gameBest,
@@ -8279,7 +8262,7 @@ const schedaGioco = ({
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-}, "Aiuta Bandy"), /*#__PURE__*/React.createElement("div", {
+}, L.t('area.gioco')), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center gap-3"
 }, /*#__PURE__*/React.createElement("img", {
   src: "./bandy.png",
@@ -8290,39 +8273,39 @@ const schedaGioco = ({
   }
 }), /*#__PURE__*/React.createElement("p", {
   className: "text-[11px] text-gray-600 leading-snug"
-}, "Bandy \xE8 in montagna e non \xE8 ancora fatto: raggiungilo con la canna pi\xF9 volte che puoi. Ogni volta che lo prendi la canna si allunga \u2014 se sbatti contro i bordi o contro te stesso, GAME OVER.")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+}, L.t('gioco.spiegazione'))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-[11px] uppercase font-bold text-gray-500 mb-1"
-}, "Nome giocatore"), /*#__PURE__*/React.createElement("input", {
+}, L.t('gioco.nomeGiocatore')), /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: gamePlayer,
   onChange: e => setGamePlayer(e.target.value),
   onKeyDown: e => e.key === 'Enter' && startGame(),
-  placeholder: "Come ti chiami?",
+  placeholder: L.t('gioco.comeTiChiami'),
   maxLength: 24,
   className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
 })), /*#__PURE__*/React.createElement("button", {
   onClick: startGame,
   className: bottone('primario', 'grande', 'w-full')
-}, "Gioca"), /*#__PURE__*/React.createElement("p", {
+}, L.t('gioco.gioca')), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic"
-}, "Comandi: scorri il dito sul campo o usa le frecce sotto. Da computer: frecce o WASD.")), /*#__PURE__*/React.createElement("div", {
+}, L.t('gioco.comandi'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg"
-}, "Classifica"), /*#__PURE__*/React.createElement("button", {
+}, L.t('gioco.classifica')), /*#__PURE__*/React.createElement("button", {
   onClick: refreshLeaderboard,
   className: "text-[9px] uppercase font-bold text-[#8F9E8B] hover:text-white"
-}, "Aggiorna")), /*#__PURE__*/React.createElement("div", {
+}, L.t('gioco.aggiorna'))), /*#__PURE__*/React.createElement("div", {
   className: "flex justify-between text-xs mb-3 pb-2 border-b border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[#8F9E8B]"
-}, "Il tuo record"), /*#__PURE__*/React.createElement("span", {
+}, L.t('gioco.tuoRecord')), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic text-[#D97706] text-lg leading-none"
 }, gameBest)), leaderboard.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-[11px] text-gray-400 italic"
-}, "Nessun punteggio condiviso ancora. Gioca una partita: con la linea il tuo record finisce qui per tutti.") : /*#__PURE__*/React.createElement("ul", {
+}, L.t('gioco.senzaPunteggi')) : /*#__PURE__*/React.createElement("ul", {
   className: "space-y-1"
 }, leaderboard.map((r, i) => /*#__PURE__*/React.createElement("li", {
   key: r.name + i,
@@ -8352,9 +8335,9 @@ const schedaGuida = ({
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-1"
-}, "Come funziona l'app"), /*#__PURE__*/React.createElement("p", {
+}, L.t('guida.titolo')), /*#__PURE__*/React.createElement("p", {
   className: "text-[11px] text-gray-500 mb-3"
-}, "Tocca un'area per vedere a cosa serve. In sintesi: segni presenze e spese, l'app calcola quanto deve ciascuno e chi rimborsa chi."), /*#__PURE__*/React.createElement("div", {
+}, L.t('guida.sottotitolo')), /*#__PURE__*/React.createElement("div", {
   className: "flex flex-wrap gap-1.5"
 }, GUIDE.map(g => /*#__PURE__*/React.createElement("button", {
   key: g.k,
@@ -8377,19 +8360,9 @@ const schedaGuida = ({
   className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md"
 }, /*#__PURE__*/React.createElement("h4", {
   className: "font-rustic text-base mb-2"
-}, "In tre passi"), /*#__PURE__*/React.createElement("ol", {
+}, L.t('guida.trePassi')), /*#__PURE__*/React.createElement("ol", {
   className: "text-xs space-y-1.5 list-decimal list-inside text-[#F0F4F1]/90"
-}, /*#__PURE__*/React.createElement("li", null, "In ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Membri"), " aggiungi le persone (e segna chi \xE8 bambino)."), /*#__PURE__*/React.createElement("li", null, "Ogni giorno segna le ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Presenze"), " e registra le spese nella ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Lista della Spesa"), ": prima cosa serve in \"Da acquistare\", poi la sposti in \"Acquistato\" con prezzo e acquirente."), /*#__PURE__*/React.createElement("li", null, "In ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Spese Totali \u2192 Saldi"), " vedi chi deve dare o ricevere e chi paga chi, e con ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Condividi resoconto"), " lo mandi nel gruppo."))));
+}, /*#__PURE__*/React.createElement("li", null, frase('guida.passo1')), /*#__PURE__*/React.createElement("li", null, frase('guida.passo2')), /*#__PURE__*/React.createElement("li", null, frase('guida.passo3')))));
 // ---------- Scheda Galleria ----------
 // Primo pezzo di interfaccia uscito da 80-app.jsx.
 //
@@ -8439,34 +8412,30 @@ const schedaGalleria = ({
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-}, "Carica le tue foto"), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
+}, L.t('galleria.carica')), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-500 leading-snug"
-}, "La galleria vive nel cloud: serve la linea. \xC8 fatta apposta per il", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, " ritorno a casa"), " \u2014 al campo non c'\xE8 campo, e le foto occuperebbero lo spazio che serve a presenze e spese.") : /*#__PURE__*/React.createElement("div", {
+}, frase('galleria.senzaCloud')) : /*#__PURE__*/React.createElement("div", {
   className: "space-y-3"
 }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1"
-}, "Chi le ha scattate"), /*#__PURE__*/React.createElement("select", {
+}, L.t('galleria.chiScatta')), /*#__PURE__*/React.createElement("select", {
   value: photoWho,
   onChange: e => setPhotoWho(e.target.value),
   className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
 }, /*#__PURE__*/React.createElement("option", {
   value: ""
-}, "\u2014 scegli il tuo nome \u2014"), members.map(m => /*#__PURE__*/React.createElement("option", {
+}, L.t('galleria.scegliNome')), members.map(m => /*#__PURE__*/React.createElement("option", {
   key: m.id,
   value: m.name
 }, m.name, " (", photosBy(m.name), "/", photoCap, ")"))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-[#D97706] mt-1"
-}, "Aggiungi prima le persone nella scheda Membri.")), photoWho && /*#__PURE__*/React.createElement("p", {
+}, L.t('galleria.primaMembri'))), photoWho && /*#__PURE__*/React.createElement("p", {
   className: "text-[11px] text-gray-600"
 }, photosBy(photoWho) >= photoCap ? /*#__PURE__*/React.createElement("span", {
   className: "text-[#D97706] font-bold"
-}, photoWho, " ha esaurito le sue ", photoCap, " foto. Cancellane una per farne entrare un'altra.") : /*#__PURE__*/React.createElement(React.Fragment, null, "A ", photoWho, " restano ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, photoCap - photosBy(photoWho)), " foto su ", photoCap, ".")), /*#__PURE__*/React.createElement("label", {
+}, L.t('galleria.esaurite', photoWho, photoCap)) : frase('galleria.restano', photoWho, photoCap - photosBy(photoWho), photoCap)), /*#__PURE__*/React.createElement("label", {
   className: `block w-full py-3 rounded font-bold uppercase text-sm tracking-wide text-center cursor-pointer ${photoWho && photosBy(photoWho) < photoCap && !photoBusy ? 'bg-[#2D392C] text-white hover:bg-[#1F271E]' : 'bg-gray-200 text-gray-400 pointer-events-none'}`
-}, photoBusy || '📸 Scegli le foto', /*#__PURE__*/React.createElement("input", {
+}, photoBusy || L.t('galleria.scegliFoto'), /*#__PURE__*/React.createElement("input", {
   type: "file",
   accept: "image/*",
   multiple: true,
@@ -8476,34 +8445,30 @@ const schedaGalleria = ({
   className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
 }, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-[#5C4A3C] leading-snug"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, cloud.foto, " ", cloud.foto === 1 ? 'foto ancora da caricare' : 'foto ancora da caricare', "."), ' ', "Tieni l'app aperta finch\xE9 non sono partite: se la chiudi adesso, quelle vanno riscelte.")), /*#__PURE__*/React.createElement("p", {
+}, frase('galleria.inCoda', cloud.foto))), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic leading-snug"
-}, "Massimo ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, photoCap, " foto a testa"), " (si cambia in Impostazioni): serve a scegliere le belle, non a svuotare il rullino. \xC8 un accordo fra noi, non un lucchetto: il nome si sceglie dalla tendina. Le foto vengono rimpicciolite prima di partire."))), /*#__PURE__*/React.createElement("div", {
+}, frase('galleria.tetto', photoCap)))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3 gap-2"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg text-[#2D392C] shrink-0"
-}, "Album ", photos.length > 0 ? `(${photos.length})` : ''), photos.length > 0 && !picking && /*#__PURE__*/React.createElement("div", {
+}, L.t('archivio.album'), " ", photos.length > 0 ? `(${photos.length})` : ''), photos.length > 0 && !picking && /*#__PURE__*/React.createElement("div", {
   className: "flex rounded border border-[#8F9E8B]/40 overflow-hidden shrink-0"
-}, [['album', '📖 Album'], ['griglia', '▦ Griglia']].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
+}, [['album', L.t('galleria.vistaAlbum')], ['griglia', L.t('galleria.vistaGriglia')]].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
   key: k,
   onClick: () => setGalleryView(k),
   className: bottoneScelta('giunta', 'piatto', galleryView === k, 'minuscolo')
 }, l))), picking && /*#__PURE__*/React.createElement("button", {
   onClick: uscitaScelta,
   className: bottone('primario', 'minuscolo', 'shrink-0')
-}, "Annulla")), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
+}, L.t('galleria.annulla'))), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
-}, "Senza linea l'album non si pu\xF2 sfogliare.") : !photosReady ? /*#__PURE__*/React.createElement("p", {
+}, L.t('galleria.senzaLinea')) : !photosReady ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
-}, "Carico l'album\u2026") : photos.length === 0 ? /*#__PURE__*/React.createElement("p", {
+}, L.t('archivio.carico')) : photos.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-sm text-gray-400 italic"
-}, "Ancora nessuna foto. Comincia tu.") : galleryView === 'album' && !picking ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+}, L.t('galleria.ancoraNessuna')) : galleryView === 'album' && !picking ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
   className: "album-sfoglio",
   ref: albumRef,
   onScroll: onScrollAlbum
@@ -8516,7 +8481,7 @@ const schedaGalleria = ({
   key: p.id,
   onClick: () => openPhoto(p),
   className: "polaroid",
-  "aria-label": `Foto di ${p.by || 'anonimo'}`
+  "aria-label": L.t('archivio.fotoDi', p.by || L.t('archivio.anonimo'))
 }, /*#__PURE__*/React.createElement("img", {
   src: p.thumb,
   alt: "",
@@ -8532,14 +8497,14 @@ const schedaGalleria = ({
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => sfoglia(-1),
   disabled: albumPage <= 0,
-  "aria-label": "Pagina precedente",
+  "aria-label": L.t('galleria.paginaPrec'),
   className: `w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage <= 0 ? 'text-gray-300' : 'text-[#2D392C]'}`
 }, "\u2039"), /*#__PURE__*/React.createElement("span", {
   className: "text-[10px] uppercase tracking-widest text-gray-500"
 }, Math.min(albumPage + 1, paginaAlbum(photos).length), " / ", paginaAlbum(photos).length), /*#__PURE__*/React.createElement("button", {
   onClick: () => sfoglia(1),
   disabled: albumPage >= paginaAlbum(photos).length - 1,
-  "aria-label": "Pagina successiva",
+  "aria-label": L.t('galleria.paginaSucc'),
   className: `w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage >= paginaAlbum(photos).length - 1 ? 'text-gray-300' : 'text-[#2D392C]'}`
 }, "\u203A"))) : /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-3 gap-1.5"
@@ -8549,7 +8514,7 @@ const schedaGalleria = ({
     key: p.id,
     onClick: () => picking ? togglePicked(p.id) : openPhoto(p),
     className: `relative aspect-square overflow-hidden rounded border bg-[#F0F4F1] ${scelta >= 0 ? 'border-[#2D392C] border-2' : 'border-[#8F9E8B]/30'}`,
-    "aria-label": picking ? `Scegli la foto di ${p.by || 'anonimo'}` : `Foto di ${p.by || 'anonimo'}`
+    "aria-label": picking ? L.t('galleria.scegliQuesta', p.by || L.t('archivio.anonimo')) : L.t('archivio.fotoDi', p.by || L.t('archivio.anonimo'))
   }, /*#__PURE__*/React.createElement("img", {
     src: p.thumb,
     alt: "",
@@ -8564,36 +8529,32 @@ const schedaGalleria = ({
   className: "mt-3 pt-3 border-t border-[#8F9E8B]/30 space-y-2"
 }, /*#__PURE__*/React.createElement("p", {
   className: "text-[11px] text-gray-600"
-}, picked.length === 0 ? 'Tocca le foto da mettere nel ricordo. L\'ordine è quello con cui le scegli.' : /*#__PURE__*/React.createElement(React.Fragment, null, "Scelte ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, picked.length), " foto su ", photos.length, " \xB7 ", Math.ceil(picked.length / PER_PAGINA_ALBUM), " ", Math.ceil(picked.length / PER_PAGINA_ALBUM) === 1 ? 'pagina' : 'pagine')), /*#__PURE__*/React.createElement("button", {
+}, picked.length === 0 ? L.t('galleria.toccaLeFoto') : frase('galleria.scelte', picked.length, photos.length, Math.ceil(picked.length / PER_PAGINA_ALBUM))), /*#__PURE__*/React.createElement("button", {
   onClick: () => generaRicordo(photos, false),
   disabled: picked.length === 0 || !!pdfBusy,
   className: bottone('bruno', 'grande', 'w-full')
-}, pdfBusy || `Crea album con le scelte${picked.length ? ` (${picked.length})` : ''}`), /*#__PURE__*/React.createElement("button", {
+}, pdfBusy || L.t('galleria.creaConScelte', picked.length)), /*#__PURE__*/React.createElement("button", {
   onClick: () => setPicked(photos.map(x => x.id)),
   disabled: !!pdfBusy || picked.length === photos.length,
   className: bottone('secondario', 'piccolo', 'w-full')
-}, "Scegli tutte"), /*#__PURE__*/React.createElement("p", {
+}, L.t('galleria.scegliTutte')), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic leading-snug"
-}, "Crea un PDF con le foto scelte su uno sfondo di montagna, quattro per pagina. Le foto vengono scaricate a piena qualit\xE0, quindi ci vuole qualche secondo.")), photos.length > 0 && !picking && cloud.connected && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+}, L.t('galleria.notaScelte'))), photos.length > 0 && !picking && cloud.connected && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
   onClick: () => generaRicordo(photos, true),
   disabled: !!pdfBusy,
   className: bottone('bruno', 'grande', 'w-full mt-3')
-}, pdfBusy || `📕 Crea album completo (${photos.length} ${photos.length === 1 ? 'foto' : 'foto'})`), /*#__PURE__*/React.createElement("p", {
+}, pdfBusy || L.t('galleria.creaCompleto', photos.length)), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic mt-1.5 leading-snug"
-}, "Un PDF con ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "tutte"), " le foto della galleria su uno sfondo di montagna, quattro per pagina, dalla prima all'ultima in ordine di scatto (", Math.ceil(photos.length / PER_PAGINA_ALBUM), " ", Math.ceil(photos.length / PER_PAGINA_ALBUM) === 1 ? 'pagina' : 'pagine', "). Vengono scaricate a piena qualit\xE0, quindi ci vuole un po'."), /*#__PURE__*/React.createElement("button", {
+}, frase('galleria.notaCompleto', Math.ceil(photos.length / PER_PAGINA_ALBUM))), /*#__PURE__*/React.createElement("button", {
   onClick: () => {
     setGalleryView('griglia');
     setPicking(true);
   },
   disabled: !!pdfBusy,
   className: bottone('secondario', 'piccolo', 'w-full mt-2')
-}, "Scegli tu quali foto"), /*#__PURE__*/React.createElement("p", {
+}, L.t('galleria.scegliTu')), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic mt-2"
-}, "Tocca una foto per vederla grande. Le foto restano nel campo: alla chiusura finiscono nell'archivio insieme ai conti."))));
+}, L.t('galleria.notaFinale')))));
 // ---------- Scheda Impostazioni ----------
 // La piu' grande di tutte, e la piu' intrecciata: aspetto, blocco, backup,
 // modalita' tecnica, chiusura del campo. Sta da sola apposta.
@@ -8653,17 +8614,13 @@ const schedaImpostazioni = ({
   className: "flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg text-[#2D392C]"
-}, "Pronto per il campo"), /*#__PURE__*/React.createElement("span", {
+}, L.t('pronto.titolo')), /*#__PURE__*/React.createElement("span", {
   className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-[#D97706] text-white' : 'bg-[#2D392C] text-white'}`
-}, !campoInCorso ? 'Nessun campo' : readyOk ? 'Sì' : 'Non ancora')), !campoInCorso ? /*#__PURE__*/React.createElement("p", {
+}, L.t(!campoInCorso ? 'pronto.nessunCampo' : readyOk ? 'pronto.si' : 'pronto.nonAncora'))), !campoInCorso ? /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug"
-}, "Non c'\xE8 un campo in corso: nessun membro, nessuna spesa, nessuna lista. I controlli tornano ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "quando si comincia a riempire l'app"), " \u2014 inutile chiedersi se si \xE8 pronti per qualcosa che non c'\xE8 ancora. I campi passati stanno in Archivio.") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+}, frase('pronto.senzaCampo')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug"
-}, "A Prato Lungo non c'\xE8 linea. Controlla queste tre cose ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "prima di partire"), ": lass\xF9 non si sistemano."), /*#__PURE__*/React.createElement("ul", {
+}, frase('pronto.treCose')), /*#__PURE__*/React.createElement("ul", {
   className: "space-y-2"
 }, readyChecks.map(c => /*#__PURE__*/React.createElement("li", {
   key: c.titolo,
@@ -8678,7 +8635,7 @@ const schedaImpostazioni = ({
   className: "text-[10px] text-[#5C4A3C] leading-snug mt-0.5"
 }, c.no))))), readyOk && /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic"
-}, "Questo telefono funziona anche senza linea. Ricontrolla il giorno della partenza."))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
+}, L.t('pronto.tuttoBene')))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
@@ -8697,9 +8654,9 @@ const schedaImpostazioni = ({
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-}, "Aspetto"), /*#__PURE__*/React.createElement("div", {
+}, L.t('aspetto.titolo')), /*#__PURE__*/React.createElement("div", {
   className: "grid grid-cols-3 gap-2"
-}, [['auto', 'Automatico', '🌗'], ['light', 'Chiaro', '☀️'], ['dark', 'Scuro', '🌙']].map(([k, l, icon]) => /*#__PURE__*/React.createElement("button", {
+}, [['auto', L.t('aspetto.automatico'), '🌗'], ['light', L.t('aspetto.chiaro'), '☀️'], ['dark', L.t('aspetto.scuro'), '🌙']].map(([k, l, icon]) => /*#__PURE__*/React.createElement("button", {
   key: k,
   onClick: () => setTheme(k),
   className: bottoneScelta('linguetta', 'sezione', theme === k, 'minuscolo')
@@ -8707,15 +8664,15 @@ const schedaImpostazioni = ({
   className: "block text-base leading-none mb-1"
 }, icon), l))), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500"
-}, theme === 'auto' ? `Segue le impostazioni del telefono: adesso è ${isDark ? 'scuro' : 'chiaro'}.` : `Sempre ${theme === 'dark' ? 'scuro' : 'chiaro'}, indipendentemente dal telefono.`, ' ', "Comodo la sera in tenda: schermo scuro, meno luce in faccia a tutti.")), /*#__PURE__*/React.createElement("div", {
+}, L.t('aspetto.spiegazione', theme === 'auto', theme === 'auto' ? isDark : theme === 'dark'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-}, "Galleria"), /*#__PURE__*/React.createElement("div", {
+}, L.t('area.galleria')), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between gap-3"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-sm text-[#2D392C]"
-}, "Foto per persona"), /*#__PURE__*/React.createElement("div", {
+}, L.t('impostazioni.fotoPerPersona')), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center gap-2 shrink-0"
 }, [3, 4, 5, 7].map(n => /*#__PURE__*/React.createElement("button", {
   key: n,
@@ -8726,11 +8683,11 @@ const schedaImpostazioni = ({
   className: bottoneScelta('linguetta', 'sezione', photoCap === n, 'normale', 'w-9')
 }, n)))), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug"
-}, "Quante foto pu\xF2 caricare ciascuno. \xC8 un accordo di gruppo che vale su questo telefono, non un controllo: serve a far scegliere le foto belle. Mettetevi d'accordo sullo stesso numero.")), admin && /*#__PURE__*/React.createElement("div", {
+}, L.t('impostazioni.fotoNota'))), admin && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
-}, "Diagnostica sincronizzazione"), (() => {
+}, L.t('diag.titolo')), (() => {
   const m = metaRef.current || {
     rev: {},
     del: {}
@@ -8748,68 +8705,50 @@ const schedaImpostazioni = ({
     className: "space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-600"
-  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold text-[#2D392C]"
-  }, Object.keys(m.rev || {}).length), " voci datate"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold text-[#2D392C]"
-  }, lapidi.length), " cancellazioni registrate")), (() => {
+  }, /*#__PURE__*/React.createElement("span", null, fraseVestita('font-bold text-[#2D392C]', 'diag.vociDatate', Object.keys(m.rev || {}).length)), /*#__PURE__*/React.createElement("span", null, fraseVestita('font-bold text-[#2D392C]', 'diag.cancellazioni', lapidi.length))), (() => {
     const MF = window.MagazzinoFoto;
     const quante = Object.keys(receipts || {}).length;
     const kb = MF ? Math.round(MF.peso(receipts) / 1024) : 0;
     return /*#__PURE__*/React.createElement("p", {
       className: "text-[11px] text-gray-600"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "font-bold text-[#2D392C]"
-    }, quante), " foto di scontrini", quante > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, " per ", /*#__PURE__*/React.createElement("span", {
-      className: "font-bold text-[#2D392C]"
-    }, kb, " KB")), ', ', fotoDove === 'magazzino' ? 'nel magazzino: non tolgono spazio ai conti.' : 'nella memoria del telefono: il magazzino non è disponibile, quindi contendono lo spazio ai conti.');
+    }, fraseVestita('font-bold text-[#2D392C]', 'diag.scontrini', quante, quante > 0 ? kb : null, fotoDove === 'magazzino'));
   })(), Object.keys(m.rev || {}).length === 0 && ((st.members || []).length > 0 || (st.purchases || []).length > 0 || Object.keys(st.campData || {}).length > 0) && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Questo telefono non ha ancora la cronologia delle modifiche."), " I dati ci sono, ma sono \"senza data\": in una sincronizzazione perdono contro quelli degli altri. Basta toccare qualcosa perch\xE9 riparta. Se succede spesso, \xE8 la memoria del telefono che \xE8 piena.")), (cloud.pending || (cloud.foto || 0) > 0) && /*#__PURE__*/React.createElement("div", {
+  }, frase('diag.senzaStoria'))), (cloud.pending || (cloud.foto || 0) > 0) && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Da inviare:"), cloud.pending ? ' le ultime modifiche' : '', cloud.pending && (cloud.foto || 0) > 0 ? ' e' : '', (cloud.foto || 0) > 0 ? ` ${cloud.foto} ${cloud.foto === 1 ? 'foto' : 'foto'}` : '', ".", ' ', "L'app riprova da sola, con attese sempre pi\xF9 lunghe. Tieni l'app aperta e la linea attiva finch\xE9 la spia in alto non torna verde."), /*#__PURE__*/React.createElement("button", {
+  }, frase('diag.daInviare', !!cloud.pending, cloud.foto || 0)), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       const CS = window.CloudSync;
       if (CS && CS.riprova) CS.riprova();
     },
     className: bottone('avviso', 'piccolo', 'w-full mt-2')
-  }, "Riprova adesso")), scorta && scorta.state && /*#__PURE__*/React.createElement("div", {
+  }, L.t('diag.riprovaAdesso'))), scorta && scorta.state && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 space-y-2"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-[#5C4A3C] leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "Rete di sicurezza."), " Il ", L.data(new Date(scorta.at), 'dataOra'), " una sincronizzazione ha tolto ", scorta.perse === 1 ? 'una voce' : `${scorta.perse} voci`, " da questo telefono, e l'app ha messo da parte una copia di com'era prima.", scorta.quando ? /*#__PURE__*/React.createElement(React.Fragment, null, " La cancellazione \xE8 stata fatta il ", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, L.data(new Date(scorta.quando), 'dataOra')), Date.now() - scorta.quando > PERDITA_RECENTE ? /*#__PURE__*/React.createElement(React.Fragment, null, " \u2014 non adesso: questo telefono era indietro e l'ha saputo solo ora.") : '.') : null), /*#__PURE__*/React.createElement("p", {
+  }, frase('diag.reteDiSicurezza', L.data(new Date(scorta.at), 'dataOra'), scorta.perse, scorta.quando ? L.data(new Date(scorta.quando), 'dataOra') : null, scorta.quando ? Date.now() - scorta.quando > PERDITA_RECENTE : false)), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-[#5C4A3C] leading-snug"
-  }, "Annullando torna ", scorta.perse === 1 ? 'quella voce' : 'quello che è sparito', scorta.paths && scorta.paths.length ? /*#__PURE__*/React.createElement(React.Fragment, null, " \u2014 ", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, descriviPerdite(scorta.paths, scorta.state))) : null, ", su tutti i telefoni. Tutto il resto, comprese le modifiche fatte dopo, rimane."), /*#__PURE__*/React.createElement("button", {
+  }, frase('diag.annullandoTorna', scorta.perse, scorta.paths && scorta.paths.length ? descriviPerdite(scorta.paths, scorta.state) : null)), /*#__PURE__*/React.createElement("button", {
     onClick: annullaSync,
     className: bottone('avviso', 'piccolo', 'w-full')
-  }, "Annulla quella sincronizzazione"), /*#__PURE__*/React.createElement("button", {
+  }, L.t('diag.annullaSync')), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      if (window.confirm('Buttare la copia di scorta?\nDopo non si potrà più annullare quella sincronizzazione.')) {
+      if (window.confirm(L.t('diag.confermaButtaCopia'))) {
         localStorage.removeItem(RESCUE_KEY);
         setLostSync(null);
         setDiagTick(t => t + 1);
       }
     },
     className: bottone('testuale', 'minuscolo', 'w-full')
-  }, "Va bene cos\xEC, butta la copia")), lapidi.length === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, L.t('diag.buttaCopia'))), lapidi.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-gray-400 italic"
-  }, "Nessuna cancellazione registrata su questo telefono.") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+  }, L.t('diag.nessunaCancellazione')) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] uppercase font-bold text-gray-500 mb-1"
-  }, "Ultime cancellazioni"), /*#__PURE__*/React.createElement("ul", {
+  }, L.t('diag.ultimeCancellazioni')), /*#__PURE__*/React.createElement("ul", {
     className: "space-y-1"
   }, lapidi.slice(0, 12).map(l => /*#__PURE__*/React.createElement("li", {
     key: l.p,
@@ -8820,9 +8759,9 @@ const schedaImpostazioni = ({
     className: "text-gray-500 shrink-0"
   }, L.data(new Date(l.at), 'breve'), ' ', L.data(new Date(l.at), 'ora'))))), lapidi.length > 12 && /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic mt-1"
-  }, "\u2026e altre ", lapidi.length - 12, ".")), /*#__PURE__*/React.createElement("p", {
+  }, L.t('diag.eAltre', lapidi.length - 12))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-gray-400 italic leading-snug"
-  }, "Una cancellazione \xE8 normale quando qualcuno toglie davvero una voce. Se ne vedi tante tutte allo stesso minuto, \xE8 il segno di un ripristino, di un'importazione o di un \"Copia da ieri\": in quel caso la copia di scorta qui sopra rimette tutto a posto."));
+  }, L.t('diag.notaCancellazioni')));
 })()), admin && /*#__PURE__*/React.createElement("div", {
   className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
@@ -8830,14 +8769,14 @@ const schedaImpostazioni = ({
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
   className: "font-rustic text-lg text-[#2D392C] shrink-0"
-}, "Registro modifiche"), /*#__PURE__*/React.createElement("span", {
+}, L.t('registro.titolo')), /*#__PURE__*/React.createElement("span", {
   className: "ml-auto flex items-center gap-2 shrink-0"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[9px] uppercase font-bold px-2 py-1 rounded bg-gray-200 text-gray-500"
 }, (() => {
   void diagTick;
   const n = logLeggi().length;
-  return n === 0 ? 'vuoto' : `${n} voci`;
+  return n === 0 ? L.t('registro.vuoto') : L.t('registro.quanteVoci', n);
 })()), /*#__PURE__*/React.createElement("span", {
   className: `text-[10px] text-[#5C4A3C] transition-transform ${logOpen ? 'rotate-180' : ''}`
 }, "\u25BE"))), logOpen && /*#__PURE__*/React.createElement("div", {
@@ -8849,7 +8788,7 @@ const schedaImpostazioni = ({
   if (reg.length === 0) {
     return /*#__PURE__*/React.createElement("p", {
       className: "text-[11px] text-gray-400 italic"
-    }, "Ancora nessuna modifica registrata su questo telefono.");
+    }, L.t('registro.nessuna'));
   }
   // Raggruppate per giorno: leggere 400 righe di fila è inutile.
   const perGiorno = [];
@@ -8863,7 +8802,7 @@ const schedaImpostazioni = ({
   });
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 leading-snug"
-  }, "Ogni modifica, fatta qui o arrivata dagli altri, con data e ora. Le pi\xF9 recenti in alto. Resta su questo telefono e non viene sincronizzata."), /*#__PURE__*/React.createElement("div", {
+  }, L.t('registro.nota')), /*#__PURE__*/React.createElement("div", {
     className: "space-y-3 max-h-96 overflow-y-auto pr-1"
   }, perGiorno.map(gruppo => /*#__PURE__*/React.createElement("div", {
     key: gruppo.giorno
@@ -8878,7 +8817,7 @@ const schedaImpostazioni = ({
     className: "text-gray-500 shrink-0 w-10"
   }, L.data(new Date(r.at), 'ora')), /*#__PURE__*/React.createElement("span", {
     className: `shrink-0 w-3 text-center ${r.k === 'd' ? 'text-red-700' : 'text-[#2D392C]'}`,
-    title: r.k === 'd' ? 'cancellata' : 'modificata'
+    title: L.t(r.k === 'd' ? 'registro.cancellata' : 'registro.modificata')
   }, r.k === 'd' ? '−' : '+'), /*#__PURE__*/React.createElement("span", {
     className: "min-w-0 flex-grow leading-snug"
   }, /*#__PURE__*/React.createElement("span", {
@@ -8887,20 +8826,20 @@ const schedaImpostazioni = ({
     className: "text-[#2D392C]"
   }, " \xB7 ", descriviPath(r.p, st))), /*#__PURE__*/React.createElement("span", {
     className: `shrink-0 text-[8px] uppercase font-bold px-1.5 py-0.5 rounded ${r.o === 'io' ? 'bg-[#2D392C]/10 text-[#2D392C]' : 'bg-[#5C4A3C]/10 text-[#5C4A3C]'}`
-  }, r.o === 'io' ? 'qui' : 'sync'))))))), /*#__PURE__*/React.createElement("div", {
+  }, L.t(r.o === 'io' ? 'registro.qui' : 'registro.sync')))))))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: esportaRegistro,
     className: bottone('primario', 'piccolo', 'flex-1')
-  }, "Esporta il registro"), /*#__PURE__*/React.createElement("button", {
+  }, L.t('registro.esporta')), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      if (window.confirm('Svuotare il registro delle modifiche?\nI dati non vengono toccati: si perde solo lo storico.')) {
+      if (window.confirm(L.t('registro.confermaSvuota'))) {
         localStorage.removeItem(LOG_KEY);
         setDiagTick(t => t + 1);
       }
     },
     className: bottone('secondario', 'piccolo', 'flex-1')
-  }, "Svuota")));
+  }, L.t('registro.svuota'))));
 })())), /*#__PURE__*/React.createElement("div", {
   className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
@@ -8908,7 +8847,7 @@ const schedaImpostazioni = ({
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
   className: "font-rustic text-lg text-[#2D392C] shrink-0"
-}, "Blocco con password"), /*#__PURE__*/React.createElement("span", {
+}, L.t('blocco.titoloScheda')), /*#__PURE__*/React.createElement("span", {
   className: "ml-auto flex items-center gap-1.5 shrink-0"
 }, (() => {
   const lock = window.APP_LOCK || {};
@@ -8917,17 +8856,17 @@ const schedaImpostazioni = ({
   const ignoto = !protetto && !cloud.connected;
   return /*#__PURE__*/React.createElement("span", {
     className: "text-[10px]",
-    title: protetto ? 'Database protetto' : ignoto ? 'Non collegato' : 'Database ad accesso aperto'
+    title: L.t(protetto ? 'blocco.dbProtetto' : ignoto ? 'blocco.dbNonCollegato' : 'blocco.dbAperto')
   }, protetto ? '🔒' : ignoto ? '—' : '⚠');
 })(), /*#__PURE__*/React.createElement("span", {
   className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
-}, LOCK && LOCK.hash ? 'Attivo' : 'Non attivo'), /*#__PURE__*/React.createElement("span", {
+}, L.t(LOCK && LOCK.hash ? 'blocco.attivo' : 'blocco.nonAttivo')), /*#__PURE__*/React.createElement("span", {
   className: `text-[10px] text-[#5C4A3C] transition-transform ${bloccoOpen ? 'rotate-180' : ''}`
 }, "\u25BE"))), bloccoOpen && /*#__PURE__*/React.createElement("div", {
   className: "px-4 pb-4 space-y-3"
 }, LOCK && LOCK.hash ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug"
-}, "All'apertura serve la password del campo. Tienila nel gruppo, non pubblicarla altrove. Serve a non lasciare spese, nomi e scontrini alla portata di chi capita sull'indirizzo: non \xE8 una cassaforte, perch\xE9 il controllo gira sul telefono."), (() => {
+}, L.t('blocco.spiegazione')), (() => {
   const lock = window.APP_LOCK || {};
   if (!lock.dbEmail) return null;
   const protetto = cloud.authMode === 'shared';
@@ -8940,11 +8879,11 @@ const schedaImpostazioni = ({
     className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] uppercase font-bold text-gray-500"
-  }, "Database"), /*#__PURE__*/React.createElement("span", {
+  }, L.t('blocco.database')), /*#__PURE__*/React.createElement("span", {
     className: `text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`
-  }, protetto ? '🔒 protetto dalla password' : ignoto ? '— non collegato' : '⚠ accesso aperto')), /*#__PURE__*/React.createElement("p", {
+  }, L.t(protetto ? 'blocco.statoProtetto' : ignoto ? 'blocco.statoIgnoto' : 'blocco.statoAperto'))), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gray-500 leading-snug mt-1"
-  }, protetto ? 'L\'app entra nel database con l\'utente del campo: senza password i dati non si leggono nemmeno da fuori.' : ignoto ? 'Senza linea non c\'è nulla da proteggere: si lavora in locale. Il controllo si aggiorna al prossimo collegamento.' : 'I dati nel cloud sono ancora raggiungibili senza password. Per chiuderli servono i passaggi nella console Firebase (utente condiviso + regole): finché non sono fatti, il blocco protegge solo la schermata.'));
+  }, L.t(protetto ? 'blocco.notaProtetto' : ignoto ? 'blocco.notaIgnoto' : 'blocco.notaAperto')));
 })(), /*#__PURE__*/React.createElement("label", {
   className: "flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer"
 }, /*#__PURE__*/React.createElement("input", {
@@ -8954,33 +8893,29 @@ const schedaImpostazioni = ({
   className: "w-4 h-4 accent-[#2D392C] shrink-0"
 }), /*#__PURE__*/React.createElement("span", {
   className: "text-[11px] text-[#2D392C] leading-snug"
-}, "Chiedi la password ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "ogni volta"), " che apro l'app", /*#__PURE__*/React.createElement("span", {
+}, frase('blocco.ogniVolta'), /*#__PURE__*/React.createElement("span", {
   className: "block text-[9px] text-gray-500"
-}, "Senza la spunta il telefono resta sbloccato fino a \"Blocca ora\"."))), window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && /*#__PURE__*/React.createElement("div", {
+}, L.t('blocco.senzaSpunta')))), window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && /*#__PURE__*/React.createElement("div", {
   className: "bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
 }, /*#__PURE__*/React.createElement("p", {
   className: "text-[11px] text-[#5C4A3C] leading-snug"
-}, "La sincronizzazione sta usando l'accesso di ripiego. L'app chiede la password da sola quando serve: se non \xE8 successo, tocca", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, " Blocca ora"), " e rientra.")), /*#__PURE__*/React.createElement("button", {
+}, frase('blocco.ripiego'))), /*#__PURE__*/React.createElement("button", {
   onClick: lockNow,
   className: bottone('bruno', 'normale', 'w-full')
-}, "\uD83D\uDD12 Blocca ora")) : /*#__PURE__*/React.createElement("p", {
+}, L.t('blocco.bloccaOra'))) : /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500"
-}, "Nessuna password impostata: l'app si apre a chiunque abbia l'indirizzo."))), /*#__PURE__*/React.createElement("div", {
+}, L.t('blocco.nessunaPassword')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setDatiOpen(v => !v),
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
   className: "font-rustic text-lg text-[#2D392C] shrink-0"
-}, "Dati su questo telefono"), /*#__PURE__*/React.createElement("span", {
+}, L.t('dati.titolo')), /*#__PURE__*/React.createElement("span", {
   className: "ml-auto flex items-center gap-2 shrink-0"
 }, /*#__PURE__*/React.createElement("span", {
   className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
-}, cloud.connected ? 'Connessa' : isOnline ? 'Non connessa' : 'Offline'), /*#__PURE__*/React.createElement("span", {
+}, L.t(cloud.connected ? 'dati.connessa' : isOnline ? 'dati.nonConnessa' : 'dati.offline')), /*#__PURE__*/React.createElement("span", {
   className: `text-[10px] text-[#5C4A3C] transition-transform ${datiOpen ? 'rotate-180' : ''}`
 }, "\u25BE"))), datiOpen && /*#__PURE__*/React.createElement("div", {
   className: "px-4 pb-4 space-y-3"
@@ -8989,41 +8924,37 @@ const schedaImpostazioni = ({
 }, /*#__PURE__*/React.createElement("button", {
   onClick: exportData,
   className: bottone('primario', 'normale', 'flex-1')
-}, "Esporta backup"), /*#__PURE__*/React.createElement("button", {
+}, L.t('dati.esportaBackup')), /*#__PURE__*/React.createElement("button", {
   onClick: () => goTo('spesa'),
   className: bottone('secondario', 'normale', 'flex-1')
-}, "Gestione dati")), /*#__PURE__*/React.createElement("button", {
+}, L.t('dati.gestione'))), /*#__PURE__*/React.createElement("button", {
   onClick: wipeLocal,
   className: bottone('distruttivo', 'normale', 'w-full')
-}, "Cancella i dati da questo telefono"), /*#__PURE__*/React.createElement("p", {
+}, L.t('dati.cancellaLocale')), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-gray-400 italic leading-snug"
-}, "Utile se presti o cambi telefono. Il cloud non viene toccato: con la linea i dati tornano da soli."))), /*#__PURE__*/React.createElement("div", {
+}, L.t('dati.notaCancella')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setTecnicaOpen(v => !v),
   className: bottoneRiga()
 }, /*#__PURE__*/React.createElement("span", {
   className: "font-rustic text-lg text-[#2D392C] shrink-0"
-}, "Modalit\xE0 tecnica"), /*#__PURE__*/React.createElement("span", {
+}, L.t('tecnica.titolo')), /*#__PURE__*/React.createElement("span", {
   className: "ml-auto flex items-center gap-2 shrink-0"
 }, /*#__PURE__*/React.createElement("span", {
   className: `text-[9px] uppercase font-bold px-2 py-1 rounded ${admin ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`
-}, admin ? 'Attiva' : 'Spenta'), /*#__PURE__*/React.createElement("span", {
+}, L.t(admin ? 'tecnica.attiva' : 'tecnica.spenta')), /*#__PURE__*/React.createElement("span", {
   className: `text-[10px] text-[#5C4A3C] transition-transform ${tecnicaOpen ? 'rotate-180' : ''}`
 }, "\u25BE"))), tecnicaOpen && /*#__PURE__*/React.createElement("div", {
   className: "px-4 pb-4 space-y-3"
 }, admin ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug"
-}, "Su questo telefono si vedono la ", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, "Diagnostica sincronizzazione"), ", il", /*#__PURE__*/React.createElement("span", {
-  className: "font-bold"
-}, " Registro modifiche"), ", gli avvisi sulle voci cancellate e il promemoria serale del backup. Sono strumenti per chi tiene i conti: sugli altri telefoni non compare niente di tutto questo."), /*#__PURE__*/React.createElement("button", {
+}, frase('tecnica.accesaNota')), /*#__PURE__*/React.createElement("button", {
   onClick: esciAdmin,
   className: bottone('secondario', 'normale', 'w-full')
-}, "Spegni la modalit\xE0 tecnica")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+}, L.t('tecnica.spegni'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-gray-500 leading-snug"
-}, "Per chi tiene i conti del campo: mostra la diagnostica della sincronizzazione, il registro delle modifiche e gli avvisi tecnici, solo su questo telefono. Ha una password dedicata, diversa da quella del campo."), /*#__PURE__*/React.createElement("div", {
+}, L.t('tecnica.spentaNota')), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("input", {
   type: "password",
@@ -9033,26 +8964,26 @@ const schedaImpostazioni = ({
     setAdminErr('');
   },
   onKeyDown: e => e.key === 'Enter' && entraAdmin(),
-  placeholder: "Password tecnica",
+  placeholder: L.t('tecnica.password'),
   className: "flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm"
 }), /*#__PURE__*/React.createElement("button", {
   onClick: entraAdmin,
   className: bottone('primario', 'normale', 'shrink-0')
-}, "Attiva")), adminErr && /*#__PURE__*/React.createElement("p", {
+}, L.t('tecnica.attivaTasto'))), adminErr && /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] font-bold text-red-700"
 }, adminErr)))), /*#__PURE__*/React.createElement("div", {
   className: "bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-2"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1"
-}, "Info"), /*#__PURE__*/React.createElement("div", {
+}, L.t('info.titolo')), /*#__PURE__*/React.createElement("div", {
   className: "flex justify-between text-[11px]"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-[#8F9E8B]"
-}, "Versione installata"), /*#__PURE__*/React.createElement("span", {
+}, L.t('info.versione')), /*#__PURE__*/React.createElement("span", {
   className: "font-bold"
 }, swVersion || '—')), /*#__PURE__*/React.createElement("p", {
   className: "text-[10px] text-[#F0F4F1]/70 leading-snug"
-}, "L'app si aggiorna da sola: se non vedi una novit\xE0, chiudila e riaprila."), /*#__PURE__*/React.createElement("p", {
+}, L.t('info.aggiornamento')), /*#__PURE__*/React.createElement("p", {
   className: "text-[9px] text-[#8F9E8B]/80 pt-1"
 }, BRAND.credits)));
 // ---------- Scheda "Chi fa cosa": i compiti assegnati ----------

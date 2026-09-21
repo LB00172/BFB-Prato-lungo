@@ -32,7 +32,7 @@ const usaGioco = ({ activeTab, cloudConnesso }) => {
 
   const startGame = () => {
     const n = gamePlayer.trim();
-    if (!n) { window.alert('Scrivi il tuo nome per entrare in classifica.'); return; }
+    if (!n) { window.alert(L.t('gioco.scriviNome')); return; }
     scriviLocale('cambusa_player', n);
     setGameRunning(true);
   };

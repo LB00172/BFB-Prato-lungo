@@ -185,8 +185,12 @@ const bottoneScelta = (forma, tono, acceso, misura, extra) => {
 // lingua e il pezzo in mezzo finirebbe nel posto sbagliato.
 //
 // Uso: {frase('compiti.spiegazione')}
-const frase = (chiave, ...resto) => L.pezzi(chiave, ...resto).map((p, i) => (
+// Il grassetto non e' sempre vestito uguale: dentro un paragrafo grigio il
+// pezzo in evidenza a volte e' anche verde. Il vestito sta qui, non nel
+// dizionario: il traduttore dice DOVE va l'enfasi, non di che colore e'.
+const fraseVestita = (classe, chiave, ...resto) => L.pezzi(chiave, ...resto).map((p, i) => (
   p.grassetto
-    ? <span key={i} className="font-bold">{p.testo}</span>
+    ? <span key={i} className={classe}>{p.testo}</span>
     : <React.Fragment key={i}>{p.testo}</React.Fragment>
 ));
+const frase = (chiave, ...resto) => fraseVestita('font-bold', chiave, ...resto);

@@ -57,22 +57,19 @@ const schedaImpostazioni = ({
         resterebbero rossi per sempre — su un telefono che sta benissimo. */}
     <div className={`p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-white border-[#2D392C]/20' : 'bg-white border-[#D97706]/50'}`}>
       <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
-        <h3 className="font-rustic text-lg text-[#2D392C]">Pronto per il campo</h3>
+        <h3 className="font-rustic text-lg text-[#2D392C]">{L.t('pronto.titolo')}</h3>
         <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-[#D97706] text-white' : 'bg-[#2D392C] text-white'}`}>
-          {!campoInCorso ? 'Nessun campo' : readyOk ? 'Sì' : 'Non ancora'}
+          {L.t(!campoInCorso ? 'pronto.nessunCampo' : readyOk ? 'pronto.si' : 'pronto.nonAncora')}
         </span>
       </div>
       {!campoInCorso ? (
         <p className="text-[10px] text-gray-500 leading-snug">
-          Non c'è un campo in corso: nessun membro, nessuna spesa, nessuna lista. I controlli
-          tornano <span className="font-bold">quando si comincia a riempire l'app</span> — inutile
-          chiedersi se si è pronti per qualcosa che non c'è ancora. I campi passati stanno in Archivio.
+          {frase('pronto.senzaCampo')}
         </p>
       ) : (
         <>
           <p className="text-[10px] text-gray-500 leading-snug">
-            A Prato Lungo non c'è linea. Controlla queste tre cose <span className="font-bold">prima di partire</span>:
-            lassù non si sistemano.
+            {frase('pronto.treCose')}
           </p>
           <ul className="space-y-2">
             {readyChecks.map((c) => (
@@ -86,7 +83,7 @@ const schedaImpostazioni = ({
             ))}
           </ul>
           {readyOk && (
-            <p className="text-[9px] text-gray-400 italic">Questo telefono funziona anche senza linea. Ricontrolla il giorno della partenza.</p>
+            <p className="text-[9px] text-gray-400 italic">{L.t('pronto.tuttoBene')}</p>
           )}
         </>
       )}
@@ -115,9 +112,9 @@ const schedaImpostazioni = ({
 
     {/* Aspetto */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Aspetto</h3>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('aspetto.titolo')}</h3>
       <div className="grid grid-cols-3 gap-2">
-        {[['auto', 'Automatico', '🌗'], ['light', 'Chiaro', '☀️'], ['dark', 'Scuro', '🌙']].map(([k, l, icon]) => (
+        {[['auto', L.t('aspetto.automatico'), '🌗'], ['light', L.t('aspetto.chiaro'), '☀️'], ['dark', L.t('aspetto.scuro'), '🌙']].map(([k, l, icon]) => (
           <button
             key={k}
             onClick={() => setTheme(k)}
@@ -129,18 +126,15 @@ const schedaImpostazioni = ({
         ))}
       </div>
       <p className="text-[10px] text-gray-500">
-        {theme === 'auto'
-          ? `Segue le impostazioni del telefono: adesso è ${isDark ? 'scuro' : 'chiaro'}.`
-          : `Sempre ${theme === 'dark' ? 'scuro' : 'chiaro'}, indipendentemente dal telefono.`}
-        {' '}Comodo la sera in tenda: schermo scuro, meno luce in faccia a tutti.
+        {L.t('aspetto.spiegazione', theme === 'auto', theme === 'auto' ? isDark : theme === 'dark')}
       </p>
     </div>
 
     {/* Galleria */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Galleria</h3>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('area.galleria')}</h3>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-[#2D392C]">Foto per persona</span>
+        <span className="text-sm text-[#2D392C]">{L.t('impostazioni.fotoPerPersona')}</span>
         <div className="flex items-center gap-2 shrink-0">
           {[3, 4, 5, 7].map((n) => (
             <button
@@ -154,8 +148,7 @@ const schedaImpostazioni = ({
         </div>
       </div>
       <p className="text-[10px] text-gray-500 leading-snug">
-        Quante foto può caricare ciascuno. È un accordo di gruppo che vale su questo telefono, non un
-        controllo: serve a far scegliere le foto belle. Mettetevi d'accordo sullo stesso numero.
+        {L.t('impostazioni.fotoNota')}
       </p>
     </div>
 
@@ -164,7 +157,7 @@ const schedaImpostazioni = ({
         vuol dire leggere il database a mano. Solo in modalità tecnica. */}
     {admin && (
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Diagnostica sincronizzazione</h3>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('diag.titolo')}</h3>
       {(() => {
         const m = metaRef.current || { rev: {}, del: {} };
         const st = syncStateRef.current;
@@ -178,8 +171,8 @@ const schedaImpostazioni = ({
         return (
           <div className="space-y-3">
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-600">
-              <span><span className="font-bold text-[#2D392C]">{Object.keys(m.rev || {}).length}</span> voci datate</span>
-              <span><span className="font-bold text-[#2D392C]">{lapidi.length}</span> cancellazioni registrate</span>
+              <span>{fraseVestita('font-bold text-[#2D392C]', 'diag.vociDatate', Object.keys(m.rev || {}).length)}</span>
+              <span>{fraseVestita('font-bold text-[#2D392C]', 'diag.cancellazioni', lapidi.length)}</span>
             </div>
 
             {/* Quanto pesano le foto e dove stanno. Nel campo 2026 gli
@@ -192,12 +185,7 @@ const schedaImpostazioni = ({
               const kb = MF ? Math.round(MF.peso(receipts) / 1024) : 0;
               return (
                 <p className="text-[11px] text-gray-600">
-                  <span className="font-bold text-[#2D392C]">{quante}</span> foto di scontrini
-                  {quante > 0 && <> per <span className="font-bold text-[#2D392C]">{kb} KB</span></>}
-                  {', '}
-                  {fotoDove === 'magazzino'
-                    ? 'nel magazzino: non tolgono spazio ai conti.'
-                    : 'nella memoria del telefono: il magazzino non è disponibile, quindi contendono lo spazio ai conti.'}
+                  {fraseVestita('font-bold text-[#2D392C]', 'diag.scontrini', quante, quante > 0 ? kb : null, fotoDove === 'magazzino')}
                 </p>
               );
             })()}
@@ -211,9 +199,7 @@ const schedaImpostazioni = ({
               ((st.members || []).length > 0 || (st.purchases || []).length > 0 || Object.keys(st.campData || {}).length > 0) && (
               <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
                 <p className="text-[10px] text-[#5C4A3C] leading-snug">
-                  <span className="font-bold">Questo telefono non ha ancora la cronologia delle modifiche.</span> I dati ci
-                  sono, ma sono "senza data": in una sincronizzazione perdono contro quelli degli altri. Basta
-                  toccare qualcosa perché riparta. Se succede spesso, è la memoria del telefono che è piena.
+                  {frase('diag.senzaStoria')}
                 </p>
               </div>
             )}
@@ -222,18 +208,13 @@ const schedaImpostazioni = ({
             {(cloud.pending || (cloud.foto || 0) > 0) && (
               <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
                 <p className="text-[10px] text-[#5C4A3C] leading-snug">
-                  <span className="font-bold">Da inviare:</span>
-                  {cloud.pending ? ' le ultime modifiche' : ''}
-                  {cloud.pending && (cloud.foto || 0) > 0 ? ' e' : ''}
-                  {(cloud.foto || 0) > 0 ? ` ${cloud.foto} ${cloud.foto === 1 ? 'foto' : 'foto'}` : ''}.
-                  {' '}L'app riprova da sola, con attese sempre più lunghe. Tieni l'app aperta e la linea
-                  attiva finché la spia in alto non torna verde.
+                  {frase('diag.daInviare', !!cloud.pending, cloud.foto || 0)}
                 </p>
                 <button
                   onClick={() => { const CS = window.CloudSync; if (CS && CS.riprova) CS.riprova(); }}
                   className={bottone('avviso', 'piccolo', 'w-full mt-2')}
                 >
-                  Riprova adesso
+                  {L.t('diag.riprovaAdesso')}
                 </button>
               </div>
             )}
@@ -241,40 +222,33 @@ const schedaImpostazioni = ({
             {scorta && scorta.state && (
               <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 space-y-2">
                 <p className="text-[10px] text-[#5C4A3C] leading-snug">
-                  <span className="font-bold">Rete di sicurezza.</span> Il {L.data(new Date(scorta.at), 'dataOra')} una
-                  sincronizzazione ha tolto {scorta.perse === 1 ? 'una voce' : `${scorta.perse} voci`} da questo telefono, e
-                  l'app ha messo da parte una copia di com'era prima.
-                  {scorta.quando ? (
-                    <> La cancellazione è stata fatta il <span className="font-bold">{L.data(new Date(scorta.quando), 'dataOra')}</span>
-                      {Date.now() - scorta.quando > PERDITA_RECENTE
-                        ? <> — non adesso: questo telefono era indietro e l'ha saputo solo ora.</>
-                        : '.'}
-                    </>
-                  ) : null}
+                  {frase('diag.reteDiSicurezza',
+                    L.data(new Date(scorta.at), 'dataOra'),
+                    scorta.perse,
+                    scorta.quando ? L.data(new Date(scorta.quando), 'dataOra') : null,
+                    scorta.quando ? Date.now() - scorta.quando > PERDITA_RECENTE : false)}
                 </p>
                 <p className="text-[10px] text-[#5C4A3C] leading-snug">
-                  Annullando torna {scorta.perse === 1 ? 'quella voce' : 'quello che è sparito'}
-                  {scorta.paths && scorta.paths.length
-                    ? <> — <span className="font-bold">{descriviPerdite(scorta.paths, scorta.state)}</span></>
-                    : null}, su tutti i telefoni. Tutto il resto, comprese le modifiche fatte dopo, rimane.
+                  {frase('diag.annullandoTorna', scorta.perse,
+                    scorta.paths && scorta.paths.length ? descriviPerdite(scorta.paths, scorta.state) : null)}
                 </p>
                 <button onClick={annullaSync} className={bottone('avviso', 'piccolo', 'w-full')}>
-                  Annulla quella sincronizzazione
+                  {L.t('diag.annullaSync')}
                 </button>
                 <button
-                  onClick={() => { if (window.confirm('Buttare la copia di scorta?\nDopo non si potrà più annullare quella sincronizzazione.')) { localStorage.removeItem(RESCUE_KEY); setLostSync(null); setDiagTick((t) => t + 1); } }}
+                  onClick={() => { if (window.confirm(L.t('diag.confermaButtaCopia'))) { localStorage.removeItem(RESCUE_KEY); setLostSync(null); setDiagTick((t) => t + 1); } }}
                   className={bottone('testuale', 'minuscolo', 'w-full')}
                 >
-                  Va bene così, butta la copia
+                  {L.t('diag.buttaCopia')}
                 </button>
               </div>
             )}
 
             {lapidi.length === 0 ? (
-              <p className="text-[11px] text-gray-400 italic">Nessuna cancellazione registrata su questo telefono.</p>
+              <p className="text-[11px] text-gray-400 italic">{L.t('diag.nessunaCancellazione')}</p>
             ) : (
               <div>
-                <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Ultime cancellazioni</p>
+                <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">{L.t('diag.ultimeCancellazioni')}</p>
                 <ul className="space-y-1">
                   {lapidi.slice(0, 12).map((l) => (
                     <li key={l.p} className="flex items-start justify-between gap-2 text-[10px] bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20">
@@ -287,14 +261,12 @@ const schedaImpostazioni = ({
                   ))}
                 </ul>
                 {lapidi.length > 12 && (
-                  <p className="text-[9px] text-gray-400 italic mt-1">…e altre {lapidi.length - 12}.</p>
+                  <p className="text-[9px] text-gray-400 italic mt-1">{L.t('diag.eAltre', lapidi.length - 12)}</p>
                 )}
               </div>
             )}
             <p className="text-[9px] text-gray-400 italic leading-snug">
-              Una cancellazione è normale quando qualcuno toglie davvero una voce. Se ne vedi tante
-              tutte allo stesso minuto, è il segno di un ripristino, di un'importazione o di un
-              "Copia da ieri": in quel caso la copia di scorta qui sopra rimette tutto a posto.
+              {L.t('diag.notaCancellazioni')}
             </p>
           </div>
         );
@@ -312,10 +284,10 @@ const schedaImpostazioni = ({
         onClick={() => setLogOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-lg text-[#2D392C] shrink-0">Registro modifiche</span>
+        <span className="font-rustic text-lg text-[#2D392C] shrink-0">{L.t('registro.titolo')}</span>
         <span className="ml-auto flex items-center gap-2 shrink-0">
           <span className="text-[9px] uppercase font-bold px-2 py-1 rounded bg-gray-200 text-gray-500">
-            {(() => { void diagTick; const n = logLeggi().length; return n === 0 ? 'vuoto' : `${n} voci`; })()}
+            {(() => { void diagTick; const n = logLeggi().length; return n === 0 ? L.t('registro.vuoto') : L.t('registro.quanteVoci', n); })()}
           </span>
           <span className={`text-[10px] text-[#5C4A3C] transition-transform ${logOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
@@ -326,7 +298,7 @@ const schedaImpostazioni = ({
           const reg = logLeggi();
           const st = syncStateRef.current;
           if (reg.length === 0) {
-            return <p className="text-[11px] text-gray-400 italic">Ancora nessuna modifica registrata su questo telefono.</p>;
+            return <p className="text-[11px] text-gray-400 italic">{L.t('registro.nessuna')}</p>;
           }
           // Raggruppate per giorno: leggere 400 righe di fila è inutile.
           const perGiorno = [];
@@ -339,8 +311,7 @@ const schedaImpostazioni = ({
           return (
             <>
               <p className="text-[10px] text-gray-500 leading-snug">
-                Ogni modifica, fatta qui o arrivata dagli altri, con data e ora. Le più recenti in alto.
-                Resta su questo telefono e non viene sincronizzata.
+                {L.t('registro.nota')}
               </p>
               <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
                 {perGiorno.map((gruppo) => (
@@ -352,7 +323,7 @@ const schedaImpostazioni = ({
                           <span className="text-gray-500 shrink-0 w-10">
                             {L.data(new Date(r.at), 'ora')}
                           </span>
-                          <span className={`shrink-0 w-3 text-center ${r.k === 'd' ? 'text-red-700' : 'text-[#2D392C]'}`} title={r.k === 'd' ? 'cancellata' : 'modificata'}>
+                          <span className={`shrink-0 w-3 text-center ${r.k === 'd' ? 'text-red-700' : 'text-[#2D392C]'}`} title={L.t(r.k === 'd' ? 'registro.cancellata' : 'registro.modificata')}>
                             {r.k === 'd' ? '−' : '+'}
                           </span>
                           <span className="min-w-0 flex-grow leading-snug">
@@ -360,7 +331,7 @@ const schedaImpostazioni = ({
                             <span className="text-[#2D392C]"> · {descriviPath(r.p, st)}</span>
                           </span>
                           <span className={`shrink-0 text-[8px] uppercase font-bold px-1.5 py-0.5 rounded ${r.o === 'io' ? 'bg-[#2D392C]/10 text-[#2D392C]' : 'bg-[#5C4A3C]/10 text-[#5C4A3C]'}`}>
-                            {r.o === 'io' ? 'qui' : 'sync'}
+                            {L.t(r.o === 'io' ? 'registro.qui' : 'registro.sync')}
                           </span>
                         </li>
                       ))}
@@ -369,12 +340,12 @@ const schedaImpostazioni = ({
                 ))}
               </div>
               <div className="flex gap-2">
-                <button onClick={esportaRegistro} className={bottone('primario', 'piccolo', 'flex-1')}>Esporta il registro</button>
+                <button onClick={esportaRegistro} className={bottone('primario', 'piccolo', 'flex-1')}>{L.t('registro.esporta')}</button>
                 <button
-                  onClick={() => { if (window.confirm('Svuotare il registro delle modifiche?\nI dati non vengono toccati: si perde solo lo storico.')) { localStorage.removeItem(LOG_KEY); setDiagTick((t) => t + 1); } }}
+                  onClick={() => { if (window.confirm(L.t('registro.confermaSvuota'))) { localStorage.removeItem(LOG_KEY); setDiagTick((t) => t + 1); } }}
                   className={bottone('secondario', 'piccolo', 'flex-1')}
                 >
-                  Svuota
+                  {L.t('registro.svuota')}
                 </button>
               </div>
             </>
@@ -391,7 +362,7 @@ const schedaImpostazioni = ({
         onClick={() => setBloccoOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-lg text-[#2D392C] shrink-0">Blocco con password</span>
+        <span className="font-rustic text-lg text-[#2D392C] shrink-0">{L.t('blocco.titoloScheda')}</span>
         <span className="ml-auto flex items-center gap-1.5 shrink-0">
           {/* Stato del database anche da chiusa: è l'unica cosa che
               serve vedere a colpo d'occhio. */}
@@ -400,10 +371,10 @@ const schedaImpostazioni = ({
             if (!lock.dbEmail || !(LOCK && LOCK.hash)) return null;
             const protetto = cloud.authMode === 'shared';
             const ignoto = !protetto && !cloud.connected;
-            return <span className="text-[10px]" title={protetto ? 'Database protetto' : ignoto ? 'Non collegato' : 'Database ad accesso aperto'}>{protetto ? '🔒' : ignoto ? '—' : '⚠'}</span>;
+            return <span className="text-[10px]" title={L.t(protetto ? 'blocco.dbProtetto' : ignoto ? 'blocco.dbNonCollegato' : 'blocco.dbAperto')}>{protetto ? '🔒' : ignoto ? '—' : '⚠'}</span>;
           })()}
           <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
-            {LOCK && LOCK.hash ? 'Attivo' : 'Non attivo'}
+            {L.t(LOCK && LOCK.hash ? 'blocco.attivo' : 'blocco.nonAttivo')}
           </span>
           <span className={`text-[10px] text-[#5C4A3C] transition-transform ${bloccoOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
@@ -412,9 +383,7 @@ const schedaImpostazioni = ({
       {LOCK && LOCK.hash ? (
         <>
           <p className="text-[10px] text-gray-500 leading-snug">
-            All'apertura serve la password del campo. Tienila nel gruppo, non pubblicarla altrove.
-            Serve a non lasciare spese, nomi e scontrini alla portata di chi capita sull'indirizzo:
-            non è una cassaforte, perché il controllo gira sul telefono.
+            {L.t('blocco.spiegazione')}
           </p>
           {/* Stato reale della protezione del database: il blocco
               dell'app e la chiusura del cloud sono due cose diverse. */}
@@ -428,17 +397,13 @@ const schedaImpostazioni = ({
             return (
               <div className={`p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : ignoto ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/30' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] uppercase font-bold text-gray-500">Database</span>
+                  <span className="text-[10px] uppercase font-bold text-gray-500">{L.t('blocco.database')}</span>
                   <span className={`text-[10px] font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`}>
-                    {protetto ? '🔒 protetto dalla password' : ignoto ? '— non collegato' : '⚠ accesso aperto'}
+                    {L.t(protetto ? 'blocco.statoProtetto' : ignoto ? 'blocco.statoIgnoto' : 'blocco.statoAperto')}
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-500 leading-snug mt-1">
-                  {protetto
-                    ? 'L\'app entra nel database con l\'utente del campo: senza password i dati non si leggono nemmeno da fuori.'
-                    : ignoto
-                    ? 'Senza linea non c\'è nulla da proteggere: si lavora in locale. Il controllo si aggiorna al prossimo collegamento.'
-                    : 'I dati nel cloud sono ancora raggiungibili senza password. Per chiuderli servono i passaggi nella console Firebase (utente condiviso + regole): finché non sono fatti, il blocco protegge solo la schermata.'}
+                  {L.t(protetto ? 'blocco.notaProtetto' : ignoto ? 'blocco.notaIgnoto' : 'blocco.notaAperto')}
                 </p>
               </div>
             );
@@ -446,26 +411,24 @@ const schedaImpostazioni = ({
           <label className="flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer">
             <input type="checkbox" checked={askAlways} onChange={toggleAskAlways} className="w-4 h-4 accent-[#2D392C] shrink-0" />
             <span className="text-[11px] text-[#2D392C] leading-snug">
-              Chiedi la password <span className="font-bold">ogni volta</span> che apro l'app
-              <span className="block text-[9px] text-gray-500">Senza la spunta il telefono resta sbloccato fino a "Blocca ora".</span>
+              {frase('blocco.ogniVolta')}
+              <span className="block text-[9px] text-gray-500">{L.t('blocco.senzaSpunta')}</span>
             </span>
           </label>
           {window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && (
             <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
               <p className="text-[11px] text-[#5C4A3C] leading-snug">
-                La sincronizzazione sta usando l'accesso di ripiego. L'app chiede la
-                password da sola quando serve: se non è successo, tocca
-                <span className="font-bold"> Blocca ora</span> e rientra.
+                {frase('blocco.ripiego')}
               </p>
             </div>
           )}
           <button onClick={lockNow} className={bottone('bruno', 'normale', 'w-full')}>
-            🔒 Blocca ora
+            {L.t('blocco.bloccaOra')}
           </button>
         </>
       ) : (
         <p className="text-[10px] text-gray-500">
-          Nessuna password impostata: l'app si apre a chiunque abbia l'indirizzo.
+          {L.t('blocco.nessunaPassword')}
         </p>
       )}
       </div>)}
@@ -477,24 +440,24 @@ const schedaImpostazioni = ({
         onClick={() => setDatiOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-lg text-[#2D392C] shrink-0">Dati su questo telefono</span>
+        <span className="font-rustic text-lg text-[#2D392C] shrink-0">{L.t('dati.titolo')}</span>
         <span className="ml-auto flex items-center gap-2 shrink-0">
           <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
-            {cloud.connected ? 'Connessa' : isOnline ? 'Non connessa' : 'Offline'}
+            {L.t(cloud.connected ? 'dati.connessa' : isOnline ? 'dati.nonConnessa' : 'dati.offline')}
           </span>
           <span className={`text-[10px] text-[#5C4A3C] transition-transform ${datiOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
       </button>
       {datiOpen && (<div className="px-4 pb-4 space-y-3">
       <div className="flex gap-2">
-        <button onClick={exportData} className={bottone('primario', 'normale', 'flex-1')}>Esporta backup</button>
-        <button onClick={() => goTo('spesa')} className={bottone('secondario', 'normale', 'flex-1')}>Gestione dati</button>
+        <button onClick={exportData} className={bottone('primario', 'normale', 'flex-1')}>{L.t('dati.esportaBackup')}</button>
+        <button onClick={() => goTo('spesa')} className={bottone('secondario', 'normale', 'flex-1')}>{L.t('dati.gestione')}</button>
       </div>
       <button onClick={wipeLocal} className={bottone('distruttivo', 'normale', 'w-full')}>
-        Cancella i dati da questo telefono
+        {L.t('dati.cancellaLocale')}
       </button>
       <p className="text-[9px] text-gray-400 italic leading-snug">
-        Utile se presti o cambi telefono. Il cloud non viene toccato: con la linea i dati tornano da soli.
+        {L.t('dati.notaCancella')}
       </p>
       </div>)}
     </div>
@@ -508,10 +471,10 @@ const schedaImpostazioni = ({
         onClick={() => setTecnicaOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-lg text-[#2D392C] shrink-0">Modalità tecnica</span>
+        <span className="font-rustic text-lg text-[#2D392C] shrink-0">{L.t('tecnica.titolo')}</span>
         <span className="ml-auto flex items-center gap-2 shrink-0">
           <span className={`text-[9px] uppercase font-bold px-2 py-1 rounded ${admin ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
-            {admin ? 'Attiva' : 'Spenta'}
+            {L.t(admin ? 'tecnica.attiva' : 'tecnica.spenta')}
           </span>
           <span className={`text-[10px] text-[#5C4A3C] transition-transform ${tecnicaOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
@@ -520,24 +483,19 @@ const schedaImpostazioni = ({
         {admin ? (
           <>
             <p className="text-[10px] text-gray-500 leading-snug">
-              Su questo telefono si vedono la <span className="font-bold">Diagnostica sincronizzazione</span>, il
-              <span className="font-bold"> Registro modifiche</span>, gli avvisi sulle voci cancellate e il
-              promemoria serale del backup. Sono strumenti per chi tiene i conti: sugli altri telefoni
-              non compare niente di tutto questo.
+              {frase('tecnica.accesaNota')}
             </p>
             <button
               onClick={esciAdmin}
               className={bottone('secondario', 'normale', 'w-full')}
             >
-              Spegni la modalità tecnica
+              {L.t('tecnica.spegni')}
             </button>
           </>
         ) : (
           <>
             <p className="text-[10px] text-gray-500 leading-snug">
-              Per chi tiene i conti del campo: mostra la diagnostica della sincronizzazione, il registro
-              delle modifiche e gli avvisi tecnici, solo su questo telefono. Ha una password dedicata,
-              diversa da quella del campo.
+              {L.t('tecnica.spentaNota')}
             </p>
             <div className="flex gap-2">
               <input
@@ -545,14 +503,14 @@ const schedaImpostazioni = ({
                 value={adminPwd}
                 onChange={(e) => { setAdminPwd(e.target.value); setAdminErr(''); }}
                 onKeyDown={(e) => e.key === 'Enter' && entraAdmin()}
-                placeholder="Password tecnica"
+                placeholder={L.t('tecnica.password')}
                 className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm"
               />
               <button
                 onClick={entraAdmin}
                 className={bottone('primario', 'normale', 'shrink-0')}
               >
-                Attiva
+                {L.t('tecnica.attivaTasto')}
               </button>
             </div>
             {adminErr && <p className="text-[10px] font-bold text-red-700">{adminErr}</p>}
@@ -563,13 +521,13 @@ const schedaImpostazioni = ({
 
     {/* Info */}
     <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-2">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1">Info</h3>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-1">{L.t('info.titolo')}</h3>
       <div className="flex justify-between text-[11px]">
-        <span className="text-[#8F9E8B]">Versione installata</span>
+        <span className="text-[#8F9E8B]">{L.t('info.versione')}</span>
         <span className="font-bold">{swVersion || '—'}</span>
       </div>
       <p className="text-[10px] text-[#F0F4F1]/70 leading-snug">
-        L'app si aggiorna da sola: se non vedi una novità, chiudila e riaprila.
+        {L.t('info.aggiornamento')}
       </p>
       <p className="text-[9px] text-[#8F9E8B]/80 pt-1">{BRAND.credits}</p>
     </div>

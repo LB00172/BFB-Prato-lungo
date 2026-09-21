@@ -277,4 +277,46 @@ const fantasmi = inPrecache.filter((f) => !fs.existsSync(path.join(RADICE, f)));
 ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.length ? ' — FANTASMI: ' + fantasmi.join(', ') : ''),
   fantasmi.length === 0);
 
+// ---------- Il § 18 non torna indietro ----------
+// I file gia' passati dal dizionario devono restarci. Senza questa guardia
+// basta una riga nuova scritta in italiano dentro una scheda tradotta e
+// nessuno se ne accorge finche' qualcuno non apre l'app in spagnolo.
+//
+// Il numero atteso NON e' sempre zero: il censimento e' un'euristica, e in
+// qualche file restano una o due schegge di codice che sembrano prosa. Sono
+// contate qui una per una, cosi' il conto e' esatto lo stesso — e se cambia
+// in un senso o nell'altro la prova diventa rossa e si guarda perche'.
+//
+// I file che ancora NON sono stati tradotti non stanno in tabella: il loro
+// conto scende man mano, e congelarlo vorrebbe dire rifare la tabella a ogni
+// passo. Ci entrano quando arrivano in fondo.
+{
+  const { perFile } = require('../censimento-testi');
+  const TRADOTTI = {
+    '10-fondamenta.jsx': 3,          // console.warn e due schegge di codice
+    '20-blocco-password.jsx': 0,
+    '30-tema-e-formati.jsx': 0,
+    '50-interfaccia.jsx': 0,
+    '60-gioco.jsx': 3,               // i nomi dei livelli: sono luoghi veri
+    '70-schermata-blocco.jsx': 0,
+    '75-usa-gioco.jsx': 1,           // una scheggia di codice
+    '76-usa-galleria.jsx': 1,        // una scheggia di codice
+    '77-usa-scontrini.jsx': 2,       // 'memoria del telefono': e' un valore, non un testo
+    '81-schede-giorno.jsx': 1,       // una scheggia di codice
+    '83-schede-gruppo.jsx': 0,
+    '84-schede-album.jsx': 0,
+    '85-scheda-galleria.jsx': 0,
+    '86-scheda-impostazioni.jsx': 2, // due schegge di codice
+    '87-scheda-compiti.jsx': 1,      // una scheggia di codice
+    '90-avvio.jsx': 0,
+  };
+  const fuori = [];
+  Object.keys(TRADOTTI).forEach((f) => {
+    const quanti = perFile[f] || 0;
+    if (quanti !== TRADOTTI[f]) fuori.push(`${f}: ${quanti} invece di ${TRADOTTI[f]}`);
+  });
+  ok(`i ${Object.keys(TRADOTTI).length} file gia' tradotti non hanno testo nuovo scritto a mano`
+    + (fuori.length ? ' — ' + fuori.join('; ') : ''), fuori.length === 0);
+}
+
 fine();

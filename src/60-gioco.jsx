@@ -1035,12 +1035,12 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
         {levelUp && !over && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="bg-black/70 px-5 py-3 rounded-lg text-center">
-              <div className="text-[10px] uppercase tracking-widest text-[#8F9E8B]">Livello {level}</div>
+              <div className="text-[10px] uppercase tracking-widest text-[#8F9E8B]">{L.t('gioco.livello', level)}</div>
               <div className="font-rustic text-2xl text-[#D97706] leading-tight">
                 {livelloInfo(level).icona} {livelloInfo(level).nome}
               </div>
               {level > LIVELLI.length && (
-                <div className="text-[10px] uppercase tracking-widest text-[#F0F4F1]">Ancora più veloce!</div>
+                <div className="text-[10px] uppercase tracking-widest text-[#F0F4F1]">{L.t('gioco.ancoraPiuVeloce')}</div>
               )}
             </div>
           </div>
@@ -1049,15 +1049,15 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
           <div className="absolute inset-0 bg-black/70 rounded-lg flex flex-col items-center justify-center text-center p-4">
             {over ? (
               <>
-                <div className="font-rustic text-2xl text-[#F0F4F1]">Bandy è scappato!</div>
+                <div className="font-rustic text-2xl text-[#F0F4F1]">{L.t('gioco.scappato')}</div>
                 <div className="text-[#D97706] font-rustic text-3xl my-2">{score}</div>
                 <div className="text-[11px] text-gray-300 mb-4">
-                  {score > bestLocal ? 'Nuovo record personale! 🎉' : `Il tuo record resta ${bestLocal}`}
+                  {score > bestLocal ? L.t('gioco.nuovoRecord') : L.t('gioco.recordResta', bestLocal)}
                 </div>
-                <button onClick={onExit} className="px-6 py-2.5 bg-[#2D392C] text-white rounded font-bold uppercase text-xs">Chiudi</button>
+                <button onClick={onExit} className="px-6 py-2.5 bg-[#2D392C] text-white rounded font-bold uppercase text-xs">{L.t('archivio.chiudi')}</button>
               </>
             ) : (
-              <div className="font-rustic text-xl text-[#F0F4F1]">In pausa</div>
+              <div className="font-rustic text-xl text-[#F0F4F1]">{L.t('gioco.inPausa')}</div>
             )}
           </div>
         )}
@@ -1066,17 +1066,17 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
       {/* Comandi per il telefono (in alternativa si scorre il dito sul campo) */}
       <div className="grid grid-cols-3 gap-2 max-w-[240px] w-full mx-auto shrink-0">
         <span></span>
-        <button onPointerDown={(e) => { e.preventDefault(); nudge(0, -1); }} aria-label="Su" className="py-3 bg-[#2D392C] text-white rounded font-bold">▲</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(0, -1); }} aria-label={L.t('gioco.su')} className="py-3 bg-[#2D392C] text-white rounded font-bold">▲</button>
         <span></span>
-        <button onPointerDown={(e) => { e.preventDefault(); nudge(-1, 0); }} aria-label="Sinistra" className="py-3 bg-[#2D392C] text-white rounded font-bold">◀</button>
-        <button onClick={togglePause} aria-label="Pausa" className="py-3 bg-[#5C4A3C] text-white rounded font-bold text-xs">{paused ? '▶' : '❚❚'}</button>
-        <button onPointerDown={(e) => { e.preventDefault(); nudge(1, 0); }} aria-label="Destra" className="py-3 bg-[#2D392C] text-white rounded font-bold">▶</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(-1, 0); }} aria-label={L.t('gioco.sinistra')} className="py-3 bg-[#2D392C] text-white rounded font-bold">◀</button>
+        <button onClick={togglePause} aria-label={L.t('gioco.pausa')} className="py-3 bg-[#5C4A3C] text-white rounded font-bold text-xs">{paused ? '▶' : '❚❚'}</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(1, 0); }} aria-label={L.t('gioco.destra')} className="py-3 bg-[#2D392C] text-white rounded font-bold">▶</button>
         <span></span>
-        <button onPointerDown={(e) => { e.preventDefault(); nudge(0, 1); }} aria-label="Giù" className="py-3 bg-[#2D392C] text-white rounded font-bold">▼</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(0, 1); }} aria-label={L.t('gioco.giu')} className="py-3 bg-[#2D392C] text-white rounded font-bold">▼</button>
         <span></span>
       </div>
 
-      <button onClick={onExit} className="w-full py-1.5 text-[11px] uppercase font-bold text-[#8F9E8B] hover:text-white shrink-0">Esci dal gioco</button>
+      <button onClick={onExit} className="w-full py-1.5 text-[11px] uppercase font-bold text-[#8F9E8B] hover:text-white shrink-0">{L.t('gioco.esci')}</button>
     </div>
   );
 }

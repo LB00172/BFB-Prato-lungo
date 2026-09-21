@@ -25,48 +25,45 @@ const schedaMembri = ({
     {membriDoppi().map((g) => (
       <div key={g[0].id} className="bg-[#D97706]/10 border-2 border-[#D97706]/40 rounded-lg p-3 space-y-2">
         <p className="text-[11px] text-[#5C4A3C] leading-snug">
-          <span className="font-bold">"{g[0].name}" è in elenco {g.length} volte.</span>{' '}
-          Capita quando due telefoni senza linea aggiungono la stessa persona. Così nei conti
-          vale {g.length} persone: <span className="font-bold">la quota di tutti sbaglia</span>.
+          {frase('membri.doppia', g[0].name, g.length)}
         </p>
         <button
           onClick={() => unisciDoppi(g)}
           className={bottone('avviso', 'piccolo', 'w-full')}
         >
-          Unisci in una sola scheda
+          {L.t('membri.unisci')}
         </button>
         <p className="text-[9px] text-gray-500 italic leading-snug">
-          Le presenze segnate sulle due schede si sommano: non si perde niente. Se invece sono
-          davvero due persone diverse, aggiungi un cognome o un soprannome a una delle due.
+          {L.t('membri.unisciNota')}
         </p>
       </div>
     ))}
 
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Aggiungi Membro</h3>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('membri.aggiungiTitolo')}</h3>
       <div className="flex gap-2">
         <input
           type="text"
           value={newMemberName}
           onChange={(e) => setNewMemberName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addMember()}
-          placeholder="Nome e cognome"
+          placeholder={L.t('membri.nome')}
           className="flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
         />
         <button onClick={addMember} className={bottoneIcona('pieno')}>+</button>
       </div>
       <label className="flex items-center gap-2 text-xs text-gray-600">
         <input type="checkbox" checked={newMemberChild} onChange={(e) => setNewMemberChild(e.target.checked)} />
-        Bambino (pasti gratis)
+        {L.t('membri.bambinoGratis')}
       </label>
     </div>
 
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
       <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">
-        Membri ({members.length})
+        {L.t('membri.quanti', members.length)}
       </h3>
       {members.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">Nessun membro. Aggiungine uno per iniziare a segnare le presenze.</p>
+        <p className="text-sm text-gray-400 italic">{L.t('membri.vuoto')}</p>
       ) : (
         <ul className="space-y-2">
           {members.map((m) => (
@@ -74,13 +71,13 @@ const schedaMembri = ({
               <div className="flex items-center justify-between gap-2">
                 <span className="font-bold text-sm text-[#2D392C] truncate">
                   {m.name}
-                  {(m.paypal || m.iban) && <span className="ml-1.5 text-[9px] text-[#8F9E8B]" title="Ha inserito i dati per il rimborso">💳</span>}
+                  {(m.paypal || m.iban) && <span className="ml-1.5 text-[9px] text-[#8F9E8B]" title={L.t('membri.haRimborso')}>💳</span>}
                 </span>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => setInfoMember((v) => (v === m.id ? null : m.id))}
-                    aria-label={`Dati di pagamento di ${m.name}`}
-                    title="Dati per il rimborso (PayPal / IBAN)"
+                    aria-label={L.t('membri.datiDi', m.name)}
+                    title={L.t('membri.datiRimborso')}
                     className={`w-6 h-6 rounded-full border-2 font-serif italic font-bold text-[11px] leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-[#2D392C] border-[#2D392C] text-white' : 'bg-white border-[#8F9E8B] text-[#5C4A3C]'}`}
                   >
                     i
@@ -89,7 +86,7 @@ const schedaMembri = ({
                     onClick={() => toggleChild(m.id)}
                     className={bottoneScelta('etichetta', 'ambra', m.isChild, 'minimo')}
                   >
-                    {m.isChild ? 'Bambino' : 'Adulto'}
+                    {L.t(m.isChild ? 'membri.bambino' : 'membri.adulto')}
                   </button>
                   <button onClick={() => removeMember(m.id)} className={bottoneIcona('distruttivo')}>&times;</button>
                 </div>
@@ -98,8 +95,7 @@ const schedaMembri = ({
               {infoMember === m.id && (
                 <div className="mt-2.5 pt-2.5 border-t border-[#8F9E8B]/30 space-y-2">
                   <p className="text-[10px] text-gray-500 leading-snug">
-                    Come farsi rimborsare a campo finito. Facoltativi: si vedono in
-                    <span className="font-bold"> Spese Totali → Saldi</span>, accanto a chi deve ricevere.
+                    {frase('membri.comeRimborso')}
                   </p>
                   <div>
                     <label className="block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1">PayPal</label>
@@ -108,7 +104,7 @@ const schedaMembri = ({
                       inputMode="email"
                       value={m.paypal || ''}
                       onChange={(e) => setMemberField(m.id, 'paypal', e.target.value)}
-                      placeholder="paypal.me/nome oppure email"
+                      placeholder={L.t('membri.paypalSegno')}
                       className="w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-sm focus:outline-none focus:border-[#2D392C]"
                     />
                   </div>
@@ -119,19 +115,18 @@ const schedaMembri = ({
                       value={m.iban || ''}
                       onChange={(e) => setMemberField(m.id, 'iban', e.target.value.toUpperCase())}
                       onBlur={(e) => { const p = ibanPretty(e.target.value); if (p !== (m.iban || '')) setMemberField(m.id, 'iban', p); }}
-                      placeholder="IT00 X000 0000 0000 0000 0000 000"
+                      placeholder={L.t('membri.ibanSegno')}
                       className="w-full p-2 bg-white border border-[#8F9E8B]/40 rounded text-xs font-mono focus:outline-none focus:border-[#2D392C]"
                     />
                     {/* Un IBAN sbagliato si scopre solo quando il bonifico torna indietro. */}
                     {(m.iban || '').trim() !== '' && (
                       ibanValid(m.iban)
-                        ? <p className="text-[9px] text-[#2D392C] mt-1">✔ IBAN formalmente corretto</p>
-                        : <p className="text-[9px] text-[#D97706] mt-1">Controlla l'IBAN: non supera la verifica standard (manca o è sbagliato un carattere).</p>
+                        ? <p className="text-[9px] text-[#2D392C] mt-1">{L.t('membri.ibanOk')}</p>
+                        : <p className="text-[9px] text-[#D97706] mt-1">{L.t('membri.ibanNo')}</p>
                     )}
                   </div>
                   <p className="text-[9px] text-gray-400 italic leading-snug">
-                    Finiscono nel database del campo, come tutto il resto: li vede chi ha la password dell'app.
-                    Alla chiusura del campo vengono azzerati insieme ai membri.
+                    {L.t('membri.datiDove')}
                   </p>
                 </div>
               )}
@@ -139,14 +134,14 @@ const schedaMembri = ({
               {FEATURES.equipExemption && (
                 <button
                   onClick={() => toggleEquipExempt(m.id)}
-                  aria-label="Esenzione attrezzatura"
+                  aria-label={L.t('membri.esenzione')}
                   className="mt-1.5 flex items-center gap-2 text-left"
                 >
                   <span className={`w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-[10px] font-bold ${m.equipExempt ? 'bg-[#5C4A3C] border-[#5C4A3C] text-white' : 'bg-white border-[#8F9E8B]'}`}>
                     {m.equipExempt ? '✓' : ''}
                   </span>
                   <span className={`text-[10px] ${m.equipExempt ? 'font-bold text-[#5C4A3C]' : 'text-gray-500'}`}>
-                    Esente attrezzatura
+                    {L.t('membri.esente')}
                   </span>
                 </button>
               )}
@@ -163,7 +158,7 @@ const schedaMembri = ({
 const schedaRegole = () => (
   <div className="space-y-4">
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Regole dell'accampamento</h3>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">{L.t('regole.titolo')}</h3>
       <ol className="space-y-3">
         {CAMP_RULES.map((text, i) => (
           <li key={i} className="flex gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20">
@@ -188,7 +183,7 @@ const schedaDotazioni = ({
   <div className="space-y-4">
     {/* Box fisso: dotazione base */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Dotazione base</h3>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">{L.t('dotazioni.base')}</h3>
       <ul className="space-y-2">
         {BASE_GEAR.map((item) => (
           <li
@@ -208,32 +203,32 @@ const schedaDotazioni = ({
           </li>
         ))}
       </ul>
-      <p className="text-[9px] text-gray-400 italic mt-2">Dotazione obbligatoria per ogni partecipante.</p>
+      <p className="text-[9px] text-gray-400 italic mt-2">{L.t('dotazioni.obbligo')}</p>
     </div>
 
     {/* Box editabile: aggiunte dell'occasione */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Aggiunte per questo campo</h3>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('dotazioni.aggiunte')}</h3>
       <div className="flex gap-2">
         <input
           type="text"
           value={newGearText}
           onChange={(e) => setNewGearText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addGear()}
-          placeholder="Es. costume, torcia frontale…"
+          placeholder={L.t('dotazioni.esempio')}
           className="flex-grow p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
         />
-        <button onClick={addGear} aria-label="Aggiungi dotazione" className={bottoneIcona('pieno')}>+</button>
+        <button onClick={addGear} aria-label={L.t('dotazioni.aggiungi')} className={bottoneIcona('pieno')}>+</button>
       </div>
       {gear.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">Nessuna aggiunta. Inserisci qui le dotazioni extra per questo campo.</p>
+        <p className="text-sm text-gray-400 italic">{L.t('dotazioni.vuoto')}</p>
       ) : (
         <ul className="space-y-2">
           {gear.map((g) => (
             <li key={g.id} className="flex items-center gap-3 bg-[#F0F4F1]/60 p-2.5 rounded border border-[#8F9E8B]/20">
               <span className="w-1.5 h-1.5 bg-[#8F9E8B] rounded-full shrink-0"></span>
               <span className="flex-grow text-sm text-[#2D392C]">{g.text}</span>
-              <button onClick={() => removeGear(g.id)} aria-label="Rimuovi" className={bottoneIcona('distruttivo')}>&times;</button>
+              <button onClick={() => removeGear(g.id)} aria-label={L.t('dotazioni.rimuovi')} className={bottoneIcona('distruttivo')}>&times;</button>
             </li>
           ))}
         </ul>

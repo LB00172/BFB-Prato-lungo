@@ -40,8 +40,7 @@ const schedaCalendario = ({
       >
         <span className="text-base leading-none mt-0.5">⚠️</span>
         <span className="text-[11px] text-[#5C4A3C] leading-snug">
-          <span className="font-bold">Questo telefono non è ancora pronto per il campo.</span>{' '}
-          Al campo non c'è linea: tocca qui per vedere cosa manca, finché sei collegato.
+          {frase('giorno.nonPronto')}
         </span>
       </button>
     )}
@@ -58,9 +57,7 @@ const schedaCalendario = ({
         >
           <span className="text-base leading-none mt-0.5">🍽️</span>
           <span className="text-[11px] text-[#5C4A3C] leading-snug">
-            <span className="font-bold">{totale} presenze non contano nei conti.</span>{' '}
-            Sono di {orfane.length === 1 ? 'una persona' : `${orfane.length} persone`} eliminate e riaggiunte fra i Membri:
-            tocca qui per riattaccarle a chi di dovere.
+            {frase('giorno.orfaneAvviso', totale, orfane.length)}
           </span>
         </button>
       );
@@ -76,9 +73,9 @@ const schedaCalendario = ({
         onClick={() => setSepOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0">Conto separato</span>
+        <span className="text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0">{L.t('giorno.contoSeparato')}</span>
         <span className="ml-auto text-[9px] text-gray-500 truncate">
-          {sepDays.length === 0 ? 'nessun giorno' : `${sepDays.length} ${sepDays.length === 1 ? 'giorno' : 'giorni'} in totale`}
+          {sepDays.length === 0 ? L.t('giorno.nessunGiorno') : L.t('giorno.giorniInTotale', sepDays.length)}
         </span>
         <span className={`text-[10px] text-[#5C4A3C] shrink-0 transition-transform ${sepOpen ? 'rotate-180' : ''}`}>▾</span>
       </button>
@@ -90,7 +87,7 @@ const schedaCalendario = ({
           return (
             <label
               key={dateStr}
-              title={`${L.data(d, 'completa')}: conto separato`}
+              title={L.t('giorno.separatoTitolo', L.data(d, 'completa'))}
               className={`flex flex-col items-center gap-0.5 py-1.5 rounded cursor-pointer border ${
                 on ? 'bg-[#5C4A3C]/15 border-[#5C4A3C]/50' : 'bg-[#F0F4F1]/50 border-transparent hover:bg-[#E2EAE4]'
               }`}
@@ -107,9 +104,7 @@ const schedaCalendario = ({
         })}
       </div>
       <p className="text-[9px] text-gray-400 italic mt-2 leading-snug">
-        Spunta i giorni che fanno cassa a parte: cibo e bevande registrati sul
-        <span className="font-bold"> conto separato</span> si dividono solo fra chi era presente ai pasti di quei giorni.
-        Gli altri giorni restano nel conto comune. Logistica e attrezzatura restano sempre in comune.
+        {frase('giorno.separatoNota')}
       </p>
       </div>)}
     </div>
@@ -128,7 +123,7 @@ const schedaCalendario = ({
           <div className="bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20 space-y-1">
             <div className="flex items-center gap-2">
               {!locOk ? (
-                <span className="text-[10px] text-gray-400 italic">Meteo: località del campo da impostare.</span>
+                <span className="text-[10px] text-gray-400 italic">{L.t('meteo.senzaLuogo')}</span>
               ) : wx ? (() => {
                 // La faccia della giornata e', quando si sa, la
                 // condizione prevalente delle ore diurne; il brutto si
@@ -154,7 +149,7 @@ const schedaCalendario = ({
                 );
               })() : (
                 <span className="text-[10px] text-gray-400 italic">
-                  Previsione non ancora disponibile per questo giorno{isOnline ? ' (copre 16 giorni in avanti)' : ' (offline)'}.
+                  {L.t('meteo.nonDisponibile', isOnline)}
                 </span>
               )}
             </div>
@@ -167,8 +162,8 @@ const schedaCalendario = ({
                   return (
                     <span className={`text-[9px] ${vecchia ? 'text-[#D97706] font-bold' : 'text-gray-400'}`}>
                       {weather.fetchedAt
-                        ? `${vecchia ? '⚠ Previsioni vecchie, del' : 'Previsioni del'} ${L.data(new Date(weather.fetchedAt), 'breve')} alle ${L.data(new Date(weather.fetchedAt), 'ora')}${vecchia ? ': altrove ne trovi di più fresche.' : ' · uguali per tutto il campo'}`
-                        : 'Previsioni non ancora scaricate.'}
+                        ? L.t('meteo.previsioniDel', vecchia, L.data(new Date(weather.fetchedAt), 'breve'), L.data(new Date(weather.fetchedAt), 'ora'))
+                        : L.t('meteo.nonScaricate')}
                     </span>
                   );
                 })()}
@@ -177,7 +172,7 @@ const schedaCalendario = ({
                   disabled={!isOnline || wxBusy}
                   className={bottone('secondario', 'minuscolo', 'shrink-0')}
                 >
-                  {wxBusy ? '…' : 'Aggiorna'}
+                  {wxBusy ? '…' : L.t('gioco.aggiorna')}
                 </button>
               </div>
             )}
@@ -187,8 +182,7 @@ const schedaCalendario = ({
             {admin && locOk && (
               <div className="text-[9px] text-gray-400 font-mono pt-0.5">
                 📍 {loc.lat}, {loc.lon}
-                {typeof loc.alt === 'number' ? ` · quota dichiarata ${loc.alt} m` : ' · quota non dichiarata'}
-                {typeof weather.quota === 'number' ? ` · modello a ${Math.round(weather.quota)} m` : ''}
+                {L.t('meteo.quote', loc.alt, weather.quota)}
               </div>
             )}
           </div>
@@ -202,11 +196,11 @@ const schedaCalendario = ({
         return (
           <div className="flex items-center gap-2 bg-[#2D392C]/5 px-3 py-2 rounded border border-[#2D392C]/15">
             <span className="text-xl leading-none">🍲</span>
-            <span className="text-[11px] uppercase font-bold text-gray-500">Cucina</span>
+            <span className="text-[11px] uppercase font-bold text-gray-500">{L.t('giorno.cucina')}</span>
             <span className="ml-auto text-sm font-bold text-[#2D392C]">
-              {lunch} <span className="text-[10px] font-normal text-gray-500">a pranzo</span>
+              {lunch} <span className="text-[10px] font-normal text-gray-500">{L.t('giorno.aPranzo')}</span>
               <span className="text-gray-300"> · </span>
-              {dinner} <span className="text-[10px] font-normal text-gray-500">a cena</span>
+              {dinner} <span className="text-[10px] font-normal text-gray-500">{L.t('giorno.aCena')}</span>
             </span>
           </div>
         );
@@ -216,20 +210,20 @@ const schedaCalendario = ({
           Si sincronizzano come tutto il resto. */}
       <div>
         <label className="flex items-center justify-between mb-1">
-          <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wide">Note del giorno</span>
+          <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wide">{L.t('giorno.note')}</span>
           {(getDayData(selectedDateStr).appunti || '').trim() && (
-            <span className="text-[9px] text-[#2D392C]">✔ scritte</span>
+            <span className="text-[9px] text-[#2D392C]">{L.t('giorno.scritte')}</span>
           )}
         </label>
         <textarea
           value={getDayData(selectedDateStr).appunti || ''}
           onChange={(e) => updateDayData(selectedDateStr, 'appunti', e.target.value)}
           rows={3}
-          placeholder="Promemoria del giorno…"
+          placeholder={L.t('giorno.promemoria')}
           className="w-full p-3 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm leading-snug focus:outline-none focus:border-[#2D392C] resize-y"
         />
         <p className="text-[9px] text-gray-400 italic mt-1">
-          Promemoria del giorno, visibili a tutti. Il <span className="font-bold">menù</span> ha la sua scheda: qui ci vanno le altre cose.
+          {frase('giorno.noteNota')}
         </p>
       </div>
 
@@ -238,8 +232,7 @@ const schedaCalendario = ({
         onClick={() => goTo('menu')}
         className={bottone('secondario', 'piccolo', 'w-full')}
       >
-        🍝 Menù del giorno
-        {(getDayData(selectedDateStr).note || '').trim() ? ' · già scritto' : ' · da scrivere'}
+        {L.t('giorno.vaiAlMenu', !!(getDayData(selectedDateStr).note || '').trim())}
       </button>
     </div>
   </div>
@@ -267,7 +260,7 @@ const schedaMenu = ({
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-2">
       <div className="flex items-baseline justify-between border-b border-dashed border-[#8F9E8B] pb-1">
         <h3 className="font-rustic text-lg text-[#2D392C]">
-          Menù di {L.data(parseDate(selectedDateStr), 'completa')}
+          {L.t('menu.diGiorno', L.data(parseDate(selectedDateStr), 'completa'))}
         </h3>
       </div>
 
@@ -278,11 +271,11 @@ const schedaMenu = ({
         return (
           <div className="flex items-center gap-2 bg-[#2D392C]/5 px-3 py-2 rounded border border-[#2D392C]/15">
             <span className="text-xl leading-none">🍲</span>
-            <span className="text-[11px] uppercase font-bold text-gray-500">Da preparare</span>
+            <span className="text-[11px] uppercase font-bold text-gray-500">{L.t('menu.daPreparare')}</span>
             <span className="ml-auto text-sm font-bold text-[#2D392C]">
-              {lunch} <span className="text-[10px] font-normal text-gray-500">a pranzo</span>
+              {lunch} <span className="text-[10px] font-normal text-gray-500">{L.t('giorno.aPranzo')}</span>
               <span className="text-gray-300"> · </span>
-              {dinner} <span className="text-[10px] font-normal text-gray-500">a cena</span>
+              {dinner} <span className="text-[10px] font-normal text-gray-500">{L.t('giorno.aCena')}</span>
             </span>
           </div>
         );
@@ -291,10 +284,10 @@ const schedaMenu = ({
       <textarea
         value={getDayData(selectedDateStr).note}
         onChange={(e) => updateDayData(selectedDateStr, 'note', e.target.value)}
-        placeholder="Cosa si mangia…"
+        placeholder={L.t('menu.cosaSiMangia')}
         className="lined-paper w-full p-3 rounded-lg border border-[#8F9E8B]/30 focus:outline-none focus:border-[#2D392C] resize-y"
       />
-      <p className="text-[9px] text-gray-400 italic">Una pietanza per riga. Si sincronizza con gli altri: chi cucina lo trova già scritto.</p>
+      <p className="text-[9px] text-gray-400 italic">{L.t('menu.unaPerRiga')}</p>
 
       {/* Il ponte verso la spesa. Sta qui e non nella Lista perché è qui che si
           scrivono le quantità: al campo 2026 il menù aveva tutta la spesa e la
@@ -303,12 +296,10 @@ const schedaMenu = ({
         onClick={proponiDalMenu}
         className={bottone('secondario', 'piccolo', 'w-full mt-1')}
       >
-        🧾 Porta nella lista della spesa
+        {L.t('menu.portaInLista')}
       </button>
       <p className="text-[9px] text-gray-400 italic">
-        Legge le righe qui sopra e le propone in <span className="font-bold">Lista della Spesa → Da acquistare</span>.
-        Prima di aggiungerle te le fa vedere: niente entra senza la tua spunta.
-        {toBuy.length > 0 && ` Adesso in lista ce ne sono ${toBuy.length}.`}
+        {frase('menu.ponteNota', toBuy.length)}
       </p>
     </div>
 
@@ -317,12 +308,9 @@ const schedaMenu = ({
       <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-3 z-50" onClick={() => setPropostaSpesa(null)}>
         <div className="bg-white rounded-lg w-full max-w-md max-h-[85vh] flex flex-col shadow-xl" onClick={(e) => e.stopPropagation()}>
           <div className="p-4 border-b border-[#8F9E8B]/30">
-            <h3 className="font-rustic text-lg text-[#2D392C]">Dal menù alla spesa</h3>
+            <h3 className="font-rustic text-lg text-[#2D392C]">{L.t('menu.dallaSpesa')}</h3>
             <p className="text-[10px] text-gray-500 leading-snug mt-1">
-              {propostaSpesa.voci.length} {propostaSpesa.voci.length === 1 ? 'voce trovata' : 'voci trovate'} nel menù di
-              {' '}{L.data(parseDate(selectedDateStr), 'lunga')}.
-              Togli la spunta a quello che non serve comprare.
-              {propostaSpesa.scartate > 0 && ` (${propostaSpesa.scartate} ${propostaSpesa.scartate === 1 ? 'era già' : 'erano già'} in lista.)`}
+              {L.t('menu.trovate', propostaSpesa.voci.length, L.data(parseDate(selectedDateStr), 'lunga'), propostaSpesa.scartate)}
             </p>
           </div>
           <ul className="overflow-y-auto divide-y divide-[#8F9E8B]/15 px-4">
@@ -342,9 +330,9 @@ const schedaMenu = ({
             ))}
           </ul>
           <div className="p-4 border-t border-[#8F9E8B]/30 flex gap-2">
-            <button onClick={() => setPropostaSpesa(null)} className={bottone('testuale', 'normale', 'flex-1')}>Annulla</button>
+            <button onClick={() => setPropostaSpesa(null)} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
             <button onClick={confermaPropostaSpesa} className={bottone('primario', 'normale', 'flex-1')}>
-              Aggiungi ({propostaSpesa.voci.filter((_, i) => propostaSpesa.scelte[i]).length})
+              {L.t('menu.aggiungiN', propostaSpesa.voci.filter((_, i) => propostaSpesa.scelte[i]).length)}
             </button>
           </div>
         </div>
@@ -353,7 +341,7 @@ const schedaMenu = ({
 
     {/* Colpo d'occhio sui giorni del campo con il menù già scritto */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">Giorni del campo</h3>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">{L.t('menu.giorniDelCampo')}</h3>
       <ul className="space-y-1.5">
         {(() => {
           const giorni = [];
@@ -375,7 +363,7 @@ const schedaMenu = ({
                     {L.data(parseDate(ds), 'settimanaGiorno')}
                   </span>
                   <span className={`text-[10px] truncate ${testo ? 'text-gray-600' : 'text-gray-400 italic'}`}>
-                    {testo ? prima : 'da scrivere'}
+                    {testo ? prima : L.t('menu.daScrivere')}
                   </span>
                   {testo && <span className="ml-auto text-[10px] shrink-0">✔</span>}
                 </button>
@@ -436,17 +424,14 @@ const schedaPresenze = ({
       return (
         <div className="bg-[#D97706]/10 border-2 border-[#D97706]/50 rounded-lg p-3 space-y-3">
           <p className="text-[11px] text-[#5C4A3C] leading-snug">
-            <span className="font-bold">Ci sono {totale} presenze senza padrone.</span> Succede quando una
-            persona viene eliminata dai Membri e poi riaggiunta: per l'app è una persona nuova, e i pasti
-            segnati prima restano attaccati alla vecchia — spariti dall'elenco e dai conti.
-            Riattaccali alla persona giusta.
+            {frase('presenze.orfaneTitolo', totale)}
           </p>
           <ul className="space-y-2">
             {orfane.map((o) => (
               <li key={o.id} className="bg-white/70 rounded border border-[#8F9E8B]/30 p-2.5 space-y-2">
                 <p className="text-[11px] text-[#2D392C] leading-snug">
-                  <span className="font-bold">{o.nome || 'Persona non più in elenco'}</span>
-                  {' — '}{o.pasti} {o.pasti === 1 ? 'pasto' : 'pasti'} su {o.giorni.length} {o.giorni.length === 1 ? 'giorno' : 'giorni'}
+                  <span className="font-bold">{o.nome || L.t('presenze.personaSparita')}</span>
+                  {' — '}{L.t('presenze.pastiSuGiorni', o.pasti, o.giorni.length)}
                   <span className="block text-[9px] text-gray-500">
                     {o.giorni.slice(0, 6).map((d) => L.data(parseDate(d), 'breve')).join(' · ')}
                     {o.giorni.length > 6 ? ' …' : ''}
@@ -458,7 +443,7 @@ const schedaPresenze = ({
                     onChange={(e) => setOrfanoScelte((prev) => ({ ...prev, [o.id]: e.target.value }))}
                     className="flex-grow min-w-0 p-2 bg-white border border-[#8F9E8B]/40 rounded text-xs focus:outline-none focus:border-[#2D392C]"
                   >
-                    <option value="">— a chi sono? —</option>
+                    <option value="">{L.t('presenze.aChiSono')}</option>
                     {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                   </select>
                   <button
@@ -466,21 +451,21 @@ const schedaPresenze = ({
                     disabled={!orfanoScelte[o.id]}
                     className={bottone('primario', 'minuscolo', 'shrink-0')}
                   >
-                    Riassegna
+                    {L.t('presenze.riassegna')}
                   </button>
                   <button
                     onClick={() => scartaOrfane(o)}
-                    aria-label="Butta via queste presenze"
+                    aria-label={L.t('presenze.buttaVia')}
                     className={bottone('distruttivo', 'minuscolo', 'shrink-0')}
                   >
-                    Butta
+                    {L.t('presenze.butta')}
                   </button>
                 </div>
               </li>
             ))}
           </ul>
           {members.length === 0 && (
-            <p className="text-[9px] text-[#5C4A3C] italic">Aggiungi prima le persone nella scheda Membri.</p>
+            <p className="text-[9px] text-[#5C4A3C] italic">{L.t('galleria.primaMembri')}</p>
           )}
         </div>
       );
@@ -489,10 +474,10 @@ const schedaPresenze = ({
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] flex items-center gap-2">
         <span className="min-w-0 truncate">
-          Presenze del {L.data(parseDate(selectedDateStr), 'lunga')}
+          {L.t('presenze.delGiorno', L.data(parseDate(selectedDateStr), 'lunga'))}
         </span>
         {giornoBloccato(selectedDateStr) && (
-          <span className="ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white">🔒 Bloccate</span>
+          <span className="ml-auto shrink-0 text-[9px] uppercase font-bold px-2 py-1 rounded bg-[#5C4A3C] text-white">{L.t('presenze.bloccate')}</span>
         )}
       </h3>
 
@@ -502,9 +487,7 @@ const schedaPresenze = ({
       {giornoGratis(selectedDateStr) && (
         <div className="bg-[#2D392C]/10 border border-[#2D392C]/35 rounded p-2.5">
           <p className="text-[10px] text-[#2D392C] leading-snug">
-            <span className="font-bold">🎁 Giorno gratis.</span> Le presenze restano segnate per la cucina,
-            ma non entrano in nessun conto: nessuno paga i pasti di oggi, e chi è venuto solo oggi
-            non deve niente.
+            {frase('presenze.gratis')}
           </p>
         </div>
       )}
@@ -515,7 +498,7 @@ const schedaPresenze = ({
           className={bottoneScelta('interruttore', 'bordato', giornoGratis(selectedDateStr), 'minuscolo',
             'w-full' + (giornoBloccato(selectedDateStr) ? ' opacity-50 cursor-not-allowed' : ''))}
         >
-          {giornoGratis(selectedDateStr) ? '🎁 Giorno gratis — rimettilo nei conti' : '🎁 Rendi questo giorno gratis'}
+          {L.t(giornoGratis(selectedDateStr) ? 'presenze.gratisTogli' : 'presenze.gratisMetti')}
         </button>
       )}
 
@@ -525,16 +508,13 @@ const schedaPresenze = ({
       {giornoBloccato(selectedDateStr) && (
         <div className="bg-[#5C4A3C]/10 border border-[#5C4A3C]/40 rounded p-2.5">
           <p className="text-[10px] text-[#5C4A3C] leading-snug">
-            <span className="font-bold">Presenze chiuse.</span> Sono state bloccate il{' '}
-            {L.data(new Date(giornoBloccato(selectedDateStr).at), 'dataOra')} e non cambiano più:
-            né dai tasti, né da quello che arriva dagli altri telefoni. Se un telefono prova a
-            modificarle, l'app le rimette com'erano.
+            {frase('presenze.chiuse', L.data(new Date(giornoBloccato(selectedDateStr).at), 'dataOra'))}
           </p>
         </div>
       )}
 
       {members.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">Aggiungi prima i membri nella scheda "Membri".</p>
+        <p className="text-sm text-gray-400 italic">{L.t('presenze.primaIMembri')}</p>
       ) : (
         <>
         {/* Azioni rapide: cambiano le presenze di TUTTI in un colpo, e
@@ -546,22 +526,21 @@ const schedaPresenze = ({
             onClick={() => setAzioniOpen((v) => !v)}
             className={bottoneRiga()}
           >
-            <span className="text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0">Segna in blocco</span>
+            <span className="text-[10px] uppercase font-bold text-[#5C4A3C] shrink-0">{L.t('presenze.segnaInBlocco')}</span>
             <span className="ml-auto text-[9px] text-gray-500 truncate">
-              {members.filter((m) => getMeal(selectedDateStr, m.id).lunch).length} a pranzo · {members.filter((m) => getMeal(selectedDateStr, m.id).dinner).length} a cena
+              {L.t('presenze.pranzoCena', members.filter((m) => getMeal(selectedDateStr, m.id).lunch).length, members.filter((m) => getMeal(selectedDateStr, m.id).dinner).length)}
             </span>
             <span className={`text-[10px] text-[#5C4A3C] shrink-0 transition-transform ${azioniOpen ? 'rotate-180' : ''}`}>▾</span>
           </button>
           {azioniOpen && (
             <div className="px-3 pb-3 space-y-2">
               <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => chiediSetAll('lunch')} className={bottone('primario', 'piccolo')}>Tutti a pranzo</button>
-                <button onClick={() => chiediSetAll('dinner')} className={bottone('bruno', 'piccolo')}>Tutti a cena</button>
-                <button onClick={chiediCopiaDaIeri} className={bottone('secondario', 'piccolo')}>Copia da ieri</button>
+                <button onClick={() => chiediSetAll('lunch')} className={bottone('primario', 'piccolo')}>{L.t('presenze.tuttiPranzo')}</button>
+                <button onClick={() => chiediSetAll('dinner')} className={bottone('bruno', 'piccolo')}>{L.t('presenze.tuttiCena')}</button>
+                <button onClick={chiediCopiaDaIeri} className={bottone('secondario', 'piccolo')}>{L.t('presenze.copiaIeri')}</button>
               </div>
               <p className="text-[9px] text-gray-400 leading-snug">
-                Segna tutti, poi togli i pochi assenti. Se sono già tutti segnati, il bottone li toglie tutti.
-                Ognuno di questi tasti chiede conferma: cambia le presenze di tutti, su tutti i telefoni.
+                {L.t('presenze.bloccoNota')}
               </p>
             </div>
           )}
@@ -574,7 +553,7 @@ const schedaPresenze = ({
               <li key={m.id} className="flex items-center justify-between gap-2 bg-[#F0F4F1]/60 p-2 rounded border border-[#8F9E8B]/20">
                 <span className="text-sm font-bold text-[#2D392C] truncate flex items-center gap-1">
                   {m.name}
-                  {m.isChild && <span className="text-[8px] uppercase bg-[#D97706] text-white px-1 rounded">gratis</span>}
+                  {m.isChild && <span className="text-[8px] uppercase bg-[#D97706] text-white px-1 rounded">{L.t('presenze.gratisEtichetta')}</span>}
                 </span>
                 <div className="flex gap-1.5 shrink-0">
                   <button
@@ -582,14 +561,14 @@ const schedaPresenze = ({
                     disabled={chiuso}
                     className={bottoneScelta('spunta', 'pranzo', meal.lunch, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')}
                   >
-                    Pranzo
+                    {L.t('presenze.pranzo')}
                   </button>
                   <button
                     onClick={() => toggleMeal(selectedDateStr, m.id, 'dinner')}
                     disabled={chiuso}
                     className={bottoneScelta('spunta', 'cena', meal.dinner, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')}
                   >
-                    Cena
+                    {L.t('presenze.cena')}
                   </button>
                 </div>
               </li>
@@ -608,25 +587,25 @@ const schedaPresenze = ({
             onClick={() => sbloccaGiorno(selectedDateStr)}
             className={bottone('secondario', 'piccolo', 'w-full')}
           >
-            🔓 Sblocca le presenze di questo giorno
+            {L.t('presenze.sblocca')}
           </button>
         ) : (
           <button
             onClick={() => bloccaGiorno(selectedDateStr)}
             className={bottone('bruno', 'piccolo', 'w-full')}
           >
-            🔒 Blocca le presenze di questo giorno
+            {L.t('presenze.blocca')}
           </button>
         )
       )}
     </div>
 
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-2">
-      <h4 className="font-rustic text-sm text-[#5C4A3C]">Note / Ospiti del giorno</h4>
+      <h4 className="font-rustic text-sm text-[#5C4A3C]">{L.t('presenze.noteOspiti')}</h4>
       <textarea
         value={getDayData(selectedDateStr).guestsNames}
         onChange={(e) => updateDayData(selectedDateStr, 'guestsNames', e.target.value)}
-        placeholder="Ospiti occasionali o note sulle presenze..."
+        placeholder={L.t('presenze.ospitiSegno')}
         className="w-full h-20 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C] resize-none"
       />
     </div>

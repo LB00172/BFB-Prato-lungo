@@ -11,8 +11,12 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    l'eccezione decisa ad agosto 2026 (`ROADMAP.md` §18): si scrivono in
    italiano per primi, ma passano da `lingue.js` perché l'app parlerà anche
    spagnolo e francese. Si usano `L.t('chiave')` per il testo,
-   `frase('chiave')` quando c'è del grassetto dentro, `L.data(d, 'forma')`
+   `frase('chiave')` quando c'è del grassetto dentro — `fraseVestita(classe,
+   'chiave')` se quel grassetto ha anche un colore — e `L.data(d, 'forma')`
    per le date. **Mai `'it-IT'` a mano** — ce n'erano 32 sparsi, adesso zero.
+   Quanto manca e dove, lo dice `node test/censimento-testi.js`: sedici
+   sorgenti su diciannove sono passati, restano `80-app.jsx` e
+   `82-schede-conti.jsx`.
 2. **`App.js` è generato. Non si tocca mai a mano.** Si modificano i sorgenti
    in `src/` e poi si lancia `node build.js`, che li incolla nell'ordine
    dichiarato, ricompila `App.js` e ricalcola `CACHE_NAME` in `sw.js` dall'hash
@@ -68,6 +72,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
+| `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
 | `test/` | 12 prove unitarie + 57 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
@@ -130,6 +135,16 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 - **`new Date(null)` non è una data non valida: è il 1° gennaio 1970.** Una
   data assente formattata senza controllo compare a schermo come «giovedì 1
   gennaio», che è una bugia con l'aria di un dato.
+- **Una costante valutata al caricamento congela la lingua.** I sorgenti si
+  incollano e girano *prima* che `App()` assegni `L`: una tabella come
+  `const SEZIONE_DI = { m: 'Membri', … }` si costruisce una volta sola e
+  resterebbe per sempre nella lingua di quel momento. Le tabelle tengono le
+  **chiavi**, il nome si chiede al disegno. `PURCHASE_TYPES` ha ancora il
+  difetto e va sistemato quando si traducono i file della spesa.
+- **Con `FEATURES.lingue` spenta, lo spagnolo non lo chiama nessuno.**
+  Settantatré chiavi sono funzioni: un apostrofo sbagliato dentro un template
+  non si vedrebbe fino al giorno in cui qualcuno accende la lingua. Le prove
+  le chiamano tutte, in tutte le lingue, con lo zero, l'uno e il due.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.

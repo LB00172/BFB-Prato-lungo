@@ -54,17 +54,43 @@ ok(`il dizionario italiano ha ${CHIAVI.length} voci`, CHIAVI.length > 20);
 // ---------- Nessuna traduzione dimenticata in italiano ----------
 // Una chiave copiata e non tradotta e' un difetto che le prove di prima non
 // vedono: la chiave c'e', il tipo e' giusto, ma a schermo compare l'italiano
-// in mezzo allo spagnolo. Si escludono i nomi propri, che non si traducono.
+// in mezzo allo spagnolo.
+//
+// Certe parole pero' sono davvero uguali: "Adulto" e "Cena" sono spagnolo,
+// "Album" e' francese, "Aiuta Bandy" e' un nome proprio. Il permesso si da'
+// UNA LINGUA ALLA VOLTA — 'es:membri.adulto', non 'membri.adulto' — se no
+// perdonare lo spagnolo perdonerebbe anche il francese, dove la stessa
+// parola sarebbe invece una traduzione dimenticata.
 {
-  const NON_SI_TRADUCE = ['area.gioco', 'area.calendario', 'menu.spese'];
+  const UGUALI_SUL_SERIO = [
+    'es:area.gioco', 'fr:area.gioco',              // nome proprio del gioco
+    'es:area.calendario',                          // "Calendario" e' anche spagnolo
+    'es:membri.adulto',                            // "Adulto" e' anche spagnolo
+    'es:presenze.cena',                            // "Cena" e' anche spagnolo
+    'es:presenze.gratisEtichetta',                 // "gratis" e' anche spagnolo
+    'fr:archivio.album', 'fr:galleria.vistaAlbum', // "Album" e' anche francese
+    'es:sezione.calendario',                       // "Calendario" e' anche spagnolo
+    'es:gioco.pausa',                              // "Pausa" e' anche spagnolo
+    'es:info.titolo',                              // "Info" e' anche spagnolo
+    'es:registro.sync', 'fr:registro.sync',        // "sync" e' una sigla, non una parola
+  ];
   const copiate = [];
   CODICI.filter((c) => c !== 'it').forEach((c) => {
     const d = L.DIZIONARI[c];
     Object.keys(d).forEach((k) => {
-      if (NON_SI_TRADUCE.includes(k)) return;
+      if (UGUALI_SUL_SERIO.includes(c + ':' + k)) return;
       if (typeof d[k] === 'string' && d[k] === IT[k]) copiate.push(c + ':' + k + ' ("' + d[k] + '")');
     });
   });
+  // Un permesso che non serve piu' e' una guardia abbassata in silenzio: se
+  // domani qualcuno traduce 'es:membri.adulto', il permesso resta li' e
+  // coprirebbe una dimenticanza futura sulla stessa chiave.
+  const scaduti = UGUALI_SUL_SERIO.filter((v) => {
+    const [c, k] = v.split(':');
+    return !(L.DIZIONARI[c] && typeof L.DIZIONARI[c][k] === 'string' && L.DIZIONARI[c][k] === IT[k]);
+  });
+  ok(`nessun permesso scaduto fra le voci uguali (${scaduti.length})${scaduti.length ? ' — ' + scaduti.join(', ') : ''}`,
+    scaduti.length === 0);
   ok(`nessuna voce è rimasta in italiano (${copiate.length})${copiate.length ? ' — ' + copiate.join(', ') : ''}`,
     copiate.length === 0);
 }
@@ -166,6 +192,39 @@ const UN_GIORNO = new Date(2026, 7, 11, 14, 5);  // martedì 11 agosto 2026, 14:
   const p = L.pezzi('uno *due tre');
   ok(`un asterisco spaiato non perde testo (${p.map((x) => x.testo).join('')})`,
     p.map((x) => x.testo).join('') === 'uno due tre');
+}
+
+// ---------- Ogni chiave-funzione sa girare davvero ----------
+// Le prove di sopra guardano le chiavi e i tipi. Non chiamano niente — e con
+// FEATURES.lingue spenta NESSUNO chiama mai lo spagnolo o il francese: un
+// apostrofo sbagliato dentro un template, o un argomento in piu' di quelli
+// che la funzione si aspetta, resterebbe li' finche' qualcuno non accende la
+// lingua al campo. Qui si chiamano tutte, in tutte le lingue, con lo zero,
+// l'uno e il due — che sono i tre numeri su cui i plurali si dividono.
+{
+  const rotte = [];
+  const vuote = [];
+  CODICI.forEach((c) => {
+    const d = L.DIZIONARI[c];
+    Object.keys(d).forEach((k) => {
+      if (typeof d[k] !== 'function') return;
+      [0, 1, 2].forEach((n) => {
+        // Gli argomenti: il numero dove serve un numero, una parola dove
+        // serve una parola. La funzione non sa quale sia quale, quindi si
+        // passa un valore che regge tutti e due i modi.
+        const args = [];
+        for (let i = 0; i < Math.max(d[k].length, 1); i++) args.push(i === 0 ? n : 'x');
+        let out;
+        try { out = d[k].apply(null, args); }
+        catch (e) { rotte.push(c + ':' + k + ' (' + n + ') — ' + e.message); return; }
+        if (typeof out !== 'string' || out.trim() === '') vuote.push(c + ':' + k + ' (' + n + ')');
+      });
+    });
+  });
+  ok(`nessuna chiave-funzione va in errore (${rotte.length})${rotte.length ? ' — ' + rotte.slice(0, 5).join('; ') : ''}`,
+    rotte.length === 0);
+  ok(`nessuna chiave-funzione restituisce il vuoto (${vuote.length})${vuote.length ? ' — ' + vuote.slice(0, 5).join('; ') : ''}`,
+    vuote.length === 0);
 }
 
 fine();

@@ -1465,7 +1465,7 @@ assegnando, non solo **a chi**.
 
 ---
 
-## 18. Più lingue — la macchina c'è (20 settembre 2026)
+## 18. Più lingue — la macchina c'è, e i due terzi dell'app ci sono passati (21 settembre 2026)
 
 **Decisione presa, e cambia un intento iniziale.** L'app era stata scritta in
 italiano e basta, per una ragione buona: la usavano venti amici italiani. Il
@@ -1555,16 +1555,57 @@ di sempre: la regola fuori, il JSX dentro.
 
 ### Cosa è tradotto, e cosa no
 
-**Tradotto:** i titoli delle quindici aree, i quattro gruppi del menu, tutta
-la scheda «Chi fa cosa», il selettore della lingua. **35 chiavi**, in italiano,
-spagnolo e francese.
+**Tradotto: sedici sorgenti su diciannove.** Calendario, Menù, Presenze,
+Membri, Regole, Dotazioni, Galleria, Archivio, Aiuta Bandy, Come funziona,
+Chi fa cosa, Impostazioni, la schermata di blocco, le condizioni del meteo e
+le descrizioni della diagnostica. **357 chiavi**, di cui **73 funzioni**
+(plurali e frasi con dei numeri dentro), in italiano, spagnolo e francese.
 
-**Non tradotto:** tutto il resto — restano **circa 1.050 testi** contati nei
-sorgenti. Per questo `FEATURES.lingue` è **spenta**: mezza schermata in
-spagnolo e mezza in italiano è peggio che non offrire la scelta. Accesa, la
-prova end-to-end verifica che toccando «Español» lo schermo cambi **senza
-riaprire l'app**, che le date seguano la lingua, che la scelta resista al
-riavvio, e che quello che scrive l'utente **non** venga tradotto.
+**Non tradotto: i due file che toccano i soldi** — `80-app.jsx` (385 testi) e
+`82-schede-conti.jsx` (158). Sono l'ultimo terzo, ed è il terzo dove un errore
+si vede nei conti e non solo a schermo: Spese Totali, Lista della Spesa,
+Attrezzatura, Saldi, e tutti gli `alert` e `confirm` dei gestori.
+
+Restano fuori per scelta, non per dimenticanza: le **regole del campo** e la
+**dotazione base** (testo verbatim di Lorenzo, contenuto della room e non
+dell'app), il **marchio**, e i **nomi dei livelli** del gioco — Prato Lungo,
+Palmiro Togliatti, Rio de Janeiro sono luoghi, e la battuta è la geografia.
+
+`FEATURES.lingue` resta **spenta** finché non finisce anche quel terzo: mezza
+schermata in spagnolo e mezza in italiano è peggio che non offrire la scelta.
+
+### Il metro: `test/censimento-testi.js`
+
+«Circa mille stringhe» non si affronta senza sapere da che file cominciare.
+Il censimento conta i testi che l'utente legge e che non passano dal
+dizionario, e dice **dove** stanno:
+
+    node test/censimento-testi.js                  quante ne restano, per file
+    node test/censimento-testi.js 82-schede        l'elenco di un file
+
+È un'euristica, non un parser: riconosce la prosa da una maiuscola in testa,
+da un accento o da una parola italiana, e scarta le classi Tailwind e le
+schegge di codice. Un paio di falsi positivi per file restano, ed è voluto —
+meglio guardarne uno di troppo che perderne uno.
+
+### Tre trappole nuove
+
+- **Una costante valutata al caricamento congela la lingua.** `SEZIONE_DI`
+  era una tabella di nomi (`{ m: 'Membri', … }`) costruita una volta sola,
+  prima che `App()` assegni `L`: tradurla lì l'avrebbe inchiodata alla lingua
+  di quel momento. Adesso la tabella tiene le **chiavi** e il nome si chiede
+  al disegno. `PURCHASE_TYPES` ha lo stesso difetto e aspetta il suo turno.
+- **`frase()` perdeva il colore del grassetto.** Dentro un paragrafo grigio,
+  il pezzo in evidenza a volte è anche verde: `frase()` lo vestiva sempre di
+  `font-bold` e basta. Se ne è accorto solo il confronto del DOM, che ha
+  segnalato `text-[#2D392C]` sparito da tre punti della Diagnostica. Adesso
+  c'è `fraseVestita(classe, chiave, …)`; il vestito sta nell'interfaccia, non
+  nel dizionario — il traduttore dice **dove** va l'enfasi, non di che colore.
+- **Con la lingua spenta, nessuno chiama mai lo spagnolo.** Settantatré
+  chiavi sono funzioni: un apostrofo sbagliato dentro un template o un
+  argomento di troppo sarebbe rimasto lì fino al giorno in cui qualcuno
+  accende la lingua. Adesso la prova le chiama **tutte**, in tutte le lingue,
+  con lo zero, l'uno e il due — i tre numeri su cui i plurali si dividono.
 
 ### La prova che protegge il resto del lavoro
 
@@ -1594,8 +1635,9 @@ con l'aria di un dato. Adesso resta vuota.
 
 | | |
 | --- | --- |
-| chiavi nel dizionario | 35 |
-| testi ancora da portare nel dizionario | ~1.050 |
+| chiavi nel dizionario | 357 (73 funzioni) |
+| sorgenti passati dal dizionario | 16 su 19 |
+| testi ancora da portare nel dizionario | 543, tutti in `80-app.jsx` e `82-schede-conti.jsx` |
 | date centralizzate | 32 su 32 |
 
 Il lavoro che resta è **meccanico e a fette**: una scheda alla volta, con la

@@ -22,13 +22,13 @@ function LockScreen({ onUnlock, reason }) {
 
   const submit = async () => {
     if (busy || waitLeft > 0) return;
-    if (!pwd) { setError('Scrivi la password.'); return; }
+    if (!pwd) { setError(L.t('blocco.scrivi')); return; }
     setBusy(true);
     setError('');
     try {
       const digest = await derivePassword(pwd);
       if (digest === null) {
-        setError('Questo browser non può verificare la password: apri l\'app su https (l\'indirizzo pubblicato) invece di una copia locale.');
+        setError(L.t('blocco.senzaHttps'));
         return;
       }
       if (digest === LOCK.hash) {
@@ -43,13 +43,13 @@ function LockScreen({ onUnlock, reason }) {
       if (fails >= 5) {
         const secs = Math.min(600, 30 * Math.pow(2, fails - 5));
         scriviLocale(UNTIL_KEY, String(Date.now() + secs * 1000));
-        setError(`Password sbagliata. Troppi tentativi: riprova fra ${secs} secondi.`);
+        setError(L.t('blocco.attesa', secs));
       } else {
-        setError(`Password sbagliata. ${5 - fails} ${5 - fails === 1 ? 'tentativo' : 'tentativi'} prima dell'attesa.`);
+        setError(L.t('blocco.restano', 5 - fails));
       }
       setPwd('');
     } catch (e) {
-      setError('Verifica non riuscita. Riprova.');
+      setError(L.t('blocco.nonRiuscita'));
     } finally {
       setBusy(false);
     }
@@ -58,7 +58,7 @@ function LockScreen({ onUnlock, reason }) {
   return (
     <div className="fixed inset-0 bg-[#2D392C] flex flex-col items-center justify-center text-[#F0F4F1] z-50 px-8">
       <div className="w-28 h-28 mb-5 rounded-full overflow-hidden shadow-2xl border-4 border-[#8F9E8B] bg-[#F0F4F1] shrink-0">
-        <img src="./logo.png" alt={`Logo ${BRAND.groupName}`} className="w-full h-full object-cover" />
+        <img src="./logo.png" alt={L.t('blocco.logo', BRAND.groupName)} className="w-full h-full object-cover" />
       </div>
       <h1 className="font-rustic text-2xl tracking-widest text-[#8F9E8B] text-center">{BRAND.splashLine1}</h1>
       <h2 className="font-rustic text-lg tracking-widest text-[#F0F4F1] text-center mb-6">{BRAND.splashLine2}</h2>
@@ -69,7 +69,7 @@ function LockScreen({ onUnlock, reason }) {
             <p className="text-[11px] text-[#F0F4F1] leading-snug">{reason}</p>
           </div>
         )}
-        <label className="block text-[10px] uppercase tracking-widest text-[#8F9E8B] font-bold">Password del campo</label>
+        <label className="block text-[10px] uppercase tracking-widest text-[#8F9E8B] font-bold">{L.t('blocco.password')}</label>
         <div className="flex gap-2">
           <input
             type={show ? 'text' : 'password'}
@@ -84,7 +84,7 @@ function LockScreen({ onUnlock, reason }) {
           />
           <button
             onClick={() => setShow((s) => !s)}
-            aria-label={show ? 'Nascondi la password' : 'Mostra la password'}
+            aria-label={L.t(show ? 'blocco.nascondi' : 'blocco.mostra')}
             className="shrink-0 px-3 rounded bg-[#1F271E] border-2 border-[#8F9E8B]/40 text-lg leading-none hover:border-[#8F9E8B]"
           >
             {show ? '🙈' : '👁️'}
@@ -96,12 +96,12 @@ function LockScreen({ onUnlock, reason }) {
           disabled={busy || waitLeft > 0}
           className="w-full py-3 rounded bg-[#8F9E8B] text-[#1F271E] font-bold uppercase text-sm tracking-widest hover:brightness-110 disabled:opacity-50"
         >
-          {busy ? 'Verifica…' : waitLeft > 0 ? `Attendi ${waitLeft} s` : 'Entra'}
+          {busy ? L.t('blocco.verifica') : waitLeft > 0 ? L.t('blocco.attendi', waitLeft) : L.t('blocco.entra')}
         </button>
 
         {error && <p className="text-[11px] text-[#F0A0A0] leading-snug">{error}</p>}
         <p className="text-[10px] text-[#8F9E8B]/80 leading-snug">
-          {(LOCK && LOCK.hint) || 'Chiedi la password a chi organizza il campo.'}
+          {(LOCK && LOCK.hint) || L.t('blocco.chiedi')}
         </p>
       </div>
 

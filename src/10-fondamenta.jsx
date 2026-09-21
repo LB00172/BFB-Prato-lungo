@@ -189,11 +189,14 @@ const diffFlat = (prima, dopo) => {
 
 // Sezione dell'app a cui appartiene un percorso: serve a raggruppare il
 // registro per area invece di mostrare una lista piatta di sigle.
-const SEZIONE_DI = { m: 'Membri', p: 'Lista della Spesa', t: 'Da acquistare', e: 'Attrezzatura', g: 'Dotazioni', s: 'Saldi', x: 'Conto separato', f: 'Giorni gratis' };
+// La tabella tiene le CHIAVI, non i nomi: e' una costante, e si valuta una
+// volta sola al caricamento — se ci mettessimo i nomi tradotti resterebbero
+// per sempre nella lingua di quel momento. Il nome si chiede al disegno.
+const SEZIONE_DI = { m: 'sezione.membri', p: 'sezione.lista', t: 'sezione.daAcquistare', e: 'sezione.attrezzatura', g: 'sezione.dotazioni', s: 'sezione.saldi', x: 'sezione.contoSeparato', f: 'sezione.giorniGratis' };
 const sezioneDiPath = (p) => {
   const parti = String(p).split('|');
-  if (parti[0] === 'c') return parti[2] === 'meals' ? 'Presenze' : (parti[3] === 'note' ? 'Menù' : 'Calendario');
-  return SEZIONE_DI[parti[0]] || 'Altro';
+  if (parti[0] === 'c') return L.t(parti[2] === 'meals' ? 'sezione.presenze' : (parti[3] === 'note' ? 'sezione.menu' : 'sezione.calendario'));
+  return L.t(SEZIONE_DI[parti[0]] || 'sezione.altro');
 };
 
 // Nomi dei membri eliminati (id -> nome). Le presenze sono legate all'id, non
@@ -221,7 +224,7 @@ const descriviPath = (p, stato) => {
   const parti = String(p).split('|');
   const nomeMembro = (id) => {
     const m = (stato.members || []).find((x) => x.id === id);
-    return m ? m.name : 'una persona non più in elenco';
+    return m ? m.name : L.t('percorso.exMembro');
   };
   const giorno = (d) => {
     try { return L.data(parseDate(d), 'settimana'); }
@@ -233,19 +236,19 @@ const descriviPath = (p, stato) => {
   };
   switch (parti[0]) {
     case 'c':
-      if (parti[2] === 'meals') return `presenza di ${nomeMembro(parti[3])} — ${giorno(parti[1])}`;
-      if (parti[3] === 'note') return `menù del ${giorno(parti[1])}`;
-      if (parti[3] === 'appunti') return `note del ${giorno(parti[1])}`;
-      if (parti[3] === 'guestsNames') return `ospiti del ${giorno(parti[1])}`;
-      return `${parti[3]} del ${giorno(parti[1])}`;
-    case 'm': return voce('members', parti[1], 'membro');
-    case 'p': return voce('purchases', parti[1], 'spesa');
-    case 't': return voce('toBuy', parti[1], 'voce da acquistare');
-    case 'e': return voce('equipment', parti[1], 'attrezzatura');
-    case 'g': return voce('gear', parti[1], 'dotazione');
-    case 's': return 'rimborso segnato come saldato';
-    case 'x': return `giorno del conto separato — ${giorno(parti[1])}`;
-    case 'f': return `giorno gratis — ${giorno(parti[1])}`;
+      if (parti[2] === 'meals') return L.t('percorso.presenzaDi', nomeMembro(parti[3]), giorno(parti[1]));
+      if (parti[3] === 'note') return L.t('percorso.menuDel', giorno(parti[1]));
+      if (parti[3] === 'appunti') return L.t('percorso.noteDel', giorno(parti[1]));
+      if (parti[3] === 'guestsNames') return L.t('percorso.ospitiDel', giorno(parti[1]));
+      return L.t('percorso.campoDel', parti[3], giorno(parti[1]));
+    case 'm': return voce('members', parti[1], L.t('percorso.membro'));
+    case 'p': return voce('purchases', parti[1], L.t('percorso.spesa'));
+    case 't': return voce('toBuy', parti[1], L.t('percorso.daAcquistare'));
+    case 'e': return voce('equipment', parti[1], L.t('percorso.attrezzatura'));
+    case 'g': return voce('gear', parti[1], L.t('percorso.dotazione'));
+    case 's': return L.t('percorso.rimborsoSaldato');
+    case 'x': return L.t('percorso.giornoSeparato', giorno(parti[1]));
+    case 'f': return L.t('percorso.giornoGratis', giorno(parti[1]));
     default: return p;
   }
 };
@@ -253,7 +256,7 @@ const descriviPath = (p, stato) => {
 const descriviPerdite = (paths, stato) => {
   const nome = (id) => {
     const m = (stato.members || []).find((x) => x.id === id);
-    return m ? m.name : 'qualcuno';
+    return m ? m.name : L.t('percorso.qualcuno');
   };
   const conta = { presenze: 0, membri: 0, spese: 0, lista: 0, attrezzatura: 0, dotazioni: 0, altro: 0 };
   const giorni = new Set();
@@ -271,14 +274,14 @@ const descriviPerdite = (paths, stato) => {
   });
   const pezzi = [];
   if (conta.presenze) {
-    pezzi.push(`${conta.presenze} presenze (${giorni.size} ${giorni.size === 1 ? 'giorno' : 'giorni'}, ${[...chi].slice(0, 4).join(', ')}${chi.size > 4 ? '…' : ''})`);
+    pezzi.push(L.t('perdite.presenze', conta.presenze, giorni.size, `${[...chi].slice(0, 4).join(', ')}${chi.size > 4 ? '…' : ''}`));
   }
-  if (conta.membri) pezzi.push(`${conta.membri} membri`);
-  if (conta.spese) pezzi.push(`${conta.spese} spese`);
-  if (conta.lista) pezzi.push(`${conta.lista} voci da acquistare`);
-  if (conta.attrezzatura) pezzi.push(`${conta.attrezzatura} attrezzature`);
-  if (conta.dotazioni) pezzi.push(`${conta.dotazioni} dotazioni`);
-  if (conta.altro) pezzi.push(`${conta.altro} altre voci`);
+  if (conta.membri) pezzi.push(L.t('perdite.membri', conta.membri));
+  if (conta.spese) pezzi.push(L.t('perdite.spese', conta.spese));
+  if (conta.lista) pezzi.push(L.t('perdite.lista', conta.lista));
+  if (conta.attrezzatura) pezzi.push(L.t('perdite.attrezzatura', conta.attrezzatura));
+  if (conta.dotazioni) pezzi.push(L.t('perdite.dotazioni', conta.dotazioni));
+  if (conta.altro) pezzi.push(L.t('perdite.altro', conta.altro));
   return pezzi.join(' · ');
 };
 

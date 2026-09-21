@@ -45,24 +45,22 @@ const schedaGalleria = ({
   <div className="space-y-4">
     {/* Caricamento */}
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">Carica le tue foto</h3>
+      <h3 className="font-rustic text-lg border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('galleria.carica')}</h3>
 
       {!cloud.connected ? (
         <p className="text-sm text-gray-500 leading-snug">
-          La galleria vive nel cloud: serve la linea. È fatta apposta per il
-          <span className="font-bold"> ritorno a casa</span> — al campo non c'è campo, e le foto
-          occuperebbero lo spazio che serve a presenze e spese.
+          {frase('galleria.senzaCloud')}
         </p>
       ) : (
         <div className="space-y-3">
           <div>
-            <label className="block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1">Chi le ha scattate</label>
+            <label className="block text-[9px] uppercase font-bold text-gray-500 tracking-wide mb-1">{L.t('galleria.chiScatta')}</label>
             <select
               value={photoWho}
               onChange={(e) => setPhotoWho(e.target.value)}
               className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-sm focus:outline-none focus:border-[#2D392C]"
             >
-              <option value="">— scegli il tuo nome —</option>
+              <option value="">{L.t('galleria.scegliNome')}</option>
               {members.map((m) => (
                 <option key={m.id} value={m.name}>
                   {m.name} ({photosBy(m.name)}/{photoCap})
@@ -70,20 +68,20 @@ const schedaGalleria = ({
               ))}
             </select>
             {members.length === 0 && (
-              <p className="text-[9px] text-[#D97706] mt-1">Aggiungi prima le persone nella scheda Membri.</p>
+              <p className="text-[9px] text-[#D97706] mt-1">{L.t('galleria.primaMembri')}</p>
             )}
           </div>
 
           {photoWho && (
             <p className="text-[11px] text-gray-600">
               {photosBy(photoWho) >= photoCap
-                ? <span className="text-[#D97706] font-bold">{photoWho} ha esaurito le sue {photoCap} foto. Cancellane una per farne entrare un'altra.</span>
-                : <>A {photoWho} restano <span className="font-bold">{photoCap - photosBy(photoWho)}</span> foto su {photoCap}.</>}
+                ? <span className="text-[#D97706] font-bold">{L.t('galleria.esaurite', photoWho, photoCap)}</span>
+                : frase('galleria.restano', photoWho, photoCap - photosBy(photoWho), photoCap)}
             </p>
           )}
 
           <label className={`block w-full py-3 rounded font-bold uppercase text-sm tracking-wide text-center cursor-pointer ${photoWho && photosBy(photoWho) < photoCap && !photoBusy ? 'bg-[#2D392C] text-white hover:bg-[#1F271E]' : 'bg-gray-200 text-gray-400 pointer-events-none'}`}>
-            {photoBusy || '📸 Scegli le foto'}
+            {photoBusy || L.t('galleria.scegliFoto')}
             <input type="file" accept="image/*" multiple onChange={addPhotos} className="hidden" />
           </label>
 
@@ -95,16 +93,13 @@ const schedaGalleria = ({
           {(cloud.foto || 0) > 0 && (
             <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
               <p className="text-[10px] text-[#5C4A3C] leading-snug">
-                <span className="font-bold">{cloud.foto} {cloud.foto === 1 ? 'foto ancora da caricare' : 'foto ancora da caricare'}.</span>{' '}
-                Tieni l'app aperta finché non sono partite: se la chiudi adesso, quelle vanno riscelte.
+                {frase('galleria.inCoda', cloud.foto)}
               </p>
             </div>
           )}
 
           <p className="text-[9px] text-gray-400 italic leading-snug">
-            Massimo <span className="font-bold">{photoCap} foto a testa</span> (si cambia in Impostazioni): serve a scegliere
-            le belle, non a svuotare il rullino. È un accordo fra noi, non un lucchetto: il nome si sceglie dalla tendina.
-            Le foto vengono rimpicciolite prima di partire.
+            {frase('galleria.tetto', photoCap)}
           </p>
         </div>
       )}
@@ -114,14 +109,14 @@ const schedaGalleria = ({
     <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
       <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2 mb-3 gap-2">
         <h3 className="font-rustic text-lg text-[#2D392C] shrink-0">
-          Album {photos.length > 0 ? `(${photos.length})` : ''}
+          {L.t('archivio.album')} {photos.length > 0 ? `(${photos.length})` : ''}
         </h3>
         {/* Due modi di guardare le stesse foto: l'album per sfogliarle,
             la griglia per trovarle. La scelta a mano funziona solo in
             griglia, quindi ci passa da sola. */}
         {photos.length > 0 && !picking && (
           <div className="flex rounded border border-[#8F9E8B]/40 overflow-hidden shrink-0">
-            {[['album', '📖 Album'], ['griglia', '▦ Griglia']].map(([k, l]) => (
+            {[['album', L.t('galleria.vistaAlbum')], ['griglia', L.t('galleria.vistaGriglia')]].map(([k, l]) => (
               <button
                 key={k}
                 onClick={() => setGalleryView(k)}
@@ -137,16 +132,16 @@ const schedaGalleria = ({
             onClick={uscitaScelta}
             className={bottone('primario', 'minuscolo', 'shrink-0')}
           >
-            Annulla
+            {L.t('galleria.annulla')}
           </button>
         )}
       </div>
       {!cloud.connected ? (
-        <p className="text-sm text-gray-400 italic">Senza linea l'album non si può sfogliare.</p>
+        <p className="text-sm text-gray-400 italic">{L.t('galleria.senzaLinea')}</p>
       ) : !photosReady ? (
-        <p className="text-sm text-gray-400 italic">Carico l'album…</p>
+        <p className="text-sm text-gray-400 italic">{L.t('archivio.carico')}</p>
       ) : photos.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">Ancora nessuna foto. Comincia tu.</p>
+        <p className="text-sm text-gray-400 italic">{L.t('galleria.ancoraNessuna')}</p>
       ) : galleryView === 'album' && !picking ? (
         <div>
           <div className="album-sfoglio" ref={albumRef} onScroll={onScrollAlbum}>
@@ -154,7 +149,7 @@ const schedaGalleria = ({
               <div key={i} className={`album-pagina ${gruppo.length === 1 ? '' : ''}`}>
                 <div className={`album-griglia ${gruppo.length === 1 ? 'una' : ''}`}>
                   {gruppo.map((p) => (
-                    <button key={p.id} onClick={() => openPhoto(p)} className="polaroid" aria-label={`Foto di ${p.by || 'anonimo'}`}>
+                    <button key={p.id} onClick={() => openPhoto(p)} className="polaroid" aria-label={L.t('archivio.fotoDi', p.by || L.t('archivio.anonimo'))}>
                       <img src={p.thumb} alt="" loading="lazy" />
                       {/* Solo il nome: sotto una polaroid il cognome non
                           serve a nessuno e non ci sta. */}
@@ -173,7 +168,7 @@ const schedaGalleria = ({
             <button
               onClick={() => sfoglia(-1)}
               disabled={albumPage <= 0}
-              aria-label="Pagina precedente"
+              aria-label={L.t('galleria.paginaPrec')}
               className={`w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage <= 0 ? 'text-gray-300' : 'text-[#2D392C]'}`}
             >
               ‹
@@ -184,7 +179,7 @@ const schedaGalleria = ({
             <button
               onClick={() => sfoglia(1)}
               disabled={albumPage >= paginaAlbum(photos).length - 1}
-              aria-label="Pagina successiva"
+              aria-label={L.t('galleria.paginaSucc')}
               className={`w-8 h-8 rounded-full border border-[#8F9E8B]/40 text-sm ${albumPage >= paginaAlbum(photos).length - 1 ? 'text-gray-300' : 'text-[#2D392C]'}`}
             >
               ›
@@ -200,7 +195,9 @@ const schedaGalleria = ({
                 key={p.id}
                 onClick={() => (picking ? togglePicked(p.id) : openPhoto(p))}
                 className={`relative aspect-square overflow-hidden rounded border bg-[#F0F4F1] ${scelta >= 0 ? 'border-[#2D392C] border-2' : 'border-[#8F9E8B]/30'}`}
-                aria-label={picking ? `Scegli la foto di ${p.by || 'anonimo'}` : `Foto di ${p.by || 'anonimo'}`}
+                aria-label={picking
+                  ? L.t('galleria.scegliQuesta', p.by || L.t('archivio.anonimo'))
+                  : L.t('archivio.fotoDi', p.by || L.t('archivio.anonimo'))}
               >
                 <img src={p.thumb} alt="" className={`w-full h-full object-cover ${picking && scelta < 0 ? 'opacity-45' : ''}`} loading="lazy" />
                 {picking && (
@@ -224,26 +221,25 @@ const schedaGalleria = ({
         <div className="mt-3 pt-3 border-t border-[#8F9E8B]/30 space-y-2">
           <p className="text-[11px] text-gray-600">
             {picked.length === 0
-              ? 'Tocca le foto da mettere nel ricordo. L\'ordine è quello con cui le scegli.'
-              : <>Scelte <span className="font-bold">{picked.length}</span> foto su {photos.length} · {Math.ceil(picked.length / PER_PAGINA_ALBUM)} {Math.ceil(picked.length / PER_PAGINA_ALBUM) === 1 ? 'pagina' : 'pagine'}</>}
+              ? L.t('galleria.toccaLeFoto')
+              : frase('galleria.scelte', picked.length, photos.length, Math.ceil(picked.length / PER_PAGINA_ALBUM))}
           </p>
           <button
             onClick={() => generaRicordo(photos, false)}
             disabled={picked.length === 0 || !!pdfBusy}
             className={bottone('bruno', 'grande', 'w-full')}
           >
-            {pdfBusy || `Crea album con le scelte${picked.length ? ` (${picked.length})` : ''}`}
+            {pdfBusy || L.t('galleria.creaConScelte', picked.length)}
           </button>
           <button
             onClick={() => setPicked(photos.map((x) => x.id))}
             disabled={!!pdfBusy || picked.length === photos.length}
             className={bottone('secondario', 'piccolo', 'w-full')}
           >
-            Scegli tutte
+            {L.t('galleria.scegliTutte')}
           </button>
           <p className="text-[9px] text-gray-400 italic leading-snug">
-            Crea un PDF con le foto scelte su uno sfondo di montagna, quattro per pagina.
-            Le foto vengono scaricate a piena qualità, quindi ci vuole qualche secondo.
+            {L.t('galleria.notaScelte')}
           </p>
         </div>
       )}
@@ -258,24 +254,20 @@ const schedaGalleria = ({
             disabled={!!pdfBusy}
             className={bottone('bruno', 'grande', 'w-full mt-3')}
           >
-            {pdfBusy || `📕 Crea album completo (${photos.length} ${photos.length === 1 ? 'foto' : 'foto'})`}
+            {pdfBusy || L.t('galleria.creaCompleto', photos.length)}
           </button>
           <p className="text-[9px] text-gray-400 italic mt-1.5 leading-snug">
-            Un PDF con <span className="font-bold">tutte</span> le foto della galleria su uno sfondo di
-            montagna, quattro per pagina, dalla prima all'ultima in ordine di scatto
-            ({Math.ceil(photos.length / PER_PAGINA_ALBUM)} {Math.ceil(photos.length / PER_PAGINA_ALBUM) === 1 ? 'pagina' : 'pagine'}).
-            Vengono scaricate a piena qualità, quindi ci vuole un po'.
+            {frase('galleria.notaCompleto', Math.ceil(photos.length / PER_PAGINA_ALBUM))}
           </p>
           <button
             onClick={() => { setGalleryView('griglia'); setPicking(true); }}
             disabled={!!pdfBusy}
             className={bottone('secondario', 'piccolo', 'w-full mt-2')}
           >
-            Scegli tu quali foto
+            {L.t('galleria.scegliTu')}
           </button>
           <p className="text-[9px] text-gray-400 italic mt-2">
-            Tocca una foto per vederla grande. Le foto restano nel campo: alla chiusura finiscono
-            nell'archivio insieme ai conti.
+            {L.t('galleria.notaFinale')}
           </p>
         </>
       )}

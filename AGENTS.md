@@ -116,10 +116,19 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   niente telemetria.
 - **Italiano** nel codice, nei commenti e nei messaggi di commit. Per
   l'interfaccia si scrive in italiano, ma passando da `lingue.js`: `L.t()`,
-  `frase()`, `L.data()`. **Nessun `'it-IT'` scritto a mano** — ce n'erano 32
-  sparsi in otto file, adesso sono zero e c'e' una prova che li conta.
+  `frase()` (o `fraseVestita()` se il grassetto ha un colore), `L.data()`.
+  **Nessun `'it-IT'` scritto a mano** — ce n'erano 32 sparsi in otto file,
+  adesso sono zero e c'e' una prova che li conta. Sedici sorgenti su
+  diciannove sono passati dal dizionario; restano `80-app.jsx` e
+  `82-schede-conti.jsx`, e `node test/censimento-testi.js` dice quanto manca.
+  I file gia' fatti non possono tornare indietro: una prova conta i testi
+  scritti a mano in ognuno e diventa rossa se ne compare uno nuovo.
   `FEATURES.lingue` e' spenta finche' i dizionari non coprono tutta l'app:
   non e' un difetto, e' una scelta.
+- **Una costante valutata al caricamento congela la lingua.** I sorgenti di
+  `src/` girano prima che `App()` assegni `L`. Una tabella di nomi costruita
+  a modulo (`const X = { a: 'Membri' }`) resterebbe nella lingua del momento:
+  le tabelle tengono le chiavi, il nome si chiede al disegno.
 - **Nessun `localStorage.setItem` fuori da `salvaLocale`.** Un'eccezione dentro
   un `useEffect` smonta React e l'app sparisce. E niente immagini là dentro:
   quelle vanno nel magazzino.

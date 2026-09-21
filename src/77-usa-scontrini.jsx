@@ -118,7 +118,7 @@ const usaScontrini = ({ purchases, toBuy, equipment }) => {
       setReceipts((prev) => ({ ...prev, [id]: dataUrl }));
       if (window.CloudSync) window.CloudSync.putReceipt(id, dataUrl);
     } catch (err) {
-      window.alert('Impossibile leggere la foto. Riprova.');
+      window.alert(L.t('scontrino.fotoIllegibile'));
     }
   };
 
@@ -135,7 +135,7 @@ const usaScontrini = ({ purchases, toBuy, equipment }) => {
       if (dataUrl.length > 900000) dataUrl = await compressImage(file, 800, 0.4);
       setPReceipt(dataUrl);
     } catch (err) {
-      window.alert('Impossibile leggere la foto. Riprova.');
+      window.alert(L.t('scontrino.fotoIllegibile'));
     }
   };
 

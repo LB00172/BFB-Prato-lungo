@@ -34,17 +34,17 @@ const PURCHASE_TYPES = { alimentare: 'Alimentare', bevande: 'Bevande', logistica
 
 // Codici meteo WMO (Open-Meteo) -> icona e descrizione.
 const wmoInfo = (code) => {
-  if (code === 0) return { icon: '☀️', label: 'Sereno' };
-  if (code === 1 || code === 2) return { icon: '🌤️', label: 'Poco nuvoloso' };
-  if (code === 3) return { icon: '☁️', label: 'Coperto' };
-  if (code === 45 || code === 48) return { icon: '🌫️', label: 'Nebbia' };
-  if (code >= 51 && code <= 57) return { icon: '🌦️', label: 'Pioviggine' };
-  if (code >= 61 && code <= 67) return { icon: '🌧️', label: 'Pioggia' };
-  if (code >= 71 && code <= 77) return { icon: '🌨️', label: 'Neve' };
-  if (code >= 80 && code <= 82) return { icon: '🌦️', label: 'Rovesci' };
-  if (code === 85 || code === 86) return { icon: '🌨️', label: 'Rovesci di neve' };
-  if (code >= 95) return { icon: '⛈️', label: 'Temporale' };
-  return { icon: '🌡️', label: 'Meteo' };
+  if (code === 0) return { icon: '☀️', label: L.t('cielo.sereno') };
+  if (code === 1 || code === 2) return { icon: '🌤️', label: L.t('cielo.pocoNuvoloso') };
+  if (code === 3) return { icon: '☁️', label: L.t('cielo.coperto') };
+  if (code === 45 || code === 48) return { icon: '🌫️', label: L.t('cielo.nebbia') };
+  if (code >= 51 && code <= 57) return { icon: '🌦️', label: L.t('cielo.pioviggine') };
+  if (code >= 61 && code <= 67) return { icon: '🌧️', label: L.t('cielo.pioggia') };
+  if (code >= 71 && code <= 77) return { icon: '🌨️', label: L.t('cielo.neve') };
+  if (code >= 80 && code <= 82) return { icon: '🌦️', label: L.t('cielo.rovesci') };
+  if (code === 85 || code === 86) return { icon: '🌨️', label: L.t('cielo.rovesciNeve') };
+  if (code >= 95) return { icon: '⛈️', label: L.t('cielo.temporale') };
+  return { icon: '🌡️', label: L.t('cielo.ignoto') };
 };
 
 // Quanto "pesa" una condizione. Serve a due cose: scegliere la faccia della
@@ -55,7 +55,7 @@ const gravitaWmo = (c) => (c >= 95 ? 5 : c >= 80 ? 4 : c >= 71 ? 4 : c >= 61 ? 3
 const ORE_FUORI = [8, 21];
 
 const momentoDelGiorno = (ora) => (
-  ora == null ? '' : ora < 6 ? 'nella notte' : ora < 12 ? 'in mattinata' : ora < 18 ? 'nel pomeriggio' : 'in serata'
+  ora == null ? '' : L.t(ora < 6 ? 'momento.notte' : ora < 12 ? 'momento.mattina' : ora < 18 ? 'momento.pomeriggio' : 'momento.sera')
 );
 
 // Come si racconta una giornata a chi deve decidere se fare la camminata.
