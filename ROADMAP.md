@@ -146,6 +146,12 @@ silenzio:
    sbagliate»: distinguerli è un modo per sapere chi è iscritto, un indirizzo
    alla volta.
 
+⚠️ **La bandiera non si accende ancora**, e non per prudenza generica: le
+regole Firestore di oggi conoscono un utente solo (`campo@brigatabandone.it`),
+e `auth.js` condivide la sessione con `firebase-sync.js`. Il primo che entrasse
+col proprio account spegnerebbe la sincronizzazione. Il dettaglio sta nel § 2,
+che è dove si risolve.
+
 **Cosa manca al § 1**, e non si può fare da qui:
 
 - **La console Firebase** (solo Lorenzo): accendere i provider *Google* e
@@ -187,6 +193,47 @@ rooms/<roomId>
   è ciò che fa davvero adottare l'app dai gruppi meno tecnologici.
 - **Ruoli**: chi crea la room la amministra (cambia date, luogo, rimuove
   membri); gli altri possono modificare i dati del campo.
+
+### Il vincolo che arriva dal § 1, e che va sciolto qui
+
+Trovato il 21 settembre guardando `firestore.rules` riga per riga. **Non si
+accende `FEATURES.auth` finché questo non è risolto.**
+
+`auth.js` e `firebase-sync.js` condividono **una sola sessione Firebase**:
+stessa app, stesso `getAuth`. Ma le regole di oggi conoscono un utente solo:
+
+```
+allow read, write: if request.auth != null
+  && request.auth.token.email == "campo@brigatabandone.it";
+```
+
+Quindi appena una persona entra col proprio account, `request.auth.token.email`
+diventa il suo indirizzo e Firestore nega tutto. La sincronizzazione si ferma.
+
+Metà del problema è già tolta: `firebase-sync.js` non scambia più un account
+personale per l'utente condiviso (`sessioneDelCampo()`, provata in
+`unita/limiti-cloud`). Prima ci cascava e **non lo diceva** — l'app si svuotava
+e basta. Adesso fallisce dichiarandolo, che è il minimo sindacale.
+
+L'altra metà è lavoro di questa sezione, e sono due strade:
+
+1. **Le regole guardano `members/<uid>` invece dell'indirizzo.** È il modello
+   già scritto qui sopra, ed è la strada giusta: l'utente condiviso sparisce e
+   ognuno entra con sé stesso. Costa la migrazione di chi oggi usa l'app.
+2. **Le regole accettano l'utente condiviso *oppure* un membro della room.** È
+   il ponte: i telefoni di oggi continuano a funzionare mentre i nuovi passano
+   al proprio account.
+
+La 2 non è un ripiego da evitare — è quello che permette di non dover
+aggiornare venti telefoni nello stesso pomeriggio. Ma va scritta sapendo che è
+temporanea, con una data.
+
+⚠️ E c'è un dettaglio che non va dimenticato: anche risolte le regole, chi
+entra col proprio account **sostituisce** la sessione condivisa su quel
+telefono. Finché l'utente condiviso esiste, le due cose non possono stare
+aperte insieme — Firebase ha un `currentUser` solo per app. O si passa a una
+seconda app Firebase (`initializeApp(config, 'nome')`), o si toglie di mezzo
+l'utente condiviso, che è la strada 1.
 
 ## 3. Pubblicazione su Google Play (versione neutra)
 

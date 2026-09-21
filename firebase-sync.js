@@ -67,10 +67,11 @@
     if (!email) { authMode = 'anon'; await fb.signInAnonymously(auth); return; }
 
     // Sessione gia' aperta su questo dispositivo: niente password da chiedere.
+    // Ma dev'essere la sessione GIUSTA — vedi sessioneDelCampo().
     try {
       if (auth.authStateReady) await auth.authStateReady();
     } catch (e) { /* SDK piu' vecchio: si prosegue */ }
-    if (auth.currentUser && !auth.currentUser.isAnonymous) { authMode = 'shared'; return; }
+    if (sessioneDelCampo(auth.currentUser, email)) { authMode = 'shared'; return; }
 
     if (creds && creds.password) {
       try {
@@ -185,6 +186,25 @@
   const MAX_DOC = 900 * 1024;
 
   // --- Regole pure, provabili senza Firebase (come sovrascrivibile) ---------
+  // La sessione aperta e' quella del CAMPO, cioe' l'utente condiviso?
+  //
+  // Qui c'era scritto "c'e' un utente e non e' anonimo, allora e' lui". Era
+  // vero finche' di utenti non anonimi ce n'era uno solo. Da quando esiste il
+  // login personale (auth.js, ROADMAP § 1) non lo e' piu': auth.js e questo
+  // file condividono una sola sessione Firebase, quindi chi entra col proprio
+  // account Google diventa lui il currentUser non anonimo. La sincronizzazione
+  // lo scambiava per l'utente condiviso, non faceva l'accesso al database, e
+  // le regole Firestore — che guardano request.auth.token.email — negavano
+  // tutto. Risultato: l'app si svuota e nessuno sa perche'.
+  //
+  // Si guarda l'indirizzo, che e' esattamente quello che guardano le regole.
+  function sessioneDelCampo(utente, dbEmail) {
+    if (!utente || utente.isAnonymous) return false;
+    const atteso = String(dbEmail || '').trim().toLowerCase();
+    if (!atteso) return false;
+    return String(utente.email || '').trim().toLowerCase() === atteso;
+  }
+
   // Un archivio piu' grande del tetto viene rifiutato da Firestore e non si
   // salva. Va saputo PRIMA di azzerare i dati locali, non dopo.
   function archivioStaDentro(meta, data) {
@@ -743,6 +763,7 @@
     getSnapshot,
     putWeather,
     archivioStaDentro,
+    sessioneDelCampo,
     punteggioMigliore,
     putArchive,
     listArchives,
