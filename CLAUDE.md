@@ -26,7 +26,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 73 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 74 prove, circa 9 minuti.
    Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
@@ -68,6 +68,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneScelta` (i chip accesi/spenti) |
 | `src/87-scheda-compiti.jsx` | «Chi fa cosa»: i compiti assegnati, dietro `FEATURES.compiti`. Un compito **non** è una spesa |
 | `src/78-usa-account.jsx` | lo stato del login: maschera, occupato, problema. Le regole no — quelle stanno in `auth.js` |
+| `src/79-usa-stanza.jsx` | lo stato della stanza: crea, entra, chi c'è dentro. Dietro `FEATURES.rooms` |
 | `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
 | `App.js` | **generato**, non modificare |
 | `sync-merge.js` | fusione voce per voce fra dispositivi (`rev`, `del`, orologio `hi`) |
@@ -78,14 +79,14 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `lingue.js` | **le lingue**: dizionario (it/es/fr), plurali come funzioni, le dodici forme di data, e la regola che si prova — ogni chiave italiana esiste altrove e viceversa. Fuori da `src/` |
 | `allarmi.js` | **quando svegliare qualcuno**: orologio di un altro telefono avanti di giorni, e perdite che meritano un allarme invece di essere il recupero di un ritardo. Pure, fuori da `src/` |
 | `auth.js` | **chi sei, e cosa ti lascia fare l'app**: `Auth` sono le regole (stati, permessi, validazione, codici d'errore tradotti), `AuthCloud` è il trasporto verso Firebase Authentication. Fuori da `src/`. Dietro `FEATURES.auth` |
-| `stanza.js` | **la stanza**: l'alfabeto e il generatore del codice d'ingresso, come si legge un codice digitato a mano, la validazione del modulo, i tre ruoli. Puro e sincrono — la crittografia no, quella è `improntaPassword` in `src/20-blocco-password.jsx`. Dietro `FEATURES.rooms` |
+| `stanza.js` | **la stanza**, in due metà come `auth.js`: `Stanza` sono le regole (alfabeto e generatore del codice, lettura di un codice digitato a mano, validazione del modulo, ruoli, **cosa si scrive entrando**), `StanzaCloud` il trasporto verso Firestore. La crittografia non c'è: è `improntaPassword` in `src/20-blocco-password.jsx`. Dietro `FEATURES.rooms` |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile` |
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `firestore.rules` | **chi può leggere e scrivere cosa** nel cloud. Due mondi che convivono: `camps/<codice>` (il campo 2026, utente condiviso) e `rooms/<id>` (le stanze). Si provano con `npm run regole`, mai a occhio |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
-| `test/` | 14 prove unitarie + 59 end‑to‑end |
+| `test/` | 14 prove unitarie + 60 end‑to‑end, più `regole/` (fuori da `npm test`) |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -202,6 +203,14 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   motivo che con le regole non c'entrava niente. Se ne è accorto un sabotaggio,
   non io — due sabotaggi diversi facevano fallire la stessa verifica estranea,
   ed è quello il segnale. `clearFirestore()` all'inizio, sempre.
+- **Una prova che sostituisce un pezzo non può verificare quel pezzo.** La
+  prova a schermo della stanza sostituisce `StanzaCloud` con un finto: la
+  verifica «entrando ci si scrive da redattori» guardava quindi il finto, e
+  sarebbe rimasta verde anche cambiando il ruolo nell'app. Il sabotaggio non
+  la faceva arrossire, ed è così che me ne sono accorto — **un sabotaggio che
+  non produce rosso è una notizia, non un sollievo.** La cura è la stessa già
+  usata per l'account: la decisione esce dal pezzo sostituito e diventa una
+  funzione pura (`Stanza.schedaIngresso`) che il finto è costretto a chiamare.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.
@@ -268,6 +277,19 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   giorno, quando non c'è linea per registrarsi e nessuno ha voglia di farlo — e
   lì non si sistema. La tabella dei permessi sta in `auth.js` e due prove la
   guardano da sole.
+- **Le versioni sono DUE, e restano separate.** La **privata** è questa: il
+  gruppo, il campo in montagna, «Aiuta Bandy», Prato Lungo, l'utente condiviso.
+  La **pubblica** è un prodotto neutro che andrà sul Play Store. Non è un'app
+  sola con il marchio cambiato: sono due, e vivono su rami diversi — `main` la
+  privata, `feature/public-app` la pubblica.
+  **Niente passa dall'una all'altra da solo.** Quando una cosa sviluppata sulla
+  pubblica va portata anche sulla privata, lo decide Lorenzo e lo dice. Non si
+  fondono i rami «per tenerli allineati».
+  Un solo vincolo tecnico a questa separazione: **la logica dei soldi non si
+  duplica**. `conti.js`, `presenze.js`, `sync-merge.js` e `allarmi.js` devono
+  restare la stessa cosa nei due rami, perché un errore sui conti corretto una
+  volta sola sarebbe un errore ancora vivo dall'altra parte. Se uno di quei
+  file diverge, è un problema da risolvere, non una conseguenza accettabile.
 - **Importazione, ripristino di emergenza e chiusura del campo stanno in
   modalità tecnica.** Non modificano i dati: li RIMPIAZZANO, e si portano
   via i blocchi insieme al resto. Erano le ultime tre strade aperte a
@@ -288,7 +310,7 @@ priorità) e la fila in cui affrontarle, con scritto cosa blocca cosa.
 Le tre cose da sapere senza aprirlo:
 
 - **L'iPhone è verificato** (`ROADMAP.md` §10): ad agosto 2026, a mano, e
-  l'aggiornamento del service worker arriva. Le 73 prove girano comunque solo
+  l'aggiornamento del service worker arriva. Le 74 prove girano comunque solo
   su Chromium, quindi quel giro va rifatto ogni volta che si tocca `sw.js` o
   `build.js` — sono i due file che decidono se un rilascio arriva o resta in
   cache. Si comincia invece dalle immagini fuori da `localStorage` (§19): nel

@@ -47,6 +47,7 @@ const schedaImpostazioni = ({
   lingua,
   setLingua,
   account,
+  stanzaStato,
   theme,
   toggleAskAlways,
   wipeLocal,
@@ -178,6 +179,86 @@ const schedaImpostazioni = ({
 
       {account.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(account.problema)}</p>}
       {account.fatto && <p className="text-piccolo text-[#2D392C] leading-snug">{L.t(account.fatto)}</p>}
+    </div>
+    )}
+
+    {/* La stanza (ROADMAP.md § 2 e § 9). Dietro FEATURES.rooms.
+
+        Come l'account, sta in fondo a Impostazioni e non davanti all'app:
+        chi usa il campo che ha gia' non incontra niente di tutto questo.
+        Le regole del codice stanno in stanza.js, quelle di CHI puo' entrare
+        in firestore.rules — qui si disegna e basta. */}
+    {FEATURES.rooms && (
+    <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
+      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('stanza.titolo')}</h3>
+
+      {stanzaStato.stanza ? (
+        <>
+          <p className="text-piccolo text-[#2D392C] leading-snug">{frase('stanza.entrato', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice))}</p>
+          <div className="flex items-center justify-between gap-2 bg-[#F0F4F1]/60 rounded p-2">
+            <span className="font-mono text-medio tracking-widest text-[#2D392C] min-w-0 break-words">{Stanza.bello(stanzaStato.stanza.codice)}</span>
+            <button
+              onClick={() => { try { navigator.clipboard.writeText(Stanza.bello(stanzaStato.stanza.codice)); } catch (e) { /* niente */ } }}
+              className={bottone('secondario', 'minuscolo', 'shrink-0')}
+            >{L.t('stanza.copiaCodice')}</button>
+          </div>
+          {stanzaStato.membri.length > 0 && (
+            <p className="text-piccolo text-gray-500">{L.t('stanza.dentro')(stanzaStato.membri.length)}</p>
+          )}
+          <button onClick={stanzaStato.esci} disabled={stanzaStato.occupato} className={bottone('testuale', 'minuscolo', 'w-full')}>{L.t('stanza.esci')}</button>
+        </>
+      ) : (
+        <>
+          <p className="text-piccolo text-gray-500 leading-snug">{L.t('stanza.aCosaServe')}</p>
+
+          {!stanzaStato.modo && (
+            <div className="flex gap-2">
+              <button onClick={() => stanzaStato.setModo('crea')} className={bottone('primario', 'normale', 'flex-1')}>{L.t('stanza.creaTitolo')}</button>
+              <button onClick={() => stanzaStato.setModo('entra')} className={bottone('secondario', 'normale', 'flex-1')}>{L.t('stanza.entraTitolo')}</button>
+            </div>
+          )}
+
+          {stanzaStato.modo === 'crea' && (
+            <div className="space-y-2 pt-1">
+              <input type="text" value={stanzaStato.nome} onChange={(e) => stanzaStato.setNome(e.target.value)}
+                placeholder={L.t('stanza.nome')}
+                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+              <div className="grid grid-cols-2 gap-2">
+                <input type="date" value={stanzaStato.inizio} onChange={(e) => stanzaStato.setInizio(e.target.value)}
+                  aria-label={L.t('stanza.inizio')}
+                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+                <input type="date" value={stanzaStato.fine} onChange={(e) => stanzaStato.setFine(e.target.value)}
+                  aria-label={L.t('stanza.fine')}
+                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={stanzaStato.chiudi} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
+                <button onClick={() => stanzaStato.crea(account.utente)} disabled={stanzaStato.occupato} className={bottone('primario', 'normale', 'flex-1')}>{L.t('stanza.crea')}</button>
+              </div>
+            </div>
+          )}
+
+          {stanzaStato.modo === 'entra' && (
+            <div className="space-y-2 pt-1">
+              {/* Il codice si mostra sempre in forma leggibile mentre si
+                  digita: chi lo ricopia da un foglio deve poter confrontare
+                  quello che vede con quello che ha in mano. */}
+              <input type="text" value={stanzaStato.codice} onChange={(e) => stanzaStato.setCodice(e.target.value)}
+                placeholder={L.t('stanza.codice')} autoCapitalize="characters" autoComplete="off" spellCheck="false"
+                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-medio font-mono tracking-widest uppercase focus:outline-none focus:border-[#2D392C]" />
+              <div className="flex gap-2">
+                <button onClick={stanzaStato.chiudi} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
+                <button onClick={() => stanzaStato.entra(account.utente)} disabled={stanzaStato.occupato} className={bottone('primario', 'normale', 'flex-1')}>{L.t('stanza.entra')}</button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {stanzaStato.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.problema)}</p>}
+      {stanzaStato.fatto === 'stanza.creata' && stanzaStato.stanza && (
+        <p className="text-piccolo text-[#2D392C] leading-snug">{frase('stanza.creata', Stanza.bello(stanzaStato.stanza.codice))}</p>
+      )}
     </div>
     )}
 

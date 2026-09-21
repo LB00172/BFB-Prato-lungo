@@ -35,6 +35,7 @@ const SORGENTI = [
   '76-usa-galleria.jsx',     // foto del campo: ascolto, caricamento, album, PDF ricordo
   '77-usa-scontrini.jsx',    // foto degli scontrini: magazzino, migrazione, potatura
   '78-usa-account.jsx',      // chi sei: login, registrazione, verifica (FEATURES.auth)
+  '79-usa-stanza.jsx',       // la stanza: crea, entra, chi c'e' dentro (FEATURES.rooms)
   '80-app.jsx',              // function App(): stato, sincronizzazione, conti, gestori
   // Le schede: disegno uscito da App(), un file per area. Stanno DOPO
   // 80-app.jsx e va bene: sono `const` che App() chiama solo al disegno,

@@ -2995,6 +2995,189 @@ const usaAccount = () => {
     controllaVerifica
   };
 };
+// ---------- La stanza ----------
+//
+// Quinto pezzo di stato fuori da App() (ROADMAP § 14), e il modulo del § 9.
+// Tiene: quale stanza sei dentro, cosa stai scrivendo nel modulo, e cosa e'
+// andato storto. Le REGOLE — l'alfabeto del codice, come si legge un codice
+// digitato a mano, se il modulo e' valido — stanno in stanza.js, fuori da
+// src/, e si provano senza browser.
+//
+// Due cose da non dimenticare leggendo questo file.
+//
+// **Non e' un muro**, come l'account. Chi apre l'app e usa il campo che ha
+// gia' non incontra niente di tutto questo: la stanza serve a chi ne crea una
+// nuova o entra in quella di un altro, e sta dietro FEATURES.rooms.
+//
+// **La guardia vera non e' qui.** Questo hook calcola l'impronta e prova a
+// scrivere; a dire di no sono le regole Firestore. Un controllo in piu' scritto
+// qui non aggiunge sicurezza — aggiunge un posto dove sbagliare — ma un
+// controllo che manca QUI si vede solo come un permission-denied, quindi le
+// cose che l'utente puo' correggere da solo (un codice della forma sbagliata,
+// una data storta) si dicono prima di disturbare la rete.
+const usaStanza = () => {
+  // La stanza di adesso: null vuol dire "nessuna", che e' il caso normale
+  // finche' la versione pubblica non esiste davvero.
+  const [stanza, setStanza] = useState(null);
+  const [membri, setMembri] = useState([]);
+  // Quale maschera e' aperta: '' | 'crea' | 'entra'.
+  const [modo, setModo] = useState('');
+  const [nome, setNome] = useState('');
+  const [inizio, setInizio] = useState('');
+  const [fine, setFine] = useState('');
+  const [codice, setCodice] = useState('');
+  // Chiavi del dizionario, non frasi: le sceglie il disegno (§ 18).
+  const [problema, setProblema] = useState(null);
+  const [fatto, setFatto] = useState(null);
+  const [occupato, setOccupato] = useState(false);
+  const SC = () => typeof window !== 'undefined' && window.StanzaCloud || null;
+  const S = () => typeof window !== 'undefined' && window.Stanza || null;
+
+  // La stanza in cui si era entrati si ricorda: riaprire l'app e ritrovarsi
+  // fuori sarebbe come non esserci mai entrati. Si scrive con scriviLocale
+  // (10-fondamenta), che ha il try/catch: un setItem nudo dentro un effetto
+  // smonta React quando la quota e' piena (CLAUDE.md). NON salvaLocale —
+  // quello vive dentro App() e da un hook non si vede.
+  useEffect(() => {
+    try {
+      const c = localStorage.getItem('cambusa_stanza');
+      if (c) setStanza({
+        codice: c
+      });
+    } catch (e) {/* niente: si resta senza stanza */}
+  }, []);
+  const pulisci = () => {
+    setProblema(null);
+    setFatto(null);
+  };
+  const chiudi = () => {
+    setModo('');
+    pulisci();
+  };
+
+  // Una sola strada per "occupato", per l'errore tradotto e per il caso in cui
+  // Firebase non sia configurato. Senza, ogni tasto avrebbe il suo try/catch e
+  // uno di loro se lo dimenticherebbe.
+  const prova = async azione => {
+    const c = SC();
+    if (!c || !c.disponibile()) {
+      setProblema('stanza.senzaFirebase');
+      return null;
+    }
+    setOccupato(true);
+    pulisci();
+    try {
+      return await azione(c);
+    } catch (e) {
+      setProblema(c.motivo ? c.motivo(e) : 'stanza.nonRiuscito');
+      return null;
+    } finally {
+      setOccupato(false);
+    }
+  };
+  const ricorda = cod => {
+    setStanza({
+      codice: cod
+    });
+    scriviLocale('cambusa_stanza', cod);
+  };
+  const crea = async utente => {
+    const regole = S();
+    // Creare una stanza vuol dire diventarne il proprietario: e' la riga
+    // della tabella di auth.js, e la ripetono anche le regole Firestore. Qui
+    // si dice prima, perche' un permission-denied non spiega niente.
+    if (!window.Auth || !window.Auth.puo('creare', window.Auth.stato(utente))) {
+      setProblema('stanza.serveAccount');
+      return;
+    }
+    const problemi = regole.validaModulo({
+      nome,
+      inizio,
+      fine
+    });
+    // Si mostra il primo: un elenco di righe rosse sotto una maschera di
+    // quattro caselle scoraggia piu' del problema che descrive.
+    if (problemi.length) {
+      setProblema(problemi[0]);
+      setFatto(null);
+      return;
+    }
+    const nuovo = regole.generaCodice();
+    // generaCodice torna null quando il browser non sa dare numeri casuali
+    // sicuri. Non si ripiega su Math.random(): un codice prevedibile e' una
+    // serratura finta, e nessuno se ne accorgerebbe.
+    if (!nuovo) {
+      setProblema('stanza.senzaCaso');
+      return;
+    }
+    const cod = await prova(c => c.crea({
+      nome,
+      inizio,
+      fine,
+      codice: nuovo
+    }, utente));
+    if (cod) {
+      ricorda(cod);
+      setModo('');
+      setFatto('stanza.creata');
+    }
+  };
+  const entra = async utente => {
+    const regole = S();
+    // La forma del codice la puo' correggere l'utente da solo: dirglielo qui
+    // e' meglio che fargli aspettare un giro di rete per sentirsi dire "non
+    // consentito", che suona come un guasto e non come un refuso.
+    if (!regole.codiceValido(codice)) {
+      setProblema('stanza.codiceNonValido');
+      return;
+    }
+    const cod = await prova(c => c.entra(codice, utente));
+    if (cod) {
+      ricorda(cod);
+      setModo('');
+      setCodice('');
+      setFatto('stanza.entrato');
+    }
+  };
+  const aggiornaMembri = async () => {
+    if (!stanza) return;
+    const elenco = await prova(c => c.membri(stanza.codice));
+    if (elenco) setMembri(elenco);
+  };
+
+  // Uscire da una stanza qui vuol dire solo smettere di guardarla: la scheda
+  // su Firestore la toglie chi amministra, o se stessi da un'altra strada.
+  // Cancellarla da qui, con un tasto che sembra "chiudi", farebbe perdere il
+  // posto a chi voleva solo tornare al campo di prima.
+  const esci = () => {
+    setStanza(null);
+    setMembri([]);
+    pulisci();
+    scriviLocale('cambusa_stanza', '');
+  };
+  return {
+    stanza,
+    membri,
+    modo,
+    setModo,
+    nome,
+    setNome,
+    inizio,
+    setInizio,
+    fine,
+    setFine,
+    codice,
+    setCodice,
+    problema,
+    fatto,
+    occupato,
+    chiudi,
+    crea,
+    entra,
+    esci,
+    aggiornaMembri
+  };
+};
 function App() {
   // ---------- La lingua ----------
   // Dietro FEATURES.lingue finche' i dizionari non sono completi: mostrare
@@ -3105,6 +3288,11 @@ function App() {
   // Dietro FEATURES.auth. L'hook gira comunque: senza bandiera nessuno guarda
   // il suo stato, e senza Firebase configurato resta "ospite" e basta.
   const account = usaAccount();
+
+  // ---------- La stanza (§ 2, § 9) ----------
+  // Dietro FEATURES.rooms. Come l'account, l'hook gira comunque: senza
+  // bandiera nessuno guarda il suo stato.
+  const stanzaStato = usaStanza();
 
   // Conto separato: giorni le cui presenze fanno cassa a parte. Il cibo e le
   // bevande marcati "separato" si dividono solo sui pasti di questi giorni;
@@ -6511,6 +6699,7 @@ function App() {
     setGuideOpen
   }), activeTab === 'impostazioni' && schedaImpostazioni({
     account,
+    stanzaStato,
     admin,
     adminErr,
     adminPwd,
@@ -8705,6 +8894,7 @@ const schedaImpostazioni = ({
   lingua,
   setLingua,
   account,
+  stanzaStato,
   theme,
   toggleAskAlways,
   wipeLocal
@@ -8839,7 +9029,95 @@ const schedaImpostazioni = ({
   className: "text-piccolo font-bold text-red-700 leading-snug"
 }, L.t(account.problema)), account.fatto && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-[#2D392C] leading-snug"
-}, L.t(account.fatto))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
+}, L.t(account.fatto))), FEATURES.rooms && /*#__PURE__*/React.createElement("div", {
+  className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
+}, /*#__PURE__*/React.createElement("h3", {
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"
+}, L.t('stanza.titolo')), stanzaStato.stanza ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-[#2D392C] leading-snug"
+}, frase('stanza.entrato', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice))), /*#__PURE__*/React.createElement("div", {
+  className: "flex items-center justify-between gap-2 bg-[#F0F4F1]/60 rounded p-2"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "font-mono text-medio tracking-widest text-[#2D392C] min-w-0 break-words"
+}, Stanza.bello(stanzaStato.stanza.codice)), /*#__PURE__*/React.createElement("button", {
+  onClick: () => {
+    try {
+      navigator.clipboard.writeText(Stanza.bello(stanzaStato.stanza.codice));
+    } catch (e) {/* niente */}
+  },
+  className: bottone('secondario', 'minuscolo', 'shrink-0')
+}, L.t('stanza.copiaCodice'))), stanzaStato.membri.length > 0 && /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-gray-500"
+}, L.t('stanza.dentro')(stanzaStato.membri.length)), /*#__PURE__*/React.createElement("button", {
+  onClick: stanzaStato.esci,
+  disabled: stanzaStato.occupato,
+  className: bottone('testuale', 'minuscolo', 'w-full')
+}, L.t('stanza.esci'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-gray-500 leading-snug"
+}, L.t('stanza.aCosaServe')), !stanzaStato.modo && /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: () => stanzaStato.setModo('crea'),
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t('stanza.creaTitolo')), /*#__PURE__*/React.createElement("button", {
+  onClick: () => stanzaStato.setModo('entra'),
+  className: bottone('secondario', 'normale', 'flex-1')
+}, L.t('stanza.entraTitolo'))), stanzaStato.modo === 'crea' && /*#__PURE__*/React.createElement("div", {
+  className: "space-y-2 pt-1"
+}, /*#__PURE__*/React.createElement("input", {
+  type: "text",
+  value: stanzaStato.nome,
+  onChange: e => stanzaStato.setNome(e.target.value),
+  placeholder: L.t('stanza.nome'),
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
+}), /*#__PURE__*/React.createElement("div", {
+  className: "grid grid-cols-2 gap-2"
+}, /*#__PURE__*/React.createElement("input", {
+  type: "date",
+  value: stanzaStato.inizio,
+  onChange: e => stanzaStato.setInizio(e.target.value),
+  "aria-label": L.t('stanza.inizio'),
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
+}), /*#__PURE__*/React.createElement("input", {
+  type: "date",
+  value: stanzaStato.fine,
+  onChange: e => stanzaStato.setFine(e.target.value),
+  "aria-label": L.t('stanza.fine'),
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
+})), /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: stanzaStato.chiudi,
+  className: bottone('testuale', 'normale', 'flex-1')
+}, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
+  onClick: () => stanzaStato.crea(account.utente),
+  disabled: stanzaStato.occupato,
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t('stanza.crea')))), stanzaStato.modo === 'entra' && /*#__PURE__*/React.createElement("div", {
+  className: "space-y-2 pt-1"
+}, /*#__PURE__*/React.createElement("input", {
+  type: "text",
+  value: stanzaStato.codice,
+  onChange: e => stanzaStato.setCodice(e.target.value),
+  placeholder: L.t('stanza.codice'),
+  autoCapitalize: "characters",
+  autoComplete: "off",
+  spellCheck: "false",
+  className: "w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-medio font-mono tracking-widest uppercase focus:outline-none focus:border-[#2D392C]"
+}), /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: stanzaStato.chiudi,
+  className: bottone('testuale', 'normale', 'flex-1')
+}, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
+  onClick: () => stanzaStato.entra(account.utente),
+  disabled: stanzaStato.occupato,
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t('stanza.entra'))))), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo font-bold text-red-700 leading-snug"
+}, L.t(stanzaStato.problema)), stanzaStato.fatto === 'stanza.creata' && stanzaStato.stanza && /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-[#2D392C] leading-snug"
+}, frase('stanza.creata', Stanza.bello(stanzaStato.stanza.codice)))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]"

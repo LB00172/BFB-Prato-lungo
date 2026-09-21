@@ -185,6 +185,22 @@ if (!S) { fine(); }
   ok('un\'azione che non esiste non si concede',
     !S.puo('amministare', 'proprietario') && !S.puo('', 'proprietario') && !S.puo(undefined, 'proprietario'));
 
+  // ---------- Cosa si scrive entrando ----------
+  // Questa decisione sta nelle regole e non nel trasporto perche' la prova a
+  // schermo il trasporto lo SOSTITUISCE con un finto: lasciata li', sarebbe
+  // una regola che nessuna prova guarda davvero.
+  const ingresso = S.schedaIngresso('Anna', 'impronta123', 1000);
+  ok(`chi entra e' redattore, e non se lo sceglie (${ingresso.ruolo})`, ingresso.ruolo === 'redattore');
+  ok('e porta la prova d\'ingresso', ingresso.prova === 'impronta123');
+  const padrone = S.schedaProprietario('Anna', 1000);
+  ok(`chi crea la stanza ne e' il proprietario (${padrone.ruolo})`, padrone.ruolo === 'proprietario');
+  // Il proprietario il segreto l'ha appena scritto lui: non deve portarne
+  // copia nella propria scheda, che i membri leggono.
+  ok('e non si porta dietro nessuna prova', !('prova' in padrone));
+  ok('nessuna delle due porta in giro altro',
+    Object.keys(ingresso).sort().join() === 'entratoIl,nome,prova,ruolo'
+    && Object.keys(padrone).sort().join() === 'entratoIl,nome,ruolo');
+
   // Una stanza senza proprietario non la amministra piu' nessuno e non si
   // puo' nemmeno cancellare: e' il vicolo cieco da cui non si esce.
   ok('il proprietario non si toglie se e\' l\'unico', !S.rimuovibile('proprietario', 'proprietario', 1));
@@ -194,4 +210,62 @@ if (!S) { fine(); }
     !S.rimuovibile('redattore', 'lettore', 1) && !S.rimuovibile('lettore', 'lettore', 1));
 }
 
-fine();
+// ---------- Il trasporto: solo quello che si puo' provare senza Firebase ----
+// StanzaCloud parla con Firestore e quasi tutto vuole una rete. Due cose pero'
+// decidono da sole, e sono quelle che rompono in silenzio.
+{
+  const C = globalThis.StanzaCloud;
+  ok('stanza.js espone anche il trasporto',
+    !!(C && typeof C.impronta === 'function' && typeof C.motivo === 'function'));
+
+  // 1. L'IMPRONTA. Il sale e' il codice normalizzato: se normalizzazione e
+  // sale non vanno d'accordo, due telefoni con lo STESSO codice calcolano
+  // impronte diverse, Firestore dice di no a tutti e due, e non c'e' una riga
+  // che sembri sbagliata. Qui improntaPassword viene finta, cosi' si guarda
+  // COSA le viene passato invece del risultato.
+  const visti = [];
+  globalThis.improntaPassword = async (pwd, cfg) => { visti.push({ pwd, salt: cfg.salt, iter: cfg.iter }); return 'finta'; };
+
+  (async () => {
+    await C.impronta('K7RX-2MQP');
+    await C.impronta(' k7rx 2mqp ');
+    await C.impronta('UUUU-VVVV');
+    await C.impronta('VVVV-VVVV');
+
+    ok(`lo stesso codice scritto in due modi da' la stessa password e lo stesso sale`
+      + ` (${visti[0].pwd}/${visti[1].pwd})`,
+      visti[0].pwd === visti[1].pwd && visti[0].salt === visti[1].salt);
+    ok('e la U vale la V anche qui, non solo a schermo',
+      visti[2].pwd === visti[3].pwd && visti[2].salt === visti[3].salt);
+    // Il sale non e' fisso: una tabella precalcolata per una stanza non deve
+    // valere per tutte le altre.
+    ok(`il sale cambia con il codice (${visti[0].salt.slice(0, 8)}… / ${visti[2].salt.slice(0, 8)}…)`,
+      visti[0].salt !== visti[2].salt);
+    ok('e il codice non finisce nel sale in chiaro',
+      visti[0].salt.indexOf('K7RX') < 0 && /^[0-9a-f]+$/.test(visti[0].salt));
+    ok(`i giri di PBKDF2 sono quelli del blocco (${visti[0].iter})`, visti[0].iter === 200000);
+
+    // Senza improntaPassword non si inventa niente: un ripiego piu' debole
+    // sarebbe invisibile, e produrrebbe stanze che sembrano chiuse.
+    delete globalThis.improntaPassword;
+    const senza = await C.impronta('K7RX-2MQP');
+    ok('senza improntaPassword non si inventa un\'impronta piu\' debole', senza === null);
+    const vuota = await C.impronta('');
+    ok('e un codice vuoto non ha impronta', vuota === null);
+
+    // 2. I MOTIVI. Un permission-denied qui vuol dire quasi sempre una cosa
+    // sola — il codice e' sbagliato — e dirlo cosi' evita di far cercare un
+    // guasto dove non c'e'.
+    ok(`un permission-denied diventa "codice sbagliato" (${C.motivo({ code: 'permission-denied' })})`,
+      C.motivo({ code: 'permission-denied' }) === 'stanza.codiceSbagliato');
+    ok('la mancanza di linea si riconosce',
+      C.motivo({ code: 'unavailable' }) === 'stanza.senzaLinea');
+    ok('Firebase non configurato pure',
+      C.motivo(new Error('firebase-non-configurato')) === 'stanza.senzaFirebase');
+    ok('e un guasto mai visto ha comunque un messaggio',
+      C.motivo({ code: 'qualcosa-di-nuovo' }) === 'stanza.nonRiuscito'
+      && C.motivo(null) === 'stanza.nonRiuscito');
+
+    fine();
+  })();
+}

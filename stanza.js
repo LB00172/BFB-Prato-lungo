@@ -4,12 +4,16 @@
 // di conti.js e auth.js: sono REGOLE, e una regola si prova con i numeri e le
 // stringhe vere invece che leggendo caselle a schermo dentro un browser.
 //
-// Tutto qui dentro e' PURO e SINCRONO. In particolare **non c'e'
-// crittografia**: l'impronta del codice la calcola chi chiama, con
-// improntaPassword() che esiste gia' in src/20-blocco-password.jsx ed e' la
-// stessa usata dal blocco dell'app. Mettere PBKDF2 qui dentro vorrebbe dire
-// due implementazioni della stessa cosa, e il giorno che una delle due cambia
-// i vecchi codici non entrano piu'.
+// Il file ha due meta', come auth.js: **Stanza** (qui sopra) sono le regole,
+// pure e sincrone, provate senza browser; **StanzaCloud** (in fondo) e' il
+// pezzo che parla con Firestore. Separati perche' le prove sostituiscono il
+// trasporto e tengono le regole.
+//
+// In Stanza non c'e' crittografia: l'impronta del codice la calcola
+// StanzaCloud passando da improntaPassword(), che esiste gia' in
+// src/20-blocco-password.jsx ed e' la stessa usata dal blocco dell'app.
+// Mettere un secondo PBKDF2 qui dentro vorrebbe dire che il giorno in cui una
+// delle due implementazioni cambia, i codici vecchi non entrano piu'.
 //
 // La decisione da non rimettere in discussione (ROADMAP § 2, 21 settembre):
 // la password d'ingresso la verificano le REGOLE Firestore, non una Cloud
@@ -190,6 +194,37 @@
     return elenco.indexOf(ruolo) !== -1;
   }
 
+  // ---------- Cosa si scrive nella scheda di un membro ----------
+  // Sta QUI, e non dentro StanzaCloud, per una ragione che ho scoperto
+  // sbagliando: la prova e2e sostituisce StanzaCloud con un finto, quindi
+  // qualunque decisione presa li' dentro la prova non la vede — verificava il
+  // finto e si dichiarava soddisfatta. Le decisioni stanno nelle regole, il
+  // trasporto le chiama, e cosi' le prova sia la prova unitaria sia quella a
+  // schermo.
+  //
+  // La riga che conta: chi ENTRA e' redattore. Non se lo sceglie. Se si
+  // scegliesse il ruolo, il primo che entra con un codice si scrive
+  // proprietario e amministra il campo di un altro. Anche le regole Firestore
+  // lo vietano — questa e' la seconda serratura, non l'unica.
+  function schedaIngresso(nome, impronta, quando) {
+    return {
+      ruolo: 'redattore',
+      nome: String(nome || ''),
+      prova: String(impronta || ''),
+      entratoIl: quando || Date.now(),
+    };
+  }
+
+  // Chi CREA la stanza ne e' il proprietario, e non porta nessuna prova: il
+  // segreto l'ha appena scritto lui.
+  function schedaProprietario(nome, quando) {
+    return {
+      ruolo: 'proprietario',
+      nome: String(nome || ''),
+      entratoIl: quando || Date.now(),
+    };
+  }
+
   // Il proprietario non si puo' togliere da solo: una stanza senza
   // proprietario non la amministra piu' nessuno e non si puo' nemmeno
   // cancellare. Per andarsene, prima passa il testimone.
@@ -212,5 +247,144 @@
     validaModulo,
     puo,
     rimuovibile,
+    schedaIngresso,
+    schedaProprietario,
   };
+}(typeof globalThis !== 'undefined' ? globalThis : this));
+
+// ============================================================================
+//  IL TRASPORTO — StanzaCloud
+// ============================================================================
+// Stessa divisione di auth.js: sopra le REGOLE, qui il pezzo che parla con
+// Firestore. Separati perche' le prove sostituiscono il trasporto e tengono le
+// regole: se fossero la stessa cosa, fingere Firebase vorrebbe dire rinunciare
+// alle regole proprio nella prova che deve verificarle.
+//
+// Tre cose che questo pezzo NON fa:
+//   - non inizializza Firebase due volte (firebase-sync.js lo fa gia': qui si
+//     chiede l'app esistente, e solo se non c'e' se ne crea una);
+//   - non carica niente all'avvio — l'SDK viene da gstatic, e senza linea
+//     l'app si deve aprire lo stesso;
+//   - non decide niente. Le decisioni stanno sopra, in Stanza.
+//
+// La cosa importante da sapere leggendolo: **la vera guardia non e' qui**.
+// Un client puo' provare a scriversi in members/<uid> quanto vuole: a dire di
+// no sono le regole Firestore (firestore.rules, provate con `npm run regole`).
+// Qui si calcola l'impronta e si prova a scrivere; se il codice e' sbagliato
+// torna indietro un permission-denied, e va tradotto in una frase.
+(function (root) {
+  'use strict';
+
+  const SDK = 'https://www.gstatic.com/firebasejs/10.12.5/';
+  let fb = null;
+  let db = null;
+
+  const config = () => (root.FIREBASE_CONFIG || null);
+  const disponibile = () => !!(config() && config().apiKey);
+
+  async function sdk() {
+    if (fb) return fb;
+    const [appMod, fsMod] = await Promise.all([
+      import(SDK + 'firebase-app.js'),
+      import(SDK + 'firebase-firestore.js'),
+    ]);
+    fb = Object.assign({}, appMod, fsMod);
+    return fb;
+  }
+
+  async function init() {
+    if (db) return db;
+    if (!disponibile()) throw new Error('firebase-non-configurato');
+    const f = await sdk();
+    const app = (f.getApps && f.getApps().length) ? f.getApp() : f.initializeApp(config());
+    db = f.getFirestore(app);
+    return db;
+  }
+
+  // L'impronta del codice. Si passa da improntaPassword(), che e' la stessa
+  // funzione del blocco dell'app: una seconda implementazione di PBKDF2
+  // vorrebbe dire che il giorno in cui una delle due cambia i codici vecchi
+  // non entrano piu', e nessuno capirebbe perche'.
+  //
+  // Il sale e' il codice della stanza stesso, non un valore a caso: il sale
+  // dev'essere lo stesso su tutti i telefoni che calcolano l'impronta di quel
+  // codice, altrimenti le impronte non combaciano mai. Serve a impedire che
+  // una tabella precalcolata valga per tutte le stanze, e per quello basta.
+  async function impronta(codice) {
+    const n = root.Stanza.normalizza(codice);
+    if (!n) return null;
+    const salt = Array.from(n).map((c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+    if (typeof root.improntaPassword !== 'function') return null;
+    return root.improntaPassword(n, { salt, iter: 200000 });
+  }
+
+  // Creare una stanza: il documento, il segreto e la scheda del proprietario.
+  // Non e' una transazione, e va saputo: se il telefono muore a meta', resta
+  // una stanza senza segreto — nessuno ci entra, nemmeno chi l'ha creata, e
+  // si rifa'. E' il male minore rispetto a una Cloud Function.
+  async function crea(dati, utente) {
+    const f = await sdk();
+    const d = await init();
+    const codice = root.Stanza.normalizza(dati.codice);
+    const imp = await impronta(codice);
+    if (!imp) throw new Error('senza-impronta');
+    await f.setDoc(f.doc(d, 'rooms', codice), {
+      nome: String(dati.nome || '').trim(),
+      inizio: dati.inizio || '',
+      fine: dati.fine || '',
+      luogo: dati.luogo || null,
+      proprietario: utente.uid,
+      creataIl: Date.now(),
+    });
+    await f.setDoc(f.doc(d, 'rooms', codice, 'private', 'join'), { impronta: imp });
+    await f.setDoc(f.doc(d, 'rooms', codice, 'members', utente.uid),
+      root.Stanza.schedaProprietario((root.Auth && root.Auth.nomeVisibile(utente)) || ''));
+    return codice;
+  }
+
+  // Entrare: ci si scrive da soli, portando l'impronta. A dire di no e'
+  // Firestore, non questo codice.
+  async function entra(codice, utente) {
+    const f = await sdk();
+    const d = await init();
+    const c = root.Stanza.normalizza(codice);
+    const imp = await impronta(c);
+    if (!imp) throw new Error('senza-impronta');
+    await f.setDoc(f.doc(d, 'rooms', c, 'members', utente.uid),
+      root.Stanza.schedaIngresso((root.Auth && root.Auth.nomeVisibile(utente)) || '', imp));
+    return c;
+  }
+
+  async function leggi(codice) {
+    const f = await sdk();
+    const d = await init();
+    const s = await f.getDoc(f.doc(d, 'rooms', root.Stanza.normalizza(codice)));
+    return s.exists() ? Object.assign({ codice: root.Stanza.normalizza(codice) }, s.data()) : null;
+  }
+
+  async function membri(codice) {
+    const f = await sdk();
+    const d = await init();
+    const s = await f.getDocs(f.collection(d, 'rooms', root.Stanza.normalizza(codice), 'members'));
+    // La prova d'ingresso non serve a chi disegna, e un'impronta che gira per
+    // l'interfaccia e' un'impronta che prima o poi finisce in un registro.
+    return s.docs.map((x) => {
+      const dati = x.data() || {};
+      return { uid: x.id, ruolo: dati.ruolo || '', nome: dati.nome || '' };
+    });
+  }
+
+  // Un permission-denied qui vuol dire quasi sempre una cosa sola: il codice
+  // e' sbagliato. Dirlo cosi' e' piu' utile di "operazione non consentita",
+  // che manda a cercare un guasto dove non c'e'.
+  function motivo(errore) {
+    const codice = String((errore && (errore.code || errore.message)) || '');
+    if (/permission-denied/.test(codice)) return 'stanza.codiceSbagliato';
+    if (/unavailable|network/.test(codice)) return 'stanza.senzaLinea';
+    if (/firebase-non-configurato/.test(codice)) return 'stanza.senzaFirebase';
+    if (/senza-impronta/.test(codice)) return 'stanza.senzaCaso';
+    return 'stanza.nonRiuscito';
+  }
+
+  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, motivo };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

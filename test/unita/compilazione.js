@@ -306,6 +306,7 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     '76-usa-galleria.jsx': 1,        // una scheggia di codice
     '77-usa-scontrini.jsx': 2,       // 'memoria del telefono': e' un valore, non un testo
     '78-usa-account.jsx': 1,         // una scheggia di codice
+    '79-usa-stanza.jsx': 1,          // una scheggia di codice
     // Un console.warn, il titolo del foglio di condivisione (che porta il
     // nome del campo) e quattordici schegge di codice.
     '80-app.jsx': 17,
@@ -405,6 +406,47 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
   const coda = ultimo >= 0 ? regole.slice(ultimo) : '';
   ok('firestore.rules finisce con il diniego di tutto il resto',
     ultimo >= 0 && /allow\s+read,\s*write:\s*if\s+false\s*;/.test(coda));
+}
+
+// ---------- I due rami non divergono sui soldi ----------
+// Le versioni sono due e restano separate (CLAUDE.md): `main` e' la privata,
+// `feature/public-app` la pubblica. La separazione e' voluta, ma ha un prezzo
+// che nessuno paga finche' non e' tardi: un errore sui conti corretto da una
+// parte sola resta vivo dall'altra, e lo scopre chi sta dividendo le spese
+// davanti a venti persone.
+//
+// Questi quattro file non sono interfaccia ne' marchio: sono i soldi. Devono
+// essere IDENTICI nei due rami. Quando uno diverge non e' per forza un errore
+// — puo' essere una correzione che deve ancora attraversare — ma va visto,
+// non scoperto.
+{
+  const { execFileSync } = require('child_process');
+  const SOLDI = ['conti.js', 'presenze.js', 'sync-merge.js', 'allarmi.js'];
+  const git = (args) => execFileSync('git', args, { cwd: RADICE, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+
+  let ramo = '';
+  try { ramo = git(['rev-parse', '--abbrev-ref', 'HEAD']).trim(); } catch (e) { ramo = ''; }
+
+  if (ramo === 'main') {
+    // Su main il confronto sarebbe con se stessi: non dice niente, e una
+    // verifica che non dice niente e' peggio di nessuna verifica.
+    ok('sul ramo privato non c\'e' + ' niente da confrontare', true);
+  } else {
+    const diversi = [];
+    let potuto = true;
+    SOLDI.forEach((f) => {
+      let altrove = null;
+      try { altrove = git(['show', 'main:' + f]); } catch (e) { potuto = false; return; }
+      if (altrove !== fs.readFileSync(path.join(RADICE, f), 'utf8')) diversi.push(f);
+    });
+    // Se il confronto non si e' potuto fare, la verifica e' ROSSA e lo dice.
+    // Una guardia che si arrende in silenzio quando non trova i dati e' il
+    // difetto che CLAUDE.md chiama sonnifero.
+    ok(`i ${SOLDI.length} file dei soldi sono identici su main`
+      + (!potuto ? ' — NON HO POTUTO CONFRONTARE: manca il ramo main o git' : '')
+      + (diversi.length ? ' — DIVERSI: ' + diversi.join(', ') : ''),
+      potuto && diversi.length === 0);
+  }
 }
 
 fine();

@@ -248,9 +248,15 @@ Quello che le regole dicono, in breve:
 | proprietario | amministra la stanza e i ruoli; non si toglie da solo né si fa riscrivere |
 | utente condiviso | `camps/<codice>`, finché dura il ponte |
 
-**Cosa manca al § 2:** il modulo di creazione (che è il § 9), lo spostamento
-della sincronizzazione da `camps/` a `rooms/<id>/dati/`, e la migrazione dei
-dati del 2026. E, prima di tutto, incollare le regole nuove in console — cosa
+**Il modulo c'è** (21 settembre): `src/79-usa-stanza.jsx` per lo stato,
+la tessera in Impostazioni dietro `FEATURES.rooms`, `StanzaCloud` per il
+trasporto. Si crea una stanza (serve un account verificato, e lo dice *prima*
+di disturbare la rete), si entra con un codice, il codice si vede e si copia.
+22 verifiche in `e2e/stanza`, sei sabotaggi.
+
+**Cosa manca al § 2:** gli inviti veri (link, QR, WhatsApp — sono il resto del
+§ 9), lo spostamento della sincronizzazione da `camps/` a `rooms/<id>/dati/`,
+e la migrazione dei dati del 2026. E, prima di tutto, incollare le regole nuove in console — cosa
 che non va fatta finché il modulo non esiste, altrimenti si pubblicano regole
 per una parte di app che nessuno può ancora usare.
 
@@ -287,6 +293,19 @@ seconda app Firebase (`initializeApp(config, 'nome')`), o si toglie di mezzo
 l'utente condiviso, che è la strada 1.
 
 ## 3. Pubblicazione su Google Play (versione neutra)
+
+> **Deciso il 21 settembre: le versioni sono DUE prodotti, non uno.**
+> La privata resta quella del gruppo (Bandy, Prato Lungo, l'utente condiviso) e
+> vive su `main`; la pubblica è neutra, vive su `feature/public-app` e va sullo
+> store. Il «de-branding» qui sotto descritto **non è più il piano**: non si
+> ricolora un'app sola, si tengono due rami. Niente passa dall'uno all'altro
+> se non lo decide Lorenzo, volta per volta.
+>
+> Resta un vincolo: `conti.js`, `presenze.js`, `sync-merge.js` e `allarmi.js`
+> **non devono divergere**. Un errore sui soldi corretto da una parte sola è un
+> errore ancora vivo dall'altra. Prima della pubblicazione va deciso come
+> tenerli uguali — oggi non c'è niente che se ne accorga.
+
 
 **Percorso tecnico:** PWA → **TWA (Trusted Web Activity)**, generata con
 PWABuilder o Bubblewrap. L'app resta la stessa: il pacchetto è un guscio che
