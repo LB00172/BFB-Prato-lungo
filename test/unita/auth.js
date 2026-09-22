@@ -183,6 +183,7 @@ if (!A) { fine(); }
   // Una password dentro users/<uid> sarebbe la fine: Firestore lo legge
   // chiunque abbia accesso alla room.
   ok('la password NON entra nel profilo', !('password' in p) && JSON.stringify(p).indexOf('segreta') === -1);
+
   ok('c\'e\' la data di creazione', typeof p.creatoIl === 'number' && p.creatoIl > 0);
 
   ok(`il nome da mostrare e' nome e cognome (${A.nomeVisibile(p)})`, A.nomeVisibile(p) === 'Mario Rossi');
@@ -194,6 +195,65 @@ if (!A) { fine(); }
   ok('e mai l\'indirizzo intero',
     A.nomeVisibile({ email: 'mario@example.com' }).indexOf('@') === -1);
   ok('senza niente non esplode', A.nomeVisibile(null) === '' && A.nomeVisibile({}) === '');
+}
+
+
+// ---------- Quando il profilo NON si scrive ----------
+// La meta' che conta. Scrivere e' facile; e' il "non scrivere" che tiene
+// pulito il database e non riscrive addosso a quello che ha messo l'utente.
+{
+  // La forma VERA: e' quella che produce nostro() e che gira per l'app.
+  // `isAnonimo` in italiano, e `nome` che qui e' il nome INTERO di Google —
+  // non il primo pezzo. Scritta all'inglese (isAnonymous, displayName) la
+  // funzione passava le prove e in produzione non avrebbe fatto niente:
+  // nessun nome letto, e un profilo scritto per ogni anonimo.
+  const GOOGLE = { uid: 'g1', email: 'Lorenzo@Example.com', nome: 'Lorenzo Ballerini', isAnonimo: false };
+
+  // 1. Un anonimo non lascia niente dietro di se'. Il suo uid muore con
+  //    l'installazione: un documento per ogni telefono che ha aperto l'app
+  //    una volta, e nessuno potrebbe piu' raggiungerlo ne' cancellarlo.
+  // L'indirizzo c'e' APPOSTA. Con un anonimo senza email la verifica passava
+  // lo stesso, ma per il motivo sbagliato — la fermava il controllo sul
+  // profilo vuoto, non quello su isAnonymous — e sarebbe rimasta verde anche
+  // togliendo la riga che dovrebbe proteggere. E' la stessa trappola gia'
+  // scritta in CLAUDE.md per sessioneDelCampo, arrivata da un'altra porta:
+  // se ne e' accorto un sabotaggio che non arrossiva.
+  ok('un anonimo non ha un profilo da scrivere, nemmeno con un indirizzo',
+    A.profiloDaSalvare({ uid: 'a1', isAnonimo: true, email: 'anon@example.com' }, null) === null);
+  ok('e nemmeno un ospite', A.profiloDaSalvare(null, null) === null);
+
+  const primo = A.profiloDaSalvare(GOOGLE, null);
+  ok(`al primo accesso il profilo nasce ("${primo.nome}" "${primo.cognome}" ${primo.email})`,
+    primo && primo.nome === 'Lorenzo' && primo.cognome === 'Ballerini'
+    && primo.email === 'lorenzo@example.com');
+
+  // 4. Se non cambia niente non si scrive niente: altrimenti ogni apertura
+  //    dell'app sarebbe una scrittura per riscrivere le stesse tre parole.
+  ok('riaprendo l\'app non si riscrive niente',
+    A.profiloDaSalvare(GOOGLE, primo) === null);
+
+  // 2. Quello che ha scritto l'utente batte quello che dice Google.
+  const corretto = Object.assign({}, primo, { cognome: 'Ballerini Rossi' });
+  ok('un cognome corretto a mano non se lo riprende Google',
+    A.profiloDaSalvare(GOOGLE, corretto) === null);
+  // E il nome, che nessuno guardava: nella verifica qui sopra "Lorenzo" era
+  // uguale da tutte e due le parti, quindi invertire la precedenza del nome
+  // non cambiava niente e il sabotaggio restava verde.
+  const rinominato = Object.assign({}, primo, { nome: 'Renzo' });
+  ok('e nemmeno un nome corretto a mano',
+    A.profiloDaSalvare(GOOGLE, rinominato) === null);
+
+  // 3. creatoIl e' la data d'iscrizione, non l'ultimo accesso.
+  const vecchio = Object.assign({}, primo, { creatoIl: 1000, email: 'altra@example.com' });
+  const riscritto = A.profiloDaSalvare(GOOGLE, vecchio);
+  ok('cambiando indirizzo si riscrive, ma creatoIl resta quello di prima',
+    riscritto && riscritto.email === 'lorenzo@example.com' && riscritto.creatoIl === 1000);
+
+  // Un nome intero si spezza in due, e un nome solo non inventa un cognome.
+  ok('«Lorenzo» da solo non si inventa un cognome',
+    A.spezzaNome('Lorenzo').nome === 'Lorenzo' && A.spezzaNome('Lorenzo').cognome === '');
+  ok('e senza nome non si scrive un profilo vuoto',
+    A.profiloDaSalvare({ uid: 'x', email: '', displayName: '' }, null) === null);
 }
 
 fine();

@@ -35,7 +35,7 @@ cosa blocca cosa.
 
 | | Sezione | Perché in quest'ordine |
 | --- | --- | --- |
-| 4 | § 1 Login | **in corso** dal 21 settembre su `camp-ops`: le regole, il trasporto e la tessera ci sono; restano la console Firebase e `users/<uid>` (che viaggia col § 2) |
+| 4 | § 1 Login | **fatto** il 22 settembre su `camp-ops`: regole, trasporto, tessera, console Firebase (progetto `camp-ops` a sé) e `users/<uid>`. Resta fuori solo la cancellazione dell'account, che è una domanda sulla room (§ 3) |
 | 5 | § 2 Room | **in corso** dal 21 settembre: `stanza.js` (codice d'ingresso, ruoli) e `firestore.rules` scritte e provate contro l'emulatore. Restano il modulo e il collegamento della sincronizzazione |
 | 6 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
 | 7 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
@@ -163,13 +163,23 @@ che fallisce più spesso.
 
 **Cosa manca al § 1**, e non si può fare da qui:
 
-- **La console Firebase** (solo Lorenzo): accendere i provider *Google* e
-  *Email/Password*, mettere il dominio di Vercel fra quelli autorizzati,
-  personalizzare l'email di verifica. Finché non è fatto, `operation-not-allowed`
-  è l'errore che si vede — ed è già tradotto in una frase che lo spiega.
-- **`users/<uid>`**: il profilo esiste già come oggetto (`Auth.profilo()`, e la
-  password non ci entra: una prova lo verifica), ma scriverlo vuol dire
-  decidere le Security Rules, che sono il cuore del § 2. Si scrive lì.
+- ~~**La console Firebase**~~ — **fatta il 22 settembre**, e ha prodotto una
+  decisione che non era in programma: i progetti Firebase sono diventati
+  **due**. Con uno solo, la finestra di consenso di Google diceva
+  `brigata-bandone` a ogni utente della versione pubblica — il marchio che
+  usciva nel momento più guardato, dove nessuna guardia stava guardando.
+  Adesso la pubblica ha il progetto `camp-ops`, con le sue regole e i suoi
+  domini autorizzati.
+- ~~**`users/<uid>`**~~ — **fatto il 22 settembre**. Le regole sono le più
+  strette di tutto il file: il profilo lo legge e lo scrive **solo** il suo
+  proprietario, nemmeno i compagni di stanza. Il nome che serve ai saldi sta
+  già in `rooms/<id>/members/<uid>`; aprire `users/` alla stanza vorrebbe dire
+  regalare l'indirizzo email di tutti a chiunque conosca un codice d'ingresso.
+  La decisione di **quando** scrivere è pura (`Auth.profiloDaSalvare`) e sta
+  quasi tutta nel dire di no: niente profilo per gli anonimi (il loro uid
+  muore con l'installazione e lascerebbe documenti irraggiungibili), quello
+  che ha corretto l'utente batte quello che dice Google, `creatoIl` si scrive
+  una volta sola, e se non è cambiato niente non si scrive niente.
 - **Cancellazione dell'account**: la chiede Google Play (§ 3). Va insieme alla
   room, perché cancellare un account che amministra una room è una domanda
   sulla room, non sull'account.

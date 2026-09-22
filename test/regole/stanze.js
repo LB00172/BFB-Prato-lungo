@@ -218,6 +218,25 @@ const permesso = async (msg, azione) => {
   // che avevano il ponte e l'utente condiviso — queste diventano rosse.
   // Cancellarle e basta avrebbe lasciato quel passo falso senza nessuno che
   // lo guarda.
+  // ---------- 5-ter) Il profilo e' tuo e di nessun altro ----------
+  // users/<uid> tiene nome, cognome e indirizzo. La meta' che conta e' quella
+  // che nega: un indirizzo email, una volta uscito, non si fa rientrare, e
+  // qui dentro ci sono quelli di tutti quelli che useranno l'app.
+  console.log('\n5-ter) Il profilo');
+  await permesso('ognuno scrive il proprio profilo',
+    () => setDoc(doc(anna, 'users/anna'), { nome: 'Anna', email: 'anna@example.com' }));
+  await permesso('e se lo rilegge', () => getDoc(doc(anna, 'users/anna')));
+  await negato('ma non scrive quello di un altro',
+    () => setDoc(doc(bruno, 'users/anna'), { nome: 'Finta' }));
+  // Nemmeno fra membri della stessa stanza: il nome che serve ai saldi sta in
+  // members/<uid>, e per quello non c'e' bisogno dell'indirizzo di nessuno.
+  await negato('e NON legge quello di un altro, nemmeno da compagno di stanza',
+    () => getDoc(doc(bruno, 'users/anna')));
+  await negato('un ospite senza account non ne legge nessuno',
+    () => getDoc(doc(ospite, 'users/anna')));
+  await negato('e non se ne scrive uno a caso',
+    () => setDoc(doc(ospite, 'users/chiunque'), { nome: 'X' }));
+
   console.log('\n6) Il campo 2026 non abita in questo progetto');
   await negato('l\'utente condiviso non legge camps/',
     () => getDoc(doc(condiviso, 'camps/Bandone')));

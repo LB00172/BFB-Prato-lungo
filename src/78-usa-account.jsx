@@ -34,10 +34,22 @@ const usaAccount = () => {
 
   const AC = () => (typeof window !== 'undefined' && window.AuthCloud) || null;
 
+  // Il profilo su users/<uid>: si allinea a ogni cambio di accesso, non a
+  // ogni disegno. Chi entra per la prima volta lo fa nascere; chi rientra di
+  // solito non scrive niente — la decisione sta in Auth.profiloDaSalvare, e
+  // dice di no quando non e' cambiato nulla.
+  //
+  // Si ignora quello che torna, apposta: il profilo e' roba di servizio e
+  // non deve mai far comparire un errore rosso a chi e' appena entrato.
+  // sincronizzaProfilo non alza eccezioni per lo stesso motivo — una dentro
+  // l'osservatore dell'accesso porterebbe via l'app intera.
   useEffect(() => {
     const ac = AC();
     if (!ac) return undefined;
-    return ac.osserva((u) => setUtente(u));
+    return ac.osserva((u) => {
+      setUtente(u);
+      if (u && ac.sincronizzaProfilo) ac.sincronizzaProfilo(u);
+    });
   }, []);
 
   const stato = window.Auth ? window.Auth.stato(utente) : 'ospite';

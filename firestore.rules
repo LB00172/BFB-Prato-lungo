@@ -143,6 +143,24 @@ service cloud.firestore {
       }
     }
 
+    // ---------- Il profilo: tuo, e di nessun altro ----------
+    // nome, cognome, indirizzo. Lo legge e lo scrive SOLO il proprietario:
+    // niente lettura fra utenti, nemmeno fra membri della stessa stanza.
+    //
+    // Sembra scomodo e invece non manca niente: il nome che si vede accanto
+    // ai saldi sta in rooms/<id>/members/<uid>, scritto entrando. Aprire
+    // users/ ai compagni di stanza vorrebbe dire regalare l'indirizzo email
+    // di tutti a chiunque conosca un codice d'ingresso — e un indirizzo
+    // email, una volta uscito, non si fa rientrare.
+    //
+    // L'anonimo qui non arriva mai: non gli si scrive un profilo (la regola
+    // sta in auth.js, profiloDaSalvare). Ma se ci arrivasse, la riga qui
+    // sotto lo lascerebbe fare, e va bene: sarebbe roba sua, sotto il suo
+    // uid, illeggibile da chiunque altro.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && uid == request.auth.uid;
+    }
+
     // ---------- Tutto il resto e' chiuso ----------
     // Va per ultimo e nega: una collezione nuova non nasce aperta per
     // distrazione. Se domani serve, si scrive la sua regola qui sopra.

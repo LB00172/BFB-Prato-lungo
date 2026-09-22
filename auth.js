@@ -163,6 +163,61 @@
     };
   }
 
+  // Google manda un nome intero ("Lorenzo Ballerini"), l'app ne tiene due
+  // pezzi. La prima parola e' il nome, il resto il cognome: sbaglia sui nomi
+  // composti, ma e' un valore di partenza che l'utente puo' correggere — e
+  // una casella gia' piena si corregge, una vuota si salta.
+  function spezzaNome(intero) {
+    const pezzi = String(intero || '').trim().split(/\s+/).filter(Boolean);
+    if (!pezzi.length) return { nome: '', cognome: '' };
+    return { nome: pezzi[0], cognome: pezzi.slice(1).join(' ') };
+  }
+
+  // ---------- Se il profilo va scritto, e con cosa ----------
+  // Restituisce l'oggetto da salvare, oppure **null quando non c'e' niente da
+  // fare**. Quel null e' la parte utile: senza, ogni apertura dell'app
+  // sarebbe una scrittura su Firestore per riscrivere le stesse tre parole.
+  //
+  // Le quattro regole, che non si indovinano leggendo il codice che chiama:
+  //
+  // 1. **Un anonimo non ha un profilo.** Non ha nome ne' indirizzo, e il suo
+  //    uid muore con l'installazione: si lascerebbe dietro un documento per
+  //    ogni telefono che ha aperto l'app una volta, che nessuno potra' mai
+  //    piu' raggiungere ne' cancellare.
+  // 2. **Quello che ha scritto l'utente batte quello che dice Google.** Chi
+  //    si e' corretto il cognome non se lo vede rimettere com'era al
+  //    prossimo accesso: da Google si prende solo cio' che manca.
+  // 3. **`creatoIl` si scrive una volta.** E' la data d'iscrizione:
+  //    riscriverla a ogni accesso la trasformerebbe in "ultima volta che sei
+  //    entrato", che e' un altro dato e nessuno se ne accorgerebbe.
+  // 4. **Se non cambia niente, non si scrive niente.**
+  // ⚠️ Due `nome` diversi, ed e' la trappola di questa funzione. Sull'UTENTE
+  // (quello di nostro(), la forma che gira per l'app) `nome` e' il nome
+  // INTERO che manda Google — "Lorenzo Ballerini". Sul PROFILO `nome` e' solo
+  // il primo pezzo, e il resto sta in `cognome`. Confonderli non da' nessun
+  // errore: scrive "Lorenzo Ballerini Ballerini" e nessuno se ne accorge.
+  //
+  // E l'anonimo qui si chiama `isAnonimo`: nostro() traduce anche quello.
+  // Scritto all'inglese il controllo non trova niente, passa sempre, e ogni
+  // telefono che ha aperto l'app una volta si lascia dietro un documento.
+  function profiloDaSalvare(utente, esistente) {
+    if (!utente || !utente.uid) return null;
+    if (utente.isAnonimo || utente.isAnonymous) return null;
+    const vecchio = esistente || null;
+    const daGoogle = spezzaNome(utente.nome || utente.displayName);
+    const voluto = profilo(utente, {
+      nome: (vecchio && vecchio.nome) || daGoogle.nome,
+      cognome: (vecchio && vecchio.cognome) || daGoogle.cognome,
+      creatoIl: (vecchio && vecchio.creatoIl) || undefined,
+    });
+    if (!voluto.email && !voluto.nome && !voluto.cognome) return null;
+    if (vecchio
+        && vecchio.nome === voluto.nome
+        && vecchio.cognome === voluto.cognome
+        && vecchio.email === voluto.email) return null;
+    return voluto;
+  }
+
   // Il nome da mostrare: nome e cognome se ci sono, se no la parte davanti
   // alla chiocciola. Mai l'indirizzo intero — finisce nei saldi, accanto a
   // quanto deve, e l'indirizzo di tutti non e' un dato da spargere.
@@ -187,6 +242,8 @@
     promuovibile: promuovibile,
     motivo: motivo,
     profilo: profilo,
+    spezzaNome: spezzaNome,
+    profiloDaSalvare: profiloDaSalvare,
     nomeVisibile: nomeVisibile,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -355,8 +412,70 @@
     return ultimo;
   }
 
+  // ---------- Il profilo su Firestore ----------
+  // Sta qui e non in firebase-sync.js perche' users/<uid> e' "chi sei", non
+  // i dati di un campo — e perche' CloudSync il suo db ce l'ha solo da
+  // connesso, mentre il profilo serve anche a chi ha spento la
+  // sincronizzazione. Il pezzo di SDK in piu' si carica solo se qualcuno
+  // entra davvero: chi resta ospite non scarica niente.
+  let fs = null;
+  let dbProfili = null;
+
+  async function sdkFirestore() {
+    if (fs) return fs;
+    const [appMod, fsMod] = await Promise.all([
+      import(SDK + 'firebase-app.js'),
+      import(SDK + 'firebase-firestore.js'),
+    ]);
+    fs = Object.assign({}, appMod, fsMod);
+    return fs;
+  }
+
+  async function dbase() {
+    if (dbProfili) return dbProfili;
+    const f = await sdkFirestore();
+    const app = (f.getApps && f.getApps().length) ? f.getApp() : f.initializeApp(config());
+    dbProfili = f.getFirestore(app);
+    return dbProfili;
+  }
+
+  // Legge quello che c'e', chiede alle REGOLE (profiloDaSalvare) se serve
+  // scrivere, e scrive solo se serve. Il merge lascia stare i campi che non
+  // nomina: se domani la stanza scrive qualcosa dentro users/<uid>, il login
+  // non glielo cancella passando di qui.
+  //
+  // Non alza mai un'eccezione. Un profilo che non si salva e' un fastidio;
+  // un'eccezione dentro l'osservatore dell'accesso smonta React e porta via
+  // l'app intera, che e' un'altra categoria di guaio.
+  async function sincronizzaProfilo(utente) {
+    try {
+      if (!root.Auth) return null;
+      // Chi non avrebbe un profilo nemmeno partendo da zero — anonimi,
+      // ospiti, chi non ha ne' nome ne' indirizzo — non fa nemmeno il giro
+      // di rete. Per tutti gli altri si legge, e sara' la stessa funzione,
+      // con quello che c'e' davvero, a dire se poi si scrive.
+      if (!root.Auth.profiloDaSalvare(utente, null)) return null;
+      if (!disponibile()) return null;
+      const f = await sdkFirestore();
+      const d = await dbase();
+      const rif = f.doc(d, 'users', utente.uid);
+      let esistente = null;
+      try {
+        const istantanea = await f.getDoc(rif);
+        if (istantanea.exists()) esistente = istantanea.data();
+      } catch (e) { /* non letto: si prova a scrivere lo stesso */ }
+      const daScrivere = root.Auth.profiloDaSalvare(utente, esistente);
+      if (!daScrivere) return esistente;
+      await f.setDoc(rif, daScrivere, { merge: true });
+      return daScrivere;
+    } catch (e) {
+      return null;
+    }
+  }
+
   root.AuthCloud = {
     disponibile: disponibile,
+    sincronizzaProfilo: sincronizzaProfilo,
     osserva: osserva,
     utente: () => (ultimo ? Object.assign({}, ultimo) : null),
     registra: registra,
