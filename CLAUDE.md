@@ -34,8 +34,8 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 74 prove, circa 9 minuti.
-   Verde o non è finito. Se hai toccato `firestore.rules`, anche
+4. **Prima di dire "fatto" gira `npm test`.** 75 prove, **due minuti e
+   mezzo**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -50,11 +50,20 @@ porta a diagnosi sbagliate. Se cambia una di quelle regole, va aggiornato lì.
 
 ```
 node build.js          # src/*.jsx -> App.js + CACHE_NAME in sw.js
-npm test               # tutto (~8 min)
-npm test unita         # solo le prove che non aprono il browser (~10 s)
+npm test               # tutto (~2 min 30)
+npm test unita         # solo le prove che non aprono il browser (~2 s)
 npm test contabilita   # filtro sul nome della prova
 npm run regole         # le regole Firestore, contro l'emulatore (~30 s)
+PROVE_PARALLELE=1 npm test   # una alla volta, per inseguire una prova ballerina
 ```
+
+Le prove girano **in parallelo**, al doppio dei core. Non è per eleganza: in
+serie erano dieci minuti, e una rete di sicurezza che costa dieci minuti si
+finisce per lanciarla di meno — che è il contrario di quello che deve
+succedere. La misura che lo permette: la suite consuma due minuti di
+processore in sei di orologio, cioè per due terzi del tempo sta ferma ad
+aspettare. Le più lente partono per prime, e le durate se le ricorda da sé in
+`test/tmp/durate.json`.
 
 `npm run regole` sta **fuori** da `npm test` perché ha bisogno
 dell'emulatore Firestore (Java e `firebase-tools`, già fra le dipendenze di
@@ -270,6 +279,16 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   pubblica né `git push` né Vercel: si incollano a mano nella console
   Firebase. Ripararle nel repository e fermarsi lì vuol dire avere la cura
   scritta e il difetto ancora vivo su venti telefoni.
+- **Un'attesa fissa dentro una prova è una bomba a orologeria che il
+  parallelismo fa esplodere.** `e2e/registro` aspettava 800 millisecondi e poi
+  pretendeva che la fusione remota fosse arrivata. In serie bastavano; con
+  otto browser accesi no, e la prova è caduta una volta su cinque — per un
+  motivo che col codice non c'entrava niente. Una prova che cade a caso è
+  peggio di una che manca: dopo due volte si prende l'abitudine di rilanciarla
+  invece di leggerla, e il giorno che ha ragione non la crede più nessuno. Si
+  aspetta la CONDIZIONE (`waitForFunction`), mai un numero di millisecondi —
+  tranne quando si verifica che qualcosa NON succeda, dove un'attesa fissa è
+  l'unica cosa possibile.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.

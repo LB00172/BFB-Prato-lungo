@@ -127,7 +127,16 @@ const spese = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('cam
       _meta: { v: 2, rev: { 'p|remota1': Date.now() - 3600000 }, del: {} },
     });
   });
-  await p.waitForTimeout(800);
+  // Qui c'erano 800 millisecondi fissi, ed e' il punto in cui la prova cadeva
+  // a caso da quando la suite gira in parallelo: la fusione la fa un effetto
+  // di React, e con otto browser accesi puo' arrivare piu' tardi. Si aspetta
+  // che le due spese ci siano davvero — e la verifica sotto resta, perche' il
+  // timeout scaduto lascia l'elenco incompleto e la fa diventare rossa lo
+  // stesso, con scritto cosa mancava.
+  await p.waitForFunction(() => {
+    const a = JSON.parse(localStorage.getItem('cambusa_purchases') || '[]').map((x) => x.name);
+    return a.indexOf('Carbone') >= 0 && a.indexOf('Birra') >= 0;
+  }, null, { timeout: 8000 }).catch(() => {});
 
   const dopo = await spese(p);
   ok(`il lavoro offline non viene cancellato (${dopo.join(', ')})`, dopo.indexOf('Carbone') >= 0 && dopo.indexOf('Birra') >= 0);
@@ -156,7 +165,15 @@ const spese = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('cam
       purchases: [{ id: 'remota1', name: 'Birra', price: 20, type: 'bevande', buyer: 'Bruno', at: 1 }],
     });
   });
-  await p.waitForTimeout(800);
+  // Stesso motivo di sopra: si aspetta che la Birra remota sia entrata, non
+  // un numero di millisecondi. Quello che si verifica e' un'altra cosa — che
+  // il Carbone NON sia sparito — ma per poterlo dire bisogna essere sicuri
+  // che la fusione sia avvenuta, o si misura un momento in cui non era
+  // ancora successo niente e la prova passa per il motivo sbagliato.
+  await p.waitForFunction(
+    () => JSON.parse(localStorage.getItem('cambusa_purchases') || '[]').some((x) => x.name === 'Birra'),
+    null, { timeout: 8000 },
+  ).catch(() => {});
   const finale = await spese(p);
   ok(`l'app vecchia non cancella il lavoro degli altri (${finale.join(', ')})`, finale.indexOf('Carbone') >= 0);
 
