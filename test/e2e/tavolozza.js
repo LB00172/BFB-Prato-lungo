@@ -34,28 +34,41 @@ const { apri, ok, fine } = require('../lib/app');
 const { semina, SCHERMATE } = require('../lib/schermate');
 
 // Il debito di partenza, misurato il 22 settembre 2026 sulla tavolozza della
-// Brigata. Ogni riga e' "testo su sfondo". Quando un colore si ripara, la sua
-// riga va TOLTA da qui, o la prova diventa rossa apposta.
+// Brigata, con la sonda che fa dipingere i colori al browser. La prima
+// versione della sonda leggeva le notazioni con una regex e ne dichiarava
+// sette: ne saltava meta', perche' ogni classe con opacita' esce in oklab()
+// e quella regex non la capiva. Il debito vero e' questo, ed e' piu' grosso.
+//
+// Ogni riga e' "testo su sfondo". Quando un colore si ripara, la sua riga va
+// TOLTA da qui, o la prova diventa rossa apposta.
 //
 // #25D366 e' il verde di WhatsApp: quello non si tocca, e' il loro marchio e
 // il bottone deve somigliare al loro. Resta dichiarato, non riparato.
 const DEBITO = {
   light: [
-    '#8F9E8B su #2D392C',   // 4,29 — a un soffio, salvia su militare
-    '#8F9E8B su #F0F4F1',   // 2,55 — il peggiore: le etichette di sezione
+    '#6A7282 su #E5E7EB',   // 3,91 — text-gray-500 di Tailwind
+    '#6A7282 su #F4F5F4',   // 4,43 — a un soffio
+    '#7B8A78 su #2D392C',   // 3,32 — salvia semitrasparente sul militare
+    '#8F9E8B su #2D392C',   // 4,29
+    '#8F9E8B su #F0F4F1',   // 2,55 — le etichette di sezione, il peggiore
     '#8F9E8B su #FFFFFF',   // 2,83
-    '#FFFFFF su #D97706',   // 3,19 — bianco sull'ambra
-    '#D97706 su #FFFFFF',   // 3,19
+    '#99A1AF su #E7E4E2',   // 2,06 — text-gray-400, il peggiore in assoluto
+    '#99A1AF su #F0F4F1',   // 2,34
+    '#99A1AF su #F6F8F7',   // 2,44
+    '#99A1AF su #FFFFFF',   // 2,60
     '#D97706 su #2D392C',   // 3,80
+    '#D97706 su #FFFFFF',   // 3,19
     '#FFFFFF su #25D366',   // 1,98 — WhatsApp, per contratto
+    '#FFFFFF su #D97706',   // 3,19
   ],
   dark: [
-    '#8F9E8B su #2D392C',   // 4,29
+    '#7B8A78 su #2D392C',   // 3,32
     '#8C988B su #2C352B',   // 4,23
     '#8C988B su #2D392C',   // 4,03
-    '#FFFFFF su #D97706',   // 3,19
+    '#8F9E8B su #2D392C',   // 4,29
     '#D97706 su #2D392C',   // 3,80
     '#FFFFFF su #25D366',   // 1,98 — WhatsApp, per contratto
+    '#FFFFFF su #D97706',   // 3,19
   ],
 };
 
@@ -63,31 +76,40 @@ const DEBITO = {
 // tondo per caso: e' quello misurato piu' un po' di respiro. Serve a prendere
 // la tavolozza che si moltiplica — dodici misure di testo diventate sei
 // avevano cominciato cosi'.
-const TETTO = { light: 24, dark: 40 };
+const TETTO = { light: 48, dark: 44 };
 
 const SONDA = () => {
+  // I colori NON si interpretano: si fanno dipingere al browser. Tailwind
+  // emette `oklab(... / 0.5)` per ogni classe con opacita' — bg-carta/50,
+  // border-salvia/30, e sono centosettanta nell'app — e una regex su rgba()
+  // li salta in silenzio. Saltarli non vuol dire misurare di meno: vuol dire
+  // misurare il contrasto contro lo sfondo SBAGLIATO, perche' la risalita
+  // prosegue fino a un antenato che quel colore non ce l'ha. Un buco che
+  // rassicura a vuoto, che e' peggio di nessuna misura.
+  //
+  // Con il canvas la notazione non conta piu': quello che si legge e' quello
+  // che verrebbe dipinto, oggi e con qualunque notazione Tailwind inventi.
+  const tela = document.createElement('canvas');
+  tela.width = 1; tela.height = 1;
+  const pennello = tela.getContext('2d', { willReadFrequently: true });
+  const memoria = {};
+  const risolvi = (css) => {
+    if (memoria[css]) return memoria[css];
+    pennello.clearRect(0, 0, 1, 1);
+    pennello.fillStyle = '#000000';
+    pennello.fillStyle = css;          // se non la capisce resta nero: si vede
+    pennello.fillRect(0, 0, 1, 1);
+    const d = pennello.getImageData(0, 0, 1, 1).data;
+    memoria[css] = { rgb: [d[0], d[1], d[2]], a: d[3] / 255 };
+    return memoria[css];
+  };
+  // Un colore semitrasparente sopra un altro: quello che si VEDE e' la
+  // mescolanza, non nessuno dei due.
+  const sopra = (f, s) => f.rgb.map((v, i) => Math.round(f.a * v + (1 - f.a) * s[i]));
+
   const lum = (c) => {
     const v = c.map((x) => x / 255).map((x) => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
     return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
-  };
-  const leggi = (s) => {
-    const m = /rgba?\(([^)]+)\)/.exec(s);
-    if (!m) return null;
-    const p = m[1].split(',').map((x) => parseFloat(x));
-    return { rgb: [p[0], p[1], p[2]], a: p.length > 3 ? p[3] : 1 };
-  };
-  // Lo sfondo vero non e' quello dell'elemento: quasi tutti sono trasparenti,
-  // e il colore arriva da un antenato. Si risale finche' non se ne trova uno
-  // che copre davvero.
-  const sfondoDi = (el) => {
-    let n = el;
-    while (n && n !== document.documentElement) {
-      const c = leggi(getComputedStyle(n).backgroundColor);
-      if (c && c.a > 0.5) return c.rgb;
-      n = n.parentElement;
-    }
-    const c = leggi(getComputedStyle(document.body).backgroundColor);
-    return c ? c.rgb : [255, 255, 255];
   };
   const rapporto = (a, b) => {
     const l1 = lum(a), l2 = lum(b);
@@ -95,30 +117,47 @@ const SONDA = () => {
   };
   const hex = (c) => '#' + c.map((x) => Math.round(x).toString(16).padStart(2, '0')).join('').toUpperCase();
 
+  // Lo sfondo vero: si risale raccogliendo gli strati finche' non se ne trova
+  // uno che copre, poi si mescolano dal fondo verso l'alto. Fermarsi al primo
+  // strato semitrasparente darebbe un colore che nessuno vede davvero.
+  const sfondoDi = (el) => {
+    const strati = [];
+    let n = el;
+    while (n && n !== document.documentElement) {
+      const c = risolvi(getComputedStyle(n).backgroundColor);
+      if (c.a > 0) strati.push(c);
+      if (c.a >= 0.999) break;
+      n = n.parentElement;
+    }
+    const radice = risolvi(getComputedStyle(document.documentElement).backgroundColor);
+    let sotto = radice.a >= 0.999 ? radice.rgb : [255, 255, 255];
+    for (let i = strati.length - 1; i >= 0; i -= 1) sotto = sopra(strati[i], sotto);
+    return sotto;
+  };
+
   const sotto = {};
   const coppie = {};
   document.querySelectorAll('main *, header *, nav *').forEach((el) => {
     // Solo chi ha del testo suo: un contenitore vuoto eredita e basta.
     const proprio = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
     if (!proprio) return;
-    // Le emoji hanno i colori loro e non li prende dal CSS: un elemento fatto
-    // solo di simboli darebbe un falso allarme a ogni giro.
+    // Le emoji hanno i colori loro e non li prendono dal CSS: un elemento
+    // fatto solo di simboli darebbe un falso allarme a ogni giro.
     if (!/[\p{L}\p{N}]/u.test(el.innerText || '')) return;
     const r = el.getBoundingClientRect();
     if (!r.width || !r.height) return;
     const st = getComputedStyle(el);
-    const t = leggi(st.color);
-    if (!t || t.a < 0.5) return;
+    const t = risolvi(st.color);
+    if (t.a < 0.1) return;                       // testo invisibile apposta
     const s = sfondoDi(el);
-    const chiave = hex(t.rgb) + ' su ' + hex(s);
+    const testo = t.a >= 0.999 ? t.rgb : sopra(t, s);
+    const chiave = hex(testo) + ' su ' + hex(s);
     coppie[chiave] = true;
     const px = parseFloat(st.fontSize);
     // La soglia WCAG AA: 3 per il testo grande, 4,5 per tutto il resto.
     const grosso = px >= 18.66 || (px >= 14 && Number(st.fontWeight) >= 700);
-    const cr = rapporto(t.rgb, s);
-    if (cr < (grosso ? 3 : 4.5)) {
-      sotto[chiave] = Math.round(cr * 100) / 100;
-    }
+    const cr = rapporto(testo, s);
+    if (cr < (grosso ? 3 : 4.5)) sotto[chiave] = Math.round(cr * 100) / 100;
   });
   return { sotto, coppie: Object.keys(coppie) };
 };
