@@ -253,6 +253,23 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   conta i pezzi, non io. E **dove** stanno i dati non si scrive più a mano:
   `'camps'` era in trentasette punti di `firebase-sync.js`, adesso passa tutto
   da `percorso()` e una prova vieta di riscriverne uno.
+- **Lo stato di partenza scritto aggirando le regole nasconde la strada che
+  lo costruisce.** Le prove delle regole seminano la stanza con
+  `withSecurityRulesDisabled` — e devono farlo, provare le regole con le
+  regole non dimostra niente. Ma fra le righe seminate c'era la **scheda del
+  proprietario**, cioè proprio il documento che l'app fatica a scrivere:
+  ogni verifica partiva da un mondo che le regole non sapevano costruire.
+  Creare una stanza sono **tre** scritture, e la terza era negata: il
+  documento nasceva, la scheda no, e da lì in poi il proprietario non poteva
+  più nemmeno leggere la stanza che aveva appena creato. Trentanove verifiche
+  verdi, e la versione pubblica senza primo passo. La prova a schermo non
+  poteva vederlo — sostituisce `StanzaCloud` con un finto. Se lo stato
+  iniziale contiene qualcosa che l'app scrive, quel percorso va provato in
+  proprio, di seguito e nell'ordine vero (`5-bis` in `test/regole/stanze.js`).
+- **Le regole in `firestore.rules` non vanno in produzione da sole.** Non le
+  pubblica né `git push` né Vercel: si incollano a mano nella console
+  Firebase. Ripararle nel repository e fermarsi lì vuol dire avere la cura
+  scritta e il difetto ancora vivo su venti telefoni.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.

@@ -166,6 +166,45 @@ const permesso = async (msg, azione) => {
   await negato('un ospite senza account non crea niente',
     () => setDoc(doc(ospite, 'rooms/NUOVA444'), { nome: 'Campo', proprietario: 'x' }));
 
+  // ---------- 5-bis) E poi la stanza si usa ----------
+  // Qui sopra si creava il documento della stanza e ci si fermava. Ma creare
+  // una stanza non e' scrivere un documento: sono TRE scritture di fila, ed
+  // e' la terza che decideva tutto. Lo stato di partenza del § 0 la scheda
+  // del proprietario se la scrive AGGIRANDO le regole — cosi' ogni verifica
+  // qui sotto partiva da un mondo che le regole non sapevano costruire, e la
+  // strada che lo costruisce non la provava nessuno. Risultato: creare una
+  // stanza lasciava il proprietario chiuso fuori dalla stanza appena creata,
+  // e trentanove verifiche verdi non se ne accorgevano.
+  //
+  // Si rifanno esattamente i tre setDoc di StanzaCloud.crea, nell'ordine, con
+  // i permessi veri. Se questa sezione cede, la versione pubblica non ha un
+  // primo passo.
+  console.log('\n5-bis) Creare una stanza e potercela usare');
+  await permesso('1. nasce il documento della stanza',
+    () => setDoc(doc(bruno, 'rooms/NUOVA555'), { nome: 'Campo', proprietario: 'bruno', creataIl: Date.now() }));
+  await permesso('2. chi l\'ha creata ci scrive il segreto',
+    () => setDoc(doc(bruno, 'rooms/NUOVA555/private/join'), { impronta: IMPRONTA }));
+  await permesso('3. e la propria scheda da proprietario',
+    () => setDoc(doc(bruno, 'rooms/NUOVA555/members/bruno'), { ruolo: 'proprietario', nome: 'Bruno' }));
+  await permesso('poi legge la sua stanza', () => getDoc(doc(bruno, 'rooms/NUOVA555')));
+  await permesso('e ci scrive i dati del campo',
+    () => setDoc(doc(bruno, 'rooms/NUOVA555/dati/stato'), { roba: 1 }));
+
+  // La meta' che deve fallire. Il ruolo di proprietario si scrive SOLO se il
+  // documento della stanza dice che sei tu: altrimenti la seconda strada
+  // aperta qui sopra sarebbe una porta di servizio per farsi padroni della
+  // stanza di chiunque, senza nemmeno conoscerne il codice.
+  await negato('un estraneo non si fa proprietario di una stanza altrui',
+    () => setDoc(doc(carla, 'rooms/NUOVA555/members/carla'), { ruolo: 'proprietario', nome: 'Carla' }));
+  await negato('e nemmeno portando l\'impronta giusta',
+    () => setDoc(doc(carla, 'rooms/NUOVA555/members/carla'), { ruolo: 'proprietario', nome: 'Carla', prova: IMPRONTA }));
+  await negato('il proprietario non scrive la scheda di un altro',
+    () => setDoc(doc(bruno, 'rooms/NUOVA555/members/carla'), { ruolo: 'proprietario', nome: 'Carla' }));
+  // Chi non ha creato niente resta fuori: il segreto lo scrive solo chi la
+  // stanza l'ha fatta nascere.
+  await negato('e il segreto di una stanza altrui non si riscrive',
+    () => setDoc(doc(carla, 'rooms/NUOVA555/private/join'), { impronta: 'mia' }));
+
   console.log('\n6) Il ponte: il campo 2026 regge da tutte e due le parti');
   // Venti telefoni fanno cosi' in questo momento, e i rimborsi si stanno
   // ancora chiudendo. Se questa diventa rossa, l'app si svuota in mano a

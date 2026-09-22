@@ -125,14 +125,31 @@ service cloud.firestore {
       match /members/{uid} {
         allow read: if membro(stanza);
 
-        // Entrare: ti scrivi TU, col tuo uid, e solo se porti l'impronta
-        // giusta. Il ruolo non te lo scegli: si entra da redattore, e a
-        // promuovere e' il proprietario.
+        // Ci si scrive TU, col tuo uid, e in due modi soli.
+        //
+        // 1. ENTRANDO col codice: si entra da redattori e si porta
+        //    l'impronta. Il ruolo non te lo scegli — altrimenti il primo che
+        //    entra si scrive proprietario e amministra il campo di un altro.
+        //
+        // 2. CREANDO la stanza: chi l'ha appena creata e' il proprietario, e
+        //    l'impronta non la porta perche' il segreto l'ha scritto lui un
+        //    attimo fa. Senza questa meta', creare una stanza voleva dire
+        //    restare chiusi fuori: il documento nasceva, la scheda del
+        //    proprietario veniva negata, e da li' in poi nemmeno leggere la
+        //    propria stanza era permesso. A dire chi e' il proprietario e' il
+        //    documento della stanza, che nessuno puo' riscrivere (la update
+        //    qui sopra congela quel campo): non e' una porta di servizio, e'
+        //    la stessa serratura letta dall'altro lato.
         allow create: if request.auth != null
           && uid == request.auth.uid
-          && request.resource.data.ruolo == 'redattore'
-          && request.resource.data.prova ==
-             get(/databases/$(database)/documents/rooms/$(stanza)/private/join).data.impronta;
+          && (
+            (request.resource.data.ruolo == 'redattore'
+             && request.resource.data.prova ==
+                get(/databases/$(database)/documents/rooms/$(stanza)/private/join).data.impronta)
+            ||
+            (request.resource.data.ruolo == 'proprietario'
+             && get(/databases/$(database)/documents/rooms/$(stanza)).data.proprietario == request.auth.uid)
+          );
 
         // Il proprietario cambia i ruoli. Ma non il proprio: togliersi il
         // ruolo da soli lascerebbe una stanza che non amministra piu'
