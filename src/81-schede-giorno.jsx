@@ -132,7 +132,7 @@ const schedaCalendario = ({
                 const r = raccontaMeteo(wx);
                 return (
                 <>
-                  <span className="text-titolo leading-none">{r.icon}</span>
+                  <span className="text-bosco">{icona(r.k, 'w-7 h-7')}</span>
                   <div className="flex flex-col min-w-0">
                     <span className="text-normale font-bold text-bosco leading-tight">
                       {r.label}{r.coda ? <span className="font-normal">, {r.coda}</span> : null}

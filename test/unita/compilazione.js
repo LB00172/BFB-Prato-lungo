@@ -304,6 +304,9 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     // Il marchio, le REGOLE del campo e la DOTAZIONE base: contenuto della
     // room, non dell'app. Restano in italiano per scelta (ROADMAP § 18).
     '40-configurazione.jsx': 20,
+    // Solo disegni: nessuna parola che l'utente legga. Le etichette stanno
+    // accanto alle icone, e quelle passano dal dizionario come tutto il resto.
+    '45-icone.jsx': 0,
     '50-interfaccia.jsx': 0,
     '60-gioco.jsx': 3,               // i nomi dei livelli: sono luoghi veri
     '70-schermata-blocco.jsx': 0,
@@ -687,6 +690,46 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
       ok(`riepilogo: ${marchio} file di marchio, ${inViaggio} modificati dal lavoro`
         + ` non ancora attraversato, ${soloQui} nati qui`, true);
     } catch (e) { /* il riepilogo non fa fallire niente */ }
+  }
+}
+
+// ---------- Le icone ----------
+// Il 22 settembre 2026 l'iconografia dell'app erano 95 emoji e zero disegni
+// nostri. Le emoji le disegna il sistema operativo: stessa schermata, faccia
+// diversa su ogni telefono, colori che non decide l'app e che il tema scuro
+// non puo' toccare. Il menu e la Guida sono passati al vocabolario di
+// src/45-icone.jsx; il resto e' ancora da fare, e questo numero dice quanto.
+{
+  const fs = require('fs');
+  const path = require('path');
+  const RADICE = path.join(__dirname, '..', '..');
+  const sorgenti = fs.readdirSync(path.join(RADICE, 'src')).filter((f) => f.endsWith('.jsx'));
+  const testo = (f) => fs.readFileSync(path.join(RADICE, 'src', f), 'utf8');
+
+  // 1. Nessun nome inventato. E' la stessa regola delle chiavi del
+  //    dizionario: icona() torna null se non conosce il nome, quindi uno
+  //    sbaglio non da' errore — da' un buco dove doveva esserci un disegno.
+  const vocabolario = testo('45-icone.jsx');
+  const definite = new Set([...vocabolario.matchAll(/^  ([a-z]+): '/gm)].map((m) => m[1]));
+  const inventate = [];
+  sorgenti.forEach((f) => {
+    [...testo(f).matchAll(/icona\(\s*'([^']+)'/g)].forEach((m) => {
+      if (!definite.has(m[1])) inventate.push(f + ': ' + m[1]);
+    });
+  });
+  ok(`ogni icona chiamata per nome esiste (${definite.size} nel vocabolario)`
+    + (inventate.length ? ' — INVENTATE: ' + inventate.join(', ') : ''), inventate.length === 0);
+
+  // 2. Il metro. Le emoji rimaste possono solo SCENDERE: chi aggiunge una
+  //    schermata nuova non ci mette un'altra faccina, disegna l'icona.
+  const TETTO = 59;
+  const re = /\p{Extended_Pictographic}/gu;
+  const quante = sorgenti.reduce((n, f) => n + (testo(f).match(re) || []).length, 0);
+  ok(`le emoji rimaste nei sorgenti sono ${quante}, non piu' di ${TETTO}`
+    + (quante > TETTO ? ' — NE SONO ENTRATE DI NUOVE: abbassa il tetto disegnando, non alzandolo' : ''),
+    quante <= TETTO);
+  if (quante < TETTO) {
+    console.log(`     (ne restano ${quante}: abbassa TETTO a ${quante} in test/unita/compilazione.js)`);
   }
 }
 

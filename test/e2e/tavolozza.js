@@ -151,8 +151,18 @@ const SONDA = () => {
   let erroriTotali = [];
   for (const tema of ['light', 'dark']) {
     const { browser, page, menu, errori } = await apri({ initScript: semina, viewport: { width: 360, height: 780 } });
-    await page.evaluate((t) => { document.documentElement.setAttribute('data-theme', t); }, tema);
-    await page.waitForTimeout(300);
+    // Il tema si sceglie come lo sceglie l'utente — la preferenza salvata —
+    // e poi si ricarica. Mettere l'attributo a mano con un evaluate sembra
+    // equivalente e non lo e': l'app riassegna data-theme dalla preferenza a
+    // ogni disegno, quindi al primo tocco l'attributo torna com'era e la
+    // meta' "scura" della prova finirebbe per misurare il tema chiaro senza
+    // dire niente. Ci sono cascato con uno script di scatti.
+    await page.evaluate((t) => { localStorage.setItem('cambusa_theme', t); }, tema);
+    await page.reload();
+    await page.waitForTimeout(1200);
+    const davvero = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    ok(`[${tema}] il tema chiesto e' quello attivo (${davvero || 'chiaro'})`,
+      tema === 'dark' ? davvero === 'dark' : davvero !== 'dark');
 
     const sotto = {};
     const coppie = new Set();

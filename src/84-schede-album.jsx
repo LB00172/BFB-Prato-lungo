@@ -189,7 +189,7 @@ const schedaGuida = ({
             onClick={() => setGuideOpen(g.k)}
             className={bottoneScelta('pillola', 'tenue', guideOpen === g.k, 'minuscolo')}
           >
-            {g.icon} {g.title}
+            <span className="inline-flex items-center gap-1.5">{icona(g.k, 'w-4 h-4')}{g.title}</span>
           </button>
         ))}
       </div>
@@ -200,7 +200,7 @@ const schedaGuida = ({
         return (
           <div className="mt-3 bg-carta/60 p-3 rounded border border-salvia/20">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-grande leading-none">{g.icon}</span>
+              <span className="text-bosco">{icona(g.k, 'w-6 h-6')}</span>
               <span className="font-rustic text-bosco">{g.title}</span>
             </div>
             <p className="text-piccolo text-bosco leading-relaxed">{g.body}</p>

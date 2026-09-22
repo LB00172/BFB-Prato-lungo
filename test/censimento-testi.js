@@ -43,10 +43,20 @@ function cssiforme(t) {
   return pezzi.every((p) => /^[a-z0-9]+[a-z0-9:\[\]()#/.,%_-]*$/.test(p) && /[-:[\]/]/.test(p));
 }
 
+// Il tracciato di un'icona SVG: "M4 6h16v14H4z M8 3v4". Ha dentro delle
+// lettere, quindi all'euristica sembrava prosa, e src/45-icone.jsx entrava nel
+// censimento con ventitre' "testi" che nessuno legge. Sono comandi — una
+// lettera del repertorio SVG seguita da numeri — e si riconoscono per questo.
+function tracciato(t) {
+  return /^[MmLlHhVvCcSsQqTtAaZz][\d\s.,+-]/.test(t.trim())
+    && !/[a-zA-Z]{2}/.test(t.replace(/[MmLlHhVvCcSsQqTtAaZz]/g, ''));
+}
+
 function prosa(s) {
   const t = String(s).trim();
   if (t.length < 3) return false;
   if (!/[a-zA-ZàèéìòùÀÈÉÌÒÙ]/.test(t)) return false;          // solo simboli o numeri
+  if (tracciato(t)) return false;                              // e' un disegno, non una frase
   if (/^[,;:)(}{[\]]/.test(t) || /[,;:({[]$/.test(t)) return false; // scheggia di codice
   if (cssiforme(t)) return false;
   if (/^[\w./#:-]+$/.test(t) && !ACCENTI.test(t)) return false;  // classe, chiave, url

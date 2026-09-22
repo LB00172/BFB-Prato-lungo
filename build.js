@@ -26,6 +26,7 @@ const SORGENTI = [
   '20-blocco-password.jsx',  // impronta PBKDF2 della password del campo
   '30-tema-e-formati.jsx',   // tema chiaro/scuro, uid/money/posNum, IBAN e PayPal
   '40-configurazione.jsx',   // marchio, funzioni attive, date del campo, meteo, regole
+  '45-icone.jsx',
   '50-interfaccia.jsx',      // vocabolario dei bottoni: sei ruoli, tre altezze
   '60-gioco.jsx',            // "Aiuta Bandy": tavolozze, disegno, BandyGame
   '70-schermata-blocco.jsx', // LockScreen

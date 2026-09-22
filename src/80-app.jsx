@@ -2517,13 +2517,10 @@ function App() {
     impostazioni: L.t('area.impostazioni'),
   };
 
-  // Icona per ogni area: nel menu aiuta a trovare la voce senza leggerle tutte.
-  const TAB_ICONS = {
-    calendario: '📅', menu: '🍝', presenze: '🍽️',
-    compiti: '✅', lista: '🧾', attrezzatura: '🪛', spesa: '💶',
-    membri: '👥', regole: '📜', dotazioni: '🎒', galleria: '📸',
-    gioco: '🎮', archivio: '🗄️', guida: '❓', impostazioni: '⚙️',
-  };
+  // Le icone delle aree stanno in src/45-icone.jsx e si chiamano per nome,
+  // come i colori e le misure di testo. Qui c'era una tabella di emoji: le
+  // disegnava il sistema operativo, quindi il menu aveva una faccia diversa
+  // su ogni telefono e i colori non li decideva l'app.
 
   // Il menu raggruppa le aree per momento d'uso: prima quello che si tocca
   // ogni giorno, poi i soldi, poi le cose del gruppo, in fondo il resto.
@@ -2566,27 +2563,27 @@ function App() {
   // una const DENTRO App(), quindi si ricostruisce a ogni disegno e la
   // lingua la segue (una const di modulo invece la congelerebbe).
   const GUIDE = [
-    { k: 'calendario', icon: '📅', title: L.t('guida.calendario.titolo'), body: L.t('guida.calendario.corpo') },
-    { k: 'menu', icon: '🍝', title: L.t('guida.menu.titolo'), body: L.t('guida.menu.corpo') },
-    { k: 'membri', icon: '👥', title: L.t('guida.membri.titolo'), body: L.t('guida.membri.corpo') },
-    { k: 'presenze', icon: '🍽️', title: L.t('guida.presenze.titolo'), body: L.t('guida.presenze.corpo') },
-    { k: 'compiti', icon: '✅', title: L.t('guida.compiti.titolo'), body: L.t('guida.compiti.corpo') },
-    { k: 'lista', icon: '🧾', title: L.t('guida.lista.titolo'), body: L.t('guida.lista.corpo') },
-    { k: 'attrezzatura', icon: '🪛', title: L.t('guida.attrezzatura.titolo'), body: L.t('guida.attrezzatura.corpo') },
-    { k: 'spesa', icon: '💶', title: L.t('guida.spesa.titolo'), body: L.t('guida.spesa.corpo') },
-    { k: 'conti', icon: '⚖️', title: L.t('guida.conti.titolo'), body: L.t('guida.conti.corpo') },
-    { k: 'separato', icon: '🍽️', title: L.t('guida.separato.titolo'), body: L.t('guida.separato.corpo') },
-    { k: 'saldi', icon: '🤝', title: L.t('guida.saldi.titolo'), body: L.t('guida.saldi.corpo') },
-    { k: 'dotazioni', icon: '🎒', title: L.t('guida.dotazioni.titolo'), body: L.t('guida.dotazioni.corpo') },
-    { k: 'backup', icon: '🛟', title: L.t('guida.backup.titolo'), body: L.t('guida.backup.corpo') },
-    { k: 'sync', icon: '☁️', title: L.t('guida.sync.titolo'), body: L.t('guida.sync.corpo') },
-    { k: 'chiusura', icon: '🏁', title: L.t('guida.chiusura.titolo'), body: L.t('guida.chiusura.corpo') },
-    { k: 'galleria', icon: '📸', title: L.t('guida.galleria.titolo'), body: L.t('guida.galleria.corpo') },
-    { k: 'gioco', icon: '🎮', title: L.t('guida.gioco.titolo'), body: L.t('guida.gioco.corpo', LEVEL_EVERY) },
-    { k: 'impostazioni', icon: '⚙️', title: L.t('guida.impostazioni.titolo'), body: L.t('guida.impostazioni.corpo') },
-    { k: 'pronto', icon: '🎒', title: L.t('guida.pronto.titolo'), body: L.t('guida.pronto.corpo') },
-    { k: 'correggi', icon: '✏️', title: L.t('guida.correggi.titolo'), body: L.t('guida.correggi.corpo') },
-    { k: 'installa', icon: '📲', title: L.t('guida.installa.titolo'), body: L.t('guida.installa.corpo') },
+    { k: 'calendario', title: L.t('guida.calendario.titolo'), body: L.t('guida.calendario.corpo') },
+    { k: 'menu', title: L.t('guida.menu.titolo'), body: L.t('guida.menu.corpo') },
+    { k: 'membri', title: L.t('guida.membri.titolo'), body: L.t('guida.membri.corpo') },
+    { k: 'presenze', title: L.t('guida.presenze.titolo'), body: L.t('guida.presenze.corpo') },
+    { k: 'compiti', title: L.t('guida.compiti.titolo'), body: L.t('guida.compiti.corpo') },
+    { k: 'lista', title: L.t('guida.lista.titolo'), body: L.t('guida.lista.corpo') },
+    { k: 'attrezzatura', title: L.t('guida.attrezzatura.titolo'), body: L.t('guida.attrezzatura.corpo') },
+    { k: 'spesa', title: L.t('guida.spesa.titolo'), body: L.t('guida.spesa.corpo') },
+    { k: 'conti', title: L.t('guida.conti.titolo'), body: L.t('guida.conti.corpo') },
+    { k: 'separato', title: L.t('guida.separato.titolo'), body: L.t('guida.separato.corpo') },
+    { k: 'saldi', title: L.t('guida.saldi.titolo'), body: L.t('guida.saldi.corpo') },
+    { k: 'dotazioni', title: L.t('guida.dotazioni.titolo'), body: L.t('guida.dotazioni.corpo') },
+    { k: 'backup', title: L.t('guida.backup.titolo'), body: L.t('guida.backup.corpo') },
+    { k: 'sync', title: L.t('guida.sync.titolo'), body: L.t('guida.sync.corpo') },
+    { k: 'chiusura', title: L.t('guida.chiusura.titolo'), body: L.t('guida.chiusura.corpo') },
+    { k: 'galleria', title: L.t('guida.galleria.titolo'), body: L.t('guida.galleria.corpo') },
+    { k: 'gioco', title: L.t('guida.gioco.titolo'), body: L.t('guida.gioco.corpo', LEVEL_EVERY) },
+    { k: 'impostazioni', title: L.t('guida.impostazioni.titolo'), body: L.t('guida.impostazioni.corpo') },
+    { k: 'pronto', title: L.t('guida.pronto.titolo'), body: L.t('guida.pronto.corpo') },
+    { k: 'correggi', title: L.t('guida.correggi.titolo'), body: L.t('guida.correggi.corpo') },
+    { k: 'installa', title: L.t('guida.installa.titolo'), body: L.t('guida.installa.corpo') },
   ];
 
   return (
@@ -2660,7 +2657,7 @@ function App() {
                     activeTab === tab ? 'bg-bosco text-carta' : 'text-bosco hover:bg-orlo'
                   }`}
                 >
-                  <span className="text-medio leading-none w-5 text-center shrink-0">{TAB_ICONS[tab]}</span>
+                  <span className="w-5 shrink-0 flex items-center justify-center">{icona(tab)}</span>
                   <span className="min-w-0 truncate">{tabs[tab]}</span>
                 </button>
               ))}
