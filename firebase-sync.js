@@ -123,7 +123,7 @@
       await signIn(creds);
       emit({ authMode });
 
-      const ref = fb.doc(db, 'camps', code);
+      const ref = fb.doc(db, ...percorso(code));
       if (unsub) unsub();
       unsub = fb.onSnapshot(
         ref,
@@ -149,7 +149,7 @@
       // per foto (dataURL compresso, sotto il limite di 1MB per documento).
       if (receiptsUnsub) receiptsUnsub();
       receiptsUnsub = fb.onSnapshot(
-        fb.collection(db, 'camps', code, 'receipts'),
+        fb.collection(db, ...percorso(code, 'receipts')),
         (snap) => {
           const map = {};
           snap.forEach((d) => {
@@ -186,6 +186,34 @@
   const MAX_DOC = 900 * 1024;
 
   // --- Regole pure, provabili senza Firebase (come sovrascrivibile) ---------
+  // DOVE stanno i dati di un campo. Era scritto 'camps' in trentasette punti;
+  // adesso e' una funzione sola, perche' le due versioni dell'app li mettono
+  // in posti diversi:
+  //
+  //   privata  -> camps/<codice>/...                (il modello di sempre)
+  //   pubblica -> rooms/<codice>/dati/stato/...     (dentro la stanza, § 2)
+  //
+  // Il `stato` in fondo non e' decorazione: Firestore vuole un numero PARI di
+  // pezzi per un documento e dispari per una collezione. `rooms/<id>/dati` e'
+  // dispari, quindi e' una collezione e non ci si puo' fare doc(): ogni
+  // scrittura sarebbe esplosa. Ci vuole un documento dentro. Se ne e' accorta
+  // la prova che conta i pezzi, non io.
+  //
+  // Lo dice APP_CONFIG.dati. Non e' una bandiera da accendere a meta': se il
+  // percorso e quello che le regole Firestore si aspettano non combaciano,
+  // non c'e' un errore — c'e' un permesso negato su ogni scrittura, e l'app
+  // sembra rotta senza dire perche'.
+  //
+  // Restituisce i PEZZI del percorso, da aprire con lo spread: cosi' chi
+  // chiama non puo' sbagliare l'ordine, e una sotto-collezione dimenticata
+  // diventa un errore di sintassi invece di una strada sbagliata.
+  function percorso(codice) {
+    const dove = (typeof window !== 'undefined' && window.APP_CONFIG && window.APP_CONFIG.dati) || 'camps';
+    const resto = Array.prototype.slice.call(arguments, 1);
+    const base = dove === 'rooms' ? ['rooms', codice, 'dati', 'stato'] : ['camps', codice];
+    return base.concat(resto);
+  }
+
   // La sessione aperta e' quella del CAMPO, cioe' l'utente condiviso?
   //
   // Qui c'era scritto "c'e' un utente e non e' anonimo, allora e' lui". Era
@@ -297,7 +325,7 @@
         emit({ status: 'error', error: 'Dati troppo grandi per il cloud (' + Math.round(json.length / 1024) + ' KB): fai un backup e chiudi il campo.' });
         return;
       }
-      const ref = fb.doc(db, 'camps', state.code);
+      const ref = fb.doc(db, ...percorso(state.code));
       // Senza transazioni non si scrive. C'era un ripiego che faceva setDoc
       // diretto "meglio di niente": ma quel setDoc salta sovrascrivibile(), ed
       // e' esattamente il buco che ha cancellato il lavoro altrui una volta.
@@ -397,11 +425,11 @@
         const v = codaFoto[0];
         try {
           if (v.tipo === 'scontrino') {
-            await fb.setDoc(fb.doc(db, 'camps', state.code, 'receipts', v.id),
+            await fb.setDoc(fb.doc(db, ...percorso(state.code, 'receipts', v.id)),
               { data: v.dati, updatedBy: deviceId, updatedAt: fb.serverTimestamp() });
           } else if (v.tipo === 'galleria') {
-            await fb.setDoc(fb.doc(db, 'camps', state.code, 'photofull', v.id), { data: v.dati.full });
-            await fb.setDoc(fb.doc(db, 'camps', state.code, 'photos', v.id), {
+            await fb.setDoc(fb.doc(db, ...percorso(state.code, 'photofull', v.id)), { data: v.dati.full });
+            await fb.setDoc(fb.doc(db, ...percorso(state.code, 'photos', v.id)), {
               thumb: v.dati.thumb, by: String(v.dati.by || '').slice(0, 40), at: v.dati.at || Date.now(), updatedBy: deviceId,
             });
           }
@@ -439,18 +467,18 @@
     const key = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     if (localStorage.getItem('cambusa_snap_date') === key) return;
     try {
-      const ref = fb.doc(db, 'camps', state.code, 'snapshots', key);
+      const ref = fb.doc(db, ...percorso(state.code, 'snapshots', key));
       const existing = await fb.getDoc(ref);
       if (!existing.exists()) {
         await fb.setDoc(ref, { data: json, savedBy: deviceId, savedAt: fb.serverTimestamp() });
         // Pulizia: tiene solo gli ultimi 10 giorni.
         try {
-          const all = await fb.getDocs(fb.collection(db, 'camps', state.code, 'snapshots'));
+          const all = await fb.getDocs(fb.collection(db, ...percorso(state.code, 'snapshots')));
           const ids = [];
           all.forEach((d) => ids.push(d.id));
           ids.sort();
           for (const id of ids.slice(0, Math.max(0, ids.length - 10))) {
-            await fb.deleteDoc(fb.doc(db, 'camps', state.code, 'snapshots', id));
+            await fb.deleteDoc(fb.doc(db, ...percorso(state.code, 'snapshots', id)));
           }
         } catch (e) { /* pulizia best-effort */ }
       }
@@ -462,7 +490,7 @@
   async function listSnapshots() {
     if (!state.connected || !db || !fb) return [];
     try {
-      const all = await fb.getDocs(fb.collection(db, 'camps', state.code, 'snapshots'));
+      const all = await fb.getDocs(fb.collection(db, ...percorso(state.code, 'snapshots')));
       const ids = [];
       all.forEach((d) => ids.push(d.id));
       return ids.sort().reverse();
@@ -475,7 +503,7 @@
   async function getSnapshot(id) {
     if (!state.connected || !db || !fb) return null;
     try {
-      const s = await fb.getDoc(fb.doc(db, 'camps', state.code, 'snapshots', id));
+      const s = await fb.getDoc(fb.doc(db, ...percorso(state.code, 'snapshots', id)));
       return s.exists() ? s.data().data : null;
     } catch (e) {
       return null;
@@ -490,7 +518,7 @@
     const key = String(name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
     if (!key) return;
     try {
-      const ref = fb.doc(db, 'camps', state.code, 'scores', key);
+      const ref = fb.doc(db, ...percorso(state.code, 'scores', key));
       // Leggere e poi scrivere non basta: due telefoni che mandano insieme il
       // punteggio possono far sopravvivere il piu' BASSO, perche' il secondo
       // legge prima che il primo abbia scritto. Dentro la transazione la
@@ -507,7 +535,7 @@
   async function listScores() {
     if (!state.connected || !db || !fb) return [];
     try {
-      const snap = await fb.getDocs(fb.collection(db, 'camps', state.code, 'scores'));
+      const snap = await fb.getDocs(fb.collection(db, ...percorso(state.code, 'scores')));
       const out = [];
       snap.forEach((d) => { const v = d.data(); if (v && v.name) out.push({ name: v.name, score: v.score || 0 }); });
       return out.sort((a, b) => b.score - a.score).slice(0, 20);
@@ -524,7 +552,7 @@
   async function putWeather(obj) {
     if (!state.connected || !db || !fb) return;
     try {
-      await fb.setDoc(fb.doc(db, 'camps', state.code, 'meta', 'weather'), {
+      await fb.setDoc(fb.doc(db, ...percorso(state.code, 'meta', 'weather')), {
         data: JSON.stringify(obj), updatedBy: deviceId, updatedAt: fb.serverTimestamp(),
       });
     } catch (e) { /* offline o regole: riprovera' al prossimo aggiornamento */ }
@@ -533,7 +561,7 @@
   function watchWeather(code) {
     if (weatherUnsub) weatherUnsub();
     weatherUnsub = fb.onSnapshot(
-      fb.doc(db, 'camps', code, 'meta', 'weather'),
+      fb.doc(db, ...percorso(code, 'meta', 'weather')),
       (snap) => {
         if (!snap.exists() || !onWeatherCb) return;
         const v = snap.data();
@@ -562,7 +590,7 @@
       // l'archivio non viene salvato. Senza controllo si scopriva a campo
       // chiuso, cioe' quando i dati locali erano gia' stati azzerati.
       if (!archivioStaDentro(m, j)) return false;
-      await fb.setDoc(fb.doc(db, 'camps', state.code, 'archives', id), {
+      await fb.setDoc(fb.doc(db, ...percorso(state.code, 'archives', id)), {
         meta: m,
         data: j,
         savedBy: deviceId,
@@ -577,7 +605,7 @@
   async function listArchives() {
     if (!state.connected || !db || !fb) return [];
     try {
-      const snap = await fb.getDocs(fb.collection(db, 'camps', state.code, 'archives'));
+      const snap = await fb.getDocs(fb.collection(db, ...percorso(state.code, 'archives')));
       const out = [];
       snap.forEach((d) => {
         const v = d.data();
@@ -593,7 +621,7 @@
   async function getArchive(id) {
     if (!state.connected || !db || !fb) return null;
     try {
-      const s = await fb.getDoc(fb.doc(db, 'camps', state.code, 'archives', id));
+      const s = await fb.getDoc(fb.doc(db, ...percorso(state.code, 'archives', id)));
       return s.exists() ? JSON.parse(s.data().data) : null;
     } catch (e) {
       return null;
@@ -603,7 +631,7 @@
   async function deleteArchive(id) {
     if (!state.connected || !db || !fb) return;
     try {
-      await fb.deleteDoc(fb.doc(db, 'camps', state.code, 'archives', id));
+      await fb.deleteDoc(fb.doc(db, ...percorso(state.code, 'archives', id)));
     } catch (e) { /* ignora */ }
   }
 
@@ -625,8 +653,8 @@
     if (!state.connected || !db || !fb) return false;
     try {
       // Prima la foto intera: se fallisce, non resta una miniatura orfana.
-      await fb.setDoc(fb.doc(db, 'camps', state.code, 'photofull', id), { data: full });
-      await fb.setDoc(fb.doc(db, 'camps', state.code, 'photos', id), {
+      await fb.setDoc(fb.doc(db, ...percorso(state.code, 'photofull', id)), { data: full });
+      await fb.setDoc(fb.doc(db, ...percorso(state.code, 'photos', id)), {
         thumb, by: String(by || '').slice(0, 40), at: Date.now(), updatedBy: deviceId,
       });
       return true;
@@ -644,7 +672,7 @@
     if (!state.connected || !db || !fb) return () => {};
     try {
       return fb.onSnapshot(
-        fb.collection(db, 'camps', state.code, 'photos'),
+        fb.collection(db, ...percorso(state.code, 'photos')),
         (snap) => {
           const out = [];
           snap.forEach((d) => {
@@ -669,11 +697,11 @@
   async function archivePhotos(archiveId) {
     if (!state.connected || !db || !fb) return 0;
     try {
-      const snap = await fb.getDocs(fb.collection(db, 'camps', state.code, 'photos'));
+      const snap = await fb.getDocs(fb.collection(db, ...percorso(state.code, 'photos')));
       const da = [];
       snap.forEach((d) => { if (!d.data().archive) da.push(d.id); });
       for (const id of da) {
-        await fb.setDoc(fb.doc(db, 'camps', state.code, 'photos', id), { archive: archiveId }, { merge: true });
+        await fb.setDoc(fb.doc(db, ...percorso(state.code, 'photos', id)), { archive: archiveId }, { merge: true });
       }
       return da.length;
     } catch (e) {
@@ -685,7 +713,7 @@
   async function listPhotos(archiveId) {
     if (!state.connected || !db || !fb) return [];
     try {
-      const snap = await fb.getDocs(fb.collection(db, 'camps', state.code, 'photos'));
+      const snap = await fb.getDocs(fb.collection(db, ...percorso(state.code, 'photos')));
       const out = [];
       snap.forEach((d) => {
         const v = d.data();
@@ -702,7 +730,7 @@
   async function getPhotoFull(id) {
     if (!state.connected || !db || !fb) return null;
     try {
-      const s = await fb.getDoc(fb.doc(db, 'camps', state.code, 'photofull', id));
+      const s = await fb.getDoc(fb.doc(db, ...percorso(state.code, 'photofull', id)));
       return s.exists() ? s.data().data : null;
     } catch (e) {
       return null;
@@ -712,8 +740,8 @@
   async function deletePhoto(id) {
     if (!state.connected || !db || !fb) return false;
     try {
-      await fb.deleteDoc(fb.doc(db, 'camps', state.code, 'photos', id));
-      await fb.deleteDoc(fb.doc(db, 'camps', state.code, 'photofull', id));
+      await fb.deleteDoc(fb.doc(db, ...percorso(state.code, 'photos', id)));
+      await fb.deleteDoc(fb.doc(db, ...percorso(state.code, 'photofull', id)));
       return true;
     } catch (e) {
       return false;
@@ -723,7 +751,7 @@
   async function deleteReceipt(purchaseId) {
     if (!state.connected || !db || !fb) return;
     try {
-      await fb.deleteDoc(fb.doc(db, 'camps', state.code, 'receipts', purchaseId));
+      await fb.deleteDoc(fb.doc(db, ...percorso(state.code, 'receipts', purchaseId)));
     } catch (e) { /* ignora */ }
   }
 
@@ -764,6 +792,7 @@
     putWeather,
     archivioStaDentro,
     sessioneDelCampo,
+    percorso,
     punteggioMigliore,
     putArchive,
     listArchives,

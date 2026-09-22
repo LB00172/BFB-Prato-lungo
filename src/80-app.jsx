@@ -719,13 +719,34 @@ function App() {
     const CS = window.CloudSync;
     if (!CS) return;
     const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
-    const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
+    // Se si e' dentro una stanza, il codice della stanza E' il codice del
+    // campo: i dati stanno in rooms/<codice>/dati/stato, e quel <codice> e'
+    // lo stesso che le regole Firestore guardano per decidere se sei un
+    // membro. Tenerne due diversi vorrebbe dire scrivere in una stanza di
+    // cui non si fa parte — permesso negato su tutto, e nessuna spiegazione.
+    const code = (stanzaStato.stanza && stanzaStato.stanza.codice)
+      || CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
     if (code && CS.isConfigured() && !optedOut && !CS.isConnected()) {
       setCampCodeInput(code);
       CS.connect(window.FIREBASE_CONFIG, code, applyRemote, { password: sessionPassword }).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locked]);
+  }, [locked, stanzaStato.stanza && stanzaStato.stanza.codice]);
+
+  // Entrando in una stanza diversa si STACCA la connessione di prima. Senza,
+  // si resterebbe agganciati al campo precedente e si continuerebbe a
+  // scriverci dentro — il posto dove finiscono i dati cambierebbe solo al
+  // prossimo riavvio dell'app, che e' il tipo di ritardo che nessuno collega
+  // alla causa.
+  const stanzaPrima = useRef(null);
+  useEffect(() => {
+    const adesso = (stanzaStato.stanza && stanzaStato.stanza.codice) || null;
+    if (stanzaPrima.current !== null && stanzaPrima.current !== adesso) {
+      const CS = window.CloudSync;
+      if (CS && CS.isConnected()) CS.disconnect();
+    }
+    stanzaPrima.current = adesso;
+  }, [stanzaStato.stanza && stanzaStato.stanza.codice]);
 
   // Se il database è protetto dall'utente condiviso ma questo telefono si è
   // agganciato con l'accesso di ripiego (capita a chi era già sbloccato da

@@ -278,9 +278,20 @@ ripiego da computer.
 L'invito **non si accetta da solo**: si mostra e si chiede. Chi tocca un link
 non ha per forza deciso di cambiare campo.
 
-**Cosa manca al § 2 e al § 9:** il QR, l'invito monouso, lo spostamento della
-sincronizzazione da `camps/` a `rooms/<id>/dati/`, e la migrazione dei dati
-del 2026. E, prima di tutto, incollare le regole nuove in console — cosa
+**La sincronizzazione è dentro la stanza** (22 settembre). `percorso()` in
+`firebase-sync.js` decide dove stanno i dati — `camps/<codice>` nella versione
+privata, `rooms/<codice>/dati/stato` in questa — e il codice della stanza
+diventa il codice del campo, perché è lo stesso che le regole guardano per
+decidere se sei un membro. Entrando in una stanza diversa la connessione di
+prima si stacca.
+
+Due cose che l'hanno corretta strada facendo: la radice pubblica era
+`rooms/<id>/dati`, tre pezzi, cioè una **collezione** — ogni `doc()` sopra
+sarebbe esploso; e `'camps'` era scritto in trentasette punti, adesso una
+prova vieta di riscriverne uno a mano.
+
+**Cosa manca al § 2 e al § 9:** il QR, l'invito monouso, e la migrazione dei
+dati del 2026. E, prima di tutto, incollare le regole nuove in console — cosa
 che non va fatta finché il modulo non esiste, altrimenti si pubblicano regole
 per una parte di app che nessuno può ancora usare.
 

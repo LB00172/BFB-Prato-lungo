@@ -326,5 +326,40 @@ const impostazioni = async (a) => {
     await e.browser.close();
   }
 
+  // ---------- 9. Entrando in una stanza, la sincronizzazione va lì --------
+  // È il pezzo che lega le due metà: il codice della stanza DEVE diventare il
+  // codice del campo, perché i dati stanno in rooms/<codice>/dati/stato e
+  // quel <codice> è lo stesso che le regole Firestore guardano per decidere
+  // se sei un membro. Se i due restassero diversi, l'app scriverebbe in una
+  // stanza di cui non fa parte: permesso negato su tutto, e nessuna
+  // spiegazione a schermo.
+  {
+    const f = await apri({ initScript: conStanze(true, REGISTRATO, 'K7RX2MQP') });
+    // Si registra a quale codice CloudSync si aggancia.
+    await f.page.evaluate(() => {
+      window.__agganci = [];
+      const vero = window.CloudSync;
+      window.CloudSync = Object.assign({}, vero, {
+        isConfigured: () => true,
+        isConnected: () => !!window.__att,
+        savedCode: () => '',
+        connect: (cfg, code) => { window.__att = true; window.__agganci.push(code); return Promise.resolve(); },
+        disconnect: () => { window.__att = false; window.__agganci.push('stacca'); },
+        onStatus: () => {}, onReceipts: () => {}, onWeather: () => {},
+      });
+    });
+    await impostazioni(f);
+    await f.page.locator('main button', { hasText: /Entra con un codice/i }).click();
+    await f.page.waitForTimeout(300);
+    await f.page.locator('main input[placeholder="Codice"]').fill('K7RX-2MQP');
+    await f.page.locator('main button', { hasText: /^Entra$/i }).click();
+    await f.page.waitForTimeout(900);
+
+    const agganci = await f.page.evaluate(() => window.__agganci || []);
+    ok(`entrando nella stanza la sincronizzazione si aggancia al suo codice (${JSON.stringify(agganci)})`,
+      agganci.includes('K7RX2MQP'));
+    await f.browser.close();
+  }
+
   fine();
 })();

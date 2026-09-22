@@ -10,7 +10,7 @@ global.localStorage = {
 };
 global.window = global;
 require('../../firebase-sync.js');
-const { archivioStaDentro, punteggioMigliore, sessioneDelCampo } = global.window.CloudSync;
+const { archivioStaDentro, punteggioMigliore, sessioneDelCampo, percorso } = global.window.CloudSync;
 
 let fails = 0, checks = 0;
 const ok = (cond, msg) => { checks++; if (!cond) { fails++; console.log('  KO ' + msg); } };
@@ -114,6 +114,52 @@ console.log("3) La sessione aperta e' quella del campo, non quella della persona
     'senza dbEmail configurata non si dichiara nessuna sessione buona');
   ok(sessioneDelCampo({ email: '', isAnonymous: false }, CAMPO) === false,
     'un utente senza indirizzo non e\' quello del campo');
+}
+
+console.log("4) I dati di un campo stanno dove le regole se li aspettano");
+{
+  // Le due versioni dell'app mettono i dati in posti diversi, e il percorso
+  // deve combaciare con quello che dicono le regole Firestore. Se non
+  // combacia non c'e' un errore: c'e' un permesso negato su OGNI scrittura, e
+  // l'app sembra rotta senza dire perche'. Era scritto 'camps' in trentasette
+  // punti; adesso e' una funzione sola, e questa prova la guarda.
+  delete global.window.APP_CONFIG;
+  ok(JSON.stringify(percorso('Bandone')) === '["camps","Bandone"]',
+    'senza configurazione si resta sul modello di sempre: camps/<codice>');
+  ok(JSON.stringify(percorso('Bandone', 'receipts', 'x')) === '["camps","Bandone","receipts","x"]',
+    'e le sotto-collezioni gli vanno dietro');
+
+  global.window.APP_CONFIG = { dati: 'rooms' };
+  // IL caso della versione pubblica: i dati stanno DENTRO la stanza, sotto
+  // `dati/`, che e' esattamente il match scritto in firestore.rules.
+  ok(JSON.stringify(percorso('K7RX2MQP')) === '["rooms","K7RX2MQP","dati","stato"]',
+    'con le stanze si scrive in rooms/<codice>/dati/stato');
+  ok(JSON.stringify(percorso('K7RX2MQP', 'receipts', 'x')) === '["rooms","K7RX2MQP","dati","stato","receipts","x"]',
+    'e le sotto-collezioni stanno sotto dati/, dove le regole le permettono');
+  // Firestore vuole un numero PARI di pezzi per un documento e dispari per
+  // una collezione: rooms/<id>/dati e' dispari, quindi e' una collezione, e
+  // sopra ci si appende un documento. Se fosse pari, ogni doc() sballerebbe.
+  // Firestore vuole un numero PARI di pezzi per un documento e dispari per
+  // una collezione. E' la verifica che ha trovato l'errore: la radice
+  // pubblica era rooms/<id>/dati, tre pezzi, quindi una COLLEZIONE — e ogni
+  // doc() sopra ci sarebbe esploso. Vale per tutte e due le versioni.
+  const pari = (n) => n % 2 === 0;
+  delete global.window.APP_CONFIG;
+  ok(pari(percorso('X').length) && pari(percorso('X', 'receipts', 'y').length)
+     && !pari(percorso('X', 'receipts').length),
+    `privata: radice e documenti pari, collezioni dispari (${percorso('X').length})`);
+  global.window.APP_CONFIG = { dati: 'rooms' };
+  ok(pari(percorso('X').length) && pari(percorso('X', 'receipts', 'y').length)
+     && !pari(percorso('X', 'receipts').length),
+    `pubblica: radice e documenti pari, collezioni dispari (${percorso('X').length})`);
+
+  // Un valore che non si conosce non inventa una strada nuova: si torna al
+  // modello di sempre, che al massimo fa negare i permessi a chi ha le regole
+  // nuove — invece di scrivere in una collezione che non esiste per nessuno.
+  global.window.APP_CONFIG = { dati: 'qualcosa-di-strano' };
+  ok(JSON.stringify(percorso('X')) === '["camps","X"]',
+    'un valore mai visto non inventa una collezione nuova');
+  delete global.window.APP_CONFIG;
 }
 
 console.log(`\n${checks} verifiche — ${fails ? fails + ' FALLITE' : 'nessun problema'}`);

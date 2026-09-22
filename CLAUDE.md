@@ -80,7 +80,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `allarmi.js` | **quando svegliare qualcuno**: orologio di un altro telefono avanti di giorni, e perdite che meritano un allarme invece di essere il recupero di un ritardo. Pure, fuori da `src/` |
 | `auth.js` | **chi sei, e cosa ti lascia fare l'app**: `Auth` sono le regole (stati, permessi, validazione, codici d'errore tradotti), `AuthCloud` è il trasporto verso Firebase Authentication. Fuori da `src/`. Dietro `FEATURES.auth` |
 | `stanza.js` | **la stanza**, in due metà come `auth.js`: `Stanza` sono le regole (alfabeto e generatore del codice, lettura di un codice digitato a mano, validazione del modulo, ruoli, **cosa si scrive entrando**), `StanzaCloud` il trasporto verso Firestore. La crittografia non c'è: è `improntaPassword` in `src/20-blocco-password.jsx`. Dietro `FEATURES.rooms` |
-| `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile` |
+| `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile`. **Dove** stanno i dati lo decide `percorso()`: `camps/<codice>` nella versione privata, `rooms/<codice>/dati/stato` in quella pubblica (`APP_CONFIG.dati`) |
 | `firebase-config.js` | chiavi Firebase e impronte delle password |
 | `firestore.rules` | **chi può leggere e scrivere cosa** nel cloud. Due mondi che convivono: `camps/<codice>` (il campo 2026, utente condiviso) e `rooms/<id>` (le stanze). Si provano con `npm run regole`, mai a occhio |
 | `sw.js` | service worker, precache atomico |
@@ -238,6 +238,13 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   gira in un browser ha bisogno di uno stato che deve esistere *prima*
   dell'apertura, quello stato si dichiara nello script di avvio — che rigira a
   ogni navigazione — non con un `page.evaluate()` dopo.
+- **Firestore conta i pezzi del percorso: pari è un documento, dispari una
+  collezione.** La radice pubblica era `rooms/<id>/dati` — tre pezzi, quindi
+  una collezione — e ogni `doc()` sopra ci sarebbe esploso. Ci vuole un
+  documento dentro: `rooms/<id>/dati/stato`. Se ne è accorta la prova che
+  conta i pezzi, non io. E **dove** stanno i dati non si scrive più a mano:
+  `'camps'` era in trentasette punti di `firebase-sync.js`, adesso passa tutto
+  da `percorso()` e una prova vieta di riscriverne uno.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.

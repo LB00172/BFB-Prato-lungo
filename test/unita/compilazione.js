@@ -493,6 +493,25 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     + (unici.length ? ' — DENTRO: ' + unici.join(', ') : ''), unici.length === 0);
 }
 
+// ---------- Nessun percorso Firestore scritto a mano ----------------------
+// 'camps' era scritto in trentasette punti di firebase-sync.js. Adesso passa
+// tutto da percorso(), perche' le due versioni mettono i dati in posti
+// diversi e un percorso che non combacia con le regole non da' un errore:
+// da' un permesso negato su ogni scrittura, e l'app sembra rotta senza dire
+// perche'. Se qualcuno ne riscrive uno a mano, questa prova lo vede.
+{
+  const sync = fs.readFileSync(path.join(RADICE, 'firebase-sync.js'), 'utf8');
+  // Attenzione allo spazio: con `\s*` l'espressione puo' consumare zero
+  // caratteri e poi trovarsi davanti " ...percorso" — con lo spazio — che
+  // non e' "...percorso", quindi il divieto non scatta e la guardia dice
+  // sempre di si'. Ci sono appena cascato: segnalava ventinove percorsi a
+  // mano che erano tutti giusti.
+  const aMano = [...sync.matchAll(/fb\.(doc|collection)\(db,[ ]+(?!\.\.\.percorso)([^)\n]*)/g)]
+    .map((m) => m[1] + '(' + m[2].trim().slice(0, 40));
+  ok(`ogni percorso Firestore passa da percorso() (${aMano.length} a mano)`
+    + (aMano.length ? ' — A MANO: ' + aMano.join(', ') : ''), aMano.length === 0);
+}
+
 // ---------- I due rami non divergono sui soldi ----------
 // Le versioni sono due e restano separate (CLAUDE.md): `main` e' la privata,
 // `feature/public-app` la pubblica. La separazione e' voluta, ma ha un prezzo

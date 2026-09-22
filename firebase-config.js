@@ -99,6 +99,13 @@ window.CAMP_LOCATION = { lat: 42.0486, lon: 13.14855, alt: 1337, label: "Prato L
 // finché non vengono attivate.
 // ============================================================================
 window.APP_CONFIG = {
+  // DOVE finiscono i dati del campo. Su questo ramo dentro la stanza
+  // (rooms/<codice>/dati/stato), che e' quello che permettono le regole
+  // Firestore pubblicate. Sulla versione privata questa riga non c'e' e si
+  // resta su camps/<codice>. Cambiarla senza cambiare le regole vuol dire
+  // permesso negato su ogni scrittura, senza nessun messaggio che lo spieghi.
+  dati: "rooms",
+
   // ATTENZIONE: questo e' il ramo PUBBLICO (feature/public-app). Il marchio
   // qui e' neutro — "Camp Ops" — e ci resta. La Brigata, Prato Lungo e Bandy
   // vivono su `main`, che e' l'app privata del gruppo: sono due prodotti, non
