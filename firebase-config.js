@@ -106,7 +106,7 @@ window.APP_CONFIG = {
   // permesso negato su ogni scrittura, senza nessun messaggio che lo spieghi.
   dati: "rooms",
 
-  // ATTENZIONE: questo e' il ramo PUBBLICO (feature/public-app). Il marchio
+  // ATTENZIONE: questo e' il ramo PUBBLICO (camp-ops). Il marchio
   // qui e' neutro — "Camp Ops" — e ci resta. La Brigata, Prato Lungo e Bandy
   // vivono su `main`, che e' l'app privata del gruppo: sono due prodotti, non
   // uno con il marchio cambiato (CLAUDE.md). Chi riporta qui un nome del

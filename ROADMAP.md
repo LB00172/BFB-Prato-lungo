@@ -9,7 +9,7 @@ bloccava tutto — «niente di tutto questo prima del campo» — ha smesso di
 valere, e questa è la fase in cui si lavora. Restano due cose di quella regola,
 che valgono ancora: l'app in produzione deve restare stabile mentre il gruppo
 chiude i rimborsi, e lo sviluppo grosso va fatto su un branch dedicato
-(`feature/public-app`), non su `main`.
+(`camp-ops`), non su `main`.
 
 ---
 
@@ -35,7 +35,7 @@ cosa blocca cosa.
 
 | | Sezione | Perché in quest'ordine |
 | --- | --- | --- |
-| 4 | § 1 Login | **in corso** dal 21 settembre su `feature/public-app`: le regole, il trasporto e la tessera ci sono; restano la console Firebase e `users/<uid>` (che viaggia col § 2) |
+| 4 | § 1 Login | **in corso** dal 21 settembre su `camp-ops`: le regole, il trasporto e la tessera ci sono; restano la console Firebase e `users/<uid>` (che viaggia col § 2) |
 | 5 | § 2 Room | **in corso** dal 21 settembre: `stanza.js` (codice d'ingresso, ruoli) e `firestore.rules` scritte e provate contro l'emulatore. Restano il modulo e il collegamento della sincronizzazione |
 | 6 | § 9 Modulo stanza e inviti | È l'interfaccia del § 2. Senza, i gruppi poco tecnologici si fermano al primo tentativo |
 | 7 | § 8 Voci di spesa spegnibili | Configurazione della room: ha senso solo quando la room esiste |
@@ -114,7 +114,7 @@ classica con nome, cognome, email e password scelta dall'utente.
 mantenere la possibilità di *entrare in un campo con il solo codice* (ospite),
 e rendere l'account necessario solo per **creare** e **amministrare** un campo.
 
-### Dove siamo — 21 settembre, su `feature/public-app`
+### Dove siamo — 21 settembre, su `camp-ops`
 
 Il pezzo che sta nel codice è scritto e provato, dietro `FEATURES.auth` (per
 ora **spenta**: si accende quando la console Firebase è pronta).
@@ -340,7 +340,7 @@ l'utente condiviso, che è la strada 1.
 
 > **Deciso il 21 settembre: le versioni sono DUE prodotti, non uno.**
 > La privata resta quella del gruppo (Bandy, Prato Lungo, l'utente condiviso) e
-> vive su `main`; la pubblica è neutra, vive su `feature/public-app` e va sullo
+> vive su `main`; la pubblica è neutra, vive su `camp-ops` e va sullo
 > store. Il «de-branding» qui sotto descritto **non è più il piano**: non si
 > ricolora un'app sola, si tengono due rami. Niente passa dall'uno all'altro
 > se non lo decide Lorenzo, volta per volta.

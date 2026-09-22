@@ -106,7 +106,7 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   campo 2026 — quello di cui si stanno ancora chiudendo i rimborsi. Per lo
   stesso motivo `APP_LOCK.dbEmail` qui è `null`: l'utente condiviso è della
   Brigata.
-- **Questo ramo si chiama Camp Ops, e non è un refuso.** `feature/public-app`
+- **Questo ramo si chiama Camp Ops, e non è un refuso.** `camp-ops`
   è la versione pubblica: marchio neutro, icone Camp Ops, `CACHE_NAME` con
   prefisso `camp-ops-`. La Brigata, Prato Lungo e Bandy vivono su `main`, che è
   l'app privata del gruppo. Sono **due prodotti**, non uno con il marchio

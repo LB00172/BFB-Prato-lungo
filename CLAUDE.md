@@ -323,10 +323,18 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   gruppo, il campo in montagna, «Aiuta Bandy», Prato Lungo, l'utente condiviso.
   La **pubblica** è un prodotto neutro che andrà sul Play Store. Non è un'app
   sola con il marchio cambiato: sono due, e vivono su rami diversi — `main` la
-  privata, `feature/public-app` la pubblica.
+  privata, `camp-ops` la pubblica.
   **Niente passa dall'una all'altra da solo.** Quando una cosa sviluppata sulla
   pubblica va portata anche sulla privata, lo decide Lorenzo e lo dice. Non si
   fondono i rami «per tenerli allineati».
+  **Ma non stanno divergendo, e conviene saperlo:** al 22 settembre i due rami
+  differiscono in sessanta file, di cui **sei** sono il marchio e gli altri
+  **lavoro nuovo che non ha ancora attraversato** — login, stanza, inviti, che
+  non sono «della pubblica», sono il futuro di tutte e due. La relazione non si
+  ricorda più: `unita/compilazione` la dichiara in due elenchi (`UGUALI`,
+  `DIVERSI`) e stampa un riepilogo a ogni `npm test`. Se qualcosa diverge senza
+  che tu l'abbia deciso, o se il marchio della Brigata torna nell'app pubblica,
+  diventa rosso.
   Un solo vincolo tecnico a questa separazione: **la logica dei soldi non si
   duplica**. `conti.js`, `presenze.js`, `sync-merge.js` e `allarmi.js` devono
   restare la stessa cosa nei due rami, perché un errore sui conti corretto una

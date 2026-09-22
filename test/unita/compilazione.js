@@ -551,21 +551,33 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     + (sospetti.length ? ' — TROVATA IN: ' + sospetti.join(', ') : ''), sospetti.length === 0);
 }
 
-// ---------- I due rami non divergono sui soldi ----------
-// Le versioni sono due e restano separate (CLAUDE.md): `main` e' la privata,
-// `feature/public-app` la pubblica. La separazione e' voluta, ma ha un prezzo
-// che nessuno paga finche' non e' tardi: un errore sui conti corretto da una
-// parte sola resta vivo dall'altra, e lo scopre chi sta dividendo le spese
-// davanti a venti persone.
+// ---------- La relazione fra i due rami, detta invece che ricordata -------
+// Le versioni sono due (CLAUDE.md): `main` e' la privata, `camp-ops` la
+// pubblica. Tenerle separate e' voluto — ma "quanto sono diverse?" era una
+// domanda a cui si rispondeva a memoria, e a memoria faceva paura: sembrava
+// una biforcazione, ed erano invece 52 file di lavoro NUOVO piu' 6 di marchio.
 //
-// Questi quattro file non sono interfaccia ne' marchio: sono i soldi. Devono
-// essere IDENTICI nei due rami. Quando uno diverge non e' per forza un errore
-// — puo' essere una correzione che deve ancora attraversare — ma va visto,
-// non scoperto.
+// Qui la relazione si dichiara, e diventa una cosa che si legge:
+//
+//   UGUALI   devono restare identici. Se divergono e' un problema, non una
+//            conseguenza accettabile: un errore sui conti corretto da una
+//            parte sola resta vivo dall'altra, e lo scopre chi sta dividendo
+//            le spese davanti a venti persone.
+//   DIVERSI  devono restare diversi. Sono l'identita' del prodotto: se uno
+//            smette di differire, qualcuno ha riportato il marchio della
+//            Brigata dentro l'app pubblica.
+//
+// Tutto il resto che differisce e' lavoro che non ha ancora attraversato, e
+// il riepilogo lo conta: e' quel numero che dice se la distanza sta
+// aumentando o se e' solo una coda.
 {
   const { execFileSync } = require('child_process');
-  const SOLDI = ['conti.js', 'presenze.js', 'sync-merge.js', 'allarmi.js'];
+  const UGUALI = ['conti.js', 'presenze.js', 'sync-merge.js', 'allarmi.js',
+    'menu-spesa.js', 'magazzino-foto.js', 'pdf-ricordo.js'];
+  const DIVERSI = ['firebase-config.js', 'manifest.json',
+    'logo.png', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
   const git = (args) => execFileSync('git', args, { cwd: RADICE, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  const bin = (args) => execFileSync('git', args, { cwd: RADICE, stdio: ['ignore', 'pipe', 'ignore'] });
 
   let ramo = '';
   try { ramo = git(['rev-parse', '--abbrev-ref', 'HEAD']).trim(); } catch (e) { ramo = ''; }
@@ -575,20 +587,51 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     // verifica che non dice niente e' peggio di nessuna verifica.
     ok('sul ramo privato non c\'e' + ' niente da confrontare', true);
   } else {
-    const diversi = [];
     let potuto = true;
-    SOLDI.forEach((f) => {
-      let altrove = null;
-      try { altrove = git(['show', 'main:' + f]); } catch (e) { potuto = false; return; }
-      if (altrove !== fs.readFileSync(path.join(RADICE, f), 'utf8')) diversi.push(f);
+    const leggiLa = (f) => {
+      try { return bin(['show', 'main:' + f]); } catch (e) { return null; }
+    };
+    const leggiQui = (f) => {
+      try { return fs.readFileSync(path.join(RADICE, f)); } catch (e) { return null; }
+    };
+
+    const divergono = [];
+    UGUALI.forEach((f) => {
+      const la = leggiLa(f);
+      if (la === null) { potuto = false; return; }
+      if (!la.equals(leggiQui(f) || Buffer.alloc(0))) divergono.push(f);
     });
-    // Se il confronto non si e' potuto fare, la verifica e' ROSSA e lo dice.
-    // Una guardia che si arrende in silenzio quando non trova i dati e' il
-    // difetto che CLAUDE.md chiama sonnifero.
-    ok(`i ${SOLDI.length} file dei soldi sono identici su main`
+    ok(`i ${UGUALI.length} file che devono restare identici lo sono`
       + (!potuto ? ' — NON HO POTUTO CONFRONTARE: manca il ramo main o git' : '')
-      + (diversi.length ? ' — DIVERSI: ' + diversi.join(', ') : ''),
-      potuto && diversi.length === 0);
+      + (divergono.length ? ' — DIVERGONO: ' + divergono.join(', ') : ''),
+      potuto && divergono.length === 0);
+
+    // E il contrario: l'identita' del prodotto deve restare diversa. Se
+    // firebase-config.js tornasse uguale a quello di main, l'app pubblica
+    // porterebbe il marchio della Brigata e scriverebbe nel suo campo.
+    const uguagliati = [];
+    let potuto2 = true;
+    DIVERSI.forEach((f) => {
+      const la = leggiLa(f);
+      if (la === null) { potuto2 = false; return; }
+      if (la.equals(leggiQui(f) || Buffer.alloc(0))) uguagliati.push(f);
+    });
+    ok(`i ${DIVERSI.length} file che portano il marchio restano diversi da main`
+      + (!potuto2 ? ' — NON HO POTUTO CONFRONTARE' : '')
+      + (uguagliati.length ? ' — TORNATI UGUALI: ' + uguagliati.join(', ') : ''),
+      potuto2 && uguagliati.length === 0);
+
+    // Il riepilogo. Non fa fallire niente: e' la riga che risponde a
+    // "quanto sono lontani i due rami, e perche'" senza doverlo ricordare.
+    try {
+      const righe = git(['diff', '--name-status', 'main...HEAD']).trim().split('\n').filter(Boolean);
+      const soloQui = righe.filter((r) => r.startsWith('A')).length;
+      const cambiati = righe.filter((r) => r.startsWith('M')).map((r) => r.split('\t')[1]);
+      const marchio = cambiati.filter((f) => DIVERSI.includes(f)).length;
+      const inViaggio = cambiati.length - marchio;
+      ok(`riepilogo: ${marchio} file di marchio, ${inViaggio} modificati dal lavoro`
+        + ` non ancora attraversato, ${soloQui} nati qui`, true);
+    } catch (e) { /* il riepilogo non fa fallire niente */ }
   }
 }
 
