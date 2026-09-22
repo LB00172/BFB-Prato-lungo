@@ -1008,6 +1008,10 @@
     'auth.metodoSpento': "Questo modo di entrare non è attivo su questa installazione.",
     'auth.giaCollegato': 'Questo account è già collegato a un altro accesso.',
     'auth.rientra': 'Per farlo serve rientrare: esci e rientra, poi riprova.',
+    'auth.dominioNonAutorizzato': "Questo indirizzo non è fra quelli autorizzati in Firebase: l'accesso con Google non può funzionare da qui. Va aggiunto in Authentication → Settings → Authorized domains.",
+    'auth.finestraBloccata': 'Il browser ha bloccato la finestra di Google. Permetti le finestre per questo sito e riprova.',
+    'auth.altroModoDiEntrare': 'Questo indirizzo esiste già, ma è entrato in un altro modo. Prova con email e password.',
+    'auth.accountSospeso': 'Questo account è stato sospeso.',
     'auth.nonRiuscito': 'Non è riuscito. Riprova.',
 
     // ---------- La stanza (§ 2) ----------
@@ -1925,6 +1929,10 @@
     'auth.metodoSpento': 'Esta forma de entrar no está activa en esta instalación.',
     'auth.giaCollegato': 'Esta cuenta ya está vinculada a otro acceso.',
     'auth.rientra': 'Para hacerlo hay que volver a entrar: sal y entra otra vez, luego vuelve a probar.',
+    'auth.dominioNonAutorizzato': 'Esta dirección no está entre las autorizadas en Firebase: el acceso con Google no puede funcionar desde aquí. Hay que añadirla en Authentication → Settings → Authorized domains.',
+    'auth.finestraBloccata': 'El navegador ha bloqueado la ventana de Google. Permite las ventanas para este sitio y vuelve a probar.',
+    'auth.altroModoDiEntrare': 'Esta dirección ya existe, pero entró de otra forma. Prueba con correo y contraseña.',
+    'auth.accountSospeso': 'Esta cuenta ha sido suspendida.',
     'auth.nonRiuscito': 'No ha salido. Vuelve a probar.',
 
     // ---------- La habitación (§ 2) ----------
@@ -2844,6 +2852,10 @@
     'auth.metodoSpento': "Cette façon d'entrer n'est pas activée sur cette installation.",
     'auth.giaCollegato': 'Ce compte est déjà lié à un autre accès.',
     'auth.rientra': 'Pour ça il faut se reconnecter : déconnecte-toi, reviens, puis réessaie.',
+    'auth.dominioNonAutorizzato': "Cette adresse n'est pas parmi celles autorisées dans Firebase : l'accès avec Google ne peut pas marcher d'ici. Il faut l'ajouter dans Authentication → Settings → Authorized domains.",
+    'auth.finestraBloccata': 'Le navigateur a bloqué la fenêtre de Google. Autorise les fenêtres pour ce site et réessaie.',
+    'auth.altroModoDiEntrare': "Cette adresse existe déjà, mais elle est entrée autrement. Essaie avec e-mail et mot de passe.",
+    'auth.accountSospeso': 'Ce compte a été suspendu.',
     'auth.nonRiuscito': "Ça n'a pas marché. Réessaie.",
 
     // ---------- La chambre (§ 2) ----------

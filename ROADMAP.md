@@ -152,6 +152,15 @@ e `auth.js` condivide la sessione con `firebase-sync.js`. Il primo che entrasse
 col proprio account spegnerebbe la sincronizzazione. Il dettaglio sta nel § 2,
 che è dove si risolve.
 
+⚠️ **`signInWithPopup` su telefono è fragile, e va rivisto.** Provando
+l'anteprima è saltato fuori che una finestra che non si apre — bloccata dal
+browser, o un ambiente che non le supporta, come i browser dentro le app —
+produce lo stesso nulla di un dominio non autorizzato. I messaggi adesso lo
+dicono (`auth.finestraBloccata`, `auth.dominioNonAutorizzato`), ma la cura
+vera per un'app che si usa dal telefono è `signInWithRedirect`, che non apre
+niente. Da fare prima dello store: su iOS in particolare, il popup è la strada
+che fallisce più spesso.
+
 **Cosa manca al § 1**, e non si può fare da qui:
 
 - **La console Firebase** (solo Lorenzo): accendere i provider *Google* e

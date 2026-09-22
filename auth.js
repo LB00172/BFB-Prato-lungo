@@ -124,6 +124,19 @@
     'auth/operation-not-allowed': 'auth.metodoSpento',
     'auth/credential-already-in-use': 'auth.giaCollegato',
     'auth/requires-recent-login': 'auth.rientra',
+    // Il dominio da cui si apre l'app non e' fra quelli autorizzati nella
+    // console Firebase. Capita ogni volta che si prova da un indirizzo nuovo
+    // — un'anteprima di Vercel, un dominio appena comprato — e "riprova" e'
+    // il consiglio piu' inutile possibile: riprovando succede identico.
+    'auth/unauthorized-domain': 'auth.dominioNonAutorizzato',
+    // La finestra di Google bloccata dal browser. NON e' un ripensamento
+    // dell'utente (quello e' popup-closed-by-user, che non dice niente):
+    // qui la finestra non si e' proprio aperta, e su telefono succede spesso.
+    'auth/popup-blocked': 'auth.finestraBloccata',
+    'auth/operation-not-supported-in-this-environment': 'auth.finestraBloccata',
+    'auth/account-exists-with-different-credential': 'auth.altroModoDiEntrare',
+    'auth/invalid-api-key': 'auth.senzaFirebase',
+    'auth/user-disabled': 'auth.accountSospeso',
   };
 
   function motivo(errore) {

@@ -150,6 +150,22 @@ if (!A) { fine(); }
     A.motivo({ code: 'auth/popup-closed-by-user' }) === null
     && A.motivo({ code: 'auth/cancelled-popup-request' }) === null);
 
+  // Questi tre sono arrivati dal campo, non dalla fantasia: provando
+  // l'anteprima, "Entra con Google" rispondeva "Non e' riuscito. Riprova." —
+  // che e' il ripiego per un codice che la tabella non conosce, ed e' il
+  // consiglio piu' inutile possibile quando il problema e' che il dominio non
+  // e' autorizzato: riprovando succede identico.
+  ok(`un dominio non autorizzato lo dice, e dice dove si sistema (${A.motivo({ code: 'auth/unauthorized-domain' })})`,
+    A.motivo({ code: 'auth/unauthorized-domain' }) === 'auth.dominioNonAutorizzato');
+  // La finestra BLOCCATA non e' la finestra CHIUSA: chiuderla e' un
+  // ripensamento e non merita un avviso, bloccata e' un guasto da spiegare.
+  // Su telefono succede spesso.
+  ok('la finestra bloccata dal browser e\' un\'altra cosa dal ripensamento',
+    A.motivo({ code: 'auth/popup-blocked' }) === 'auth.finestraBloccata'
+    && A.motivo({ code: 'auth/popup-closed-by-user' }) === null);
+  ok('e un ambiente che non sa aprire finestre dice la stessa cosa',
+    A.motivo({ code: 'auth/operation-not-supported-in-this-environment' }) === 'auth.finestraBloccata');
+
   ok('un codice mai visto ha comunque un messaggio',
     A.motivo({ code: 'auth/qualcosa-di-nuovo' }) === 'auth.nonRiuscito');
   ok('e anche nessun codice affatto',
