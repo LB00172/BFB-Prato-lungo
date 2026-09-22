@@ -621,6 +621,37 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
       + (uguagliati.length ? ' — TORNATI UGUALI: ' + uguagliati.join(', ') : ''),
       potuto2 && uguagliati.length === 0);
 
+    // ---------- Il marchio che usciva dove la guardia non guardava ----------
+    // "firebase-config.js differisce da main" non bastava, ed e' stato verde
+    // per settimane mentre il marchio usciva lo stesso. I due file erano
+    // diversi in due righe (`dati`, `CAMP_CODE_DEFAULT`) e IDENTICI nelle
+    // sei che contano: stesso apiKey, stesso projectId, stesso authDomain.
+    // Cioe' lo stesso progetto Firebase — e quindi, premendo "Entra con
+    // Google", una finestra di consenso che diceva `brigata-bandone` a ogni
+    // utente della versione pubblica, nel momento in cui e' piu' guardata.
+    //
+    // Un file "diverso" non e' un marchio separato: separato lo e' quando a
+    // differire sono i valori che l'utente legge. Qui si guardano quelli.
+    const CHIAVI_PROGETTO = ['apiKey', 'authDomain', 'projectId', 'appId'];
+    const valore = (testo, chiave) => {
+      const m = new RegExp('\\b' + chiave + ':\\s*"([^"]*)"').exec(testo || '');
+      return m ? m[1] : null;
+    };
+    try {
+      const laa = git(['show', 'main:firebase-config.js']);
+      const quii = fs.readFileSync(path.join(RADICE, 'firebase-config.js'), 'utf8');
+      const condivise = CHIAVI_PROGETTO.filter((c) => {
+        const a = valore(laa, c), b = valore(quii, c);
+        return a !== null && b !== null && a === b;
+      });
+      ok('il progetto Firebase della pubblica non e\' quello della Brigata'
+        + (condivise.length ? ' — ANCORA IN COMUNE: ' + condivise.join(', ') : ''),
+        condivise.length === 0);
+    } catch (e) {
+      ok('il progetto Firebase della pubblica non e\' quello della Brigata'
+        + ' — NON HO POTUTO CONFRONTARE', false);
+    }
+
     // Il riepilogo. Non fa fallire niente: e' la riga che risponde a
     // "quanto sono lontani i due rami, e perche'" senza doverlo ricordare.
     try {

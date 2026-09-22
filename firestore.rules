@@ -1,9 +1,16 @@
 // ============================================================================
-//  REGOLE FIRESTORE — Brigata Fabio Bandone / versione pubblica
+//  REGOLE FIRESTORE — Camp Ops (versione pubblica)
 // ============================================================================
-// Da incollare in: console.firebase.google.com -> progetto brigata-bandone
-// -> Firestore Database -> scheda "Regole" (Rules) -> sostituisci tutto
-// -> Pubblica.
+// Da incollare in: console.firebase.google.com -> progetto **camp-ops**
+// -> Firestore Database -> scheda "Regole" -> sostituisci tutto -> Pubblica.
+//
+// ⚠️ NON e' il progetto della Brigata. Dal 22 settembre i progetti sono due:
+// `camp-ops` per la versione pubblica, `brigata-bandone` per quella privata.
+// Queste regole parlano SOLO di stanze: qui dentro `camps/` non esiste, e
+// l'utente condiviso del campo 2026 nemmeno. Se stai guardando queste regole
+// chiedendoti dove sia finito il ponte verso `camps/`, la risposta e' che non
+// serve piu' un ponte fra due progetti diversi — si e' portato via anche le
+// cinque verifiche che lo sorvegliavano.
 //
 // **Queste regole si provano prima di pubblicarle**: `npm run regole` le
 // carica in un emulatore Firestore locale e prova a violarle una per una.
@@ -11,28 +18,6 @@
 // regola: e' una speranza (CLAUDE.md, regola 5).
 //
 // ----------------------------------------------------------------------------
-// Ci sono DUE mondi qui dentro, e per un po' devono convivere.
-//
-//   camps/<codice>   il campo 2026, com'e' oggi. Ci si entra con l'utente
-//                    CONDIVISO (campo@brigatabandone.it) e la password del
-//                    blocco. Venti telefoni fanno cosi' in questo momento, e
-//                    i rimborsi si stanno ancora chiudendo: non si tocca.
-//
-//   rooms/<id>       la stanza della versione pubblica (ROADMAP § 2). Ognuno
-//                    entra con il PROPRIO account, e chi puo' fare cosa sta
-//                    scritto in members/<uid>.
-//
-// Il **ponte** (decisione del 21 settembre, ROADMAP § 2): a camps/<codice> si
-// accede con l'utente condiviso OPPURE essendo membro della stanza che porta
-// lo stesso codice. Cosi' i telefoni di oggi continuano a funzionare senza che
-// nessuno debba fare niente, e chi arriva dopo entra con se' stesso.
-//
-// ⚠️ IL PONTE E' TEMPORANEO. Va tolto quando il gruppo e' passato alle
-// stanze — cioe' quando nessuno entra piu' con l'utente condiviso. Da
-// rivedere: **marzo 2027** (prima dell'apertura pubblica, ROADMAP "calendario").
-// Finche' c'e', chi conosce la password del campo legge i dati del campo.
-// ----------------------------------------------------------------------------
-//
 // Come si entra in una stanza, senza backend: l'impronta del codice
 // d'ingresso sta in rooms/<id>/private/join, che **nessun client puo'
 // leggere**. Le get() delle regole pero' girano sul server e non passano dai
@@ -44,6 +29,7 @@
 // members lo leggono solo i membri, e un membro il codice lo conosce gia' —
 // l'ha digitato per entrare. Quando si toglie qualcuno dalla stanza, pero',
 // il codice va cambiato: lui se lo ricorda.
+// ----------------------------------------------------------------------------
 
 rules_version = '2';
 
@@ -51,13 +37,6 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ---------- Chi sei ----------
-
-    // L'utente condiviso del campo 2026. Non e' una persona: e' la password
-    // del blocco travestita da account, uguale su tutti i telefoni.
-    function utenteCondiviso() {
-      return request.auth != null
-        && request.auth.token.email == "campo@brigatabandone.it";
-    }
 
     function scheda(stanza) {
       return /databases/$(database)/documents/rooms/$(stanza)/members/$(request.auth.uid);
@@ -81,13 +60,6 @@ service cloud.firestore {
 
     function modifica(stanza) {
       return membro(stanza) && ruolo(stanza) in ['proprietario', 'redattore'];
-    }
-
-    // ---------- Il campo 2026, con il ponte ----------
-    // Il codice del campo e quello della stanza sono lo stesso: e' questo che
-    // permette ai due mondi di indicare gli stessi dati durante il passaggio.
-    match /camps/{codice}/{resto=**} {
-      allow read, write: if utenteCondiviso() || membro(codice);
     }
 
     // ---------- Le stanze ----------
@@ -163,8 +135,8 @@ service cloud.firestore {
       }
 
       // ---------- I dati del campo ----------
-      // Presenze, spese, menu', scontrini, foto: tutto quello che oggi sta
-      // sotto camps/<codice>. Il lettore guarda, il redattore scrive.
+      // Presenze, spese, menu', scontrini, foto: tutto quello che un campo
+      // mette insieme. Il lettore guarda, il redattore scrive.
       match /dati/{resto=**} {
         allow read: if membro(stanza);
         allow write: if modifica(stanza);

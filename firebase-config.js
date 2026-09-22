@@ -1,28 +1,41 @@
 // ============================================================================
 //  CONFIGURAZIONE FIREBASE  (solo per la sincronizzazione online — opzionale)
 // ============================================================================
-// Config del progetto Firebase "brigata-bandone".
+// Config del progetto Firebase "camp-ops".
+//
+// **Il progetto e' SUO, e non e' quello della Brigata.** Fino al 22 settembre
+// i due rami parlavano con lo stesso progetto (`brigata-bandone`), e la cosa
+// si vedeva nel punto peggiore: premendo "Entra con Google" la finestra di
+// consenso andava su `brigata-bandone.firebaseapp.com` e mostrava quel nome.
+// Cioe' il prodotto pubblico, nel momento in cui e' piu' guardato, diceva il
+// nome del gruppo privato. La guardia sui file di marchio restava verde —
+// `firebase-config.js` era gia' nell'elenco DIVERSI e in effetti differiva,
+// in due righe — mentre la stringa che l'utente leggeva davvero era identica.
+//
+// Separandoli cadono insieme altre tre cose: un file di regole solo per due
+// app diverse, il raggio di un errore (uno sbaglio nelle regole pubbliche
+// arrivava ai dati veri del campo 2026), e le carte del Play Store, che sono
+// per progetto e si sarebbero portate dietro i dati personali di venti amici.
 //
 // NOTA: l'apiKey di Firebase NON e' un segreto. E' un identificatore pubblico
 // lato client; la sicurezza vera sta nelle Regole di Firestore.
 // ============================================================================
 
 window.FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAXxV4WII_quLsStOlj0_DPbqSArL7vwSQ",
-  authDomain: "brigata-bandone.firebaseapp.com",
-  projectId: "brigata-bandone",
-  storageBucket: "brigata-bandone.firebasestorage.app",
-  messagingSenderId: "981622823343",
-  appId: "1:981622823343:web:daabbe8e90c7373155b75a",
-  measurementId: "G-RP3PN9V17N"
+  apiKey: "AIzaSyDRZg0ilLE3EPgvgprQuJSy_eAJC1pIpmQ",
+  authDomain: "camp-ops.firebaseapp.com",
+  projectId: "camp-ops",
+  storageBucket: "camp-ops.firebasestorage.app",
+  messagingSenderId: "367713450118",
+  appId: "1:367713450118:web:8a191efd7f62da0983f907",
+  measurementId: "G-SQ0C5J8796"
 };
 
-// Codice del campo: chi conosce questo codice accede ai dati condivisi.
-// Il codice del campo su cui scrive questa versione. **Deve essere diverso da
-// quello della Brigata**: i due rami parlano con lo STESSO progetto Firebase,
-// quindi con lo stesso codice l'anteprima pubblica scriverebbe dentro il
-// documento del campo 2026 — quello di cui si stanno ancora chiudendo i
-// rimborsi. Le versioni sono due: i dati pure.
+// La stanza su cui apre questa versione quando non ne hai ancora scelta una.
+// Da quando i progetti Firebase sono due non puo' piu' pestare i dati della
+// Brigata nemmeno volendo: stanno in un altro progetto, non in un'altra
+// cartella dello stesso. Resta diverso lo stesso — un valore che ricorda da
+// dove si viene costa niente e si legge in un attimo.
 window.CAMP_CODE_DEFAULT = "CampOpsProva";
 
 // ============================================================================

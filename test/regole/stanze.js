@@ -205,19 +205,31 @@ const permesso = async (msg, azione) => {
   await negato('e il segreto di una stanza altrui non si riscrive',
     () => setDoc(doc(carla, 'rooms/NUOVA555/private/join'), { impronta: 'mia' }));
 
-  console.log('\n6) Il ponte: il campo 2026 regge da tutte e due le parti');
-  // Venti telefoni fanno cosi' in questo momento, e i rimborsi si stanno
-  // ancora chiudendo. Se questa diventa rossa, l'app si svuota in mano a
-  // gente che sta facendo i conti.
-  await permesso('l\'utente condiviso legge il campo 2026', () => getDoc(doc(condiviso, 'camps/Bandone')));
-  await permesso('e scrive', () => setDoc(doc(condiviso, 'camps/Bandone'), { roba: 2 }));
-  await permesso('comprese le sottoraccolte', () => getDoc(doc(condiviso, 'camps/Bandone/receipts/uno')));
-  // L'altra campata: chi e' membro della stanza con lo stesso codice.
-  await permesso('un membro della stanza legge lo stesso campo', () => getDoc(doc(carla, 'camps/Bandone')));
-  await permesso('e ci scrive', () => setDoc(doc(carla, 'camps/Bandone'), { roba: 3 }));
-  // E chi non e' ne' l'uno ne' l'altro resta fuori: senza questa, il ponte
-  // sarebbe una porta aperta.
-  await negato('ma un estraneo resta fuori', () => getDoc(doc(bruno, 'camps/Bandone')));
+  // ---------- 6) Il campo 2026 qui dentro NON esiste ----------
+  // Fino al 22 settembre questa sezione si chiamava "il ponte" e chiedeva il
+  // contrario: che l'utente condiviso e i membri della stanza arrivassero
+  // tutti e due a camps/<codice>. Serviva a far convivere due mondi nello
+  // STESSO progetto Firebase. I progetti adesso sono due — `camp-ops` per la
+  // versione pubblica, `brigata-bandone` per quella privata — e qui dentro
+  // camps/ e' soltanto una collezione come un'altra, cioe' chiusa.
+  //
+  // Le verifiche sono rimaste, girate al rovescio, e sono piu' utili di
+  // prima: se qualcuno incolla in questo progetto le vecchie regole — quelle
+  // che avevano il ponte e l'utente condiviso — queste diventano rosse.
+  // Cancellarle e basta avrebbe lasciato quel passo falso senza nessuno che
+  // lo guarda.
+  console.log('\n6) Il campo 2026 non abita in questo progetto');
+  await negato('l\'utente condiviso non legge camps/',
+    () => getDoc(doc(condiviso, 'camps/Bandone')));
+  await negato('e non ci scrive', () => setDoc(doc(condiviso, 'camps/Bandone'), { roba: 2 }));
+  await negato('nemmeno le sottoraccolte',
+    () => getDoc(doc(condiviso, 'camps/Bandone/receipts/uno')));
+  // Il membro di una stanza vede i dati della SUA stanza, non un campo che
+  // porta lo stesso codice: la coincidenza dei nomi non e' piu' un permesso.
+  await negato('un membro di stanza non arriva a camps/ col suo codice',
+    () => getDoc(doc(carla, 'camps/Bandone')));
+  await negato('e non ci scrive', () => setDoc(doc(carla, 'camps/Bandone'), { roba: 3 }));
+  await negato('un estraneo resta fuori', () => getDoc(doc(bruno, 'camps/Bandone')));
   await negato('e un ospite senza account pure', () => getDoc(doc(ospite, 'camps/Bandone')));
 
   console.log('\n7) Quello che non e\' previsto e\' chiuso');

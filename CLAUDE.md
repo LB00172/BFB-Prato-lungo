@@ -89,8 +89,8 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `auth.js` | **chi sei, e cosa ti lascia fare l'app**: `Auth` sono le regole (stati, permessi, validazione, codici d'errore tradotti), `AuthCloud` è il trasporto verso Firebase Authentication. Fuori da `src/`. Dietro `FEATURES.auth` |
 | `stanza.js` | **la stanza**, in due metà come `auth.js`: `Stanza` sono le regole (alfabeto e generatore del codice, lettura di un codice digitato a mano, validazione del modulo, ruoli, **cosa si scrive entrando**), `StanzaCloud` il trasporto verso Firestore. La crittografia non c'è: è `improntaPassword` in `src/20-blocco-password.jsx`. Dietro `FEATURES.rooms` |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile`. **Dove** stanno i dati lo decide `percorso()`: `camps/<codice>` nella versione privata, `rooms/<codice>/dati/stato` in quella pubblica (`APP_CONFIG.dati`) |
-| `firebase-config.js` | chiavi Firebase e impronte delle password |
-| `firestore.rules` | **chi può leggere e scrivere cosa** nel cloud. Due mondi che convivono: `camps/<codice>` (il campo 2026, utente condiviso) e `rooms/<id>` (le stanze). Si provano con `npm run regole`, mai a occhio |
+| `firebase-config.js` | chiavi Firebase e impronte delle password. Il progetto è **`camp-ops`**, non quello della Brigata: separarli è la decisione del 22 settembre |
+| `firestore.rules` | **chi può leggere e scrivere cosa** nel cloud. Su questo ramo parlano solo di `rooms/<id>`: `camps/` sta in un altro progetto Firebase e qui è chiuso come tutto il resto. Si provano con `npm run regole`, mai a occhio |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
@@ -344,6 +344,17 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   **Niente passa dall'una all'altra da solo.** Quando una cosa sviluppata sulla
   pubblica va portata anche sulla privata, lo decide Lorenzo e lo dice. Non si
   fondono i rami «per tenerli allineati».
+  **E dal 22 settembre i progetti Firebase sono DUE**: `camp-ops` per la
+  pubblica, `brigata-bandone` per la privata. Prima era uno solo, e il marchio
+  usciva nel punto peggiore — premendo «Entra con Google» la finestra di
+  consenso diceva `brigata-bandone` a ogni utente della versione pubblica. La
+  guardia sui file di marchio restava verde: i due `firebase-config.js`
+  differivano in due righe e avevano identiche le sei che contano. Un file
+  diverso non è un marchio separato; separato lo è quando differiscono i
+  **valori che l'utente legge**, ed è quello che adesso una prova controlla
+  (`apiKey`, `authDomain`, `projectId`, `appId`). Separando i progetti cadono
+  insieme anche il file di regole unico per due app e il raggio di un errore:
+  uno sbaglio nelle regole pubbliche non arriva più ai dati veri del 2026.
   **Ma non stanno divergendo, e conviene saperlo:** al 22 settembre i due rami
   differiscono in sessanta file, di cui **sei** sono il marchio e gli altri
   **lavoro nuovo che non ha ancora attraversato** — login, stanza, inviti, che
