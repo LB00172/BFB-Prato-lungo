@@ -18,7 +18,7 @@ const schedaArchivio = ({
   totals,
 }) => (
   <div className="space-y-4">
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">{L.t('area.archivio')}</h3>
       {archives.length === 0 ? (
         <p className="text-normale text-gray-400 italic">
@@ -60,7 +60,7 @@ const schedaArchivio = ({
 
     {/* Album di un campo chiuso: le miniature si scaricano su richiesta. */}
     {album && (
-      <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+      <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
         <div className="flex items-center justify-between border-b border-salvia/40 pb-2 mb-3">
           <h3 className="font-rustic text-grande text-bosco truncate">{L.t('archivio.albumDi', album.name)}</h3>
           <button onClick={() => setAlbum(null)} className={bottone('testuale', 'minuscolo', 'shrink-0')}>{L.t('archivio.chiudi')}</button>
@@ -108,7 +108,7 @@ const schedaGioco = ({
   <div className="space-y-4">
     {!gameRunning ? (
       <>
-        <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+        <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
           <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('area.gioco')}</h3>
           <div className="flex items-center gap-3">
             <img src="./bandy.png" alt="Bandy" className="w-14 h-14 rounded border-2 border-salvia/40 bg-carta" style={{ imageRendering: 'pixelated' }} />
@@ -177,7 +177,7 @@ const schedaGuida = ({
   setGuideOpen,
 }) => (
   <div className="space-y-4">
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-1">{L.t('guida.titolo')}</h3>
       <p className="text-piccolo text-gray-500 mb-3">{L.t('guida.sottotitolo')}</p>
 

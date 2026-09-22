@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <!-- Icona per l'installazione su iPhone/iPad (iOS ignora le icone del manifest) -->
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <meta name="theme-color" content="#2D392C">
+  <meta name="theme-color" content="#00494A">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -41,13 +41,17 @@
          Restano fuori una dozzina di colori unici — il verde di WhatsApp,
          l'azzurro del meteo, il rosso di un errore — che non sono tavolozza:
          sono citazioni, e stanno scritti dove servono. */
-      --color-bosco: #2D392C;      /* il verde scuro portante */
-      --color-salvia: #8F9E8B;    /* bordi e scrittura secondaria */
-      --color-carta: #F0F4F1;     /* il fondo chiaro */
-      --color-legno: #5C4A3C;     /* il marrone */
-      --color-fuoco: #D97706;     /* l'ambra degli avvisi */
-      --color-orlo: #E2EAE4;      /* il passaggio del mouse */
-      --color-notte: #1F271E;     /* il verde quasi nero */
+      --color-bosco: #00494A;      /* il teal del logo, un gradino piu' fondo:
+                                     nel logo e' una campitura, qui e' una
+                                     superficie con del testo sopra, e a
+                                     #005858 tre chiari restavano a 4,4 */
+      --color-salvia: #46635E;    /* bordi e scrittura secondaria */
+      --color-carta: #FAF0D8;     /* il crema del logo: il fondo di tutto */
+      --color-legno: #7A4A2A;     /* il marrone caldo */
+      --color-fuoco: #B4470F;     /* l'arancio bruciato degli avvisi */
+      --color-orlo: #F2E2BE;      /* il passaggio del mouse */
+      --color-notte: #0A2322;     /* il teal quasi nero */
+      --color-scheda: #FFFBF0;    /* le schede: un soffio sopra il crema */
 
       --text-minuto: 9px;          /* etichette minute, note a margine */
       --text-minuto--line-height: 1.5;
@@ -77,7 +81,7 @@
        accidentali col dito). */
     @media (min-width: 768px) {
       body {
-        background-color: #D3DCD4;
+        background-color: #E8D9B4;
         -webkit-user-select: text;
         user-select: text;
       }
@@ -91,7 +95,7 @@
       font-size: 14px;
       line-height: var(--riga);
       min-height: calc(var(--riga) * 8);
-      background-color: #F7FAF7;
+      background-color: #FFFBF0;
       background-image: repeating-linear-gradient(
         to bottom,
         transparent 0,
@@ -105,7 +109,7 @@
       padding-bottom: 4px;
     }
     :root[data-theme="dark"] .lined-paper {
-      background-color: #2c352b !important;
+      background-color: #1B2E2C !important;
       background-image: repeating-linear-gradient(
         to bottom,
         transparent 0,
@@ -222,6 +226,39 @@
     :root[data-theme="dark"] .polaroid .didascalia { color: #3a3a38; }
 
     /* ======================================================================
+       QUANDO IL TESTO STA SOPRA UNA SUPERFICIE SCURA
+       ======================================================================
+       salvia e fuoco sono scelti per leggersi sul CREMA. Dove finiscono
+       sopra un fondo scuro — il menu, l'intestazione, i pannelli dei totali:
+       settantuno elementi — con la tavolozza del logo diventavano
+       illeggibili: salvia su bosco fa 1,26:1, fuoco su bosco 1,52:1. Prima
+       passavano per un pelo (4,29:1) solo perche' il verde militare era
+       molto piu' scuro del teal.
+       Si rimappano qui invece di cambiare cinquantotto punti di markup: e'
+       la stessa tecnica del tema scuro qui sotto, e si porta dietro da sola
+       ogni text-salvia che nascera' dentro un pannello scuro. La specificita'
+       di un discendente batte la classe di Tailwind senza !important. */
+    .bg-bosco [class*="text-salvia"],
+    .bg-notte [class*="text-salvia"] { color: #D6E5E0; }
+    .bg-bosco [class*="text-fuoco"],
+    .bg-notte [class*="text-fuoco"] { color: #F2B57E; }
+
+    /* ======================================================================
+       I GRIGI DI TAILWIND
+       ======================================================================
+       text-gray-400 e text-gray-500 erano gia' il debito peggiore dell'app
+       prima del cambio di tavolozza: #99A1AF sul chiaro faceva 2,01:1, cioe'
+       scritte che praticamente non si leggono. Sul crema, in piu', stonano —
+       sono grigi freddi in una stanza calda.
+       Si rimappano qui, una volta, invece di inseguirli in trecento punti. */
+    [class*="text-gray-400"],
+    [class*="text-gray-500"],
+    [class*="text-gray-600"],
+    [class*="text-gray-700"] { color: #55665F; }
+    .bg-bosco [class*="text-gray-"],
+    .bg-notte [class*="text-gray-"] { color: #D6E5E0; }
+
+    /* ======================================================================
        TEMA SCURO
        ======================================================================
        L'attributo data-theme="dark" viene messo su <html> dall'app (voce
@@ -241,12 +278,12 @@
     :root[data-theme="dark"] { color-scheme: dark; }
 
     :root[data-theme="dark"] body,
-    :root[data-theme="dark"] [class*="bg-carta"] { background-color: #1a201a !important; }
+    :root[data-theme="dark"] [class*="bg-carta"] { background-color: #0E1A1A !important; }
     @media (min-width: 768px) {
-      :root[data-theme="dark"] body { background-color: #0f130f !important; }
+      :root[data-theme="dark"] body { background-color: #061010 !important; }
     }
     /* Schede: il bianco diventa un verde molto scuro, un gradino sopra il fondo */
-    :root[data-theme="dark"] [class*="bg-white"]:not([class*="hover:bg-white"]) { background-color: #20271f !important; }
+    :root[data-theme="dark"] [class*="bg-scheda"]:not([class*="hover:bg-scheda"]) { background-color: #142524 !important; }
     /* Pannelli interni (erano bianchi sporchi/verdini) */
     /* Attenzione: qui la classe e' scritta per intero (non [class*=]), quindi
        l'opacita' fa parte del selettore e va sfuggita. Nel passaggio ai token
@@ -256,38 +293,43 @@
        generico, un gradino piu' scuro del dovuto. Nessun errore, nessuna
        schermata rotta. L'ha preso il confronto prima/dopo dei colori. */
     :root[data-theme="dark"] .bg-carta\/50,
-    :root[data-theme="dark"] .bg-carta\/60 { background-color: #2c352b !important; }
+    :root[data-theme="dark"] .bg-carta\/60 { background-color: #1B2E2C !important; }
     /* Pannelli tenui col verde militare trasparente: sul fondo scuro
        sparirebbero, quindi diventano un grigio-verde appena percettibile */
-    :root[data-theme="dark"] [class*="bg-bosco/"] { background-color: #2f382d !important; }
-    :root[data-theme="dark"] [class*="bg-gray-200"] { background-color: #2c352b !important; }
-    :root[data-theme="dark"] [class*="hover:bg-orlo"]:hover { background-color: #333d32 !important; }
+    :root[data-theme="dark"] [class*="bg-bosco/"] { background-color: #113332 !important; }
+    :root[data-theme="dark"] [class*="bg-gray-200"] { background-color: #1B2E2C !important; }
+    :root[data-theme="dark"] [class*="hover:bg-orlo"]:hover { background-color: #1E3937 !important; }
 
     /* Testi */
     :root[data-theme="dark"] body,
-    :root[data-theme="dark"] [class*="text-bosco"] { color: #dde6dc !important; }
+    :root[data-theme="dark"] [class*="text-bosco"] { color: #E4EDE4 !important; }
     :root[data-theme="dark"] [class*="text-gray-700"],
-    :root[data-theme="dark"] [class*="text-gray-600"] { color: #c3cdc2 !important; }
-    :root[data-theme="dark"] [class*="text-gray-500"] { color: #a3afa2 !important; }
+    :root[data-theme="dark"] [class*="text-gray-600"] { color: #C6D4CF !important; }
+    :root[data-theme="dark"] [class*="text-gray-500"] { color: #A8B8B3 !important; }
     :root[data-theme="dark"] [class*="text-gray-400"],
-    :root[data-theme="dark"] [class*="text-gray-300"] { color: #8c988b !important; }
-    :root[data-theme="dark"] [class*="text-legno"] { color: #c9a683 !important; }
+    :root[data-theme="dark"] [class*="text-gray-300"] { color: #AEC0BB !important; }
+    :root[data-theme="dark"] [class*="text-legno"] { color: #D7A878 !important; }
+    /* Questi due non c'erano: la salvia di prima era chiara e sul fondo scuro
+       si leggeva da sola. Quella nuova e' scelta per il crema, quindi scura,
+       e senza queste righe sparirebbe (2,71:1 sul fondo notturno). */
+    :root[data-theme="dark"] [class*="text-salvia"] { color: #A9C2BC !important; }
+    :root[data-theme="dark"] [class*="text-fuoco"] { color: #F2B57E !important; }
     :root[data-theme="dark"] [class*="text-red-700"] { color: #f08a8a !important; }
 
     /* Bordi */
-    :root[data-theme="dark"] [class*="border-salvia"] { border-color: #414b40 !important; }
-    :root[data-theme="dark"] [class*="border-bosco"] { border-color: #4a5a48 !important; }
+    :root[data-theme="dark"] [class*="border-salvia"] { border-color: #2F4D4A !important; }
+    :root[data-theme="dark"] [class*="border-bosco"] { border-color: #3B5E5B !important; }
     :root[data-theme="dark"] [class*="border-gray-200"],
-    :root[data-theme="dark"] [class*="border-gray-300"] { border-color: #3a443a !important; }
+    :root[data-theme="dark"] [class*="border-gray-300"] { border-color: #2A4442 !important; }
 
     /* Campi di inserimento: senza questo il testo digitato resterebbe nero */
     :root[data-theme="dark"] input,
     :root[data-theme="dark"] textarea,
-    :root[data-theme="dark"] select { color: #dde6dc !important; }
+    :root[data-theme="dark"] select { color: #E4EDE4 !important; }
     :root[data-theme="dark"] input::placeholder,
-    :root[data-theme="dark"] textarea::placeholder { color: #7e8a7d !important; }
+    :root[data-theme="dark"] textarea::placeholder { color: #869A96 !important; }
     /* Le opzioni delle tendine sono disegnate dal sistema */
-    :root[data-theme="dark"] option { background-color: #242c23; color: #dde6dc; }
+    :root[data-theme="dark"] option { background-color: #122A28; color: #E4EDE4; }
   </style>
 
   <!-- Tema applicato prima di disegnare la pagina, così aprendo l'app non si

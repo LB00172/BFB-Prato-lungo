@@ -40,9 +40,9 @@ const BOTTONE_MISURA = {
 const BOTTONE_RUOLO = {
   primario: 'bg-bosco border-transparent text-white hover:bg-notte',
   bruno: 'bg-legno border-transparent text-white hover:bg-[#463628]',
-  secondario: 'bg-white border-salvia/50 text-legno hover:bg-orlo',
+  secondario: 'bg-scheda border-salvia/50 text-legno hover:bg-orlo',
   testuale: 'border-transparent text-legno hover:text-bosco',
-  distruttivo: 'bg-white border-red-700/40 text-red-700 hover:bg-red-50',
+  distruttivo: 'bg-scheda border-red-700/40 text-red-700 hover:bg-red-50',
   // L'ambra e' il colore degli avvisi in tutta l'app (86 usi): un bottone
   // ambra e' un'azione che nasce da un problema, non un'azione qualsiasi.
   avviso: 'bg-fuoco border-transparent text-white hover:brightness-95',
@@ -123,22 +123,22 @@ const SCELTA_TONO = {
   // la linguetta una linguetta invece di un bottone premuto.
   sezione: {
     acceso: 'bg-bosco text-white border-legno',
-    spento: 'bg-white text-bosco border-gray-300 hover:bg-orlo',
+    spento: 'bg-scheda text-bosco border-gray-300 hover:bg-orlo',
   },
   bordato: {
     acceso: 'bg-bosco text-white border-bosco',
-    spento: 'bg-white text-bosco border-salvia/50 hover:bg-orlo',
+    spento: 'bg-scheda text-bosco border-salvia/50 hover:bg-orlo',
   },
   // Pranzo e cena: spento e' GRIGIO, non bianco. Qui "spento" vuol dire "non
   // c'era", e deve sparire dall'occhio — a colpo d'occhio si contano i
   // presenti, non si legge riga per riga.
   pranzo: {
     acceso: 'bg-bosco text-white border-bosco',
-    spento: 'bg-white text-gray-400 border-gray-300',
+    spento: 'bg-scheda text-gray-400 border-gray-300',
   },
   cena: {
     acceso: 'bg-legno text-white border-legno',
-    spento: 'bg-white text-gray-400 border-gray-300',
+    spento: 'bg-scheda text-gray-400 border-gray-300',
   },
   tenue: {
     acceso: 'bg-bosco text-white',
@@ -146,14 +146,14 @@ const SCELTA_TONO = {
   },
   piatto: {
     acceso: 'bg-bosco text-white',
-    spento: 'bg-white text-bosco',
+    spento: 'bg-scheda text-bosco',
   },
   // Spunta: da spenta e' un quadrato vuoto col filo sage. Il segno di spunta
   // c'e' sempre ma e' trasparente: cosi' la casella non cambia dimensione
   // quando la si tocca, e la riga non salta.
   casella: {
     acceso: 'bg-bosco border-bosco text-white',
-    spento: 'bg-white border-salvia text-transparent',
+    spento: 'bg-scheda border-salvia text-transparent',
   },
   // Ambra: il colore con cui l'app segna le cose fuori dai conti. Un bambino
   // non paga, e quel chip lo dice con lo stesso colore degli avvisi.

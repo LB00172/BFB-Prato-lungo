@@ -12,7 +12,7 @@ const applyTheme = (pref) => {
   if (dark) root.setAttribute('data-theme', 'dark');
   else root.removeAttribute('data-theme');
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', dark ? '#1a201a' : '#2D392C');
+  if (meta) meta.setAttribute('content', dark ? '#0E1A1A' : '#00494A');
   return dark;
 };
 

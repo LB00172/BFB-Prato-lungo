@@ -45,31 +45,16 @@ const { semina, SCHERMATE } = require('../lib/schermate');
 // #25D366 e' il verde di WhatsApp: quello non si tocca, e' il loro marchio e
 // il bottone deve somigliare al loro. Resta dichiarato, non riparato.
 const DEBITO = {
-  light: [
-    '#6A7282 su #E5E7EB',   // 3,91 — text-gray-500 di Tailwind
-    '#6A7282 su #F4F5F4',   // 4,43 — a un soffio
-    '#7B8A78 su #2D392C',   // 3,32 — salvia semitrasparente sul militare
-    '#8F9E8B su #2D392C',   // 4,29
-    '#8F9E8B su #F0F4F1',   // 2,55 — le etichette di sezione, il peggiore
-    '#8F9E8B su #FFFFFF',   // 2,83
-    '#99A1AF su #E7E4E2',   // 2,06 — text-gray-400, il peggiore in assoluto
-    '#99A1AF su #F0F4F1',   // 2,34
-    '#99A1AF su #F6F8F7',   // 2,44
-    '#99A1AF su #FFFFFF',   // 2,60
-    '#D97706 su #2D392C',   // 3,80
-    '#D97706 su #FFFFFF',   // 3,19
-    '#FFFFFF su #25D366',   // 1,98 — WhatsApp, per contratto
-    '#FFFFFF su #D97706',   // 3,19
-  ],
-  dark: [
-    '#7B8A78 su #2D392C',   // 3,32
-    '#8C988B su #2C352B',   // 4,23
-    '#8C988B su #2D392C',   // 4,03
-    '#8F9E8B su #2D392C',   // 4,29
-    '#D97706 su #2D392C',   // 3,80
-    '#FFFFFF su #25D366',   // 1,98 — WhatsApp, per contratto
-    '#FFFFFF su #D97706',   // 3,19
-  ],
+  // Il 22 settembre 2026 qui c'erano quattordici righe in chiaro e sette in
+  // scuro: il debito della tavolozza della Brigata, che nessuno aveva mai
+  // misurato. La tavolozza di Camp Ops le ha riparate tutte tranne una —
+  // non per fortuna, ma perche' i colori sono stati scelti sui numeri e
+  // questa prova rifiutava ogni valore che non passasse.
+  //
+  // L'unica rimasta non e' riparabile: #25D366 e' il verde di WhatsApp, il
+  // bottone deve somigliare al loro, e il loro contrasto e' quello.
+  light: ['#FFFFFF su #25D366'],
+  dark: ['#FFFFFF su #25D366'],
 };
 
 // Quante coppie colore/sfondo distinte puo' disegnare l'app. Non e' un numero

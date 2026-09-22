@@ -44,7 +44,7 @@ const schedaGalleria = ({
 }) => (
   <div className="space-y-4">
     {/* Caricamento */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('galleria.carica')}</h3>
 
       {!cloud.connected ? (
@@ -106,7 +106,7 @@ const schedaGalleria = ({
     </div>
 
     {/* Griglia */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
       <div className="flex items-center justify-between border-b border-salvia/40 pb-2 mb-3 gap-2">
         <h3 className="font-rustic text-grande text-bosco shrink-0">
           {L.t('archivio.album')} {photos.length > 0 ? `(${photos.length})` : ''}
@@ -201,7 +201,7 @@ const schedaGalleria = ({
               >
                 <img src={p.thumb} alt="" className={`w-full h-full object-cover ${picking && scelta < 0 ? 'opacity-45' : ''}`} loading="lazy" />
                 {picking && (
-                  <span className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-minuto font-bold border-2 ${scelta >= 0 ? 'bg-bosco text-white border-bosco' : 'bg-white/80 border-white'}`}>
+                  <span className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-minuto font-bold border-2 ${scelta >= 0 ? 'bg-bosco text-white border-bosco' : 'bg-scheda/80 border-white'}`}>
                     {scelta >= 0 ? scelta + 1 : ''}
                   </span>
                 )}

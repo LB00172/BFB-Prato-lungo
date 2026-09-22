@@ -57,7 +57,7 @@ const schedaImpostazioni = ({
         Senza un campo in corso i controlli non hanno oggetto: due dei tre
         parlano dei dati, e i dati sono quelli del campo. Dopo la chiusura
         resterebbero rossi per sempre — su un telefono che sta benissimo. */}
-    <div className={`p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-white border-bosco/20' : 'bg-white border-fuoco/50'}`}>
+    <div className={`p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-scheda border-bosco/20' : 'bg-scheda border-fuoco/50'}`}>
       <div className="flex items-center justify-between border-b border-salvia/40 pb-2">
         <h3 className="font-rustic text-grande text-bosco">{L.t('pronto.titolo')}</h3>
         <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-fuoco text-white' : 'bg-bosco text-white'}`}>
@@ -99,7 +99,7 @@ const schedaImpostazioni = ({
         esiste. L'account serve a creare e amministrare un campo — cioe' alle
         cose che nella versione pubblica hanno un proprietario. */}
     {FEATURES.auth && (
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('auth.titolo')}</h3>
 
       {account.stato === 'registrato' && (
@@ -192,7 +192,7 @@ const schedaImpostazioni = ({
         Le regole del codice stanno in stanza.js, quelle di CHI puo' entrare
         in firestore.rules — qui si disegna e basta. */}
     {FEATURES.rooms && (
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('stanza.titolo')}</h3>
 
       {/* Un invito arrivato da un link. Si mostra e si CHIEDE: entrare di
@@ -302,7 +302,7 @@ const schedaImpostazioni = ({
         l'app, offrire la scelta vorrebbe dire mostrare meta' schermata in una
         lingua e meta' nell'altra. */}
     {FEATURES.lingue && (
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('lingua.titolo')}</h3>
       <div className="grid grid-cols-3 gap-2">
         {Object.keys(window.Lingue.LINGUE).map((k) => (
@@ -320,7 +320,7 @@ const schedaImpostazioni = ({
     )}
 
     {/* Aspetto */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('aspetto.titolo')}</h3>
       <div className="grid grid-cols-3 gap-2">
         {[['auto', L.t('aspetto.automatico'), '🌗'], ['light', L.t('aspetto.chiaro'), '☀️'], ['dark', L.t('aspetto.scuro'), '🌙']].map(([k, l, icon]) => (
@@ -340,7 +340,7 @@ const schedaImpostazioni = ({
     </div>
 
     {/* Galleria */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('area.galleria')}</h3>
       <div className="flex items-center justify-between gap-3">
         <span className="text-normale text-bosco">{L.t('impostazioni.fotoPerPersona')}</span>
@@ -365,7 +365,7 @@ const schedaImpostazioni = ({
         quando. Senza questa scheda, capire chi ha fatto sparire cosa
         vuol dire leggere il database a mano. Solo in modalità tecnica. */}
     {admin && (
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('diag.titolo')}</h3>
       {(() => {
         const m = metaRef.current || { rev: {}, del: {} };
@@ -488,7 +488,7 @@ const schedaImpostazioni = ({
         stato fatto qui e ciò che è arrivato dalla sincronizzazione.
         Solo in modalità tecnica. */}
     {admin && (
-    <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
+    <div className="bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
       <button
         onClick={() => setLogOpen((v) => !v)}
         className={bottoneRiga()}
@@ -566,7 +566,7 @@ const schedaImpostazioni = ({
 
     {/* Blocco con password — riga richiudibile: si imposta una volta e
         non si tocca più, quindi sta chiusa e in fondo. */}
-    <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
+    <div className="bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
       <button
         onClick={() => setBloccoOpen((v) => !v)}
         className={bottoneRiga()}
@@ -644,7 +644,7 @@ const schedaImpostazioni = ({
     </div>
 
     {/* Dati su questo telefono — riga richiudibile. */}
-    <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
+    <div className="bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
       <button
         onClick={() => setDatiOpen((v) => !v)}
         className={bottoneRiga()}
@@ -675,7 +675,7 @@ const schedaImpostazioni = ({
         password sua, per telefono: gli avvisi sulle voci cancellate,
         la diagnostica, il registro e il promemoria del backup si
         vedono solo qui. Gli altri usano l'app e basta. */}
-    <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
+    <div className="bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
       <button
         onClick={() => setTecnicaOpen((v) => !v)}
         className={bottoneRiga()}

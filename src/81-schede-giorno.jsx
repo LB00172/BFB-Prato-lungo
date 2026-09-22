@@ -68,7 +68,7 @@ const schedaCalendario = ({
     {/* Giorni del conto separato: le presenze di questi giorni fanno
         cassa a parte (vedi conti.js). Sta chiuso: è una cosa che
         si imposta una volta, non a ogni apertura del Calendario. */}
-    <div className="bg-white rounded-lg border border-salvia/30 shadow-sm overflow-hidden">
+    <div className="bg-scheda rounded-lg border border-salvia/30 shadow-sm overflow-hidden">
       <button
         onClick={() => setSepOpen((v) => !v)}
         className={bottoneRiga()}
@@ -109,7 +109,7 @@ const schedaCalendario = ({
       </div>)}
     </div>
 
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-dashed border-salvia pb-1">
         {L.data(parseDate(selectedDateStr), 'completa')}
       </h3>
@@ -257,7 +257,7 @@ const schedaMenu = ({
     {/* Stessa striscia del Calendario: il giorno scelto è condiviso */}
     {renderWeekStrip()}
 
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2">
       <div className="flex items-baseline justify-between border-b border-dashed border-salvia pb-1">
         <h3 className="font-rustic text-grande text-bosco">
           {L.t('menu.diGiorno', L.data(parseDate(selectedDateStr), 'completa'))}
@@ -306,7 +306,7 @@ const schedaMenu = ({
     {/* Conferma della proposta: l'uomo decide, il lettore propone. */}
     {propostaSpesa && (
       <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-3 z-50" onClick={() => setPropostaSpesa(null)}>
-        <div className="bg-white rounded-lg w-full max-w-md max-h-[85vh] flex flex-col shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-scheda rounded-lg w-full max-w-md max-h-[85vh] flex flex-col shadow-xl" onClick={(e) => e.stopPropagation()}>
           <div className="p-4 border-b border-salvia/30">
             <h3 className="font-rustic text-grande text-bosco">{L.t('menu.dallaSpesa')}</h3>
             <p className="text-piccolo text-gray-500 leading-snug mt-1">
@@ -340,7 +340,7 @@ const schedaMenu = ({
     )}
 
     {/* Colpo d'occhio sui giorni del campo con il menù già scritto */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">{L.t('menu.giorniDelCampo')}</h3>
       <ul className="space-y-1.5">
         {(() => {
@@ -403,7 +403,7 @@ const schedaPresenze = ({
   updateDayData,
 }) => (
   <div className="space-y-4">
-    <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-salvia/30 shadow-sm">
+    <div className="flex justify-between items-center bg-scheda p-3 rounded-lg border border-salvia/30 shadow-sm">
       <button onClick={() => navigateDate(-1)} className={bottoneIcona('tenue')}>&larr;</button>
       <input
         type="date"
@@ -428,7 +428,7 @@ const schedaPresenze = ({
           </p>
           <ul className="space-y-2">
             {orfane.map((o) => (
-              <li key={o.id} className="bg-white/70 rounded border border-salvia/30 p-2.5 space-y-2">
+              <li key={o.id} className="bg-scheda/70 rounded border border-salvia/30 p-2.5 space-y-2">
                 <p className="text-piccolo text-bosco leading-snug">
                   <span className="font-bold">{o.nome || L.t('presenze.personaSparita')}</span>
                   {' — '}{L.t('presenze.pastiSuGiorni', o.pasti, o.giorni.length)}
@@ -441,7 +441,7 @@ const schedaPresenze = ({
                   <select
                     value={orfanoScelte[o.id] || ''}
                     onChange={(e) => setOrfanoScelte((prev) => ({ ...prev, [o.id]: e.target.value }))}
-                    className="flex-grow min-w-0 p-2 bg-white border border-salvia/40 rounded text-piccolo focus:outline-none focus:border-bosco"
+                    className="flex-grow min-w-0 p-2 bg-scheda border border-salvia/40 rounded text-piccolo focus:outline-none focus:border-bosco"
                   >
                     <option value="">{L.t('presenze.aChiSono')}</option>
                     {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -471,7 +471,7 @@ const schedaPresenze = ({
       );
     })()}
 
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco flex items-center gap-2">
         <span className="min-w-0 truncate">
           {L.t('presenze.delGiorno', L.data(parseDate(selectedDateStr), 'lunga'))}
@@ -600,7 +600,7 @@ const schedaPresenze = ({
       )}
     </div>
 
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2">
       <h4 className="font-rustic text-normale text-legno">{L.t('presenze.noteOspiti')}</h4>
       <textarea
         value={getDayData(selectedDateStr).guestsNames}

@@ -432,7 +432,7 @@ const applyTheme = pref => {
   const root = document.documentElement;
   if (dark) root.setAttribute('data-theme', 'dark');else root.removeAttribute('data-theme');
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', dark ? '#1a201a' : '#2D392C');
+  if (meta) meta.setAttribute('content', dark ? '#0E1A1A' : '#00494A');
   return dark;
 };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -780,9 +780,9 @@ const BOTTONE_MISURA = {
 const BOTTONE_RUOLO = {
   primario: 'bg-bosco border-transparent text-white hover:bg-notte',
   bruno: 'bg-legno border-transparent text-white hover:bg-[#463628]',
-  secondario: 'bg-white border-salvia/50 text-legno hover:bg-orlo',
+  secondario: 'bg-scheda border-salvia/50 text-legno hover:bg-orlo',
   testuale: 'border-transparent text-legno hover:text-bosco',
-  distruttivo: 'bg-white border-red-700/40 text-red-700 hover:bg-red-50',
+  distruttivo: 'bg-scheda border-red-700/40 text-red-700 hover:bg-red-50',
   // L'ambra e' il colore degli avvisi in tutta l'app (86 usi): un bottone
   // ambra e' un'azione che nasce da un problema, non un'azione qualsiasi.
   avviso: 'bg-fuoco border-transparent text-white hover:brightness-95',
@@ -849,22 +849,22 @@ const SCELTA_TONO = {
   // la linguetta una linguetta invece di un bottone premuto.
   sezione: {
     acceso: 'bg-bosco text-white border-legno',
-    spento: 'bg-white text-bosco border-gray-300 hover:bg-orlo'
+    spento: 'bg-scheda text-bosco border-gray-300 hover:bg-orlo'
   },
   bordato: {
     acceso: 'bg-bosco text-white border-bosco',
-    spento: 'bg-white text-bosco border-salvia/50 hover:bg-orlo'
+    spento: 'bg-scheda text-bosco border-salvia/50 hover:bg-orlo'
   },
   // Pranzo e cena: spento e' GRIGIO, non bianco. Qui "spento" vuol dire "non
   // c'era", e deve sparire dall'occhio — a colpo d'occhio si contano i
   // presenti, non si legge riga per riga.
   pranzo: {
     acceso: 'bg-bosco text-white border-bosco',
-    spento: 'bg-white text-gray-400 border-gray-300'
+    spento: 'bg-scheda text-gray-400 border-gray-300'
   },
   cena: {
     acceso: 'bg-legno text-white border-legno',
-    spento: 'bg-white text-gray-400 border-gray-300'
+    spento: 'bg-scheda text-gray-400 border-gray-300'
   },
   tenue: {
     acceso: 'bg-bosco text-white',
@@ -872,14 +872,14 @@ const SCELTA_TONO = {
   },
   piatto: {
     acceso: 'bg-bosco text-white',
-    spento: 'bg-white text-bosco'
+    spento: 'bg-scheda text-bosco'
   },
   // Spunta: da spenta e' un quadrato vuoto col filo sage. Il segno di spunta
   // c'e' sempre ma e' trasparente: cosi' la casella non cambia dimensione
   // quando la si tocca, e la riga non salta.
   casella: {
     acceso: 'bg-bosco border-bosco text-white',
-    spento: 'bg-white border-salvia text-transparent'
+    spento: 'bg-scheda border-salvia text-transparent'
   },
   // Ambra: il colore con cui l'app segna le cose fuori dai conti. Un bambino
   // non paga, e quel chip lo dice con lo stesso colore degli avvisi.
@@ -2117,7 +2117,7 @@ function BandyGame({
       paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between gap-2 bg-white/95 px-3 py-2 rounded-lg shrink-0"
+    className: "flex items-center justify-between gap-2 bg-scheda/95 px-3 py-2 rounded-lg shrink-0"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-piccolo uppercase font-bold text-gray-500 truncate max-w-[24%]"
   }, playerName), /*#__PURE__*/React.createElement("span", {
@@ -5575,7 +5575,7 @@ function App() {
   // Striscia dei giorni: la stessa in Calendario e in Menù, così il giorno
   // scelto in una scheda è già scelto anche nell'altra.
   const renderWeekStrip = () => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between items-center bg-white p-3 rounded-lg border border-salvia/30 shadow-sm"
+    className: "flex justify-between items-center bg-scheda p-3 rounded-lg border border-salvia/30 shadow-sm"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => changeWeek(-7),
     "aria-label": L.t('settimana.precedente'),
@@ -5599,7 +5599,7 @@ function App() {
         setSelectedDateStr(dateStr);
         setCurrentDate(new Date(d));
       },
-      className: `p-2 flex flex-col items-center rounded-lg border transition-all ${isSelected ? 'bg-legno text-white border-legno' : isCampPeriod ? 'bg-bosco/10 text-bosco border-bosco' : 'bg-white text-gray-400 border-gray-200'}`
+      className: `p-2 flex flex-col items-center rounded-lg border transition-all ${isSelected ? 'bg-legno text-white border-legno' : isCampPeriod ? 'bg-bosco/10 text-bosco border-bosco' : 'bg-scheda text-gray-400 border-gray-200'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-piccolo uppercase font-bold"
     }, label), /*#__PURE__*/React.createElement("span", {
@@ -5654,7 +5654,7 @@ function App() {
   // le due casse si mostrassero con codice diverso, prima o poi direbbero le
   // stesse cose in due modi diversi.
   const schedaQuote = c => /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3"
   }, c.titolo), c.sottotitolo && /*#__PURE__*/React.createElement("p", {
@@ -6387,7 +6387,7 @@ function App() {
     onClick: () => setMenuOpen(o => !o),
     "aria-label": "Menu",
     "aria-expanded": menuOpen,
-    className: "absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-white/10"
+    className: "absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-scheda/10"
   }, /*#__PURE__*/React.createElement("span", {
     className: "block w-5 h-0.5 bg-carta"
   }), /*#__PURE__*/React.createElement("span", {
@@ -6424,7 +6424,7 @@ function App() {
   }, /*#__PURE__*/React.createElement("img", {
     src: "./logo.png",
     alt: "",
-    className: "w-11 h-11 rounded-full object-cover border-2 border-salvia bg-white"
+    className: "w-11 h-11 rounded-full object-cover border-2 border-salvia bg-scheda"
   }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-bosco leading-tight"
   }, BRAND.appTitle), /*#__PURE__*/React.createElement("div", {
@@ -6849,7 +6849,7 @@ function App() {
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5"
   }, /*#__PURE__*/React.createElement("div", {
     onClick: e => e.stopPropagation(),
-    className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-3 shadow-2xl"
+    className: "bg-scheda rounded-lg p-4 w-full max-w-xs space-y-3 shadow-2xl"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start justify-between gap-2 border-b border-salvia/40 pb-2"
   }, /*#__PURE__*/React.createElement("h3", {
@@ -6861,7 +6861,7 @@ function App() {
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
     title: L.t('lista.scontrinoTitolo'),
     "aria-label": L.t('lista.allegaScontrino'),
-    className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-salvia/50 bg-white text-grande leading-none hover:bg-orlo"
+    className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-salvia/50 bg-scheda text-grande leading-none hover:bg-orlo"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
@@ -6932,7 +6932,7 @@ function App() {
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5"
   }, /*#__PURE__*/React.createElement("div", {
     onClick: e => e.stopPropagation(),
-    className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[85vh] overflow-y-auto shadow-2xl"
+    className: "bg-scheda rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[85vh] overflow-y-auto shadow-2xl"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start justify-between gap-2 border-b border-salvia/40 pb-2"
   }, /*#__PURE__*/React.createElement("h3", {
@@ -6944,7 +6944,7 @@ function App() {
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
     title: L.t('lista.scontrinoTitolo'),
     "aria-label": L.t('lista.allegaScontrino'),
-    className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-salvia/50 bg-white text-grande leading-none hover:bg-orlo"
+    className: "shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-salvia/50 bg-scheda text-grande leading-none hover:bg-orlo"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
@@ -7020,7 +7020,7 @@ function App() {
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
   }, /*#__PURE__*/React.createElement("div", {
     onClick: e => e.stopPropagation(),
-    className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl"
+    className: "bg-scheda rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-grande text-bosco border-b border-salvia/40 pb-2"
   }, L.t('ripristino.titolo')), /*#__PURE__*/React.createElement("p", {
@@ -7040,7 +7040,7 @@ function App() {
     }, giorno), /*#__PURE__*/React.createElement("span", {
       className: "block text-minuto text-gray-500"
     }, fascia ? L.t('ripristino.copiaDelle', fascia, ora) : L.t('ripristino.copiaCloud'))), /*#__PURE__*/React.createElement("span", {
-      className: "text-minuto uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-white border border-salvia/40 text-gray-500"
+      className: "text-minuto uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-scheda border border-salvia/40 text-gray-500"
     }, L.t(s.dove === 'locale' ? 'ripristino.sulTelefono' : 'ripristino.nelCloud')));
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSnapList(null),
@@ -7050,7 +7050,7 @@ function App() {
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
   }, /*#__PURE__*/React.createElement("div", {
     onClick: e => e.stopPropagation(),
-    className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl"
+    className: "bg-scheda rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-grande text-bosco border-b border-salvia/40 pb-2"
   }, L.t('chiusura.campoTitolo')), /*#__PURE__*/React.createElement("label", {
@@ -7080,7 +7080,7 @@ function App() {
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
   }, /*#__PURE__*/React.createElement("div", {
     onClick: e => e.stopPropagation(),
-    className: "bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl"
+    className: "bg-scheda rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-grande text-bosco border-b border-salvia/40 pb-2"
   }, viewArchive.name), /*#__PURE__*/React.createElement("pre", {
@@ -7185,7 +7185,7 @@ const schedaCalendario = ({
     className: "text-piccolo text-legno leading-snug"
   }, frase('giorno.orfaneAvviso', totale, orfane.length)));
 })(), renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white rounded-lg border border-salvia/30 shadow-sm overflow-hidden"
+  className: "bg-scheda rounded-lg border border-salvia/30 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setSepOpen(v => !v),
   className: bottoneRiga()
@@ -7217,7 +7217,7 @@ const schedaCalendario = ({
 })), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic mt-2 leading-snug"
 }, frase('giorno.separatoNota')))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-dashed border-salvia pb-1"
 }, L.data(parseDate(selectedDateStr), 'completa')), (() => {
@@ -7322,7 +7322,7 @@ const schedaMenu = ({
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-baseline justify-between border-b border-dashed border-salvia pb-1"
 }, /*#__PURE__*/React.createElement("h3", {
@@ -7361,7 +7361,7 @@ const schedaMenu = ({
   className: "fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-3 z-50",
   onClick: () => setPropostaSpesa(null)
 }, /*#__PURE__*/React.createElement("div", {
-  className: "bg-white rounded-lg w-full max-w-md max-h-[85vh] flex flex-col shadow-xl",
+  className: "bg-scheda rounded-lg w-full max-w-md max-h-[85vh] flex flex-col shadow-xl",
   onClick: e => e.stopPropagation()
 }, /*#__PURE__*/React.createElement("div", {
   className: "p-4 border-b border-salvia/30"
@@ -7399,7 +7399,7 @@ const schedaMenu = ({
   onClick: confermaPropostaSpesa,
   className: bottone('primario', 'normale', 'flex-1')
 }, L.t('menu.aggiungiN', propostaSpesa.voci.filter((_, i) => propostaSpesa.scelte[i]).length))))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3"
 }, L.t('menu.giorniDelCampo')), /*#__PURE__*/React.createElement("ul", {
@@ -7457,7 +7457,7 @@ const schedaPresenze = ({
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
-  className: "flex justify-between items-center bg-white p-3 rounded-lg border border-salvia/30 shadow-sm"
+  className: "flex justify-between items-center bg-scheda p-3 rounded-lg border border-salvia/30 shadow-sm"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => navigateDate(-1),
   className: bottoneIcona('tenue')
@@ -7486,7 +7486,7 @@ const schedaPresenze = ({
     className: "space-y-2"
   }, orfane.map(o => /*#__PURE__*/React.createElement("li", {
     key: o.id,
-    className: "bg-white/70 rounded border border-salvia/30 p-2.5 space-y-2"
+    className: "bg-scheda/70 rounded border border-salvia/30 p-2.5 space-y-2"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo text-bosco leading-snug"
   }, /*#__PURE__*/React.createElement("span", {
@@ -7501,7 +7501,7 @@ const schedaPresenze = ({
       ...prev,
       [o.id]: e.target.value
     })),
-    className: "flex-grow min-w-0 p-2 bg-white border border-salvia/40 rounded text-piccolo focus:outline-none focus:border-bosco"
+    className: "flex-grow min-w-0 p-2 bg-scheda border border-salvia/40 rounded text-piccolo focus:outline-none focus:border-bosco"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, L.t('presenze.aChiSono')), members.map(m => /*#__PURE__*/React.createElement("option", {
@@ -7519,7 +7519,7 @@ const schedaPresenze = ({
     className: "text-minuto text-legno italic"
   }, L.t('galleria.primaMembri')));
 })(), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco flex items-center gap-2"
 }, /*#__PURE__*/React.createElement("span", {
@@ -7596,7 +7596,7 @@ const schedaPresenze = ({
   onClick: () => bloccaGiorno(selectedDateStr),
   className: bottone('bruno', 'normale', 'w-full')
 }, L.t('presenze.blocca')))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2"
 }, /*#__PURE__*/React.createElement("h4", {
   className: "font-rustic text-normale text-legno"
 }, L.t('presenze.noteOspiti')), /*#__PURE__*/React.createElement("textarea", {
@@ -7648,7 +7648,7 @@ const schedaSpesa = ({
 }, l))), spesaSection === 'totali' && /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-4"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-4"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('spesa.cassaGlobale')), /*#__PURE__*/React.createElement("p", {
@@ -7756,7 +7756,7 @@ const schedaSpesa = ({
   vuoto: L.t('quote.separataVuota'),
   avviso: totals.foodDrinksSep > 0 && totals.adultMealsSep === 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, frase('quote.separataSenzaPasti', money(totals.foodDrinksSep))) : null
 }), cassaSepAttiva && totals.breakdown.length > 0 && /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3"
 }, L.t('quote.totaleAPersona')), /*#__PURE__*/React.createElement("p", {
@@ -7814,7 +7814,7 @@ const schedaSpesa = ({
 }, L.t('saldi.condividiNota'))), spesaSection === 'dati' && /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, admin && /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco flex items-center gap-2"
 }, /*#__PURE__*/React.createElement("span", null, L.t('chiusura.contiTitolo')), bloccoConti() && /*#__PURE__*/React.createElement("span", {
@@ -7830,7 +7830,7 @@ const schedaSpesa = ({
   onClick: chiudiConti,
   className: bottone('bruno', 'normale', 'w-full')
 }, L.t('chiusura.chiudi')))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('backup.titolo')), /*#__PURE__*/React.createElement("p", {
@@ -7849,9 +7849,9 @@ const schedaSpesa = ({
   className: "hidden"
 }))), admin && /*#__PURE__*/React.createElement("button", {
   onClick: openRestore,
-  className: "w-full py-2.5 bg-white border-2 border-fuoco/50 text-fuoco rounded text-piccolo font-bold uppercase hover:bg-fuoco/10"
+  className: "w-full py-2.5 bg-scheda border-2 border-fuoco/50 text-fuoco rounded text-piccolo font-bold uppercase hover:bg-fuoco/10"
 }, L.t('backup.ripristino'))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-legno/30 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-legno/30 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('campo.chiusuraTitolo')), /*#__PURE__*/React.createElement("p", {
@@ -7865,7 +7865,7 @@ const schedaSpesa = ({
   onClick: () => goTo('archivio'),
   className: bottone('testuale', 'normale', 'w-full')
 }, L.t('campo.vediArchivio', archives.length))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-salvia/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
@@ -7950,7 +7950,7 @@ const schedaLista = ({
   onClick: () => setListaSection(k),
   className: bottoneScelta('linguetta', 'sezione', listaSection === k, 'minuscolo')
 }, l, n > 0 ? ` (${n})` : ''))), listaSection === 'daacquistare' && /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-legno/30 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-legno/30 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-salvia/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
@@ -8037,13 +8037,13 @@ const schedaLista = ({
   className: "text-minuto text-gray-400 italic"
 }, L.t('lista.notaPassaggio'))), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, !manualOpen ? /*#__PURE__*/React.createElement("button", {
   onClick: () => setManualOpen(true),
-  className: "w-full bg-white p-3 rounded-lg border-2 border-dashed border-salvia/60 text-bosco hover:bg-orlo flex items-center justify-center gap-2"
+  className: "w-full bg-scheda p-3 rounded-lg border-2 border-dashed border-salvia/60 text-bosco hover:bg-orlo flex items-center justify-center gap-2"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-grande leading-none"
 }, "\uFF0B"), /*#__PURE__*/React.createElement("span", {
   className: "font-bold uppercase text-piccolo tracking-wide"
 }, L.t('lista.aggiungiAMano'))) : /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-salvia/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
@@ -8053,7 +8053,7 @@ const schedaLista = ({
 }, /*#__PURE__*/React.createElement("label", {
   title: L.t('lista.scontrinoTitolo'),
   "aria-label": L.t('lista.allegaScontrino'),
-  className: `cursor-pointer px-3 py-2 rounded border-2 text-grande leading-none ${pReceipt ? 'bg-bosco border-bosco' : 'bg-white border-salvia/50 hover:bg-orlo'}`
+  className: `cursor-pointer px-3 py-2 rounded border-2 text-grande leading-none ${pReceipt ? 'bg-bosco border-bosco' : 'bg-scheda border-salvia/50 hover:bg-orlo'}`
 }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
   type: "file",
   accept: "image/*",
@@ -8126,7 +8126,7 @@ const schedaLista = ({
   onClick: addPurchase,
   className: bottone('primario', 'grande', 'w-full')
 }, L.t('lista.salva'))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-salvia/40 pb-2 mb-3"
 }, /*#__PURE__*/React.createElement("h3", {
@@ -8203,7 +8203,7 @@ const schedaLista = ({
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
     title: L.t('lista.scontrinoTitolo'),
     "aria-label": L.t('lista.allegaScontrino'),
-    className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-salvia/50 bg-white text-normale leading-none hover:bg-orlo"
+    className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-salvia/50 bg-scheda text-normale leading-none hover:bg-orlo"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
@@ -8244,7 +8244,7 @@ const schedaAttrezzatura = ({
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
   }, L.t('attrezzatura.aggiungiTitolo')), /*#__PURE__*/React.createElement("input", {
@@ -8273,7 +8273,7 @@ const schedaAttrezzatura = ({
   }, L.t('attrezzatura.aggiungi'))), /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-gray-400"
   }, L.t('attrezzatura.nota'))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between border-b border-salvia/40 pb-2 mb-3"
   }, /*#__PURE__*/React.createElement("h3", {
@@ -8315,7 +8315,7 @@ const schedaAttrezzatura = ({
   }, "\uD83D\uDCF7") : /*#__PURE__*/React.createElement("label", {
     title: L.t('lista.scontrinoTitolo'),
     "aria-label": L.t('lista.allegaScontrino'),
-    className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-salvia/50 bg-white text-normale leading-none hover:bg-orlo"
+    className: "shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-salvia/50 bg-scheda text-normale leading-none hover:bg-orlo"
   }, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
@@ -8377,7 +8377,7 @@ const schedaMembri = ({
 }, L.t('membri.unisci')), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-500 italic leading-snug"
 }, L.t('membri.unisciNota')))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('membri.aggiungiTitolo')), /*#__PURE__*/React.createElement("div", {
@@ -8399,7 +8399,7 @@ const schedaMembri = ({
   checked: newMemberChild,
   onChange: e => setNewMemberChild(e.target.checked)
 }), L.t('membri.bambinoGratis'))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3"
 }, L.t('membri.quanti', members.length)), members.length === 0 ? /*#__PURE__*/React.createElement("p", {
@@ -8422,7 +8422,7 @@ const schedaMembri = ({
   onClick: () => setInfoMember(v => v === m.id ? null : m.id),
   "aria-label": L.t('membri.datiDi', m.name),
   title: L.t('membri.datiRimborso'),
-  className: `w-6 h-6 rounded-full border-2 font-serif italic font-bold text-piccolo leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-bosco border-bosco text-white' : 'bg-white border-salvia text-legno'}`
+  className: `w-6 h-6 rounded-full border-2 font-serif italic font-bold text-piccolo leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-bosco border-bosco text-white' : 'bg-scheda border-salvia text-legno'}`
 }, "i"), /*#__PURE__*/React.createElement("button", {
   onClick: () => toggleChild(m.id),
   className: bottoneScelta('etichetta', 'ambra', m.isChild, 'minimo')
@@ -8441,7 +8441,7 @@ const schedaMembri = ({
   value: m.paypal || '',
   onChange: e => setMemberField(m.id, 'paypal', e.target.value),
   placeholder: L.t('membri.paypalSegno'),
-  className: "w-full p-2 bg-white border border-salvia/40 rounded text-normale focus:outline-none focus:border-bosco"
+  className: "w-full p-2 bg-scheda border border-salvia/40 rounded text-normale focus:outline-none focus:border-bosco"
 })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1"
 }, "IBAN"), /*#__PURE__*/React.createElement("input", {
@@ -8453,7 +8453,7 @@ const schedaMembri = ({
     if (p !== (m.iban || '')) setMemberField(m.id, 'iban', p);
   },
   placeholder: L.t('membri.ibanSegno'),
-  className: "w-full p-2 bg-white border border-salvia/40 rounded text-piccolo font-mono focus:outline-none focus:border-bosco"
+  className: "w-full p-2 bg-scheda border border-salvia/40 rounded text-piccolo font-mono focus:outline-none focus:border-bosco"
 }), (m.iban || '').trim() !== '' && (ibanValid(m.iban) ? /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-bosco mt-1"
 }, L.t('membri.ibanOk')) : /*#__PURE__*/React.createElement("p", {
@@ -8465,7 +8465,7 @@ const schedaMembri = ({
   "aria-label": L.t('membri.esenzione'),
   className: "mt-1.5 flex items-center gap-2 text-left"
 }, /*#__PURE__*/React.createElement("span", {
-  className: `w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-piccolo font-bold ${m.equipExempt ? 'bg-legno border-legno text-white' : 'bg-white border-salvia'}`
+  className: `w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-piccolo font-bold ${m.equipExempt ? 'bg-legno border-legno text-white' : 'bg-scheda border-salvia'}`
 }, m.equipExempt ? '✓' : ''), /*#__PURE__*/React.createElement("span", {
   className: `text-piccolo ${m.equipExempt ? 'font-bold text-legno' : 'text-gray-500'}`
 }, L.t('membri.esente'))))))));
@@ -8475,7 +8475,7 @@ const schedaMembri = ({
 const schedaRegole = () => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3"
 }, L.t('regole.titolo')), /*#__PURE__*/React.createElement("ol", {
@@ -8497,7 +8497,7 @@ const schedaDotazioni = ({
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3"
 }, L.t('dotazioni.base')), /*#__PURE__*/React.createElement("ul", {
@@ -8512,7 +8512,7 @@ const schedaDotazioni = ({
 }, item.text)))), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic mt-2"
 }, L.t('dotazioni.obbligo'))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('dotazioni.aggiunte')), /*#__PURE__*/React.createElement("div", {
@@ -8565,7 +8565,7 @@ const schedaArchivio = ({
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3"
 }, L.t('area.archivio')), archives.length === 0 ? /*#__PURE__*/React.createElement("p", {
@@ -8605,7 +8605,7 @@ const schedaArchivio = ({
   "aria-label": L.t('archivio.eliminaArchivio'),
   className: bottone('distruttivo', 'minuscolo')
 }, L.t('archivio.elimina'))))))), album && /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-salvia/40 pb-2 mb-3"
 }, /*#__PURE__*/React.createElement("h3", {
@@ -8647,7 +8647,7 @@ const schedaGioco = ({
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, !gameRunning ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('area.gioco')), /*#__PURE__*/React.createElement("div", {
@@ -8720,7 +8720,7 @@ const schedaGuida = ({
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-1"
 }, L.t('guida.titolo')), /*#__PURE__*/React.createElement("p", {
@@ -8797,7 +8797,7 @@ const schedaGalleria = ({
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('galleria.carica')), !cloud.connected ? /*#__PURE__*/React.createElement("p", {
@@ -8836,7 +8836,7 @@ const schedaGalleria = ({
 }, frase('galleria.inCoda', cloud.foto))), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic leading-snug"
 }, frase('galleria.tetto', photoCap)))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-salvia/40 pb-2 mb-3 gap-2"
 }, /*#__PURE__*/React.createElement("h3", {
@@ -8909,7 +8909,7 @@ const schedaGalleria = ({
     className: `w-full h-full object-cover ${picking && scelta < 0 ? 'opacity-45' : ''}`,
     loading: "lazy"
   }), picking && /*#__PURE__*/React.createElement("span", {
-    className: `absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-minuto font-bold border-2 ${scelta >= 0 ? 'bg-bosco text-white border-bosco' : 'bg-white/80 border-white'}`
+    className: `absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-minuto font-bold border-2 ${scelta >= 0 ? 'bg-bosco text-white border-bosco' : 'bg-scheda/80 border-white'}`
   }, scelta >= 0 ? scelta + 1 : ''), p.by && /*#__PURE__*/React.createElement("span", {
     className: "absolute bottom-0 left-0 right-0 bg-black/55 text-white text-minuto px-1 py-0.5 truncate text-left"
   }, soloNome(p.by)));
@@ -8999,7 +8999,7 @@ const schedaImpostazioni = ({
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
-  className: `p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-white border-bosco/20' : 'bg-white border-fuoco/50'}`
+  className: `p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-scheda border-bosco/20' : 'bg-scheda border-fuoco/50'}`
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-salvia/40 pb-2"
 }, /*#__PURE__*/React.createElement("h3", {
@@ -9026,7 +9026,7 @@ const schedaImpostazioni = ({
 }, c.no))))), readyOk && /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic"
 }, L.t('pronto.tuttoBene')))), FEATURES.auth && /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('auth.titolo')), account.stato === 'registrato' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
@@ -9128,7 +9128,7 @@ const schedaImpostazioni = ({
 }, L.t(account.problema, typeof window !== 'undefined' ? window.location.hostname : '')), account.fatto && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-bosco leading-snug"
 }, L.t(account.fatto))), FEATURES.rooms && /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('stanza.titolo')), stanzaStato.invito && /*#__PURE__*/React.createElement("div", {
@@ -9251,7 +9251,7 @@ const schedaImpostazioni = ({
 }, L.t(stanzaStato.problema)), stanzaStato.fatto === 'stanza.creata' && stanzaStato.stanza && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-bosco leading-snug"
 }, frase('stanza.creata', Stanza.bello(stanzaStato.stanza.codice)))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('lingua.titolo')), /*#__PURE__*/React.createElement("div", {
@@ -9266,7 +9266,7 @@ const schedaImpostazioni = ({
 }, window.Lingue.LINGUE[k].nome))), /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500 leading-snug"
 }, L.t('lingua.nota'))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('aspetto.titolo')), /*#__PURE__*/React.createElement("div", {
@@ -9280,7 +9280,7 @@ const schedaImpostazioni = ({
 }, icon), l))), /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500"
 }, L.t('aspetto.spiegazione', theme === 'auto', theme === 'auto' ? isDark : theme === 'dark'))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('area.galleria')), /*#__PURE__*/React.createElement("div", {
@@ -9299,7 +9299,7 @@ const schedaImpostazioni = ({
 }, n)))), /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500 leading-snug"
 }, L.t('impostazioni.fotoNota'))), admin && /*#__PURE__*/React.createElement("div", {
-  className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
 }, L.t('diag.titolo')), (() => {
@@ -9378,7 +9378,7 @@ const schedaImpostazioni = ({
     className: "text-minuto text-gray-400 italic leading-snug"
   }, L.t('diag.notaCancellazioni')));
 })()), admin && /*#__PURE__*/React.createElement("div", {
-  className: "bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
+  className: "bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setLogOpen(v => !v),
   className: bottoneRiga()
@@ -9456,7 +9456,7 @@ const schedaImpostazioni = ({
     className: bottone('secondario', 'normale', 'flex-1')
   }, L.t('registro.svuota'))));
 })())), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
+  className: "bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setBloccoOpen(v => !v),
   className: bottoneRiga()
@@ -9520,7 +9520,7 @@ const schedaImpostazioni = ({
 }, L.t('blocco.bloccaOra'))) : /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500"
 }, L.t('blocco.nessunaPassword')))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
+  className: "bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setDatiOpen(v => !v),
   className: bottoneRiga()
@@ -9548,7 +9548,7 @@ const schedaImpostazioni = ({
 }, L.t('dati.cancellaLocale')), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic leading-snug"
 }, L.t('dati.notaCancella')))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
+  className: "bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setTecnicaOpen(v => !v),
   className: bottoneRiga()
@@ -9666,7 +9666,7 @@ const schedaCompiti = ({
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
   }, L.t('compiti.assegnaTitolo')), /*#__PURE__*/React.createElement("input", {
@@ -9684,7 +9684,7 @@ const schedaCompiti = ({
   }, L.t('compiti.assegna')), /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-gray-400 italic leading-snug"
   }, frase('compiti.spiegazione'))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
+    className: "bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between px-4 py-3 border-b border-salvia/40"
   }, /*#__PURE__*/React.createElement("h3", {
@@ -9694,7 +9694,7 @@ const schedaCompiti = ({
   }, daFare.length)), daFare.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "px-4 py-6 text-center text-piccolo text-gray-400 italic"
   }, compiti.length === 0 ? L.t('compiti.vuoto') : L.t('compiti.tuttoFatto')) : /*#__PURE__*/React.createElement("ul", null, daFare.map(riga))), fatti.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
+    className: "bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between px-4 py-3 border-b border-salvia/40"
   }, /*#__PURE__*/React.createElement("h3", {

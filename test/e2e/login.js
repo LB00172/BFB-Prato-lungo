@@ -82,9 +82,24 @@ const { bloccoDiProva, PASSWORD_PROVA } = require('../lib/app');
     fondo: getComputedStyle(document.body).backgroundColor,
     metaTema: (document.querySelector('meta[name="theme-color"]') || {}).content,
     testo: getComputedStyle(document.querySelector('main h3')).color,
+    // "Scuro" come lo vede l'occhio: luminanza bassa, qualunque tinta sia.
+    scuroDavvero: (() => {
+      const m = /rgba?\(([^)]+)\)/.exec(getComputedStyle(document.body).backgroundColor);
+      if (!m) return false;
+      const p = m[1].split(',').map(Number);
+      const l = p.slice(0, 3).map((x) => x / 255)
+        .map((x) => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
+      return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2] < 0.05;
+    })(),
   }));
   console.log('tema scuro attivo:', JSON.stringify(stato));
-  const scuroOk = stato.attr === 'dark' && stato.salvato === 'dark' && /rgb\(26, 32, 26\)/.test(stato.fondo);
+  // Qui c'era scritto dentro il colore esatto del fondo — rgb(26, 32, 26) —
+  // e il cambio di tavolozza del 22 settembre l'ha fatta diventare rossa
+  // senza che il tema scuro avesse niente che non andava. Una prova che
+  // ricopia una costante invecchia da sola: quello che deve verificare e'
+  // che il fondo sia SCURO DAVVERO, non che sia quel preciso verde. Il
+  // colore giusto lo guarda e2e/tavolozza, che misura i contrasti.
+  const scuroOk = stato.attr === 'dark' && stato.salvato === 'dark' && stato.scuroDavvero;
   console.log('fondo e attributo corretti:', scuroOk ? 'OK' : 'PROBLEMA');
   await p.screenshot({ path: require('path').join(__dirname,'..','tmp','vista-impostazioni-scuro.png'), fullPage: true });
 

@@ -46,7 +46,7 @@ const schedaSpesa = ({
     </div>
 
     {spesaSection === 'totali' && (<div className="space-y-4">
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-4">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-4">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('spesa.cassaGlobale')}</h3>
       <p className="text-piccolo text-gray-500 -mt-1">{frase('spesa.cassaNota')}</p>
       <div className="space-y-2">
@@ -190,7 +190,7 @@ const schedaSpesa = ({
     {/* Il totale di tutte e due, per chi vuole sapere quanto tira
         fuori in tutto senza sommare a mente. */}
     {cassaSepAttiva && totals.breakdown.length > 0 && (
-      <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+      <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
         <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">{L.t('quote.totaleAPersona')}</h3>
         <p className="text-piccolo text-gray-500 leading-snug mb-2">{L.t('quote.totaleNota')}</p>
         <ul className="divide-y divide-salvia/20">
@@ -270,7 +270,7 @@ const schedaSpesa = ({
     {/* Chiusura dei conti: il blocco che serve DOPO il campo, quando la
         gente comincia a pagarsi e gli importi non devono più muoversi. */}
     {admin && (
-      <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+      <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
         <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco flex items-center gap-2">
           <span>{L.t('chiusura.contiTitolo')}</span>
           {bloccoConti() && <span className="ml-auto text-minuto uppercase font-bold px-2 py-1 rounded bg-legno text-white">{L.t('chiusura.chiusi')}</span>}
@@ -298,7 +298,7 @@ const schedaSpesa = ({
     )}
 
     {/* Backup dati */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('backup.titolo')}</h3>
       <p className="text-piccolo text-gray-500">{L.t('backup.nota')}</p>
       {/* Esportare è innocuo e serve a chiunque voglia tenersi una
@@ -315,14 +315,14 @@ const schedaSpesa = ({
         )}
       </div>
       {admin && (
-        <button onClick={openRestore} className="w-full py-2.5 bg-white border-2 border-fuoco/50 text-fuoco rounded text-piccolo font-bold uppercase hover:bg-fuoco/10">
+        <button onClick={openRestore} className="w-full py-2.5 bg-scheda border-2 border-fuoco/50 text-fuoco rounded text-piccolo font-bold uppercase hover:bg-fuoco/10">
           {L.t('backup.ripristino')}
         </button>
       )}
     </div>
 
     {/* Chiusura del campo */}
-    <div className="bg-white p-4 rounded-lg border-2 border-legno/30 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-legno/30 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('campo.chiusuraTitolo')}</h3>
       <p className="text-piccolo text-gray-500">
         {frase('campo.chiusuraNota')}
@@ -344,7 +344,7 @@ const schedaSpesa = ({
     </div>
 
     {/* Sincronizzazione Cloud (online) */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <div className="flex items-center justify-between border-b border-salvia/40 pb-2">
         <h3 className="font-rustic text-grande text-bosco">{L.t('cloud.titolo')}</h3>
         <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-bosco text-white' : 'bg-gray-200 text-gray-500'}`}>
@@ -459,7 +459,7 @@ const schedaLista = ({
 
     {/* ===== DA ACQUISTARE ===== */}
     {listaSection === 'daacquistare' && (
-    <div className="bg-white p-4 rounded-lg border-2 border-legno/30 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-legno/30 shadow-sm space-y-3">
       <div className="flex items-center justify-between border-b border-salvia/40 pb-2">
         <h3 className="font-rustic text-grande text-bosco">{L.t('lista.daAcquistareTitolo')}</h3>
         {toBuy.length > 0 && (
@@ -562,20 +562,20 @@ const schedaLista = ({
     {!manualOpen ? (
       <button
         onClick={() => setManualOpen(true)}
-        className="w-full bg-white p-3 rounded-lg border-2 border-dashed border-salvia/60 text-bosco hover:bg-orlo flex items-center justify-center gap-2"
+        className="w-full bg-scheda p-3 rounded-lg border-2 border-dashed border-salvia/60 text-bosco hover:bg-orlo flex items-center justify-center gap-2"
       >
         <span className="text-grande leading-none">＋</span>
         <span className="font-bold uppercase text-piccolo tracking-wide">{L.t('lista.aggiungiAMano')}</span>
       </button>
     ) : (
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <div className="flex items-center justify-between border-b border-salvia/40 pb-2">
         <h3 className="font-rustic text-grande text-bosco">{L.t('lista.prodottoAcquistato')}</h3>
         <div className="flex items-center gap-2 shrink-0">
           <label
             title={L.t('lista.scontrinoTitolo')}
             aria-label={L.t('lista.allegaScontrino')}
-            className={`cursor-pointer px-3 py-2 rounded border-2 text-grande leading-none ${pReceipt ? 'bg-bosco border-bosco' : 'bg-white border-salvia/50 hover:bg-orlo'}`}
+            className={`cursor-pointer px-3 py-2 rounded border-2 text-grande leading-none ${pReceipt ? 'bg-bosco border-bosco' : 'bg-scheda border-salvia/50 hover:bg-orlo'}`}
           >
             📷
             <input type="file" accept="image/*" onChange={onReceiptFile} className="hidden" />
@@ -671,7 +671,7 @@ const schedaLista = ({
     )}
 
     {/* Cronologia acquisti */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
       <div className="flex items-center justify-between border-b border-salvia/40 pb-2 mb-3">
         <h3 className="font-rustic text-grande text-bosco">{L.t('lista.cronologia')}</h3>
         {purchases.length > 0 && (
@@ -758,7 +758,7 @@ const schedaLista = ({
                 {receipts[p.id] ? (
                   <button onClick={() => setViewReceipt(receipts[p.id])} aria-label={L.t('lista.vediScontrino')} className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
                 ) : (
-                  <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-salvia/50 bg-white text-normale leading-none hover:bg-orlo">
+                  <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-salvia/50 bg-scheda text-normale leading-none hover:bg-orlo">
                     📷
                     <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, p.id)} className="hidden" />
                   </label>
@@ -801,7 +801,7 @@ const schedaAttrezzatura = ({
   return (
   <div className="space-y-4">
     {/* Form di inserimento */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('attrezzatura.aggiungiTitolo')}</h3>
       <input
         type="text"
@@ -829,7 +829,7 @@ const schedaAttrezzatura = ({
     </div>
 
     {/* Elenco attrezzatura */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
       <div className="flex items-center justify-between border-b border-salvia/40 pb-2 mb-3">
         <h3 className="font-rustic text-grande text-bosco">{L.t('area.attrezzatura')}</h3>
         {equipment.length > 0 && (
@@ -866,7 +866,7 @@ const schedaAttrezzatura = ({
                 {receipts[e.id] ? (
                   <button onClick={() => setViewReceipt(receipts[e.id])} aria-label={L.t('lista.vediScontrino')} className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
                 ) : (
-                  <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-salvia/50 bg-white text-normale leading-none hover:bg-orlo">
+                  <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-2 py-1 rounded border-2 border-salvia/50 bg-scheda text-normale leading-none hover:bg-orlo">
                     📷
                     <input type="file" accept="image/*" onChange={(ev) => attachReceiptTo(ev, e.id)} className="hidden" />
                   </label>

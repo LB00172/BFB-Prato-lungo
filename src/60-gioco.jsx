@@ -1016,7 +1016,7 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
     >
       {/* "Palmiro Togliatti" è lungo: su un telefono stretto questa riga
           deve accorciare il nome, non spingere fuori il punteggio. */}
-      <div className="flex items-center justify-between gap-2 bg-white/95 px-3 py-2 rounded-lg shrink-0">
+      <div className="flex items-center justify-between gap-2 bg-scheda/95 px-3 py-2 rounded-lg shrink-0">
         <span className="text-piccolo uppercase font-bold text-gray-500 truncate max-w-[24%]">{playerName}</span>
         <span className="font-rustic text-grande text-bosco shrink-0">{score} 🌿</span>
         <span className="text-piccolo text-gray-400 min-w-0 truncate text-right">

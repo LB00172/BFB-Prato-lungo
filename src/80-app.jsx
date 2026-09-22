@@ -1898,7 +1898,7 @@ function App() {
   // scelto in una scheda è già scelto anche nell'altra.
   const renderWeekStrip = () => (
     <>
-      <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-salvia/30 shadow-sm">
+      <div className="flex justify-between items-center bg-scheda p-3 rounded-lg border border-salvia/30 shadow-sm">
         <button onClick={() => changeWeek(-7)} aria-label={L.t('settimana.precedente')} className={bottoneIcona('tenue')}>&larr;</button>
         <span className="font-bold text-normale text-bosco uppercase font-rustic">{L.t('settimana.selezionata')}</span>
         <button onClick={() => changeWeek(7)} aria-label={L.t('settimana.successiva')} className={bottoneIcona('tenue')}>&rarr;</button>
@@ -1919,7 +1919,7 @@ function App() {
                   ? 'bg-legno text-white border-legno'
                   : isCampPeriod
                   ? 'bg-bosco/10 text-bosco border-bosco'
-                  : 'bg-white text-gray-400 border-gray-200'
+                  : 'bg-scheda text-gray-400 border-gray-200'
               }`}
             >
               <span className="text-piccolo uppercase font-bold">{label}</span>
@@ -1973,7 +1973,7 @@ function App() {
   // le due casse si mostrassero con codice diverso, prima o poi direbbero le
   // stesse cose in due modi diversi.
   const schedaQuote = (c) => (
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">{c.titolo}</h3>
       {c.sottotitolo && <p className="text-piccolo text-gray-500 leading-snug mb-2">{c.sottotitolo}</p>}
       {c.avviso && (
@@ -2596,7 +2596,7 @@ function App() {
           onClick={() => setMenuOpen((o) => !o)}
           aria-label="Menu"
           aria-expanded={menuOpen}
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-white/10"
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-scheda/10"
         >
           <span className="block w-5 h-0.5 bg-carta"></span>
           <span className="block w-5 h-0.5 bg-carta"></span>
@@ -2640,7 +2640,7 @@ function App() {
           className={`pointer-events-auto absolute left-0 top-0 bottom-0 w-72 max-w-[80%] bg-carta border-r-4 border-legno shadow-2xl p-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
           <div className="flex items-center gap-3 border-b border-salvia/40 pb-3 mb-2">
-            <img src="./logo.png" alt="" className="w-11 h-11 rounded-full object-cover border-2 border-salvia bg-white" />
+            <img src="./logo.png" alt="" className="w-11 h-11 rounded-full object-cover border-2 border-salvia bg-scheda" />
             <div>
               <div className="font-rustic text-bosco leading-tight">{BRAND.appTitle}</div>
               <div className="text-minuto uppercase tracking-wider text-salvia">{BRAND.groupName}</div>
@@ -2915,7 +2915,7 @@ function App() {
       {/* Registrazione acquisto di una voce "Da Acquistare" */}
       {buying && (
         <div onClick={() => setBuying(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 shadow-2xl">
+          <div onClick={(e) => e.stopPropagation()} className="bg-scheda rounded-lg p-4 w-full max-w-xs space-y-3 shadow-2xl">
             <div className="flex items-start justify-between gap-2 border-b border-salvia/40 pb-2">
               <h3 className="font-rustic text-grande text-bosco min-w-0 break-words">
                 {L.t('lista.acquistataTitolo', buying.name, buying.qty)}
@@ -2933,7 +2933,7 @@ function App() {
                 <label
                   title={L.t('lista.scontrinoTitolo')}
                   aria-label={L.t('lista.allegaScontrino')}
-                  className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-salvia/50 bg-white text-grande leading-none hover:bg-orlo"
+                  className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-salvia/50 bg-scheda text-grande leading-none hover:bg-orlo"
                 >
                   📷
                   <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, buying.id)} className="hidden" />
@@ -3002,7 +3002,7 @@ function App() {
       {/* Correzione di una voce già registrata */}
       {editing && (
         <div onClick={() => setEditing(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[85vh] overflow-y-auto shadow-2xl">
+          <div onClick={(e) => e.stopPropagation()} className="bg-scheda rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[85vh] overflow-y-auto shadow-2xl">
             <div className="flex items-start justify-between gap-2 border-b border-salvia/40 pb-2">
               <h3 className="font-rustic text-grande text-bosco">
                 {L.t(editing.kind === 'purchase' ? 'correggi.spesa' : 'correggi.voce')}
@@ -3011,7 +3011,7 @@ function App() {
               {receipts[editing.id] ? (
                 <button onClick={() => setViewReceipt(receipts[editing.id])} aria-label={L.t('lista.vediScontrino')} className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
               ) : (
-                <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-salvia/50 bg-white text-grande leading-none hover:bg-orlo">
+                <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-salvia/50 bg-scheda text-grande leading-none hover:bg-orlo">
                   📷
                   <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, editing.id)} className="hidden" />
                 </label>
@@ -3089,7 +3089,7 @@ function App() {
       {/* Scelta dello snapshot da ripristinare */}
       {snapList && (
         <div onClick={() => setSnapList(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl">
+          <div onClick={(e) => e.stopPropagation()} className="bg-scheda rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl">
             <h3 className="font-rustic text-grande text-bosco border-b border-salvia/40 pb-2">{L.t('ripristino.titolo')}</h3>
             <p className="text-piccolo text-gray-500">
               {frase('ripristino.nota')}
@@ -3110,7 +3110,7 @@ function App() {
                       {fascia ? L.t('ripristino.copiaDelle', fascia, ora) : L.t('ripristino.copiaCloud')}
                     </span>
                   </span>
-                  <span className="text-minuto uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-white border border-salvia/40 text-gray-500">
+                  <span className="text-minuto uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-scheda border border-salvia/40 text-gray-500">
                     {L.t(s.dove === 'locale' ? 'ripristino.sulTelefono' : 'ripristino.nelCloud')}
                   </span>
                 </button>
@@ -3124,7 +3124,7 @@ function App() {
       {/* Chiusura del campo: nome dell'archivio e riepilogo di cosa succede */}
       {closing && (
         <div onClick={() => setClosing(false)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl">
+          <div onClick={(e) => e.stopPropagation()} className="bg-scheda rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl">
             <h3 className="font-rustic text-grande text-bosco border-b border-salvia/40 pb-2">{L.t('chiusura.campoTitolo')}</h3>
             <label className="block text-piccolo uppercase font-bold text-gray-500">{L.t('chiusura.nomeArchivio')}</label>
             <input
@@ -3152,7 +3152,7 @@ function App() {
       {/* Resoconto di un campo archiviato */}
       {viewArchive && (
         <div onClick={() => setViewArchive(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl">
+          <div onClick={(e) => e.stopPropagation()} className="bg-scheda rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl">
             <h3 className="font-rustic text-grande text-bosco border-b border-salvia/40 pb-2">{viewArchive.name}</h3>
             <pre className="text-piccolo text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">{viewArchive.report || L.t('archivio.nessunResoconto')}</pre>
             <button onClick={() => shareArchive(viewArchive)} className={bottone('whatsapp', 'normale', 'w-full')}>{L.t('archivio.condividi')}</button>

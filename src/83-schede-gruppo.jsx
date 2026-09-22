@@ -39,7 +39,7 @@ const schedaMembri = ({
       </div>
     ))}
 
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('membri.aggiungiTitolo')}</h3>
       <div className="flex gap-2">
         <input
@@ -58,7 +58,7 @@ const schedaMembri = ({
       </label>
     </div>
 
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">
         {L.t('membri.quanti', members.length)}
       </h3>
@@ -78,7 +78,7 @@ const schedaMembri = ({
                     onClick={() => setInfoMember((v) => (v === m.id ? null : m.id))}
                     aria-label={L.t('membri.datiDi', m.name)}
                     title={L.t('membri.datiRimborso')}
-                    className={`w-6 h-6 rounded-full border-2 font-serif italic font-bold text-piccolo leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-bosco border-bosco text-white' : 'bg-white border-salvia text-legno'}`}
+                    className={`w-6 h-6 rounded-full border-2 font-serif italic font-bold text-piccolo leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-bosco border-bosco text-white' : 'bg-scheda border-salvia text-legno'}`}
                   >
                     i
                   </button>
@@ -105,7 +105,7 @@ const schedaMembri = ({
                       value={m.paypal || ''}
                       onChange={(e) => setMemberField(m.id, 'paypal', e.target.value)}
                       placeholder={L.t('membri.paypalSegno')}
-                      className="w-full p-2 bg-white border border-salvia/40 rounded text-normale focus:outline-none focus:border-bosco"
+                      className="w-full p-2 bg-scheda border border-salvia/40 rounded text-normale focus:outline-none focus:border-bosco"
                     />
                   </div>
                   <div>
@@ -116,7 +116,7 @@ const schedaMembri = ({
                       onChange={(e) => setMemberField(m.id, 'iban', e.target.value.toUpperCase())}
                       onBlur={(e) => { const p = ibanPretty(e.target.value); if (p !== (m.iban || '')) setMemberField(m.id, 'iban', p); }}
                       placeholder={L.t('membri.ibanSegno')}
-                      className="w-full p-2 bg-white border border-salvia/40 rounded text-piccolo font-mono focus:outline-none focus:border-bosco"
+                      className="w-full p-2 bg-scheda border border-salvia/40 rounded text-piccolo font-mono focus:outline-none focus:border-bosco"
                     />
                     {/* Un IBAN sbagliato si scopre solo quando il bonifico torna indietro. */}
                     {(m.iban || '').trim() !== '' && (
@@ -137,7 +137,7 @@ const schedaMembri = ({
                   aria-label={L.t('membri.esenzione')}
                   className="mt-1.5 flex items-center gap-2 text-left"
                 >
-                  <span className={`w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-piccolo font-bold ${m.equipExempt ? 'bg-legno border-legno text-white' : 'bg-white border-salvia'}`}>
+                  <span className={`w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-piccolo font-bold ${m.equipExempt ? 'bg-legno border-legno text-white' : 'bg-scheda border-salvia'}`}>
                     {m.equipExempt ? '✓' : ''}
                   </span>
                   <span className={`text-piccolo ${m.equipExempt ? 'font-bold text-legno' : 'text-gray-500'}`}>
@@ -157,7 +157,7 @@ const schedaMembri = ({
 // sola, e infatti l'elenco delle dipendenze e' vuoto.
 const schedaRegole = () => (
   <div className="space-y-4">
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">{L.t('regole.titolo')}</h3>
       <ol className="space-y-3">
         {CAMP_RULES.map((text, i) => (
@@ -182,7 +182,7 @@ const schedaDotazioni = ({
 }) => (
   <div className="space-y-4">
     {/* Box fisso: dotazione base */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">{L.t('dotazioni.base')}</h3>
       <ul className="space-y-2">
         {BASE_GEAR.map((item) => (
@@ -207,7 +207,7 @@ const schedaDotazioni = ({
     </div>
 
     {/* Box editabile: aggiunte dell'occasione */}
-    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('dotazioni.aggiunte')}</h3>
       <div className="flex gap-2">
         <input

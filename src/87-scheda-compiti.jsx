@@ -67,7 +67,7 @@ const schedaCompiti = ({
   return (
     <div className="space-y-4">
       {/* Assegnare */}
-      <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+      <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
         <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('compiti.assegnaTitolo')}</h3>
         <input
           value={nuovoCompito}
@@ -84,7 +84,7 @@ const schedaCompiti = ({
       </div>
 
       {/* Da fare */}
-      <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
+      <div className="bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-salvia/40">
           <h3 className="font-rustic text-grande text-bosco">{L.t('compiti.daFare')}</h3>
           {daFare.length > 0 && <span className="font-rustic font-bold text-bosco">{daFare.length}</span>}
@@ -102,7 +102,7 @@ const schedaCompiti = ({
 
       {/* Fatti */}
       {fatti.length > 0 && (
-        <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
+        <div className="bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-salvia/40">
             <h3 className="font-rustic text-grande text-bosco">{L.t('compiti.fatti')}</h3>
             <span className="font-rustic font-bold text-bosco">{fatti.length}</span>
