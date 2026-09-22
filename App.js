@@ -9095,7 +9095,7 @@ const schedaImpostazioni = ({
   className: bottone('testuale', 'minuscolo', 'w-full')
 }, L.t('auth.passwordDimenticata')))), account.problema && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo font-bold text-red-700 leading-snug"
-}, L.t(account.problema)), account.fatto && /*#__PURE__*/React.createElement("p", {
+}, L.t(account.problema, typeof window !== 'undefined' ? window.location.hostname : '')), account.fatto && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-[#2D392C] leading-snug"
 }, L.t(account.fatto))), FEATURES.rooms && /*#__PURE__*/React.createElement("div", {
   className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3"

@@ -177,7 +177,10 @@ const schedaImpostazioni = ({
         </>
       )}
 
-      {account.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(account.problema)}</p>}
+      {/* L'indirizzo di questa pagina si passa sempre: le chiavi che sono
+          stringhe lo ignorano, e quella del dominio non autorizzato ci
+          scrive dentro il nome da copiare in Firebase. */}
+      {account.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(account.problema, typeof window !== 'undefined' ? window.location.hostname : '')}</p>}
       {account.fatto && <p className="text-piccolo text-[#2D392C] leading-snug">{L.t(account.fatto)}</p>}
     </div>
     )}

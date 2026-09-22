@@ -288,4 +288,18 @@ const UN_GIORNO = new Date(2026, 7, 11, 14, 5);  // martedì 11 agosto 2026, 14:
     + (indirette.length ? ' — ' + indirette.slice(0, 6).join(', ') : ''), indirette.length === 0);
 }
 
+// ---------- Un messaggio che nomina la causa e non il valore e' mezzo ----------
+// «Questo indirizzo non e' autorizzato» dice cosa non va e non dice cosa
+// copiare: chi legge va in Firebase e incolla l'indirizzo che si ricorda,
+// che e' quello di ieri. E' successo davvero, con un'anteprima Vercel che
+// aveva cambiato nome insieme al ramo. Il dominio va SCRITTO nel messaggio,
+// in tutte le lingue.
+{
+  const DOVE = 'esempio-di-prova.vercel.app';
+  CODICI.forEach((c) => {
+    const frase = L.crea(c).t('auth.dominioNonAutorizzato', DOVE);
+    ok(`[${c}] il dominio non autorizzato si legge nel messaggio`, frase.includes(DOVE));
+  });
+}
+
 fine();
