@@ -162,5 +162,62 @@ console.log("4) I dati di un campo stanno dove le regole se li aspettano");
   delete global.window.APP_CONFIG;
 }
 
+// ---------- Quando si stacca e si riattacca ----------
+// I due difetti che questa regola mette insieme sono nati separati, e nessuno
+// dei due si vedeva da solo.
+//
+// Il primo: entrare nella PRIMA stanza non riagganciava niente. L'effetto che
+// staccava confrontava la stanza di prima con quella di adesso, ma "nessuna
+// stanza" era scritta `null` come il valore di partenza del riferimento —
+// quindi il passaggio che conta di piu' non lo vedeva nessuno, e l'app
+// restava a scrivere nel campo predefinito mentre a schermo diceva di essere
+// dentro la stanza appena creata.
+//
+// Il secondo: entrando con Google DOPO esserti gia' agganciato da anonimo,
+// la connessione continua a parlare per l'uid anonimo. Le regole Firestore
+// guardano l'uid, e quello non e' membro di niente.
+{
+  const { vaRiagganciato } = global.window.CloudSync;
+  const nessuno = { connesso: false, codice: null, uid: null };
+
+  ok(vaRiagganciato(nessuno, { codice: 'ABCD1234', uid: null }) === true,
+    'da fermi ci si aggancia');
+  ok(vaRiagganciato(nessuno, { codice: '', uid: 'g' }) === false,
+    'ma senza un codice non si aggancia niente');
+
+  // IL caso che era rotto.
+  ok(vaRiagganciato({ connesso: true, codice: 'CampOpsProva', uid: 'anon1' },
+                    { codice: 'TS9N-TC43', uid: 'anon1' }) === true,
+    'entrando nella prima stanza si riaggancia');
+  ok(vaRiagganciato({ connesso: true, codice: 'STANZA-A', uid: 'g' },
+                    { codice: 'STANZA-B', uid: 'g' }) === true,
+    'e cambiando stanza pure');
+
+  // L'altro caso che era rotto: cambia CHI sei, non dove scrivi.
+  ok(vaRiagganciato({ connesso: true, codice: 'TS9N-TC43', uid: 'anon1' },
+                    { codice: 'TS9N-TC43', uid: 'google1' }) === true,
+    'entrando con Google si riaggancia con il tuo uid');
+
+  // E le due che devono restare ferme, o si stacca e riattacca a ogni
+  // disegno: un uid che non si conosce non e' un uid diverso.
+  ok(vaRiagganciato({ connesso: true, codice: 'TS9N-TC43', uid: 'anon1' },
+                    { codice: 'TS9N-TC43', uid: null }) === false,
+    'un uid che non si conosce non fa riagganciare');
+  ok(vaRiagganciato({ connesso: true, codice: 'TS9N-TC43', uid: null },
+                    { codice: 'TS9N-TC43', uid: 'google1' }) === false,
+    'e nemmeno un collegamento di cui non si sa l\'uid');
+  ok(vaRiagganciato({ connesso: true, codice: 'TS9N-TC43', uid: 'g' },
+                    { codice: 'TS9N-TC43', uid: 'g' }) === false,
+    'stessa stanza e stesso uid: si resta dove si e\'');
+
+  // Questa l'ha trovata un sabotaggio che NON produceva rosso: nessuna
+  // verifica copriva l'essere connessi senza sapere a cosa (capita mentre la
+  // connessione sta salendo). Nel dubbio si riaggancia — restare appesi a un
+  // posto che non si sa nominare e' peggio di un giro di rete in piu'.
+  ok(vaRiagganciato({ connesso: true, codice: null, uid: 'g' },
+                    { codice: 'TS9N-TC43', uid: 'g' }) === true,
+    'connessi senza sapere a cosa: si riaggancia');
+}
+
 console.log(`\n${checks} verifiche — ${fails ? fails + ' FALLITE' : 'nessun problema'}`);
 process.exit(fails ? 1 : 0);

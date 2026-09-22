@@ -64,7 +64,26 @@
   async function signIn(creds) {
     const lock = (typeof window !== 'undefined' && window.APP_LOCK) || {};
     const email = lock.dbEmail;
-    if (!email) { authMode = 'anon'; await fb.signInAnonymously(auth); return; }
+    // Nessun utente condiviso: e' la versione pubblica, dove CHI SEI lo decide
+    // l'account, non la sincronizzazione. Qui c'era un signInAnonymously
+    // secco, e buttava via la sessione Google appena aperta: l'uid anonimo
+    // non ha nessuna scheda in members/, e le regole chiedono esattamente
+    // quella — ogni lettura e scrittura della stanza finiva negata, senza che
+    // niente lo dicesse. Chi non e' entrato resta anonimo, ed e' giusto:
+    // l'account non e' un muro, e anche un anonimo puo' avere la sua scheda
+    // se e' entrato col codice.
+    if (!email) {
+      try {
+        if (auth.authStateReady) await auth.authStateReady();
+      } catch (e) { /* SDK piu' vecchio: si prosegue */ }
+      if (auth.currentUser) {
+        authMode = auth.currentUser.isAnonymous ? 'anon' : 'account';
+        return;
+      }
+      authMode = 'anon';
+      await fb.signInAnonymously(auth);
+      return;
+    }
 
     // Sessione gia' aperta su questo dispositivo: niente password da chiedere.
     // Ma dev'essere la sessione GIUSTA — vedi sessioneDelCampo().
@@ -100,6 +119,32 @@
     // precedente): si prova comunque, ma lo stato lo segnala alla UI.
     authMode = 'anon-nopass';
     await fb.signInAnonymously(auth);
+  }
+
+  // ---------- Quando staccare e riattaccare ----------
+  // Pura, e sta qui perche' e' una regola del trasporto, non del disegno.
+  // Dentro App() erano due effetti che si guardavano male: uno riattaccava
+  // solo se non era gia' connesso, l'altro staccava solo se la stanza di
+  // PRIMA non era null — e "nessuna stanza" era scritta null anche lei.
+  // Cosi' il passaggio che conta davvero, da nessuna stanza alla prima, non
+  // toccava nessuno dei due, e l'app restava agganciata al campo di partenza.
+  //
+  // Le due regole che non sono ovvie:
+  //
+  // - **Cambiare identita' vale quanto cambiare stanza.** Chi apre l'app da
+  //   ospite si aggancia da anonimo; se poi entra con Google, l'uid cambia e
+  //   la connessione di prima parla ancora per l'anonimo. Le regole guardano
+  //   l'uid, quindi senza riaggancio si scrive da uno che non e' membro.
+  // - **Un uid che non si conosce non e' un uid diverso.** Se manca (ospite,
+  //   oppure FEATURES.auth spenta e nessuno che osserva l'accesso) non si
+  //   riattacca niente: confrontarlo con quello collegato darebbe "diverso"
+  //   a ogni disegno, e sarebbe un stacca-e-riattacca senza fine.
+  function vaRiagganciato(collegato, voluto) {
+    if (!voluto || !voluto.codice) return false;
+    if (!collegato || !collegato.connesso) return true;
+    if (collegato.codice !== voluto.codice) return true;
+    if (voluto.uid && collegato.uid && voluto.uid !== collegato.uid) return true;
+    return false;
   }
 
   async function connect(config, code, remoteCb, creds) {
@@ -805,6 +850,9 @@
     onReceipts: (cb) => { onReceiptsCb = cb; },
     onWeather: (cb) => { onWeatherCb = cb; },
     isConnected: () => state.connected,
+    codiceCollegato: () => state.code,
+    uidCollegato: () => (auth && auth.currentUser && auth.currentUser.uid) || null,
+    vaRiagganciato,
     authMode: () => authMode,
     needsPassword: () => {
       const lock = (typeof window !== 'undefined' && window.APP_LOCK) || {};
