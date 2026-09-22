@@ -169,15 +169,24 @@ function App() {
 
   // window.APP_ADMIN si legge al momento del controllo, non all'avvio: così
   // una configurazione mancante si può aggiungere senza rompere niente.
+  const accendiAdmin = () => {
+    try { localStorage.setItem(ADMIN_KEY, '1'); } catch (e) { /* resta accesa solo finché l'app è aperta */ }
+    setAdmin(true);
+    setAdminPwd('');
+    setAdminErr('');
+  };
+
   const entraAdmin = async () => {
     const cfg = window.APP_ADMIN;
+    // `aperta` vuol dire che su questa versione non c'è niente da digitare.
+    // Sta in firebase-config.js con scritto accanto cosa apre, e la scheda lo
+    // dice a schermo: una serratura tolta di nascosto è peggio di una
+    // serratura che non c'è.
+    if (cfg && cfg.aperta) { accendiAdmin(); return; }
     if (!cfg || !cfg.hash) { setAdminErr(L.t('tecnica.nonConfigurata')); return; }
     const im = await improntaPassword(adminPwd, cfg);
     if (im && im === cfg.hash) {
-      try { localStorage.setItem(ADMIN_KEY, '1'); } catch (e) { /* resta accesa solo finché l'app è aperta */ }
-      setAdmin(true);
-      setAdminPwd('');
-      setAdminErr('');
+      accendiAdmin();
     } else {
       setAdminErr(L.t(im ? 'tecnica.passwordSbagliata' : 'tecnica.serveHttps'));
     }

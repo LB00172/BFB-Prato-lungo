@@ -446,6 +446,7 @@
     'tecnica.accesaNota': 'Su questo telefono si vedono la *Diagnostica sincronizzazione*, il* Registro modifiche*, gli avvisi sulle voci cancellate e il promemoria serale del backup. Sono strumenti per chi tiene i conti: sugli altri telefoni non compare niente di tutto questo.',
     'tecnica.spegni': 'Spegni la modalità tecnica',
     'tecnica.spentaNota': 'Per chi tiene i conti del campo: mostra la diagnostica della sincronizzazione, il registro delle modifiche e gli avvisi tecnici, solo su questo telefono. Ha una password dedicata, diversa da quella del campo.',
+    'tecnica.apertaNota': "Su questa versione non chiede nessuna password. Dietro ci sono anche importazione, ripristino e chiusura del campo, che i dati li rimpiazzano invece di modificarli.",
     'tecnica.password': 'Password tecnica',
     'tecnica.attivaTasto': 'Attiva',
     // Info
@@ -1414,6 +1415,7 @@
     'tecnica.accesaNota': 'En este teléfono se ven el *Diagnóstico de la sincronización*, el* Registro de cambios*, los avisos sobre las entradas borradas y el recordatorio nocturno de la copia. Son herramientas para quien lleva las cuentas: en los demás teléfonos no aparece nada de esto.',
     'tecnica.spegni': 'Apagar el modo técnico',
     'tecnica.spentaNota': 'Para quien lleva las cuentas del campamento: enseña el diagnóstico de la sincronización, el registro de cambios y los avisos técnicos, solo en este teléfono. Tiene una contraseña propia, distinta de la del campamento.',
+    'tecnica.apertaNota': 'En esta versión no pide ninguna contraseña. Detrás están también la importación, la restauración y el cierre del campamento, que reemplazan los datos en vez de modificarlos.',
     'tecnica.password': 'Contraseña técnica',
     'tecnica.attivaTasto': 'Activar',
     'info.titolo': 'Info',
@@ -2337,6 +2339,7 @@
     'tecnica.accesaNota': 'Sur ce téléphone on voit le *Diagnostic de la synchronisation*, le* Journal des modifications*, les avertissements sur les entrées supprimées et le rappel du soir pour la sauvegarde. Ce sont des outils pour qui tient les comptes : sur les autres téléphones, rien de tout ça n\'apparaît.',
     'tecnica.spegni': 'Éteindre le mode technique',
     'tecnica.spentaNota': 'Pour qui tient les comptes du camp : montre le diagnostic de la synchronisation, le journal des modifications et les avertissements techniques, seulement sur ce téléphone. Il a un mot de passe à lui, différent de celui du camp.',
+    'tecnica.apertaNota': "Sur cette version, aucun mot de passe n'est demandé. Derrière il y a aussi l'importation, la restauration et la fermeture du camp, qui remplacent les données au lieu de les modifier.",
     'tecnica.password': 'Mot de passe technique',
     'tecnica.attivaTasto': 'Activer',
     'info.titolo': 'Infos',

@@ -85,10 +85,23 @@ window.APP_LOCK = {
 // stata attivata. Gli altri usano l'app senza messaggi tecnici.
 // Come per il blocco: qui c'è solo l'impronta, non la password. Per cambiarla
 // si usa lo stesso comando del blocco qui sopra.
+//
+// ⚠️ SU QUESTO RAMO LA PASSWORD NON C'E'. `aperta: true` vuol dire che la
+// modalita' tecnica si accende con un tasto, senza niente da digitare —
+// deciso il 22 settembre per lavorare sulla versione pubblica senza ridigitare
+// la password a ogni rilascio dell'anteprima.
+//
+// **Non e' una scelta da portarsi al Play Store.** Dietro la modalita'
+// tecnica non c'e' solo la diagnostica: ci sono importazione, ripristino di
+// emergenza e chiusura del campo, che non modificano i dati — li RIMPIAZZANO,
+// e si portano via i blocchi insieme al resto. Aperta a tutti vuol dire che
+// chiunque apra Impostazioni puo' svuotare il campo di venti persone.
+//
+// Non e' un interruttore silenzioso: con `aperta` accesa la scheda lo dice a
+// schermo, e una prova controlla che sul ramo privato la password ci sia
+// ancora. Per rimetterla qui, si toglie `aperta` e si rimettono salt/hash/iter.
 window.APP_ADMIN = {
-  salt: "dbe546cd0f8b3613730c140ea9ea1ee0",
-  hash: "a82b547461e3a4b1417f812370676773afe79ecba283eb5f86dc6c32e3372c98",
-  iter: 200000,
+  aperta: true,
 };
 
 // Località del campo per il meteo (Open-Meteo, gratuito, senza chiave).

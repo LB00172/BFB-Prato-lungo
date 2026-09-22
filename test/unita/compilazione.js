@@ -652,6 +652,30 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
         + ' — NON HO POTUTO CONFRONTARE', false);
     }
 
+    // ---------- La serratura tolta qui non si toglie anche di la' ----------
+    // Dal 22 settembre su questo ramo la modalita' tecnica non chiede
+    // password (`APP_ADMIN.aperta`), per non ridigitarla a ogni rilascio
+    // dell'anteprima. Dietro quella modalita' pero' ci sono importazione,
+    // ripristino di emergenza e chiusura del campo: non modificano i dati, li
+    // RIMPIAZZANO. Sulla privata la usano venti persone su un campo vero, e
+    // li' la password deve restare.
+    //
+    // E' il genere di cosa che attraversa per distrazione — si copia un file
+    // di configurazione «tanto e' uguale» — e che nessuno nota finche' non e'
+    // troppo tardi, perche' toglie una difesa invece di aggiungere un errore.
+    try {
+      const laa = git(['show', 'main:firebase-config.js']);
+      const apertaLa = /aperta:\s*true/.test(laa);
+      const haImpronta = /\bhash:\s*"[0-9a-f]{64}"/.test(laa);
+      ok('sulla privata la modalita\' tecnica ha ancora la sua password'
+        + (apertaLa ? ' — APERTA ANCHE LA\'' : '')
+        + (!haImpronta ? ' — SENZA IMPRONTA' : ''),
+        !apertaLa && haImpronta);
+    } catch (e) {
+      ok('sulla privata la modalita\' tecnica ha ancora la sua password'
+        + ' — NON HO POTUTO CONFRONTARE', false);
+    }
+
     // Il riepilogo. Non fa fallire niente: e' la riga che risponde a
     // "quanto sono lontani i due rami, e perche'" senza doverlo ricordare.
     try {

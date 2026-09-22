@@ -706,22 +706,40 @@ const schedaImpostazioni = ({
             <p className="text-piccolo text-gray-500 leading-snug">
               {L.t('tecnica.spentaNota')}
             </p>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={adminPwd}
-                onChange={(e) => { setAdminPwd(e.target.value); setAdminErr(''); }}
-                onKeyDown={(e) => e.key === 'Enter' && entraAdmin()}
-                placeholder={L.t('tecnica.password')}
-                className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale"
-              />
-              <button
-                onClick={entraAdmin}
-                className={bottone('primario', 'normale', 'shrink-0')}
-              >
-                {L.t('tecnica.attivaTasto')}
-              </button>
-            </div>
+            {/* Senza password non si mostra una casella che non serve: una
+                casella vuota accanto a un tasto che entra comunque fa
+                pensare di aver dimenticato qualcosa. Al suo posto si dice
+                che la serratura non c'è, e cosa apre la porta. */}
+            {window.APP_ADMIN && window.APP_ADMIN.aperta ? (
+              <>
+                <p className="text-piccolo font-bold text-[#8A5A2B] leading-snug">
+                  {L.t('tecnica.apertaNota')}
+                </p>
+                <button
+                  onClick={entraAdmin}
+                  className={bottone('primario', 'normale', 'w-full')}
+                >
+                  {L.t('tecnica.attivaTasto')}
+                </button>
+              </>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={adminPwd}
+                  onChange={(e) => { setAdminPwd(e.target.value); setAdminErr(''); }}
+                  onKeyDown={(e) => e.key === 'Enter' && entraAdmin()}
+                  placeholder={L.t('tecnica.password')}
+                  className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale"
+                />
+                <button
+                  onClick={entraAdmin}
+                  className={bottone('primario', 'normale', 'shrink-0')}
+                >
+                  {L.t('tecnica.attivaTasto')}
+                </button>
+              </div>
+            )}
             {adminErr && <p className="text-piccolo font-bold text-red-700">{adminErr}</p>}
           </>
         )}

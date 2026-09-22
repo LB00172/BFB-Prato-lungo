@@ -3417,20 +3417,31 @@ function App() {
 
   // window.APP_ADMIN si legge al momento del controllo, non all'avvio: così
   // una configurazione mancante si può aggiungere senza rompere niente.
+  const accendiAdmin = () => {
+    try {
+      localStorage.setItem(ADMIN_KEY, '1');
+    } catch (e) {/* resta accesa solo finché l'app è aperta */}
+    setAdmin(true);
+    setAdminPwd('');
+    setAdminErr('');
+  };
   const entraAdmin = async () => {
     const cfg = window.APP_ADMIN;
+    // `aperta` vuol dire che su questa versione non c'è niente da digitare.
+    // Sta in firebase-config.js con scritto accanto cosa apre, e la scheda lo
+    // dice a schermo: una serratura tolta di nascosto è peggio di una
+    // serratura che non c'è.
+    if (cfg && cfg.aperta) {
+      accendiAdmin();
+      return;
+    }
     if (!cfg || !cfg.hash) {
       setAdminErr(L.t('tecnica.nonConfigurata'));
       return;
     }
     const im = await improntaPassword(adminPwd, cfg);
     if (im && im === cfg.hash) {
-      try {
-        localStorage.setItem(ADMIN_KEY, '1');
-      } catch (e) {/* resta accesa solo finché l'app è aperta */}
-      setAdmin(true);
-      setAdminPwd('');
-      setAdminErr('');
+      accendiAdmin();
     } else {
       setAdminErr(L.t(im ? 'tecnica.passwordSbagliata' : 'tecnica.serveHttps'));
     }
@@ -9545,7 +9556,12 @@ const schedaImpostazioni = ({
   className: bottone('secondario', 'normale', 'w-full')
 }, L.t('tecnica.spegni'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500 leading-snug"
-}, L.t('tecnica.spentaNota')), /*#__PURE__*/React.createElement("div", {
+}, L.t('tecnica.spentaNota')), window.APP_ADMIN && window.APP_ADMIN.aperta ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo font-bold text-[#8A5A2B] leading-snug"
+}, L.t('tecnica.apertaNota')), /*#__PURE__*/React.createElement("button", {
+  onClick: entraAdmin,
+  className: bottone('primario', 'normale', 'w-full')
+}, L.t('tecnica.attivaTasto'))) : /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("input", {
   type: "password",
