@@ -30,7 +30,7 @@ const schedaCompiti = ({
   const fatti = compiti.filter((c) => c.fatto);
 
   const riga = (c) => (
-    <li key={c.id} className="p-3 border-b border-[#8F9E8B]/20 last:border-0">
+    <li key={c.id} className="p-3 border-b border-salvia/20 last:border-0">
       <div className="flex items-start gap-2">
         <button
           onClick={() => toggleCompito(c.id)}
@@ -45,12 +45,12 @@ const schedaCompiti = ({
           <input
             value={c.testo}
             onChange={(e) => setCompitoCampo(c.id, 'testo', e.target.value)}
-            className={`w-full bg-transparent text-normale text-[#2D392C] focus:outline-none border-b border-transparent focus:border-[#8F9E8B]/40 ${
+            className={`w-full bg-transparent text-normale text-bosco focus:outline-none border-b border-transparent focus:border-salvia/40 ${
               c.fatto ? 'line-through text-gray-400' : ''
             }`}
           />
           <div className="flex items-center gap-2">
-            <span className="text-minuto uppercase font-bold text-[#8F9E8B] shrink-0">{L.t('compiti.aChi')}</span>
+            <span className="text-minuto uppercase font-bold text-salvia shrink-0">{L.t('compiti.aChi')}</span>
             {renderBuyerSelect(c.chi, (v) => setCompitoCampo(c.id, 'chi', v), 'text-piccolo p-1.5')}
           </div>
           {c.fatto && (
@@ -67,14 +67,14 @@ const schedaCompiti = ({
   return (
     <div className="space-y-4">
       {/* Assegnare */}
-      <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-        <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('compiti.assegnaTitolo')}</h3>
+      <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+        <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('compiti.assegnaTitolo')}</h3>
         <input
           value={nuovoCompito}
           onChange={(e) => setNuovoCompito(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') addCompito(); }}
           placeholder={L.t('compiti.cosa')}
-          className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
+          className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
         />
         {renderBuyerSelect(nuovoCompitoChi, setNuovoCompitoChi)}
         <button onClick={addCompito} disabled={!nuovoCompito.trim()} className={bottone('primario', 'grande', 'w-full')}>
@@ -84,10 +84,10 @@ const schedaCompiti = ({
       </div>
 
       {/* Da fare */}
-      <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#8F9E8B]/40">
-          <h3 className="font-rustic text-grande text-[#2D392C]">{L.t('compiti.daFare')}</h3>
-          {daFare.length > 0 && <span className="font-rustic font-bold text-[#2D392C]">{daFare.length}</span>}
+      <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-salvia/40">
+          <h3 className="font-rustic text-grande text-bosco">{L.t('compiti.daFare')}</h3>
+          {daFare.length > 0 && <span className="font-rustic font-bold text-bosco">{daFare.length}</span>}
         </div>
         {daFare.length === 0 ? (
           <p className="px-4 py-6 text-center text-piccolo text-gray-400 italic">
@@ -102,17 +102,17 @@ const schedaCompiti = ({
 
       {/* Fatti */}
       {fatti.length > 0 && (
-        <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#8F9E8B]/40">
-            <h3 className="font-rustic text-grande text-[#2D392C]">{L.t('compiti.fatti')}</h3>
-            <span className="font-rustic font-bold text-[#2D392C]">{fatti.length}</span>
+        <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-salvia/40">
+            <h3 className="font-rustic text-grande text-bosco">{L.t('compiti.fatti')}</h3>
+            <span className="font-rustic font-bold text-bosco">{fatti.length}</span>
           </div>
           <ul>{fatti.map(riga)}</ul>
         </div>
       )}
 
       {members.length === 0 && (
-        <p className="text-piccolo text-[#D97706] italic leading-snug px-1">{L.t('compiti.senzaMembri')}</p>
+        <p className="text-piccolo text-fuoco italic leading-snug px-1">{L.t('compiti.senzaMembri')}</p>
       )}
     </div>
   );

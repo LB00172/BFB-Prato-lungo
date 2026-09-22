@@ -1011,14 +1011,14 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
   return (
     <div
       ref={wrapRef}
-      className="fixed inset-0 z-50 bg-[#1F271E] flex flex-col gap-2 p-2"
+      className="fixed inset-0 z-50 bg-notte flex flex-col gap-2 p-2"
       style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
     >
       {/* "Palmiro Togliatti" è lungo: su un telefono stretto questa riga
           deve accorciare il nome, non spingere fuori il punteggio. */}
       <div className="flex items-center justify-between gap-2 bg-white/95 px-3 py-2 rounded-lg shrink-0">
         <span className="text-piccolo uppercase font-bold text-gray-500 truncate max-w-[24%]">{playerName}</span>
-        <span className="font-rustic text-grande text-[#2D392C] shrink-0">{score} 🌿</span>
+        <span className="font-rustic text-grande text-bosco shrink-0">{score} 🌿</span>
         <span className="text-piccolo text-gray-400 min-w-0 truncate text-right">
           {livelloInfo(level).icona} {livelloInfo(level).nome} · -{Math.max(0, level * 15 - score)} · rec {bestLocal}
         </span>
@@ -1029,18 +1029,18 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
           ref={canvasRef}
           width={720}
           height={912}
-          className="rounded-lg border-2 border-[#2D392C]/40 touch-none max-h-full max-w-full"
+          className="rounded-lg border-2 border-bosco/40 touch-none max-h-full max-w-full"
           style={{ imageRendering: 'pixelated', height: '100%', width: 'auto', aspectRatio: '720 / 912' }}
         />
         {levelUp && !over && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="bg-black/70 px-5 py-3 rounded-lg text-center">
-              <div className="text-piccolo uppercase tracking-widest text-[#8F9E8B]">{L.t('gioco.livello', level)}</div>
-              <div className="font-rustic text-titolo text-[#D97706] leading-tight">
+              <div className="text-piccolo uppercase tracking-widest text-salvia">{L.t('gioco.livello', level)}</div>
+              <div className="font-rustic text-titolo text-fuoco leading-tight">
                 {livelloInfo(level).icona} {livelloInfo(level).nome}
               </div>
               {level > LIVELLI.length && (
-                <div className="text-piccolo uppercase tracking-widest text-[#F0F4F1]">{L.t('gioco.ancoraPiuVeloce')}</div>
+                <div className="text-piccolo uppercase tracking-widest text-carta">{L.t('gioco.ancoraPiuVeloce')}</div>
               )}
             </div>
           </div>
@@ -1049,15 +1049,15 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
           <div className="absolute inset-0 bg-black/70 rounded-lg flex flex-col items-center justify-center text-center p-4">
             {over ? (
               <>
-                <div className="font-rustic text-titolo text-[#F0F4F1]">{L.t('gioco.scappato')}</div>
-                <div className="text-[#D97706] font-rustic text-titolo my-2">{score}</div>
+                <div className="font-rustic text-titolo text-carta">{L.t('gioco.scappato')}</div>
+                <div className="text-fuoco font-rustic text-titolo my-2">{score}</div>
                 <div className="text-piccolo text-gray-300 mb-4">
                   {score > bestLocal ? L.t('gioco.nuovoRecord') : L.t('gioco.recordResta', bestLocal)}
                 </div>
-                <button onClick={onExit} className="px-6 py-2.5 bg-[#2D392C] text-white rounded font-bold uppercase text-piccolo">{L.t('archivio.chiudi')}</button>
+                <button onClick={onExit} className="px-6 py-2.5 bg-bosco text-white rounded font-bold uppercase text-piccolo">{L.t('archivio.chiudi')}</button>
               </>
             ) : (
-              <div className="font-rustic text-titolo text-[#F0F4F1]">{L.t('gioco.inPausa')}</div>
+              <div className="font-rustic text-titolo text-carta">{L.t('gioco.inPausa')}</div>
             )}
           </div>
         )}
@@ -1066,17 +1066,17 @@ function BandyGame({ playerName, onExit, onGameOver, bestLocal }) {
       {/* Comandi per il telefono (in alternativa si scorre il dito sul campo) */}
       <div className="grid grid-cols-3 gap-2 max-w-[240px] w-full mx-auto shrink-0">
         <span></span>
-        <button onPointerDown={(e) => { e.preventDefault(); nudge(0, -1); }} aria-label={L.t('gioco.su')} className="py-3 bg-[#2D392C] text-white rounded font-bold">▲</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(0, -1); }} aria-label={L.t('gioco.su')} className="py-3 bg-bosco text-white rounded font-bold">▲</button>
         <span></span>
-        <button onPointerDown={(e) => { e.preventDefault(); nudge(-1, 0); }} aria-label={L.t('gioco.sinistra')} className="py-3 bg-[#2D392C] text-white rounded font-bold">◀</button>
-        <button onClick={togglePause} aria-label={L.t('gioco.pausa')} className="py-3 bg-[#5C4A3C] text-white rounded font-bold text-piccolo">{paused ? '▶' : '❚❚'}</button>
-        <button onPointerDown={(e) => { e.preventDefault(); nudge(1, 0); }} aria-label={L.t('gioco.destra')} className="py-3 bg-[#2D392C] text-white rounded font-bold">▶</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(-1, 0); }} aria-label={L.t('gioco.sinistra')} className="py-3 bg-bosco text-white rounded font-bold">◀</button>
+        <button onClick={togglePause} aria-label={L.t('gioco.pausa')} className="py-3 bg-legno text-white rounded font-bold text-piccolo">{paused ? '▶' : '❚❚'}</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(1, 0); }} aria-label={L.t('gioco.destra')} className="py-3 bg-bosco text-white rounded font-bold">▶</button>
         <span></span>
-        <button onPointerDown={(e) => { e.preventDefault(); nudge(0, 1); }} aria-label={L.t('gioco.giu')} className="py-3 bg-[#2D392C] text-white rounded font-bold">▼</button>
+        <button onPointerDown={(e) => { e.preventDefault(); nudge(0, 1); }} aria-label={L.t('gioco.giu')} className="py-3 bg-bosco text-white rounded font-bold">▼</button>
         <span></span>
       </div>
 
-      <button onClick={onExit} className="w-full py-1.5 text-piccolo uppercase font-bold text-[#8F9E8B] hover:text-white shrink-0">{L.t('gioco.esci')}</button>
+      <button onClick={onExit} className="w-full py-1.5 text-piccolo uppercase font-bold text-salvia hover:text-white shrink-0">{L.t('gioco.esci')}</button>
     </div>
   );
 }

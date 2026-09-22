@@ -1898,9 +1898,9 @@ function App() {
   // scelto in una scheda è già scelto anche nell'altra.
   const renderWeekStrip = () => (
     <>
-      <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-[#8F9E8B]/30 shadow-sm">
+      <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-salvia/30 shadow-sm">
         <button onClick={() => changeWeek(-7)} aria-label={L.t('settimana.precedente')} className={bottoneIcona('tenue')}>&larr;</button>
-        <span className="font-bold text-normale text-[#2D392C] uppercase font-rustic">{L.t('settimana.selezionata')}</span>
+        <span className="font-bold text-normale text-bosco uppercase font-rustic">{L.t('settimana.selezionata')}</span>
         <button onClick={() => changeWeek(7)} aria-label={L.t('settimana.successiva')} className={bottoneIcona('tenue')}>&rarr;</button>
       </div>
 
@@ -1916,15 +1916,15 @@ function App() {
               onClick={() => { setSelectedDateStr(dateStr); setCurrentDate(new Date(d)); }}
               className={`p-2 flex flex-col items-center rounded-lg border transition-all ${
                 isSelected
-                  ? 'bg-[#5C4A3C] text-white border-[#5C4A3C]'
+                  ? 'bg-legno text-white border-legno'
                   : isCampPeriod
-                  ? 'bg-[#2D392C]/10 text-[#2D392C] border-[#2D392C]'
+                  ? 'bg-bosco/10 text-bosco border-bosco'
                   : 'bg-white text-gray-400 border-gray-200'
               }`}
             >
               <span className="text-piccolo uppercase font-bold">{label}</span>
               <span className="text-grande font-bold font-rustic">{d.getDate()}</span>
-              {isCampPeriod && <span className="w-1.5 h-1.5 bg-[#D97706] rounded-full mt-0.5"></span>}
+              {isCampPeriod && <span className="w-1.5 h-1.5 bg-fuoco rounded-full mt-0.5"></span>}
             </button>
           );
         })}
@@ -1973,36 +1973,36 @@ function App() {
   // le due casse si mostrassero con codice diverso, prima o poi direbbero le
   // stesse cose in due modi diversi.
   const schedaQuote = (c) => (
-    <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
-      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-3">{c.titolo}</h3>
+    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">{c.titolo}</h3>
       {c.sottotitolo && <p className="text-piccolo text-gray-500 leading-snug mb-2">{c.sottotitolo}</p>}
       {c.avviso && (
-        <div className="mb-3 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-          <p className="text-piccolo text-[#5C4A3C] leading-snug">{c.avviso}</p>
+        <div className="mb-3 bg-fuoco/10 border border-fuoco/40 rounded p-2.5">
+          <p className="text-piccolo text-legno leading-snug">{c.avviso}</p>
         </div>
       )}
       {c.elenco.length === 0 ? (
         <p className="text-normale text-gray-400 italic">{c.vuoto || L.t('quote.vuoto')}</p>
       ) : (
         <div>
-          <ul className="divide-y divide-[#8F9E8B]/20">
+          <ul className="divide-y divide-salvia/20">
             {c.elenco.map((b) => (
               <li key={b.id} className="flex items-center justify-between py-2">
                 <div className="flex flex-col">
-                  <span className="text-normale font-bold text-[#2D392C]">{b.name}</span>
+                  <span className="text-normale font-bold text-bosco">{b.name}</span>
                   <span className="text-piccolo text-gray-500">
                     {L.t('quote.pastiRiga', c.pastiDi(b), b.mealsGratis, b.isChild)}
                   </span>
                 </div>
-                <span className={`font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-[#2D392C]'}`}>
+                <span className={`font-rustic font-bold ${b.isChild ? 'text-gray-400' : 'text-bosco'}`}>
                   {b.isChild ? L.t('quote.gratis') : `${money(c.quotaDi(b))} €`}
                 </span>
               </li>
             ))}
           </ul>
-          <div className="flex justify-between items-center pt-2 mt-1 border-t border-[#8F9E8B]/30">
+          <div className="flex justify-between items-center pt-2 mt-1 border-t border-salvia/30">
             <span className="text-piccolo uppercase font-bold text-gray-500">{L.t('quote.totaleRaccolto')}</span>
-            <span className="font-rustic font-bold text-[#2D392C]">{money(c.raccolto)} €</span>
+            <span className="font-rustic font-bold text-bosco">{money(c.raccolto)} €</span>
           </div>
           <p className="text-minuto text-gray-400 italic mt-2">
             {L.t('quote.arrotondamento', Math.abs(c.scarto) >= 0.005
@@ -2017,13 +2017,13 @@ function App() {
           Prima finivano dentro lo scarto e la riconciliazione se li spalmava
           addosso a chi capitava, sotto l'etichetta "arrotondamento". */}
       {c.nonRipartito > 0.005 && (
-        <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 mt-2">
-          <p className="text-piccolo text-[#5C4A3C] leading-snug">
+        <div className="bg-fuoco/10 border border-fuoco/40 rounded p-2.5 mt-2">
+          <p className="text-piccolo text-legno leading-snug">
             {frase('quote.nonRipartito', money(c.nonRipartito), money(c.totale), money(c.raccolto))}
           </p>
           <ul className="mt-1.5 space-y-1">
             {c.buchi.map((b) => (
-              <li key={b.perche} className="text-piccolo text-[#5C4A3C] leading-snug">
+              <li key={b.perche} className="text-piccolo text-legno leading-snug">
                 {frase('quote.buco', money(b.quanto), L.t(b.perche))}
               </li>
             ))}
@@ -2042,13 +2042,13 @@ function App() {
   const schedaSaldi = (c) => {
     const s = c.cassa;
     return (
-      <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md">
-        <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 mb-3">{c.titolo}</h3>
-        {c.sottotitolo && <p className="text-minuto text-[#8F9E8B] leading-snug mb-3">{c.sottotitolo}</p>}
+      <div className="bg-bosco text-carta p-4 rounded-lg border-b-4 border-legno shadow-md">
+        <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 mb-3">{c.titolo}</h3>
+        {c.sottotitolo && <p className="text-minuto text-salvia leading-snug mb-3">{c.sottotitolo}</p>}
         {s.byBuyer.length > 0 && (
-          <div className="mb-3 pb-3 border-b border-[#8F9E8B]/30">
-            <h4 className="font-rustic text-normale text-[#8F9E8B] mb-1">{L.t('saldi.anticipiPerAcquirente')}</h4>
-            <ul className="divide-y divide-[#8F9E8B]/20">
+          <div className="mb-3 pb-3 border-b border-salvia/30">
+            <h4 className="font-rustic text-normale text-salvia mb-1">{L.t('saldi.anticipiPerAcquirente')}</h4>
+            <ul className="divide-y divide-salvia/20">
               {s.byBuyer.map((b) => (
                 <li key={b.name} className="flex items-center justify-between py-1.5">
                   <span className={`text-piccolo font-bold ${b.name === '—' ? 'text-gray-400 italic' : ''}`}>
@@ -2063,7 +2063,7 @@ function App() {
         {s.settlement.length === 0 ? (
           <p className="text-normale text-gray-400 italic">{c.vuoto || L.t('saldi.vuoto')}</p>
         ) : (
-          <ul className="divide-y divide-[#8F9E8B]/20">
+          <ul className="divide-y divide-salvia/20">
             {s.settlement.map((x) => {
               const credito = x.net > 0.005;
               const debito = x.net < -0.005;
@@ -2071,9 +2071,9 @@ function App() {
                 <li key={x.name} className="flex items-center justify-between py-2 gap-2">
                   <div className="flex flex-col min-w-0">
                     <span className="text-normale font-bold truncate">{x.name}</span>
-                    <span className="text-minuto text-[#8F9E8B]">{L.t('saldi.haAnticipatoDeve', money(x.paid), money(x.owed))}</span>
+                    <span className="text-minuto text-salvia">{L.t('saldi.haAnticipatoDeve', money(x.paid), money(x.owed))}</span>
                   </div>
-                  <span className={`font-rustic font-bold text-normale shrink-0 text-right ${credito ? 'text-[#8FBF8F]' : debito ? 'text-[#D97706]' : 'text-gray-400'}`}>
+                  <span className={`font-rustic font-bold text-normale shrink-0 text-right ${credito ? 'text-[#8FBF8F]' : debito ? 'text-fuoco' : 'text-gray-400'}`}>
                     {credito ? L.t('saldi.riceve', money(x.net)) : debito ? L.t('saldi.da', money(-x.net)) : L.t('saldi.inPari')}
                   </span>
                 </li>
@@ -2082,8 +2082,8 @@ function App() {
           </ul>
         )}
         {s.transfers.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-[#8F9E8B]/30">
-            <h4 className="font-rustic text-normale text-[#8F9E8B] mb-1">{L.t('saldi.chiPagaChi')}</h4>
+          <div className="mt-3 pt-3 border-t border-salvia/30">
+            <h4 className="font-rustic text-normale text-salvia mb-1">{L.t('saldi.chiPagaChi')}</h4>
             <p className="text-minuto text-gray-400 mb-2">{L.t('saldi.toccaRiga')}</p>
             <ul className="space-y-1.5">
               {s.transfers.map((t, i) => {
@@ -2096,28 +2096,28 @@ function App() {
                   <li
                     key={key + i}
                     onClick={() => toggleSettled(key)}
-                    className={`cursor-pointer select-none bg-[#1F271E] px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-[#8F9E8B]/20'}`}
+                    className={`cursor-pointer select-none bg-notte px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-salvia/20'}`}
                   >
                     <div className="flex items-center justify-between">
                       <span className={`text-piccolo ${paid ? 'line-through text-gray-400' : ''}`}>
                         <span className="font-bold">{t.from}</span>
-                        <span className="text-[#8F9E8B]"> → </span>
+                        <span className="text-salvia"> → </span>
                         <span className="font-bold">{t.to}</span>
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className={`font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-[#D97706]'}`}>{money(t.amount)} €</span>
+                        <span className={`font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-fuoco'}`}>{money(t.amount)} €</span>
                         {paid && <span className="text-[#8FBF8F] text-normale font-bold">✓</span>}
                       </span>
                     </div>
                     {mostraDati && (
-                      <div className="mt-1.5 pt-1.5 border-t border-[#8F9E8B]/20 space-y-1">
+                      <div className="mt-1.5 pt-1.5 border-t border-salvia/20 space-y-1">
                         {[['PayPal', dest.paypal], ['IBAN', dest.iban]].filter((r) => r[1]).map((r) => (
                           <div key={r[0]} className="flex items-start gap-2">
-                            <span className="text-minuto uppercase font-bold text-[#8F9E8B] w-11 shrink-0 pt-0.5">{r[0]}</span>
-                            <span className={`text-piccolo text-[#F0F4F1] break-all leading-snug ${r[0] === 'IBAN' ? 'font-mono' : ''}`}>{r[1]}</span>
+                            <span className="text-minuto uppercase font-bold text-salvia w-11 shrink-0 pt-0.5">{r[0]}</span>
+                            <span className={`text-piccolo text-carta break-all leading-snug ${r[0] === 'IBAN' ? 'font-mono' : ''}`}>{r[1]}</span>
                             <button
                               onClick={(e) => { e.stopPropagation(); copiaDato(`${r[0]} di ${t.to}`, r[1]); }}
-                              className="ml-auto shrink-0 text-minuto uppercase font-bold px-2 py-1 rounded bg-[#2D392C] border border-[#8F9E8B]/30 text-[#8F9E8B] hover:text-white"
+                              className="ml-auto shrink-0 text-minuto uppercase font-bold px-2 py-1 rounded bg-bosco border border-salvia/30 text-salvia hover:text-white"
                             >
                               {L.t(copied === `${r[0]} di ${t.to}` ? 'saldi.copiato' : 'saldi.copia')}
                             </button>
@@ -2143,7 +2143,7 @@ function App() {
           </div>
         )}
         {s.unattributed > 0.005 && (
-          <p className="text-minuto text-[#D97706] italic mt-2">
+          <p className="text-minuto text-fuoco italic mt-2">
             {L.t('saldi.senzaAcquirente', money(s.unattributed))}
           </p>
         )}
@@ -2151,15 +2151,15 @@ function App() {
             quadrare: chi ha anticipato resta scoperto. Va detto qui, dove si
             guarda chi paga chi, non solo nella scheda delle quote. */}
         {c.nonRipartito > 0.005 && (
-          <div className="mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-            <p className="text-piccolo text-[#5C4A3C] leading-snug">
+          <div className="mt-2 bg-fuoco/10 border border-fuoco/40 rounded p-2.5">
+            <p className="text-piccolo text-legno leading-snug">
               {frase('saldi.nonQuadrano', money(c.nonRipartito))}
             </p>
           </div>
         )}
         {s.unknownBuyers.length > 0 && (
-          <div className="mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-            <p className="text-piccolo text-[#5C4A3C] leading-snug">
+          <div className="mt-2 bg-fuoco/10 border border-fuoco/40 rounded p-2.5">
+            <p className="text-piccolo text-legno leading-snug">
               {frase('saldi.daControllareTesta')}{' '}
               {s.unknownBuyers.map((u, i) => (
                 <span key={u.name}>
@@ -2482,15 +2482,15 @@ function App() {
     return (
       <div
         onClick={() => setShowSplash(false)}
-        className="fixed inset-0 bg-[#2D392C] flex flex-col items-center justify-center text-[#F0F4F1] z-50 cursor-pointer"
+        className="fixed inset-0 bg-bosco flex flex-col items-center justify-center text-carta z-50 cursor-pointer"
       >
-        <div className="w-56 h-56 mb-6 rounded-full overflow-hidden shadow-2xl flex items-center justify-center border-4 border-[#8F9E8B] bg-[#F0F4F1]">
+        <div className="w-56 h-56 mb-6 rounded-full overflow-hidden shadow-2xl flex items-center justify-center border-4 border-salvia bg-carta">
           <img src="./logo.png" alt={`Logo ${BRAND.groupName}`} className="w-full h-full object-cover" />
         </div>
-        <h1 className="font-rustic text-titolo tracking-widest text-[#8F9E8B]">{BRAND.splashLine1}</h1>
-        <h2 className="font-rustic text-titolo tracking-widest text-[#F0F4F1]">{BRAND.splashLine2}</h2>
+        <h1 className="font-rustic text-titolo tracking-widest text-salvia">{BRAND.splashLine1}</h1>
+        <h2 className="font-rustic text-titolo tracking-widest text-carta">{BRAND.splashLine2}</h2>
         <p className="mt-4 text-piccolo uppercase tracking-widest opacity-60">{BRAND.splashTagline}</p>
-        <p className="absolute bottom-4 left-0 right-0 text-center text-minuto tracking-wide text-[#8F9E8B]/70 px-6">
+        <p className="absolute bottom-4 left-0 right-0 text-center text-minuto tracking-wide text-salvia/70 px-6">
           {BRAND.credits}
         </p>
       </div>
@@ -2543,7 +2543,7 @@ function App() {
       <select
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C] ${extraClass || ''}`}
+        className={`w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco ${extraClass || ''}`}
       >
         <option value="">{L.t('acquirente.nonIndicato')}</option>
         {members.map((m) => (<option key={m.id} value={m.name}>{m.name}</option>))}
@@ -2554,7 +2554,7 @@ function App() {
         )}
       </select>
       {members.length === 0 && (
-        <p className="text-minuto text-[#D97706] mt-1">{L.t('galleria.primaMembri')}</p>
+        <p className="text-minuto text-fuoco mt-1">{L.t('galleria.primaMembri')}</p>
       )}
     </>
   );
@@ -2590,20 +2590,20 @@ function App() {
   ];
 
   return (
-    <div className="max-w-md mx-auto min-h-screen flex flex-col bg-[#F0F4F1] border-x border-[#8F9E8B]/30 shadow-2xl pb-24">
-      <header className="bg-[#2D392C] text-[#F0F4F1] p-4 text-center border-b-4 border-[#5C4A3C] relative">
+    <div className="max-w-md mx-auto min-h-screen flex flex-col bg-carta border-x border-salvia/30 shadow-2xl pb-24">
+      <header className="bg-bosco text-carta p-4 text-center border-b-4 border-legno relative">
         <button
           onClick={() => setMenuOpen((o) => !o)}
           aria-label="Menu"
           aria-expanded={menuOpen}
           className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-white/10"
         >
-          <span className="block w-5 h-0.5 bg-[#F0F4F1]"></span>
-          <span className="block w-5 h-0.5 bg-[#F0F4F1]"></span>
-          <span className="block w-5 h-0.5 bg-[#F0F4F1]"></span>
+          <span className="block w-5 h-0.5 bg-carta"></span>
+          <span className="block w-5 h-0.5 bg-carta"></span>
+          <span className="block w-5 h-0.5 bg-carta"></span>
         </button>
         <h1 className="font-rustic text-titolo tracking-wide">{BRAND.appTitle}</h1>
-        <p className="text-piccolo uppercase tracking-wider text-[#8F9E8B]">{tabs[activeTab]}</p>
+        <p className="text-piccolo uppercase tracking-wider text-salvia">{tabs[activeTab]}</p>
         {/* Spia in alto a destra. "Da inviare" è il caso importante: sei
             online ma qualcosa non è ancora arrivato agli altri, e prima non
             lo diceva nessuno. */}
@@ -2613,8 +2613,8 @@ function App() {
           const testo = sospeso
             ? (foto > 0 ? L.t('spia.fotoDaInviare', foto) : L.t('spia.daInviare'))
             : L.t(isOnline ? 'spia.online' : 'spia.offline');
-          const colore = sospeso ? 'text-[#F6C177]' : isOnline ? 'text-[#8F9E8B]' : 'text-[#D97706]';
-          const pallino = sospeso ? 'bg-[#F6C177] animate-pulse' : isOnline ? 'bg-[#8F9E8B]' : 'bg-[#D97706]';
+          const colore = sospeso ? 'text-[#F6C177]' : isOnline ? 'text-salvia' : 'text-fuoco';
+          const pallino = sospeso ? 'bg-[#F6C177] animate-pulse' : isOnline ? 'bg-salvia' : 'bg-fuoco';
           return (
             <span
               title={sospeso ? L.t('spia.sospeso') : testo}
@@ -2637,27 +2637,27 @@ function App() {
             così su desktop entra dal bordo dell'app e non da quello della finestra. */}
         <div className="absolute inset-0 max-w-md mx-auto overflow-hidden pointer-events-none">
         <nav
-          className={`pointer-events-auto absolute left-0 top-0 bottom-0 w-72 max-w-[80%] bg-[#F0F4F1] border-r-4 border-[#5C4A3C] shadow-2xl p-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          className={`pointer-events-auto absolute left-0 top-0 bottom-0 w-72 max-w-[80%] bg-carta border-r-4 border-legno shadow-2xl p-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
-          <div className="flex items-center gap-3 border-b border-[#8F9E8B]/40 pb-3 mb-2">
-            <img src="./logo.png" alt="" className="w-11 h-11 rounded-full object-cover border-2 border-[#8F9E8B] bg-white" />
+          <div className="flex items-center gap-3 border-b border-salvia/40 pb-3 mb-2">
+            <img src="./logo.png" alt="" className="w-11 h-11 rounded-full object-cover border-2 border-salvia bg-white" />
             <div>
-              <div className="font-rustic text-[#2D392C] leading-tight">{BRAND.appTitle}</div>
-              <div className="text-minuto uppercase tracking-wider text-[#8F9E8B]">{BRAND.groupName}</div>
+              <div className="font-rustic text-bosco leading-tight">{BRAND.appTitle}</div>
+              <div className="text-minuto uppercase tracking-wider text-salvia">{BRAND.groupName}</div>
             </div>
           </div>
           {MENU_GROUPS.map((group) => (
             <div key={group.title} className="pt-2 first:pt-0">
               <div className="flex items-center gap-2 px-1 pb-1">
-                <span className="text-minuto uppercase tracking-widest font-bold text-[#8F9E8B] shrink-0">{group.title}</span>
-                <span className="flex-grow h-px bg-[#8F9E8B]/30"></span>
+                <span className="text-minuto uppercase tracking-widest font-bold text-salvia shrink-0">{group.title}</span>
+                <span className="flex-grow h-px bg-salvia/30"></span>
               </div>
               {group.items.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => goTo(tab)}
                   className={`w-full text-left px-3 py-2.5 rounded font-bold uppercase text-normale tracking-wide transition-colors flex items-center gap-2.5 ${
-                    activeTab === tab ? 'bg-[#2D392C] text-[#F0F4F1]' : 'text-[#2D392C] hover:bg-[#E2EAE4]'
+                    activeTab === tab ? 'bg-bosco text-carta' : 'text-bosco hover:bg-orlo'
                   }`}
                 >
                   <span className="text-medio leading-none w-5 text-center shrink-0">{TAB_ICONS[tab]}</span>
@@ -2672,9 +2672,9 @@ function App() {
 
       {/* Suggerimento installazione app */}
       {showInstallHint && (
-        <div className="bg-[#D97706]/15 border-b border-[#D97706]/40 px-4 py-2.5 flex items-start gap-2">
+        <div className="bg-fuoco/15 border-b border-fuoco/40 px-4 py-2.5 flex items-start gap-2">
           <span className="text-medio leading-none mt-0.5">📲</span>
-          <p className="flex-grow text-piccolo text-[#5C4A3C] leading-snug">
+          <p className="flex-grow text-piccolo text-legno leading-snug">
             <span className="font-bold">{L.t(isDesktop ? 'installa.computer' : 'installa.telefono')}</span>{' '}
             {L.t(isIOS ? 'installa.ios' : isDesktop ? 'installa.desktop' : 'installa.android')}
             {' '}{L.t('installa.poi')}
@@ -2691,11 +2691,11 @@ function App() {
         const modifiche = promemoriaBackup();
         if (!modifiche) return null;
         return (
-          <div className="bg-[#5C4A3C]/12 border-y-2 border-[#5C4A3C]/40 px-4 py-3">
+          <div className="bg-legno/12 border-y-2 border-legno/40 px-4 py-3">
             <div className="flex items-start gap-2">
               <span className="text-medio leading-none mt-0.5">🎒</span>
               <div className="min-w-0 flex-grow">
-                <p className="text-piccolo text-[#5C4A3C] leading-snug">
+                <p className="text-piccolo text-legno leading-snug">
                   {frase('backup.fineGiornata', modifiche)}
                 </p>
                 <div className="flex gap-2 mt-2">
@@ -2723,8 +2723,8 @@ function App() {
           salva più, e alla riapertura questo telefono perderebbe i confronti
           con gli altri. È il tipo di guasto che non si vede: va detto. */}
       {spazioPieno && (
-        <div className="bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3">
-          <p className="text-piccolo text-[#5C4A3C] leading-snug">
+        <div className="bg-fuoco/15 border-y-2 border-fuoco/50 px-4 py-3">
+          <p className="text-piccolo text-legno leading-snug">
             {frase('spazio.pieno')}
             {admin && <>{frase('spazio.dettaglio')}</>}
           </p>
@@ -2735,11 +2735,11 @@ function App() {
           bloccato: è stata rimessa in elenco. Lo vedono tutti, come sopra:
           chi l'ha eliminata deve sapere che non è stata eliminata davvero. */}
       {membriSalvati.length > 0 && (
-        <div className="bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3">
+        <div className="bg-fuoco/15 border-y-2 border-fuoco/50 px-4 py-3">
           <div className="flex items-start gap-2">
             <span className="text-medio leading-none mt-0.5">🔒</span>
             <div className="min-w-0 flex-grow">
-              <p className="text-piccolo text-[#5C4A3C] leading-snug">
+              <p className="text-piccolo text-legno leading-snug">
                 {frase('membriSalvati.avviso', membriSalvati.length,
                   membriSalvati.length === 1
                     ? membriSalvati[0]
@@ -2760,11 +2760,11 @@ function App() {
           silenzio, si dice. Vale per tutti, non solo in modalità tecnica: chi
           ha registrato la spesa deve sapere che non è entrata. */}
       {respinte.length > 0 && (
-        <div className="bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3">
+        <div className="bg-fuoco/15 border-y-2 border-fuoco/50 px-4 py-3">
           <div className="flex items-start gap-2">
             <span className="text-medio leading-none mt-0.5">🔒</span>
             <div className="min-w-0 flex-grow">
-              <p className="text-piccolo text-[#5C4A3C] leading-snug">
+              <p className="text-piccolo text-legno leading-snug">
                 {frase('respinte.testa', respinte.length)}{' '}
                 {respinte.slice(0, 3).map((r, i) => (
                   <span key={r.che + r.nome + i}>
@@ -2789,11 +2789,11 @@ function App() {
           cosa da fare è chiedere in giro chi ha la data sbagliata, e questo
           lo fa chi tiene i conti. */}
       {admin && orologioFuori && (
-        <div className="bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3">
+        <div className="bg-fuoco/15 border-y-2 border-fuoco/50 px-4 py-3">
           <div className="flex items-start gap-2">
             <span className="text-medio leading-none mt-0.5">🕐</span>
             <div className="min-w-0 flex-grow">
-              <p className="text-piccolo text-[#5C4A3C] leading-snug">
+              <p className="text-piccolo text-legno leading-snug">
                 {frase('orologio.avviso', Math.round(orologioFuori.avanti / 86400000))}
               </p>
               <button
@@ -2814,11 +2814,11 @@ function App() {
           conti — quindici tasti "Annulla" in giro sono più pericolosi del
           problema che risolvono. */}
       {admin && lostSync && (
-        <div className="bg-[#D97706]/15 border-y-2 border-[#D97706]/50 px-4 py-3">
+        <div className="bg-fuoco/15 border-y-2 border-fuoco/50 px-4 py-3">
           <div className="flex items-start gap-2">
             <span className="text-medio leading-none mt-0.5">⚠️</span>
             <div className="min-w-0 flex-grow">
-              <p className="text-piccolo text-[#5C4A3C] leading-snug">
+              <p className="text-piccolo text-legno leading-snug">
                 {frase('perdita.avviso', lostSync.n,
                   lostSync.quando ? L.data(new Date(lostSync.quando), 'dataOraBreve') : null,
                   lostSync.che || null)}
@@ -2916,8 +2916,8 @@ function App() {
       {buying && (
         <div onClick={() => setBuying(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 shadow-2xl">
-            <div className="flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2">
-              <h3 className="font-rustic text-grande text-[#2D392C] min-w-0 break-words">
+            <div className="flex items-start justify-between gap-2 border-b border-salvia/40 pb-2">
+              <h3 className="font-rustic text-grande text-bosco min-w-0 break-words">
                 {L.t('lista.acquistataTitolo', buying.name, buying.qty)}
               </h3>
               {/* Foto dello scontrino: si allega qui, con lo scontrino in mano */}
@@ -2933,7 +2933,7 @@ function App() {
                 <label
                   title={L.t('lista.scontrinoTitolo')}
                   aria-label={L.t('lista.allegaScontrino')}
-                  className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-grande leading-none hover:bg-[#E2EAE4]"
+                  className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-salvia/50 bg-white text-grande leading-none hover:bg-orlo"
                 >
                   📷
                   <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, buying.id)} className="hidden" />
@@ -2951,7 +2951,7 @@ function App() {
                 onChange={(e) => setBuying((b) => ({ ...b, price: e.target.value }))}
                 onKeyDown={(e) => e.key === 'Enter' && confirmBuy()}
                 placeholder="0.00"
-                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
+                className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded font-bold"
               />
             </div>
             <div>
@@ -2963,13 +2963,13 @@ function App() {
               <select
                 value={buying.type}
                 onChange={(e) => setBuying((b) => ({ ...b, type: e.target.value }))}
-                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold"
+                className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale font-bold"
               >
                 {Object.keys(PURCHASE_TYPES).map((k) => (<option key={k} value={k}>{tipoSpesa(k)}</option>))}
               </select>
             </div>
             {buying.type === 'logistica' && (
-                <p className="text-piccolo text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2">
+                <p className="text-piccolo text-gray-500 leading-snug bg-carta/60 border border-salvia/25 rounded p-2">
                   {frase('correggi.notaLogistica')}
                 </p>
             )}
@@ -2979,13 +2979,13 @@ function App() {
                 <select
                   value={buying.account || 'comune'}
                   onChange={(e) => setBuying((b) => ({ ...b, account: e.target.value }))}
-                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold"
+                  className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale font-bold"
                 >
                   <option value="comune">{L.t('lista.contoComune')}</option>
                   <option value="sep">{L.t('giorno.contoSeparato')}</option>
                 </select>
                 {buying.account === 'sep' && sepDays.length === 0 && (
-                  <p className="text-minuto mt-1 leading-snug text-[#5C4A3C]">
+                  <p className="text-minuto mt-1 leading-snug text-legno">
                     {L.t('lista.senzaGiorniBreve')}
                   </p>
                 )}
@@ -3003,15 +3003,15 @@ function App() {
       {editing && (
         <div onClick={() => setEditing(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[85vh] overflow-y-auto shadow-2xl">
-            <div className="flex items-start justify-between gap-2 border-b border-[#8F9E8B]/40 pb-2">
-              <h3 className="font-rustic text-grande text-[#2D392C]">
+            <div className="flex items-start justify-between gap-2 border-b border-salvia/40 pb-2">
+              <h3 className="font-rustic text-grande text-bosco">
                 {L.t(editing.kind === 'purchase' ? 'correggi.spesa' : 'correggi.voce')}
               </h3>
               {/* Anche in correzione si può mettere o rivedere lo scontrino */}
               {receipts[editing.id] ? (
                 <button onClick={() => setViewReceipt(receipts[editing.id])} aria-label={L.t('lista.vediScontrino')} className={bottoneIcona('pieno', 'shrink-0')}>📷</button>
               ) : (
-                <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-[#8F9E8B]/50 bg-white text-grande leading-none hover:bg-[#E2EAE4]">
+                <label title={L.t('lista.scontrinoTitolo')} aria-label={L.t('lista.allegaScontrino')} className="shrink-0 cursor-pointer px-3 py-2 rounded border-2 border-salvia/50 bg-white text-grande leading-none hover:bg-orlo">
                   📷
                   <input type="file" accept="image/*" onChange={(e) => attachReceiptTo(e, editing.id)} className="hidden" />
                 </label>
@@ -3024,7 +3024,7 @@ function App() {
                 type="text"
                 value={editing.name}
                 onChange={(e) => setEditing((x) => ({ ...x, name: e.target.value }))}
-                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
+                className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
               />
             </div>
 
@@ -3040,7 +3040,7 @@ function App() {
                   type="number" min="0" step="0.01" inputMode="decimal"
                   value={editing.price}
                   onChange={(e) => setEditing((x) => ({ ...x, price: e.target.value }))}
-                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded font-bold"
+                  className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded font-bold"
                 />
               </div>
               {editing.kind === 'purchase' && (
@@ -3049,7 +3049,7 @@ function App() {
                   <select
                     value={editing.type}
                     onChange={(e) => setEditing((x) => ({ ...x, type: e.target.value }))}
-                    className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold"
+                    className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale font-bold"
                   >
                     {Object.keys(PURCHASE_TYPES).map((k) => (<option key={k} value={k}>{tipoSpesa(k)}</option>))}
                   </select>
@@ -3066,14 +3066,14 @@ function App() {
                 <select
                   value={editing.account}
                   onChange={(e) => setEditing((x) => ({ ...x, account: e.target.value }))}
-                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale font-bold"
+                  className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale font-bold"
                 >
                   <option value="comune">{L.t('lista.contoComune')}</option>
                   <option value="sep">{L.t('giorno.contoSeparato')}</option>
                 </select>
               </div>
             ) : (
-                <p className="text-piccolo text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2">
+                <p className="text-piccolo text-gray-500 leading-snug bg-carta/60 border border-salvia/25 rounded p-2">
                   {frase('correggi.notaLogistica')}
                 </p>
             ))}
@@ -3090,7 +3090,7 @@ function App() {
       {snapList && (
         <div onClick={() => setSnapList(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-2 max-h-[70vh] overflow-y-auto shadow-2xl">
-            <h3 className="font-rustic text-grande text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">{L.t('ripristino.titolo')}</h3>
+            <h3 className="font-rustic text-grande text-bosco border-b border-salvia/40 pb-2">{L.t('ripristino.titolo')}</h3>
             <p className="text-piccolo text-gray-500">
               {frase('ripristino.nota')}
             </p>
@@ -3102,7 +3102,7 @@ function App() {
                 <button
                   key={s.dove + s.id}
                   onClick={() => restoreSnapshot(s)}
-                  className="w-full py-2 px-3 bg-[#F0F4F1] border border-[#8F9E8B]/40 rounded text-left text-[#2D392C] hover:bg-[#E2EAE4] flex items-center justify-between gap-2"
+                  className="w-full py-2 px-3 bg-carta border border-salvia/40 rounded text-left text-bosco hover:bg-orlo flex items-center justify-between gap-2"
                 >
                   <span className="min-w-0">
                     <span className="block text-normale font-bold truncate">{giorno}</span>
@@ -3110,7 +3110,7 @@ function App() {
                       {fascia ? L.t('ripristino.copiaDelle', fascia, ora) : L.t('ripristino.copiaCloud')}
                     </span>
                   </span>
-                  <span className="text-minuto uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-white border border-[#8F9E8B]/40 text-gray-500">
+                  <span className="text-minuto uppercase font-bold px-1.5 py-0.5 rounded shrink-0 bg-white border border-salvia/40 text-gray-500">
                     {L.t(s.dove === 'locale' ? 'ripristino.sulTelefono' : 'ripristino.nelCloud')}
                   </span>
                 </button>
@@ -3125,19 +3125,19 @@ function App() {
       {closing && (
         <div onClick={() => setClosing(false)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl">
-            <h3 className="font-rustic text-grande text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">{L.t('chiusura.campoTitolo')}</h3>
+            <h3 className="font-rustic text-grande text-bosco border-b border-salvia/40 pb-2">{L.t('chiusura.campoTitolo')}</h3>
             <label className="block text-piccolo uppercase font-bold text-gray-500">{L.t('chiusura.nomeArchivio')}</label>
             <input
               type="text"
               value={closeName}
               onChange={(e) => setCloseName(e.target.value)}
               placeholder={L.t('chiusura.esempioNome')}
-              className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]"
+              className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
             />
-            <div className="bg-[#F0F4F1]/60 rounded p-3 text-piccolo text-gray-600 space-y-1">
-              <p className="font-bold text-[#2D392C]">{L.t('chiusura.verraArchiviato')}</p>
+            <div className="bg-carta/60 rounded p-3 text-piccolo text-gray-600 space-y-1">
+              <p className="font-bold text-bosco">{L.t('chiusura.verraArchiviato')}</p>
               <p>{L.t('chiusura.riepilogo', money(totals.overallTotal), purchases.length, members.length)}</p>
-              <p className="font-bold text-[#2D392C] pt-1">{L.t('chiusura.poiAzzerati')}</p>
+              <p className="font-bold text-bosco pt-1">{L.t('chiusura.poiAzzerati')}</p>
               <p>{L.t('chiusura.cosaSiAzzera')}</p>
               <p className="pt-1 italic">{L.t('chiusura.cosaResta')}</p>
             </div>
@@ -3153,7 +3153,7 @@ function App() {
       {viewArchive && (
         <div onClick={() => setViewArchive(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg p-4 w-full max-w-xs space-y-3 max-h-[80vh] overflow-y-auto shadow-2xl">
-            <h3 className="font-rustic text-grande text-[#2D392C] border-b border-[#8F9E8B]/40 pb-2">{viewArchive.name}</h3>
+            <h3 className="font-rustic text-grande text-bosco border-b border-salvia/40 pb-2">{viewArchive.name}</h3>
             <pre className="text-piccolo text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">{viewArchive.report || L.t('archivio.nessunResoconto')}</pre>
             <button onClick={() => shareArchive(viewArchive)} className={bottone('whatsapp', 'normale', 'w-full')}>{L.t('archivio.condividi')}</button>
             <button onClick={() => setViewArchive(null)} className={bottone('testuale', 'normale', 'w-full')}>{L.t('archivio.chiudi')}</button>
@@ -3181,13 +3181,13 @@ function App() {
             <span className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => removePhoto(viewPhoto)}
-                className="text-piccolo uppercase font-bold px-3 py-2 rounded border border-[#D97706]/60 text-[#D97706]"
+                className="text-piccolo uppercase font-bold px-3 py-2 rounded border border-fuoco/60 text-fuoco"
               >
                 {L.t('archivio.elimina')}
               </button>
               <button
                 onClick={() => setViewPhoto(null)}
-                className="text-piccolo uppercase font-bold px-3 py-2 rounded bg-[#F0F4F1] text-[#2D392C]"
+                className="text-piccolo uppercase font-bold px-3 py-2 rounded bg-carta text-bosco"
               >
                 {L.t('archivio.chiudi')}
               </button>
@@ -3206,8 +3206,8 @@ function App() {
         </div>
       )}
 
-      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#F0F4F1] border-t-2 border-[#5C4A3C] py-3 px-4 text-center z-10">
-        <div className="font-rustic text-[#2D392C] tracking-widest text-normale uppercase font-bold">{BRAND.footerMotto}</div>
+      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-carta border-t-2 border-legno py-3 px-4 text-center z-10">
+        <div className="font-rustic text-bosco tracking-widest text-normale uppercase font-bold">{BRAND.footerMotto}</div>
       </footer>
     </div>
   );

@@ -38,14 +38,14 @@ const BOTTONE_MISURA = {
 // secondo livello (chiudere il campo, creare l'album), ed e' usato abbastanza
 // da essere una scelta, non una svista.
 const BOTTONE_RUOLO = {
-  primario: 'bg-[#2D392C] border-transparent text-white hover:bg-[#1F271E]',
-  bruno: 'bg-[#5C4A3C] border-transparent text-white hover:bg-[#463628]',
-  secondario: 'bg-white border-[#8F9E8B]/50 text-[#5C4A3C] hover:bg-[#E2EAE4]',
-  testuale: 'border-transparent text-[#5C4A3C] hover:text-[#2D392C]',
+  primario: 'bg-bosco border-transparent text-white hover:bg-notte',
+  bruno: 'bg-legno border-transparent text-white hover:bg-[#463628]',
+  secondario: 'bg-white border-salvia/50 text-legno hover:bg-orlo',
+  testuale: 'border-transparent text-legno hover:text-bosco',
   distruttivo: 'bg-white border-red-700/40 text-red-700 hover:bg-red-50',
   // L'ambra e' il colore degli avvisi in tutta l'app (86 usi): un bottone
   // ambra e' un'azione che nasce da un problema, non un'azione qualsiasi.
-  avviso: 'bg-[#D97706] border-transparent text-white hover:brightness-95',
+  avviso: 'bg-fuoco border-transparent text-white hover:brightness-95',
   // Verde WhatsApp: e' un marchio altrui, non una nostra scelta di tavolozza.
   // Sta qui per non farlo sembrare un colore dell'app usato a caso.
   whatsapp: 'bg-[#25D366] border-transparent text-white hover:brightness-95',
@@ -56,10 +56,10 @@ const BOTTONE_RUOLO = {
 // farebbe diventare rettangoli con dentro un simbolo. Nel codice la stessa
 // "x" di eliminazione esisteva in quattro varianti diverse.
 const BOTTONE_ICONA = {
-  neutro: 'text-[#8F9E8B] hover:text-[#2D392C]',
+  neutro: 'text-salvia hover:text-bosco',
   distruttivo: 'text-red-700 hover:text-red-900',
-  pieno: 'bg-[#2D392C] text-white hover:bg-[#1F271E]',
-  tenue: 'bg-[#8F9E8B]/20 text-[#2D392C] hover:bg-[#8F9E8B]/40',
+  pieno: 'bg-bosco text-white hover:bg-notte',
+  tenue: 'bg-salvia/20 text-bosco hover:bg-salvia/40',
 };
 
 const bottoneIcona = (tono, extra) => [
@@ -72,7 +72,7 @@ const bottoneIcona = (tono, extra) => [
 // diversa — larga, allineata a sinistra, senza maiuscolo, con il contenuto ai
 // due estremi. Passa da qui perche' e' un ruolo, non un caso particolare.
 const bottoneRiga = (extra) => [
-  'w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-[#E2EAE4]/60',
+  'w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-orlo/60',
   extra || '',
 ].filter(Boolean).join(' ');
 
@@ -89,7 +89,7 @@ const bottone = (ruolo, misura, extra) => [
 // resta accesa. Nel codice erano quindici forme scritte a mano, tutte con lo
 // stesso schema `${acceso ? 'verde e bianco' : 'bianco e verde'}` e ogni volta
 // un pixel diverso: chi py-2 e chi py-2.5, chi border-b-2 e chi border-b-4,
-// chi text-white e chi text-[#F0F4F1] — che a occhio sono lo stesso colore.
+// chi text-white e chi text-carta — che a occhio sono lo stesso colore.
 //
 // Due assi, come per i bottoni:
 //   - la FORMA dice com'e' fatto e quanto e' spesso (linguetta, pillola…);
@@ -122,43 +122,43 @@ const SCELTA_TONO = {
   // Da acceso il bordo sotto e' bruno, non verde: e' quello che fa sembrare
   // la linguetta una linguetta invece di un bottone premuto.
   sezione: {
-    acceso: 'bg-[#2D392C] text-white border-[#5C4A3C]',
-    spento: 'bg-white text-[#2D392C] border-gray-300 hover:bg-[#E2EAE4]',
+    acceso: 'bg-bosco text-white border-legno',
+    spento: 'bg-white text-bosco border-gray-300 hover:bg-orlo',
   },
   bordato: {
-    acceso: 'bg-[#2D392C] text-white border-[#2D392C]',
-    spento: 'bg-white text-[#2D392C] border-[#8F9E8B]/50 hover:bg-[#E2EAE4]',
+    acceso: 'bg-bosco text-white border-bosco',
+    spento: 'bg-white text-bosco border-salvia/50 hover:bg-orlo',
   },
   // Pranzo e cena: spento e' GRIGIO, non bianco. Qui "spento" vuol dire "non
   // c'era", e deve sparire dall'occhio — a colpo d'occhio si contano i
   // presenti, non si legge riga per riga.
   pranzo: {
-    acceso: 'bg-[#2D392C] text-white border-[#2D392C]',
+    acceso: 'bg-bosco text-white border-bosco',
     spento: 'bg-white text-gray-400 border-gray-300',
   },
   cena: {
-    acceso: 'bg-[#5C4A3C] text-white border-[#5C4A3C]',
+    acceso: 'bg-legno text-white border-legno',
     spento: 'bg-white text-gray-400 border-gray-300',
   },
   tenue: {
-    acceso: 'bg-[#2D392C] text-white',
-    spento: 'bg-[#F0F4F1] text-[#2D392C] border border-[#8F9E8B]/40 hover:bg-[#E2EAE4]',
+    acceso: 'bg-bosco text-white',
+    spento: 'bg-carta text-bosco border border-salvia/40 hover:bg-orlo',
   },
   piatto: {
-    acceso: 'bg-[#2D392C] text-white',
-    spento: 'bg-white text-[#2D392C]',
+    acceso: 'bg-bosco text-white',
+    spento: 'bg-white text-bosco',
   },
   // Spunta: da spenta e' un quadrato vuoto col filo sage. Il segno di spunta
   // c'e' sempre ma e' trasparente: cosi' la casella non cambia dimensione
   // quando la si tocca, e la riga non salta.
   casella: {
-    acceso: 'bg-[#2D392C] border-[#2D392C] text-white',
-    spento: 'bg-white border-[#8F9E8B] text-transparent',
+    acceso: 'bg-bosco border-bosco text-white',
+    spento: 'bg-white border-salvia text-transparent',
   },
   // Ambra: il colore con cui l'app segna le cose fuori dai conti. Un bambino
   // non paga, e quel chip lo dice con lo stesso colore degli avvisi.
   ambra: {
-    acceso: 'bg-[#D97706] text-white',
+    acceso: 'bg-fuoco text-white',
     spento: 'bg-gray-200 text-gray-500',
   },
 };

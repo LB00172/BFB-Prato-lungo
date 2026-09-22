@@ -57,10 +57,10 @@ const schedaImpostazioni = ({
         Senza un campo in corso i controlli non hanno oggetto: due dei tre
         parlano dei dati, e i dati sono quelli del campo. Dopo la chiusura
         resterebbero rossi per sempre — su un telefono che sta benissimo. */}
-    <div className={`p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-white border-[#2D392C]/20' : 'bg-white border-[#D97706]/50'}`}>
-      <div className="flex items-center justify-between border-b border-[#8F9E8B]/40 pb-2">
-        <h3 className="font-rustic text-grande text-[#2D392C]">{L.t('pronto.titolo')}</h3>
-        <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-[#D97706] text-white' : 'bg-[#2D392C] text-white'}`}>
+    <div className={`p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-white border-bosco/20' : 'bg-white border-fuoco/50'}`}>
+      <div className="flex items-center justify-between border-b border-salvia/40 pb-2">
+        <h3 className="font-rustic text-grande text-bosco">{L.t('pronto.titolo')}</h3>
+        <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-fuoco text-white' : 'bg-bosco text-white'}`}>
           {L.t(!campoInCorso ? 'pronto.nessunCampo' : readyOk ? 'pronto.si' : 'pronto.nonAncora')}
         </span>
       </div>
@@ -75,11 +75,11 @@ const schedaImpostazioni = ({
           </p>
           <ul className="space-y-2">
             {readyChecks.map((c) => (
-              <li key={c.titolo} className={`flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/20' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
+              <li key={c.titolo} className={`flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-carta/60 border-salvia/20' : 'bg-fuoco/10 border-fuoco/40'}`}>
                 <span className="text-medio leading-none shrink-0">{c.ok ? '✅' : '⚠️'}</span>
                 <div className="min-w-0">
-                  <div className="text-piccolo font-bold text-[#2D392C]">{c.titolo}</div>
-                  {!c.ok && <div className="text-piccolo text-[#5C4A3C] leading-snug mt-0.5">{c.no}</div>}
+                  <div className="text-piccolo font-bold text-bosco">{c.titolo}</div>
+                  {!c.ok && <div className="text-piccolo text-legno leading-snug mt-0.5">{c.no}</div>}
                 </div>
               </li>
             ))}
@@ -99,19 +99,19 @@ const schedaImpostazioni = ({
         esiste. L'account serve a creare e amministrare un campo — cioe' alle
         cose che nella versione pubblica hanno un proprietario. */}
     {FEATURES.auth && (
-    <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('auth.titolo')}</h3>
+    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('auth.titolo')}</h3>
 
       {account.stato === 'registrato' && (
         <>
-          <p className="text-piccolo text-[#2D392C] leading-snug">{frase('auth.entratoCome', window.Auth.nomeVisibile({ nome: account.utente && account.utente.nome, email: account.utente && account.utente.email }))}</p>
+          <p className="text-piccolo text-bosco leading-snug">{frase('auth.entratoCome', window.Auth.nomeVisibile({ nome: account.utente && account.utente.nome, email: account.utente && account.utente.email }))}</p>
           <button onClick={account.esci} disabled={account.occupato} className={bottone('secondario', 'normale', 'w-full')}>{L.t('auth.esci')}</button>
         </>
       )}
 
       {account.stato === 'daVerificare' && (
         <>
-          <p className="text-piccolo text-[#5C4A3C] leading-snug">{frase('auth.daVerificare', (account.utente && account.utente.email) || '')}</p>
+          <p className="text-piccolo text-legno leading-snug">{frase('auth.daVerificare', (account.utente && account.utente.email) || '')}</p>
           <div className="flex gap-2">
             <button onClick={account.controllaVerifica} disabled={account.occupato} className={bottone('primario', 'normale', 'flex-1')}>{L.t('auth.hoVerificato')}</button>
             <button onClick={account.rimandaVerifica} disabled={account.occupato} className={bottone('secondario', 'normale', 'flex-1')}>{L.t('auth.rimandaEmail')}</button>
@@ -127,9 +127,9 @@ const schedaImpostazioni = ({
 
           {!account.modo ? (
             <div className="flex items-center gap-2">
-              <span className="flex-grow h-px bg-[#8F9E8B]/30"></span>
+              <span className="flex-grow h-px bg-salvia/30"></span>
               <span className="text-minuto uppercase tracking-widest text-gray-400 shrink-0">{L.t('auth.oppure')}</span>
-              <span className="flex-grow h-px bg-[#8F9E8B]/30"></span>
+              <span className="flex-grow h-px bg-salvia/30"></span>
             </div>
           ) : null}
 
@@ -146,19 +146,19 @@ const schedaImpostazioni = ({
                 <div className="grid grid-cols-2 gap-2">
                   <input type="text" value={account.nome} onChange={(e) => account.setNome(e.target.value)}
                     placeholder={L.t('auth.nome')} autoComplete="given-name"
-                    className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+                    className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
                   <input type="text" value={account.cognome} onChange={(e) => account.setCognome(e.target.value)}
                     placeholder={L.t('auth.cognome')} autoComplete="family-name"
-                    className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+                    className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
                 </div>
               )}
               <input type="email" inputMode="email" value={account.email} onChange={(e) => account.setEmail(e.target.value)}
                 placeholder={L.t('auth.email')} autoComplete="email"
-                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+                className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
               <input type="password" value={account.password} onChange={(e) => account.setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (account.modo === 'entra' ? account.entraConEmail() : account.registrati())}
                 placeholder={L.t('auth.password')} autoComplete={account.modo === 'entra' ? 'current-password' : 'new-password'}
-                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+                className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
               <div className="flex gap-2">
                 <button onClick={account.chiudi} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
                 <button
@@ -181,7 +181,7 @@ const schedaImpostazioni = ({
           stringhe lo ignorano, e quella del dominio non autorizzato ci
           scrive dentro il nome da copiare in Firebase. */}
       {account.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(account.problema, typeof window !== 'undefined' ? window.location.hostname : '')}</p>}
-      {account.fatto && <p className="text-piccolo text-[#2D392C] leading-snug">{L.t(account.fatto)}</p>}
+      {account.fatto && <p className="text-piccolo text-bosco leading-snug">{L.t(account.fatto)}</p>}
     </div>
     )}
 
@@ -192,15 +192,15 @@ const schedaImpostazioni = ({
         Le regole del codice stanno in stanza.js, quelle di CHI puo' entrare
         in firestore.rules — qui si disegna e basta. */}
     {FEATURES.rooms && (
-    <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('stanza.titolo')}</h3>
+    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('stanza.titolo')}</h3>
 
       {/* Un invito arrivato da un link. Si mostra e si CHIEDE: entrare di
           nascosto perche' qualcuno ha inoltrato un messaggio e' il genere di
           cosa che fa disinstallare un'app. */}
       {stanzaStato.invito && (
-        <div className="bg-[#F0F4F1]/70 border border-[#2D392C]/20 rounded p-3 space-y-2">
-          <p className="text-piccolo text-[#2D392C] leading-snug">{frase('stanza.invitoCodice', Stanza.bello(stanzaStato.invito))}</p>
+        <div className="bg-carta/70 border border-bosco/20 rounded p-3 space-y-2">
+          <p className="text-piccolo text-bosco leading-snug">{frase('stanza.invitoCodice', Stanza.bello(stanzaStato.invito))}</p>
           <div className="flex gap-2">
             <button onClick={stanzaStato.rifiutaInvito} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('stanza.rifiutaInvito')}</button>
             <button onClick={() => stanzaStato.accettaInvito(account.utente)} disabled={stanzaStato.occupato} className={bottone('primario', 'normale', 'flex-1')}>{L.t('stanza.accettaInvito')}</button>
@@ -210,9 +210,9 @@ const schedaImpostazioni = ({
 
       {stanzaStato.stanza ? (
         <>
-          <p className="text-piccolo text-[#2D392C] leading-snug">{frase('stanza.entrato', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice))}</p>
-          <div className="flex items-center justify-between gap-2 bg-[#F0F4F1]/60 rounded p-2">
-            <span className="font-mono text-medio tracking-widest text-[#2D392C] min-w-0 break-words">{Stanza.bello(stanzaStato.stanza.codice)}</span>
+          <p className="text-piccolo text-bosco leading-snug">{frase('stanza.entrato', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice))}</p>
+          <div className="flex items-center justify-between gap-2 bg-carta/60 rounded p-2">
+            <span className="font-mono text-medio tracking-widest text-bosco min-w-0 break-words">{Stanza.bello(stanzaStato.stanza.codice)}</span>
             <button
               onClick={() => { try { navigator.clipboard.writeText(Stanza.bello(stanzaStato.stanza.codice)); } catch (e) { /* niente */ } }}
               className={bottone('secondario', 'minuscolo', 'shrink-0')}
@@ -258,14 +258,14 @@ const schedaImpostazioni = ({
             <div className="space-y-2 pt-1">
               <input type="text" value={stanzaStato.nome} onChange={(e) => stanzaStato.setNome(e.target.value)}
                 placeholder={L.t('stanza.nome')}
-                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+                className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
               <div className="grid grid-cols-2 gap-2">
                 <input type="date" value={stanzaStato.inizio} onChange={(e) => stanzaStato.setInizio(e.target.value)}
                   aria-label={L.t('stanza.inizio')}
-                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+                  className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
                 <input type="date" value={stanzaStato.fine} onChange={(e) => stanzaStato.setFine(e.target.value)}
                   aria-label={L.t('stanza.fine')}
-                  className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale focus:outline-none focus:border-[#2D392C]" />
+                  className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
               </div>
               <div className="flex gap-2">
                 <button onClick={stanzaStato.chiudi} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
@@ -281,7 +281,7 @@ const schedaImpostazioni = ({
                   quello che vede con quello che ha in mano. */}
               <input type="text" value={stanzaStato.codice} onChange={(e) => stanzaStato.setCodice(e.target.value)}
                 placeholder={L.t('stanza.codice')} autoCapitalize="characters" autoComplete="off" spellCheck="false"
-                className="w-full p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-medio font-mono tracking-widest uppercase focus:outline-none focus:border-[#2D392C]" />
+                className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-medio font-mono tracking-widest uppercase focus:outline-none focus:border-bosco" />
               <div className="flex gap-2">
                 <button onClick={stanzaStato.chiudi} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
                 <button onClick={() => stanzaStato.entra(account.utente)} disabled={stanzaStato.occupato} className={bottone('primario', 'normale', 'flex-1')}>{L.t('stanza.entra')}</button>
@@ -293,7 +293,7 @@ const schedaImpostazioni = ({
 
       {stanzaStato.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.problema)}</p>}
       {stanzaStato.fatto === 'stanza.creata' && stanzaStato.stanza && (
-        <p className="text-piccolo text-[#2D392C] leading-snug">{frase('stanza.creata', Stanza.bello(stanzaStato.stanza.codice))}</p>
+        <p className="text-piccolo text-bosco leading-snug">{frase('stanza.creata', Stanza.bello(stanzaStato.stanza.codice))}</p>
       )}
     </div>
     )}
@@ -302,8 +302,8 @@ const schedaImpostazioni = ({
         l'app, offrire la scelta vorrebbe dire mostrare meta' schermata in una
         lingua e meta' nell'altra. */}
     {FEATURES.lingue && (
-    <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('lingua.titolo')}</h3>
+    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('lingua.titolo')}</h3>
       <div className="grid grid-cols-3 gap-2">
         {Object.keys(window.Lingue.LINGUE).map((k) => (
           <button
@@ -320,8 +320,8 @@ const schedaImpostazioni = ({
     )}
 
     {/* Aspetto */}
-    <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('aspetto.titolo')}</h3>
+    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('aspetto.titolo')}</h3>
       <div className="grid grid-cols-3 gap-2">
         {[['auto', L.t('aspetto.automatico'), '🌗'], ['light', L.t('aspetto.chiaro'), '☀️'], ['dark', L.t('aspetto.scuro'), '🌙']].map(([k, l, icon]) => (
           <button
@@ -340,10 +340,10 @@ const schedaImpostazioni = ({
     </div>
 
     {/* Galleria */}
-    <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('area.galleria')}</h3>
+    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('area.galleria')}</h3>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-normale text-[#2D392C]">{L.t('impostazioni.fotoPerPersona')}</span>
+        <span className="text-normale text-bosco">{L.t('impostazioni.fotoPerPersona')}</span>
         <div className="flex items-center gap-2 shrink-0">
           {[3, 4, 5, 7].map((n) => (
             <button
@@ -365,8 +365,8 @@ const schedaImpostazioni = ({
         quando. Senza questa scheda, capire chi ha fatto sparire cosa
         vuol dire leggere il database a mano. Solo in modalità tecnica. */}
     {admin && (
-    <div className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C]">{L.t('diag.titolo')}</h3>
+    <div className="bg-white p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('diag.titolo')}</h3>
       {(() => {
         const m = metaRef.current || { rev: {}, del: {} };
         const st = syncStateRef.current;
@@ -380,8 +380,8 @@ const schedaImpostazioni = ({
         return (
           <div className="space-y-3">
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-piccolo text-gray-600">
-              <span>{fraseVestita('font-bold text-[#2D392C]', 'diag.vociDatate', Object.keys(m.rev || {}).length)}</span>
-              <span>{fraseVestita('font-bold text-[#2D392C]', 'diag.cancellazioni', lapidi.length)}</span>
+              <span>{fraseVestita('font-bold text-bosco', 'diag.vociDatate', Object.keys(m.rev || {}).length)}</span>
+              <span>{fraseVestita('font-bold text-bosco', 'diag.cancellazioni', lapidi.length)}</span>
             </div>
 
             {/* Quanto pesano le foto e dove stanno. Nel campo 2026 gli
@@ -394,7 +394,7 @@ const schedaImpostazioni = ({
               const kb = MF ? Math.round(MF.peso(receipts) / 1024) : 0;
               return (
                 <p className="text-piccolo text-gray-600">
-                  {fraseVestita('font-bold text-[#2D392C]', 'diag.scontrini', quante, quante > 0 ? kb : null, fotoDove === 'magazzino')}
+                  {fraseVestita('font-bold text-bosco', 'diag.scontrini', quante, quante > 0 ? kb : null, fotoDove === 'magazzino')}
                 </p>
               );
             })()}
@@ -406,8 +406,8 @@ const schedaImpostazioni = ({
                 memoria si riempie, e non si vedeva da nessuna parte. */}
             {Object.keys(m.rev || {}).length === 0 &&
               ((st.members || []).length > 0 || (st.purchases || []).length > 0 || Object.keys(st.campData || {}).length > 0) && (
-              <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-                <p className="text-piccolo text-[#5C4A3C] leading-snug">
+              <div className="bg-fuoco/10 border border-fuoco/40 rounded p-2.5">
+                <p className="text-piccolo text-legno leading-snug">
                   {frase('diag.senzaStoria')}
                 </p>
               </div>
@@ -415,8 +415,8 @@ const schedaImpostazioni = ({
 
             {/* Cosa non è ancora arrivato agli altri, e come forzarlo. */}
             {(cloud.pending || (cloud.foto || 0) > 0) && (
-              <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-                <p className="text-piccolo text-[#5C4A3C] leading-snug">
+              <div className="bg-fuoco/10 border border-fuoco/40 rounded p-2.5">
+                <p className="text-piccolo text-legno leading-snug">
                   {frase('diag.daInviare', !!cloud.pending, cloud.foto || 0)}
                 </p>
                 <button
@@ -429,15 +429,15 @@ const schedaImpostazioni = ({
             )}
 
             {scorta && scorta.state && (
-              <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5 space-y-2">
-                <p className="text-piccolo text-[#5C4A3C] leading-snug">
+              <div className="bg-fuoco/10 border border-fuoco/40 rounded p-2.5 space-y-2">
+                <p className="text-piccolo text-legno leading-snug">
                   {frase('diag.reteDiSicurezza',
                     L.data(new Date(scorta.at), 'dataOra'),
                     scorta.perse,
                     scorta.quando ? L.data(new Date(scorta.quando), 'dataOra') : null,
                     scorta.quando ? Date.now() - scorta.quando > PERDITA_RECENTE : false)}
                 </p>
-                <p className="text-piccolo text-[#5C4A3C] leading-snug">
+                <p className="text-piccolo text-legno leading-snug">
                   {frase('diag.annullandoTorna', scorta.perse,
                     scorta.paths && scorta.paths.length ? descriviPerdite(scorta.paths, scorta.state) : null)}
                 </p>
@@ -460,8 +460,8 @@ const schedaImpostazioni = ({
                 <p className="text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('diag.ultimeCancellazioni')}</p>
                 <ul className="space-y-1">
                   {lapidi.slice(0, 12).map((l) => (
-                    <li key={l.p} className="flex items-start justify-between gap-2 text-piccolo bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20">
-                      <span className="text-[#2D392C] leading-snug">{descriviPath(l.p, st)}</span>
+                    <li key={l.p} className="flex items-start justify-between gap-2 text-piccolo bg-carta/60 px-2 py-1.5 rounded border border-salvia/20">
+                      <span className="text-bosco leading-snug">{descriviPath(l.p, st)}</span>
                       <span className="text-gray-500 shrink-0">
                         {L.data(new Date(l.at), 'breve')}
                         {' '}{L.data(new Date(l.at), 'ora')}
@@ -488,17 +488,17 @@ const schedaImpostazioni = ({
         stato fatto qui e ciò che è arrivato dalla sincronizzazione.
         Solo in modalità tecnica. */}
     {admin && (
-    <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
       <button
         onClick={() => setLogOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-grande text-[#2D392C] shrink-0">{L.t('registro.titolo')}</span>
+        <span className="font-rustic text-grande text-bosco shrink-0">{L.t('registro.titolo')}</span>
         <span className="ml-auto flex items-center gap-2 shrink-0">
           <span className="text-minuto uppercase font-bold px-2 py-1 rounded bg-gray-200 text-gray-500">
             {(() => { void diagTick; const n = logLeggi().length; return n === 0 ? L.t('registro.vuoto') : L.t('registro.quanteVoci', n); })()}
           </span>
-          <span className={`text-piccolo text-[#5C4A3C] transition-transform ${logOpen ? 'rotate-180' : ''}`}>▾</span>
+          <span className={`text-piccolo text-legno transition-transform ${logOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
       </button>
       {logOpen && (<div className="px-4 pb-4 space-y-3">
@@ -528,18 +528,18 @@ const schedaImpostazioni = ({
                     <p className="text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1">{gruppo.giorno}</p>
                     <ul className="space-y-1">
                       {gruppo.voci.map((r, i) => (
-                        <li key={r.p + r.at + i} className="flex items-start gap-2 text-piccolo bg-[#F0F4F1]/60 px-2 py-1.5 rounded border border-[#8F9E8B]/20">
+                        <li key={r.p + r.at + i} className="flex items-start gap-2 text-piccolo bg-carta/60 px-2 py-1.5 rounded border border-salvia/20">
                           <span className="text-gray-500 shrink-0 w-10">
                             {L.data(new Date(r.at), 'ora')}
                           </span>
-                          <span className={`shrink-0 w-3 text-center ${r.k === 'd' ? 'text-red-700' : 'text-[#2D392C]'}`} title={L.t(r.k === 'd' ? 'registro.cancellata' : 'registro.modificata')}>
+                          <span className={`shrink-0 w-3 text-center ${r.k === 'd' ? 'text-red-700' : 'text-bosco'}`} title={L.t(r.k === 'd' ? 'registro.cancellata' : 'registro.modificata')}>
                             {r.k === 'd' ? '−' : '+'}
                           </span>
                           <span className="min-w-0 flex-grow leading-snug">
-                            <span className="font-bold text-[#5C4A3C]">{sezioneDiPath(r.p)}</span>
-                            <span className="text-[#2D392C]"> · {descriviPath(r.p, st)}</span>
+                            <span className="font-bold text-legno">{sezioneDiPath(r.p)}</span>
+                            <span className="text-bosco"> · {descriviPath(r.p, st)}</span>
                           </span>
-                          <span className={`shrink-0 text-minuto uppercase font-bold px-1.5 py-0.5 rounded ${r.o === 'io' ? 'bg-[#2D392C]/10 text-[#2D392C]' : 'bg-[#5C4A3C]/10 text-[#5C4A3C]'}`}>
+                          <span className={`shrink-0 text-minuto uppercase font-bold px-1.5 py-0.5 rounded ${r.o === 'io' ? 'bg-bosco/10 text-bosco' : 'bg-legno/10 text-legno'}`}>
                             {L.t(r.o === 'io' ? 'registro.qui' : 'registro.sync')}
                           </span>
                         </li>
@@ -566,12 +566,12 @@ const schedaImpostazioni = ({
 
     {/* Blocco con password — riga richiudibile: si imposta una volta e
         non si tocca più, quindi sta chiusa e in fondo. */}
-    <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
       <button
         onClick={() => setBloccoOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-grande text-[#2D392C] shrink-0">{L.t('blocco.titoloScheda')}</span>
+        <span className="font-rustic text-grande text-bosco shrink-0">{L.t('blocco.titoloScheda')}</span>
         <span className="ml-auto flex items-center gap-1.5 shrink-0">
           {/* Stato del database anche da chiusa: è l'unica cosa che
               serve vedere a colpo d'occhio. */}
@@ -582,10 +582,10 @@ const schedaImpostazioni = ({
             const ignoto = !protetto && !cloud.connected;
             return <span className="text-piccolo" title={L.t(protetto ? 'blocco.dbProtetto' : ignoto ? 'blocco.dbNonCollegato' : 'blocco.dbAperto')}>{protetto ? '🔒' : ignoto ? '—' : '⚠'}</span>;
           })()}
-          <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
+          <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${LOCK && LOCK.hash ? 'bg-bosco text-white' : 'bg-gray-200 text-gray-500'}`}>
             {L.t(LOCK && LOCK.hash ? 'blocco.attivo' : 'blocco.nonAttivo')}
           </span>
-          <span className={`text-piccolo text-[#5C4A3C] transition-transform ${bloccoOpen ? 'rotate-180' : ''}`}>▾</span>
+          <span className={`text-piccolo text-legno transition-transform ${bloccoOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
       </button>
       {bloccoOpen && (<div className="px-4 pb-4 space-y-3">
@@ -604,10 +604,10 @@ const schedaImpostazioni = ({
             // database: meglio dirlo, invece di allarmare chi è offline.
             const ignoto = !protetto && !cloud.connected;
             return (
-              <div className={`p-3 rounded border ${protetto ? 'bg-[#2D392C]/5 border-[#2D392C]/25' : ignoto ? 'bg-[#F0F4F1]/60 border-[#8F9E8B]/30' : 'bg-[#D97706]/10 border-[#D97706]/40'}`}>
+              <div className={`p-3 rounded border ${protetto ? 'bg-bosco/5 border-bosco/25' : ignoto ? 'bg-carta/60 border-salvia/30' : 'bg-fuoco/10 border-fuoco/40'}`}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-piccolo uppercase font-bold text-gray-500">{L.t('blocco.database')}</span>
-                  <span className={`text-piccolo font-bold ${protetto ? 'text-[#2D392C]' : ignoto ? 'text-gray-500' : 'text-[#D97706]'}`}>
+                  <span className={`text-piccolo font-bold ${protetto ? 'text-bosco' : ignoto ? 'text-gray-500' : 'text-fuoco'}`}>
                     {L.t(protetto ? 'blocco.statoProtetto' : ignoto ? 'blocco.statoIgnoto' : 'blocco.statoAperto')}
                   </span>
                 </div>
@@ -617,16 +617,16 @@ const schedaImpostazioni = ({
               </div>
             );
           })()}
-          <label className="flex items-center gap-3 bg-[#F0F4F1]/60 p-3 rounded border border-[#8F9E8B]/20 cursor-pointer">
-            <input type="checkbox" checked={askAlways} onChange={toggleAskAlways} className="w-4 h-4 accent-[#2D392C] shrink-0" />
-            <span className="text-piccolo text-[#2D392C] leading-snug">
+          <label className="flex items-center gap-3 bg-carta/60 p-3 rounded border border-salvia/20 cursor-pointer">
+            <input type="checkbox" checked={askAlways} onChange={toggleAskAlways} className="w-4 h-4 accent-bosco shrink-0" />
+            <span className="text-piccolo text-bosco leading-snug">
               {frase('blocco.ogniVolta')}
               <span className="block text-minuto text-gray-500">{L.t('blocco.senzaSpunta')}</span>
             </span>
           </label>
           {window.CloudSync && window.CloudSync.needsPassword && window.CloudSync.needsPassword() && (
-            <div className="bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5">
-              <p className="text-piccolo text-[#5C4A3C] leading-snug">
+            <div className="bg-fuoco/10 border border-fuoco/40 rounded p-2.5">
+              <p className="text-piccolo text-legno leading-snug">
                 {frase('blocco.ripiego')}
               </p>
             </div>
@@ -644,17 +644,17 @@ const schedaImpostazioni = ({
     </div>
 
     {/* Dati su questo telefono — riga richiudibile. */}
-    <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
       <button
         onClick={() => setDatiOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-grande text-[#2D392C] shrink-0">{L.t('dati.titolo')}</span>
+        <span className="font-rustic text-grande text-bosco shrink-0">{L.t('dati.titolo')}</span>
         <span className="ml-auto flex items-center gap-2 shrink-0">
-          <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
+          <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${cloud.connected ? 'bg-bosco text-white' : 'bg-gray-200 text-gray-500'}`}>
             {L.t(cloud.connected ? 'dati.connessa' : isOnline ? 'dati.nonConnessa' : 'dati.offline')}
           </span>
-          <span className={`text-piccolo text-[#5C4A3C] transition-transform ${datiOpen ? 'rotate-180' : ''}`}>▾</span>
+          <span className={`text-piccolo text-legno transition-transform ${datiOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
       </button>
       {datiOpen && (<div className="px-4 pb-4 space-y-3">
@@ -675,17 +675,17 @@ const schedaImpostazioni = ({
         password sua, per telefono: gli avvisi sulle voci cancellate,
         la diagnostica, il registro e il promemoria del backup si
         vedono solo qui. Gli altri usano l'app e basta. */}
-    <div className="bg-white rounded-lg border-2 border-[#2D392C]/20 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
       <button
         onClick={() => setTecnicaOpen((v) => !v)}
         className={bottoneRiga()}
       >
-        <span className="font-rustic text-grande text-[#2D392C] shrink-0">{L.t('tecnica.titolo')}</span>
+        <span className="font-rustic text-grande text-bosco shrink-0">{L.t('tecnica.titolo')}</span>
         <span className="ml-auto flex items-center gap-2 shrink-0">
-          <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${admin ? 'bg-[#2D392C] text-white' : 'bg-gray-200 text-gray-500'}`}>
+          <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${admin ? 'bg-bosco text-white' : 'bg-gray-200 text-gray-500'}`}>
             {L.t(admin ? 'tecnica.attiva' : 'tecnica.spenta')}
           </span>
-          <span className={`text-piccolo text-[#5C4A3C] transition-transform ${tecnicaOpen ? 'rotate-180' : ''}`}>▾</span>
+          <span className={`text-piccolo text-legno transition-transform ${tecnicaOpen ? 'rotate-180' : ''}`}>▾</span>
         </span>
       </button>
       {tecnicaOpen && (<div className="px-4 pb-4 space-y-3">
@@ -730,7 +730,7 @@ const schedaImpostazioni = ({
                   onChange={(e) => { setAdminPwd(e.target.value); setAdminErr(''); }}
                   onKeyDown={(e) => e.key === 'Enter' && entraAdmin()}
                   placeholder={L.t('tecnica.password')}
-                  className="flex-grow min-w-0 p-2.5 bg-[#F0F4F1]/50 border border-[#8F9E8B]/30 rounded text-normale"
+                  className="flex-grow min-w-0 p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale"
                 />
                 <button
                   onClick={entraAdmin}
@@ -747,16 +747,16 @@ const schedaImpostazioni = ({
     </div>
 
     {/* Info */}
-    <div className="bg-[#2D392C] text-[#F0F4F1] p-4 rounded-lg border-b-4 border-[#5C4A3C] shadow-md space-y-2">
-      <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-1">{L.t('info.titolo')}</h3>
+    <div className="bg-bosco text-carta p-4 rounded-lg border-b-4 border-legno shadow-md space-y-2">
+      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-1">{L.t('info.titolo')}</h3>
       <div className="flex justify-between text-piccolo">
-        <span className="text-[#8F9E8B]">{L.t('info.versione')}</span>
+        <span className="text-salvia">{L.t('info.versione')}</span>
         <span className="font-bold">{swVersion || '—'}</span>
       </div>
-      <p className="text-piccolo text-[#F0F4F1]/70 leading-snug">
+      <p className="text-piccolo text-carta/70 leading-snug">
         {L.t('info.aggiornamento')}
       </p>
-      <p className="text-minuto text-[#8F9E8B]/80 pt-1">{BRAND.credits}</p>
+      <p className="text-minuto text-salvia/80 pt-1">{BRAND.credits}</p>
     </div>
   </div>
 );
