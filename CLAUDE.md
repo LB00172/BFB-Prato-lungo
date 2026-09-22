@@ -26,6 +26,14 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
+   **Le chiavi di SERVIZIO di Firebase non entrano da nessuna parte** — né nel
+   repository né in chat. Una chiave admin scavalca le regole Firestore: vale
+   più di tutto quello che c'è scritto in `firestore.rules` messo insieme, e
+   quello che entra in git ci resta anche dopo che lo cancelli. Le chiavi
+   *web* in `firebase-config.js` sono un'altra cosa: sono pubbliche per
+   progetto, stanno nel codice che arriva su ogni telefono, e la protezione
+   vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
+   se una chiave di servizio compare, comunque la si chiami.
 4. **Prima di dire "fatto" gira `npm test`.** 74 prove, circa 9 minuti.
    Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.

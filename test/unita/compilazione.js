@@ -512,6 +512,45 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     + (aMano.length ? ' — A MANO: ' + aMano.join(', ') : ''), aMano.length === 0);
 }
 
+// ---------- Nessuna chiave di servizio nel repository ---------------------
+// Le chiavi web di Firebase (firebase-config.js) sono pubbliche per progetto
+// e stanno bene dove stanno. Una chiave di SERVIZIO e' un'altra cosa: e'
+// un'identita' amministrativa che SCAVALCA le regole Firestore — vale piu' di
+// tutto quello che c'e' scritto in firestore.rules messo insieme. Se ne
+// arriva una nel repository, ci resta anche dopo che la cancelli, perche'
+// la storia di git non dimentica.
+//
+// .gitignore la ferma, ma solo se si chiama come ci si aspetta. Questa prova
+// guarda il CONTENUTO, che non si puo' rinominare.
+{
+  const sospetti = [];
+  const salta = new Set(['node_modules', '.git', 'test/tmp', 'vendor']);
+  // Il motivo si compone a pezzi, altrimenti questa prova trova SE STESSA —
+  // i marcatori sarebbero scritti qui dentro. L'alternativa era un elenco di
+  // file da saltare, che e' peggio: un giorno ci finisce dentro un file vero
+  // e la guardia smette di guardarlo senza dirlo a nessuno.
+  const marcatore = new RegExp([
+    'BEGIN [A-Z ]*PRIVATE' + ' KEY',
+    '"type"\\s*:\\s*"service' + '_account"',
+    '"private' + '_key"',
+  ].join('|'));
+  const gira = (dir, rel) => {
+    fs.readdirSync(dir, { withFileTypes: true }).forEach((v) => {
+      const dentro = rel ? rel + '/' + v.name : v.name;
+      if (salta.has(dentro) || salta.has(v.name)) return;
+      const pieno = path.join(dir, v.name);
+      if (v.isDirectory()) { gira(pieno, dentro); return; }
+      if (!/\.(json|js|txt|pem|p12|env)$/.test(v.name) && v.name !== '.env') return;
+      let testo = '';
+      try { testo = fs.readFileSync(pieno, 'utf8'); } catch (e) { return; }
+      if (marcatore.test(testo)) sospetti.push(dentro);
+    });
+  };
+  gira(RADICE, '');
+  ok(`nessuna chiave di servizio nel repository (${sospetti.length})`
+    + (sospetti.length ? ' — TROVATA IN: ' + sospetti.join(', ') : ''), sospetti.length === 0);
+}
+
 // ---------- I due rami non divergono sui soldi ----------
 // Le versioni sono due e restano separate (CLAUDE.md): `main` e' la privata,
 // `feature/public-app` la pubblica. La separazione e' voluta, ma ha un prezzo

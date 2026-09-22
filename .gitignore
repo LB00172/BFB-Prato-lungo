@@ -3,3 +3,15 @@ node_modules/
 *.log
 .DS_Store
 test/tmp/
+
+# Chiavi di SERVIZIO di Firebase e simili. Non entrano mai nel repository:
+# una chiave admin SCAVALCA le regole Firestore, quindi vale piu' di tutte le
+# regole scritte in firestore.rules messe insieme. Le chiavi web in
+# firebase-config.js sono un'altra cosa — quelle sono pubbliche per progetto.
+*-firebase-adminsdk-*.json
+serviceAccount*.json
+service-account*.json
+*.pem
+*.p12
+.env
+.env.*
