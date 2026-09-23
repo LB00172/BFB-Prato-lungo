@@ -76,6 +76,20 @@ const bottoneRiga = (extra) => [
   extra || '',
 ].filter(Boolean).join(' ');
 
+// ---------- La voce del menu ----------
+// La riga del cassetto: icona a sinistra, etichetta che si accorcia invece di
+// traboccare, e lo stato acceso quando e' l'area che stai guardando. Era
+// scritta a mano in un posto solo finche' le voci erano una famiglia sola;
+// da quando il menu ha anche le due AZIONI (crea un campo, partecipa) sono
+// diventate due copie della stessa riga — ed e' il momento in cui una forma
+// va nel vocabolario, non il momento in cui si aggiunge una riga al censimento.
+const bottoneMenu = (accesa, extra) => [
+  'w-full text-left px-3 py-2.5 rounded font-bold uppercase text-normale',
+  'tracking-wide transition-colors flex items-center gap-2.5',
+  accesa ? 'bg-bosco text-carta' : 'text-bosco hover:bg-orlo',
+  extra || '',
+].filter(Boolean).join(' ');
+
 // Uso: className={bottone('primario', 'grande', 'w-full mt-3')}
 const bottone = (ruolo, misura, extra) => [
   'rounded font-bold uppercase tracking-wide disabled:opacity-40',

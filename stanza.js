@@ -275,6 +275,24 @@
     };
   }
 
+  // ---------- Cosa si puo' fare quando non sei in nessun campo ----------
+  // Finche' non sei dentro un campo, quasi tutte le aree dell'app parlano di
+  // dati che non esistono: Calendario mostra una settimana vuota, Saldi dei
+  // conti a zero, Galleria nessuna foto. Un menu pieno di sezioni vuote non
+  // e' generoso, e' confuso — sembra un'app rotta invece di un'app che sta
+  // aspettando una cosa sola.
+  //
+  // Restano le aree che parlano di TE e non del campo. Tutto il resto compare
+  // quando c'e' qualcosa da mostrarci dentro.
+  const FUORI_DAL_CAMPO = ['impostazioni'];
+
+  function gruppiMenu(gruppi, dentroUnCampo) {
+    if (dentroUnCampo) return gruppi || [];
+    return (gruppi || [])
+      .map((g) => ({ ...g, items: (g.items || []).filter((k) => FUORI_DAL_CAMPO.indexOf(k) >= 0) }))
+      .filter((g) => g.items.length);
+  }
+
   // Il proprietario non si puo' togliere da solo: una stanza senza
   // proprietario non la amministra piu' nessuno e non si puo' nemmeno
   // cancellare. Per andarsene, prima passa il testimone.
@@ -299,6 +317,8 @@
     rimuovibile,
     schedaIngresso,
     schedaProprietario,
+    FUORI_DAL_CAMPO,
+    gruppiMenu,
     linkInvito,
     leggiInvito,
     CHIAVE_INVITO,

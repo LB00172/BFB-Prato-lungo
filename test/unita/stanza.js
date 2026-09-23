@@ -324,6 +324,36 @@ if (!S) { fine(); }
       C.motivo({ code: 'qualcosa-di-nuovo' }) === 'stanza.nonRiuscito'
       && C.motivo(null) === 'stanza.nonRiuscito');
 
+    // ---------- Il menu quando non sei in nessun campo ----------
+    // Un menu pieno di sezioni vuote sembra un'app rotta, non un'app che
+    // aspetta una cosa sola. La meta' che conta di piu' e' la prima: DENTRO
+    // un campo non deve togliere niente, o il giorno che si entra in una
+    // stanza mezza app sparisce e nessuno capisce perche'.
+    {
+      const GRUPPI = [
+        { title: 'Pianificazione', items: ['calendario', 'menu', 'presenze'] },
+        { title: 'Spese', items: ['lista', 'attrezzatura', 'spesa'] },
+        { title: 'Altro', items: ['gioco', 'archivio', 'guida', 'impostazioni'] },
+      ];
+      const chiavi = (g) => g.reduce((a, x) => a.concat(x.items), []);
+
+      const dentro = S.gruppiMenu(GRUPPI, true);
+      ok(`dentro un campo il menu resta intero (${chiavi(dentro).length} voci)`,
+        JSON.stringify(dentro) === JSON.stringify(GRUPPI));
+
+      const fuori = S.gruppiMenu(GRUPPI, false);
+      ok(`fuori da un campo restano solo le aree che parlano di te (${chiavi(fuori).join(', ')})`,
+        JSON.stringify(chiavi(fuori)) === JSON.stringify(['impostazioni']));
+      // Un titolo di sezione senza niente sotto e' peggio di una sezione che
+      // non c'e': sembra che manchi qualcosa invece che sia voluto.
+      ok(`e i gruppi rimasti vuoti non si disegnano (${fuori.length} invece di ${GRUPPI.length})`,
+        fuori.length === 1);
+
+      ok('senza gruppi non esplode',
+        JSON.stringify(S.gruppiMenu(null, false)) === '[]'
+        && JSON.stringify(S.gruppiMenu(undefined, true)) === '[]');
+    }
+
     fine();
   })();
 }

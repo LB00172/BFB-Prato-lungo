@@ -909,6 +909,15 @@ const bottoneIcona = (tono, extra) => ['px-2.5 py-2 rounded font-bold leading-no
 // due estremi. Passa da qui perche' e' un ruolo, non un caso particolare.
 const bottoneRiga = extra => ['w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-orlo/60', extra || ''].filter(Boolean).join(' ');
 
+// ---------- La voce del menu ----------
+// La riga del cassetto: icona a sinistra, etichetta che si accorcia invece di
+// traboccare, e lo stato acceso quando e' l'area che stai guardando. Era
+// scritta a mano in un posto solo finche' le voci erano una famiglia sola;
+// da quando il menu ha anche le due AZIONI (crea un campo, partecipa) sono
+// diventate due copie della stessa riga — ed e' il momento in cui una forma
+// va nel vocabolario, non il momento in cui si aggiunge una riga al censimento.
+const bottoneMenu = (accesa, extra) => ['w-full text-left px-3 py-2.5 rounded font-bold uppercase text-normale', 'tracking-wide transition-colors flex items-center gap-2.5', accesa ? 'bg-bosco text-carta' : 'text-bosco hover:bg-orlo', extra || ''].filter(Boolean).join(' ');
+
 // Uso: className={bottone('primario', 'grande', 'w-full mt-3')}
 const bottone = (ruolo, misura, extra) => ['rounded font-bold uppercase tracking-wide disabled:opacity-40', BOTTONE_MISURA[misura] || BOTTONE_MISURA.normale, BOTTONE_RUOLO[ruolo] || BOTTONE_RUOLO.primario, extra || ''].filter(Boolean).join(' ');
 
@@ -6335,6 +6344,28 @@ function App() {
     items: ['gioco', 'archivio', 'guida', 'impostazioni']
   }];
 
+  // Fuori da un campo quasi tutte le aree parlano di dati che non esistono:
+  // il Calendario mostra una settimana vuota, i Saldi conti a zero. La regola
+  // — quali restano — e' pura e sta in stanza.js, provata senza browser.
+  //
+  // "Dentro un campo" NON vuol dire "hai scelto una stanza": vuol dire che un
+  // campo c'e', comunque tu ci sia arrivato. La stanza scelta, il codice
+  // salvato dalla volta scorsa, o quello predefinito di questa installazione
+  // — sono le stesse tre strade da cui la sincronizzazione prende il codice
+  // venti righe piu' su, e devono restare le stesse: se il menu e i dati non
+  // fossero d'accordo su dove sei, l'app mostrerebbe un campo vuoto mentre ne
+  // sta scrivendo un altro.
+  //
+  // Definirlo come "hai scelto una stanza" ha fatto diventare rosse
+  // cinquantasei prove in un colpo, e avevano ragione loro: un'app con dentro
+  // un campo e' lo stato normale, non uno strano.
+  //
+  // Con le stanze spente (la versione privata) si e' sempre dentro: li' il
+  // campo c'e' per costruzione e non c'e' niente da nascondere.
+  const codiceInGioco = stanzaStato.stanza && stanzaStato.stanza.codice || window.CloudSync && window.CloudSync.savedCode() || window.CAMP_CODE_DEFAULT || '';
+  const dentroUnCampo = !FEATURES.rooms || !!codiceInGioco;
+  const GRUPPI_VISIBILI = window.Stanza ? window.Stanza.gruppiMenu(MENU_GROUPS, dentroUnCampo) : MENU_GROUPS;
+
   // Acquirente: si sceglie dai membri, non si scrive. Un nome digitato a mano
   // con una lettera diversa creerebbe una persona fantasma nei saldi finali.
   const renderBuyerSelect = (value, onChange, extraClass) => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("select", {
@@ -6495,7 +6526,26 @@ function App() {
     className: "font-rustic text-bosco leading-tight"
   }, BRAND.appTitle), /*#__PURE__*/React.createElement("div", {
     className: "text-minuto uppercase tracking-wider text-salvia"
-  }, BRAND.groupName))), MENU_GROUPS.map(group => /*#__PURE__*/React.createElement("div", {
+  }, BRAND.groupName))), !dentroUnCampo && FEATURES.rooms && /*#__PURE__*/React.createElement("div", {
+    className: "pt-2 first:pt-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 px-1 pb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-minuto uppercase tracking-widest font-bold text-salvia shrink-0"
+  }, L.t('menu.ilCampo')), /*#__PURE__*/React.createElement("span", {
+    className: "flex-grow h-px bg-salvia/30"
+  })), [['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => /*#__PURE__*/React.createElement("button", {
+    key: modo,
+    onClick: () => {
+      stanzaStato.setModo(modo);
+      goTo('impostazioni');
+    },
+    className: bottoneMenu(false)
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-5 shrink-0 flex items-center justify-center"
+  }, icona(modo === 'crea' ? 'compiti' : 'membri')), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, L.t(chiave))))), GRUPPI_VISIBILI.map(group => /*#__PURE__*/React.createElement("div", {
     key: group.title,
     className: "pt-2 first:pt-0"
   }, /*#__PURE__*/React.createElement("div", {
@@ -6507,7 +6557,7 @@ function App() {
   })), group.items.map(tab => /*#__PURE__*/React.createElement("button", {
     key: tab,
     onClick: () => goTo(tab),
-    className: `w-full text-left px-3 py-2.5 rounded font-bold uppercase text-normale tracking-wide transition-colors flex items-center gap-2.5 ${activeTab === tab ? 'bg-bosco text-carta' : 'text-bosco hover:bg-orlo'}`
+    className: bottoneMenu(activeTab === tab)
   }, /*#__PURE__*/React.createElement("span", {
     className: "w-5 shrink-0 flex items-center justify-center"
   }, icona(tab)), /*#__PURE__*/React.createElement("span", {

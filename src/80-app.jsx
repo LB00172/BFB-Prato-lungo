@@ -2533,6 +2533,32 @@ function App() {
     { title: L.t('menu.altro'), items: ['gioco', 'archivio', 'guida', 'impostazioni'] },
   ];
 
+  // Fuori da un campo quasi tutte le aree parlano di dati che non esistono:
+  // il Calendario mostra una settimana vuota, i Saldi conti a zero. La regola
+  // — quali restano — e' pura e sta in stanza.js, provata senza browser.
+  //
+  // "Dentro un campo" NON vuol dire "hai scelto una stanza": vuol dire che un
+  // campo c'e', comunque tu ci sia arrivato. La stanza scelta, il codice
+  // salvato dalla volta scorsa, o quello predefinito di questa installazione
+  // — sono le stesse tre strade da cui la sincronizzazione prende il codice
+  // venti righe piu' su, e devono restare le stesse: se il menu e i dati non
+  // fossero d'accordo su dove sei, l'app mostrerebbe un campo vuoto mentre ne
+  // sta scrivendo un altro.
+  //
+  // Definirlo come "hai scelto una stanza" ha fatto diventare rosse
+  // cinquantasei prove in un colpo, e avevano ragione loro: un'app con dentro
+  // un campo e' lo stato normale, non uno strano.
+  //
+  // Con le stanze spente (la versione privata) si e' sempre dentro: li' il
+  // campo c'e' per costruzione e non c'e' niente da nascondere.
+  const codiceInGioco = (stanzaStato.stanza && stanzaStato.stanza.codice)
+    || (window.CloudSync && window.CloudSync.savedCode())
+    || window.CAMP_CODE_DEFAULT || '';
+  const dentroUnCampo = !FEATURES.rooms || !!codiceInGioco;
+  const GRUPPI_VISIBILI = window.Stanza
+    ? window.Stanza.gruppiMenu(MENU_GROUPS, dentroUnCampo)
+    : MENU_GROUPS;
+
   // Acquirente: si sceglie dai membri, non si scrive. Un nome digitato a mano
   // con una lettera diversa creerebbe una persona fantasma nei saldi finali.
   const renderBuyerSelect = (value, onChange, extraClass) => (
@@ -2643,7 +2669,28 @@ function App() {
               <div className="text-minuto uppercase tracking-wider text-salvia">{BRAND.groupName}</div>
             </div>
           </div>
-          {MENU_GROUPS.map((group) => (
+          {/* Le due strade per avere un campo. Stanno FUORI dai gruppi perche'
+              non sono aree da visitare, sono azioni: portano alla scheda
+              della stanza, dove si crea o si entra con un codice. */}
+          {!dentroUnCampo && FEATURES.rooms && (
+            <div className="pt-2 first:pt-0">
+              <div className="flex items-center gap-2 px-1 pb-1">
+                <span className="text-minuto uppercase tracking-widest font-bold text-salvia shrink-0">{L.t('menu.ilCampo')}</span>
+                <span className="flex-grow h-px bg-salvia/30"></span>
+              </div>
+              {[['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => (
+                <button
+                  key={modo}
+                  onClick={() => { stanzaStato.setModo(modo); goTo('impostazioni'); }}
+                  className={bottoneMenu(false)}
+                >
+                  <span className="w-5 shrink-0 flex items-center justify-center">{icona(modo === 'crea' ? 'compiti' : 'membri')}</span>
+                  <span className="min-w-0 truncate">{L.t(chiave)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {GRUPPI_VISIBILI.map((group) => (
             <div key={group.title} className="pt-2 first:pt-0">
               <div className="flex items-center gap-2 px-1 pb-1">
                 <span className="text-minuto uppercase tracking-widest font-bold text-salvia shrink-0">{group.title}</span>
@@ -2653,9 +2700,7 @@ function App() {
                 <button
                   key={tab}
                   onClick={() => goTo(tab)}
-                  className={`w-full text-left px-3 py-2.5 rounded font-bold uppercase text-normale tracking-wide transition-colors flex items-center gap-2.5 ${
-                    activeTab === tab ? 'bg-bosco text-carta' : 'text-bosco hover:bg-orlo'
-                  }`}
+                  className={bottoneMenu(activeTab === tab)}
                 >
                   <span className="w-5 shrink-0 flex items-center justify-center">{icona(tab)}</span>
                   <span className="min-w-0 truncate">{tabs[tab]}</span>

@@ -165,7 +165,12 @@ ok('ogni bottone chiede un ruolo e una misura che esistono'
 // Il conteggio e' la guardia: se sale, qualcuno ha scritto un bottone a mano
 // invece di chiedere una parola al vocabolario; se scende, si aggiorna qui.
 const A_MANO_ATTESI = {
-  '80-app.jsx': 7,
+  // Era 7 fino al 23 settembre: la voce del cassetto e' entrata nel
+  // vocabolario (bottoneMenu) quando il menu ha avuto anche le due azioni
+  // "crea un campo" e "partecipa", e la stessa riga e' diventata tre copie.
+  // Il numero puo' solo SCENDERE: se sale, qualcuno ha scritto a mano una
+  // forma che il vocabolario aveva gia'.
+  '80-app.jsx': 6,
   '81-schede-giorno.jsx': 3,
   '82-schede-conti.jsx': 2,
   '83-schede-gruppo.jsx': 2,
@@ -201,6 +206,15 @@ const classeDi = (testo, da) => {
   return '';
 };
 
+// I nomi del vocabolario NON si scrivono qui. Erano una regex a mano —
+// /bottone(Icona|Riga|Scelta)?\(/ — ed e' bastato che nascesse bottoneMenu
+// perche' i bottoni che lo usano tornassero a contare come "scritti a mano":
+// la guardia diceva che il vocabolario stava perdendo terreno mentre stava
+// crescendo. L'elenco si chiede a chi lo tiene gia'.
+const VOCABOLARIO = [...fs.readFileSync(path.join(RADICE, 'src', '50-interfaccia.jsx'), 'utf8')
+  .matchAll(/^const (bottone[A-Za-z]*)\s*=/gm)].map((m) => m[1]);
+const usaIlVocabolario = new RegExp('\\b(' + VOCABOLARIO.join('|') + ')\\(');
+
 const aMano = {};
 const schedeNuove = [];
 SORGENTI.filter((f) => /^8/.test(f)).forEach((f) => {
@@ -208,13 +222,16 @@ SORGENTI.filter((f) => /^8/.test(f)).forEach((f) => {
   let i = testo.indexOf('<button');
   while (i >= 0) {
     const cls = classeDi(testo, i);
-    if (!/\bbottone(Icona|Riga|Scelta)?\(/.test(cls)) {
+    if (!usaIlVocabolario.test(cls)) {
       aMano[f] = (aMano[f] || 0) + 1;
       if (!(f in A_MANO_ATTESI)) schedeNuove.push(`${f}: ${cls.replace(/\s+/g, ' ').slice(0, 50)}…`);
     }
     i = testo.indexOf('<button', i + 7);
   }
 });
+ok(`il vocabolario dei bottoni ha ${VOCABOLARIO.length} voci (${VOCABOLARIO.join(', ')})`,
+  VOCABOLARIO.length >= 4);
+
 const scostamenti = Object.keys(A_MANO_ATTESI)
   .filter((f) => (aMano[f] || 0) !== A_MANO_ATTESI[f])
   .map((f) => `${f}: ${aMano[f] || 0} invece di ${A_MANO_ATTESI[f]}`)
