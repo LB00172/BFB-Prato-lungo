@@ -34,7 +34,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 75 prove, **due minuti e
+4. **Prima di dire "fatto" gira `npm test`.** 77 prove, **due minuti e
    mezzo**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
@@ -82,8 +82,10 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `src/80-app.jsx` | `function App()`: stato, sincronizzazione, gestori. I conti non stanno più qui |
 | `src/7*-usa-*.jsx` | lo **stato** uscito da `App()`: hook (`usaGioco`, `usaGalleria`, `usaScontrini`) che si portano dietro i loro `useState`. Tengono stato e **non disegnano** |
 | `src/8*-schede-*.jsx` | il **disegno** delle schede, uscito da `App()`. Non sono componenti React: sono funzioni che restituiscono JSX e ricevono le dipendenze in un oggetto. Disegnano e **non tengono stato** |
-| `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneScelta` (i chip accesi/spenti) |
+| `src/45-icone.jsx` | **le icone**, SVG in linea con `stroke="currentColor"`: prendono il colore dal testo, quindi tema scuro e tavolozza vengono gratis. Si chiamano per nome, `icona('calendario')`; un nome inventato non dà errore, dà un buco — una prova lo vieta. Le emoji rimaste possono solo scendere |
+| `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneMenu`, `bottoneScelta` (i chip accesi/spenti). La guardia chiede l'elenco a questo file, non lo tiene scritto |
 | `src/87-scheda-compiti.jsx` | «Chi fa cosa»: i compiti assegnati, dietro `FEATURES.compiti`. Un compito **non** è una spesa |
+| `src/88-scheda-ingresso.jsx` | **l'ingresso**: la tessera dell'account (una sola, usata da Impostazioni e dalla schermata d'apertura) e la schermata d'apertura, che compare solo a chi non ha **né** un account **né** un campo |
 | `src/78-usa-account.jsx` | lo stato del login: maschera, occupato, problema. Le regole no — quelle stanno in `auth.js` |
 | `src/79-usa-stanza.jsx` | lo stato della stanza: crea, entra, chi c'è dentro. Dietro `FEATURES.rooms` |
 | `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
@@ -104,7 +106,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `build.js` | compilazione + versione della cache |
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
-| `test/` | 14 prove unitarie + 60 end‑to‑end, più `regole/` (fuori da `npm test`) |
+| `test/` | 14 prove unitarie + 63 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.

@@ -324,6 +324,9 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     // Solo disegni: nessuna parola che l'utente legga. Le etichette stanno
     // accanto alle icone, e quelle passano dal dizionario come tutto il resto.
     '45-icone.jsx': 0,
+    // La schermata d'apertura e la tessera dell'account: tutto dal
+    // dizionario, e il marchio dalla configurazione (BRAND).
+    '88-scheda-ingresso.jsx': 0,
     '50-interfaccia.jsx': 0,
     '60-gioco.jsx': 3,               // i nomi dei livelli: sono luoghi veri
     '70-schermata-blocco.jsx': 0,

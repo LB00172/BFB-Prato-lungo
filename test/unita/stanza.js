@@ -324,6 +324,18 @@ if (!S) { fine(); }
       C.motivo({ code: 'qualcosa-di-nuovo' }) === 'stanza.nonRiuscito'
       && C.motivo(null) === 'stanza.nonRiuscito');
 
+    // 3. ENTRARE SENZA UTENTE. Era un TypeError su utente.uid, che a schermo
+    // diventava "non e' riuscito": un guasto finto al posto del motivo vero.
+    let errore = null;
+    try { await C.entra('K7RX-2MQP', null); } catch (e) { errore = e; }
+    // Si controlla DOVE ci si ferma, non solo che ci si fermi: qui in Node
+    // entra() senza il controllo cadrebbe comunque, prima, sul caricamento
+    // dell'SDK da gstatic — e una verifica "non esplode" passerebbe per il
+    // motivo sbagliato. Un sabotaggio l'ha mostrato.
+    ok(`entrare senza un utente si ferma subito, prima della rete (${errore && errore.message})`,
+      !!errore && errore.message === 'senza-utente');
+    ok(`e dice il motivo vero (${C.motivo(errore)})`, C.motivo(errore) === 'stanza.senzaLinea');
+
     // ---------- Il menu quando non sei in nessun campo ----------
     // Un menu pieno di sezioni vuote sembra un'app rotta, non un'app che
     // aspetta una cosa sola. La meta' che conta di piu' e' la prima: DENTRO

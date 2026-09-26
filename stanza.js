@@ -418,6 +418,14 @@
   // Entrare: ci si scrive da soli, portando l'impronta. A dire di no e'
   // Firestore, non questo codice.
   async function entra(codice, utente) {
+    // Senza un utente non c'e' un uid sotto cui scriversi fra i membri. Qui
+    // c'era un utente.uid secco, e un utente nullo lo faceva esplodere in un
+    // TypeError che arrivava a schermo come "non e' riuscito" — cioe' come un
+    // guasto, quando il motivo e' un altro. Succede quando l'accesso anonimo
+    // non e' ancora avvenuto: la sincronizzazione lo fa aprendo l'app, e se
+    // non c'era linea non l'ha fatto. Il controllo sta PRIMA di caricare
+    // l'SDK: senza utente non serve nemmeno provarci.
+    if (!utente || !utente.uid) throw new Error('senza-utente');
     const f = await sdk();
     const d = await init();
     const c = root.Stanza.normalizza(codice);
@@ -453,7 +461,10 @@
   function motivo(errore) {
     const codice = String((errore && (errore.code || errore.message)) || '');
     if (/permission-denied/.test(codice)) return 'stanza.codiceSbagliato';
-    if (/unavailable|network/.test(codice)) return 'stanza.senzaLinea';
+    // "senza-utente" vuol dire che l'accesso anonimo non c'e' stato, e il
+    // motivo quasi sempre e' la linea: si dice quello, che l'utente capisce e
+    // puo' risolvere da solo, invece di un "non e' riuscito" che sa di guasto.
+    if (/unavailable|network|senza-utente/.test(codice)) return 'stanza.senzaLinea';
     if (/firebase-non-configurato/.test(codice)) return 'stanza.senzaFirebase';
     if (/senza-impronta/.test(codice)) return 'stanza.senzaCaso';
     return 'stanza.nonRiuscito';

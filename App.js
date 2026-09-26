@@ -3363,6 +3363,12 @@ function App() {
   const [locked, setLocked] = useState(() => !isUnlocked());
   const [lockReason, setLockReason] = useState('');
   const [showSplash, setShowSplash] = useState(true);
+  // "Ho un codice" dalla schermata d'apertura: si passa oltre per questa
+  // volta, verso la scheda della stanza. Non si ricorda: se chi l'ha premuto
+  // poi entra davvero in un campo, la schermata non torna comunque (c'e' un
+  // campo); se torna indietro senza entrare, alla prossima apertura la
+  // ritrova — che e' giusto, perche' un campo ancora non ce l'ha.
+  const [saltaIngresso, setSaltaIngresso] = useState(false);
   const [activeTab, setActiveTab] = useState('calendario');
   const [currentDate, setCurrentDate] = useState(() => parseDate(defaultDateStr()));
   const [selectedDateStr, setSelectedDateStr] = useState(defaultDateStr());
@@ -6270,6 +6276,27 @@ function App() {
     }).catch(() => {});
   }, [activeTab, cloud.connected]);
 
+  // Fuori da un campo quasi tutte le aree parlano di dati che non esistono:
+  // il Calendario mostra una settimana vuota, i Saldi conti a zero. La regola
+  // — quali restano — e' pura e sta in stanza.js, provata senza browser.
+  //
+  // "Dentro un campo" NON vuol dire "hai scelto una stanza": vuol dire che un
+  // campo c'e', comunque tu ci sia arrivato. La stanza scelta, il codice
+  // salvato dalla volta scorsa, o quello predefinito di questa installazione
+  // — sono le stesse tre strade da cui la sincronizzazione prende il codice
+  // venti righe piu' su, e devono restare le stesse: se il menu e i dati non
+  // fossero d'accordo su dove sei, l'app mostrerebbe un campo vuoto mentre ne
+  // sta scrivendo un altro.
+  //
+  // Definirlo come "hai scelto una stanza" ha fatto diventare rosse
+  // cinquantasei prove in un colpo, e avevano ragione loro: un'app con dentro
+  // un campo e' lo stato normale, non uno strano.
+  //
+  // Con le stanze spente (la versione privata) si e' sempre dentro: li' il
+  // campo c'e' per costruzione e non c'e' niente da nascondere.
+  const codiceInGioco = stanzaStato.stanza && stanzaStato.stanza.codice || window.CloudSync && window.CloudSync.savedCode() || window.CAMP_CODE_DEFAULT || '';
+  const dentroUnCampo = !FEATURES.rooms || !!codiceInGioco;
+
   // ---------- Render ----------
   // Il blocco viene prima di tutto: senza password non si vede nulla.
   if (locked) return /*#__PURE__*/React.createElement(LockScreen, {
@@ -6298,6 +6325,22 @@ function App() {
     }, BRAND.splashTagline), /*#__PURE__*/React.createElement("p", {
       className: "absolute bottom-4 left-0 right-0 text-center text-minuto tracking-wide text-salvia/70 px-6"
     }, BRAND.credits));
+  }
+
+  // La schermata d'apertura: nessun account vero E nessun campo. Chi ha una
+  // delle due cose passa oltre — vedi src/88-scheda-ingresso.jsx per il
+  // perche'. Anonimo conta come "senza account": e' l'accesso che la
+  // sincronizzazione fa da sola aprendo l'app, non una scelta della persona.
+  const senzaAccount = account.stato === 'ospite' || account.stato === 'anonimo';
+  if (FEATURES.rooms && FEATURES.auth && senzaAccount && !dentroUnCampo && !saltaIngresso) {
+    return schermataIngresso({
+      account,
+      onCodice: () => {
+        setSaltaIngresso(true);
+        stanzaStato.setModo('entra');
+        setActiveTab('impostazioni');
+      }
+    });
   }
 
   // I titoli delle aree passano dal dizionario. Si ricalcolano a ogni disegno
@@ -6343,27 +6386,6 @@ function App() {
     title: L.t('menu.altro'),
     items: ['gioco', 'archivio', 'guida', 'impostazioni']
   }];
-
-  // Fuori da un campo quasi tutte le aree parlano di dati che non esistono:
-  // il Calendario mostra una settimana vuota, i Saldi conti a zero. La regola
-  // — quali restano — e' pura e sta in stanza.js, provata senza browser.
-  //
-  // "Dentro un campo" NON vuol dire "hai scelto una stanza": vuol dire che un
-  // campo c'e', comunque tu ci sia arrivato. La stanza scelta, il codice
-  // salvato dalla volta scorsa, o quello predefinito di questa installazione
-  // — sono le stesse tre strade da cui la sincronizzazione prende il codice
-  // venti righe piu' su, e devono restare le stesse: se il menu e i dati non
-  // fossero d'accordo su dove sei, l'app mostrerebbe un campo vuoto mentre ne
-  // sta scrivendo un altro.
-  //
-  // Definirlo come "hai scelto una stanza" ha fatto diventare rosse
-  // cinquantasei prove in un colpo, e avevano ragione loro: un'app con dentro
-  // un campo e' lo stato normale, non uno strano.
-  //
-  // Con le stanze spente (la versione privata) si e' sempre dentro: li' il
-  // campo c'e' per costruzione e non c'e' niente da nascondere.
-  const codiceInGioco = stanzaStato.stanza && stanzaStato.stanza.codice || window.CloudSync && window.CloudSync.savedCode() || window.CAMP_CODE_DEFAULT || '';
-  const dentroUnCampo = !FEATURES.rooms || !!codiceInGioco;
   const GRUPPI_VISIBILI = window.Stanza ? window.Stanza.gruppiMenu(MENU_GROUPS, dentroUnCampo) : MENU_GROUPS;
 
   // Acquirente: si sceglie dai membri, non si scrive. Un nome digitato a mano
@@ -9143,109 +9165,9 @@ const schedaImpostazioni = ({
   className: "text-piccolo text-legno leading-snug mt-0.5"
 }, c.no))))), readyOk && /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic"
-}, L.t('pronto.tuttoBene')))), FEATURES.auth && /*#__PURE__*/React.createElement("div", {
-  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
-}, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
-}, L.t('auth.titolo')), account.stato === 'registrato' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-bosco leading-snug"
-}, frase('auth.entratoCome', window.Auth.nomeVisibile({
-  nome: account.utente && account.utente.nome,
-  email: account.utente && account.utente.email
-}))), /*#__PURE__*/React.createElement("button", {
-  onClick: account.esci,
-  disabled: account.occupato,
-  className: bottone('secondario', 'normale', 'w-full')
-}, L.t('auth.esci'))), account.stato === 'daVerificare' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-legno leading-snug"
-}, frase('auth.daVerificare', account.utente && account.utente.email || '')), /*#__PURE__*/React.createElement("div", {
-  className: "flex gap-2"
-}, /*#__PURE__*/React.createElement("button", {
-  onClick: account.controllaVerifica,
-  disabled: account.occupato,
-  className: bottone('primario', 'normale', 'flex-1')
-}, L.t('auth.hoVerificato')), /*#__PURE__*/React.createElement("button", {
-  onClick: account.rimandaVerifica,
-  disabled: account.occupato,
-  className: bottone('secondario', 'normale', 'flex-1')
-}, L.t('auth.rimandaEmail'))), /*#__PURE__*/React.createElement("button", {
-  onClick: account.esci,
-  disabled: account.occupato,
-  className: bottone('testuale', 'minuscolo', 'w-full')
-}, L.t('auth.esci'))), (account.stato === 'ospite' || account.stato === 'anonimo') && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-gray-500 leading-snug"
-}, frase('auth.aCosaServe')), /*#__PURE__*/React.createElement("button", {
-  onClick: account.entraConGoogle,
-  disabled: account.occupato,
-  className: bottone('primario', 'normale', 'w-full')
-}, L.t('auth.conGoogle')), !account.modo ? /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center gap-2"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "flex-grow h-px bg-salvia/30"
-}), /*#__PURE__*/React.createElement("span", {
-  className: "text-minuto uppercase tracking-widest text-gray-400 shrink-0"
-}, L.t('auth.oppure')), /*#__PURE__*/React.createElement("span", {
-  className: "flex-grow h-px bg-salvia/30"
-})) : null, !account.modo && /*#__PURE__*/React.createElement("div", {
-  className: "flex gap-2"
-}, /*#__PURE__*/React.createElement("button", {
-  onClick: () => account.setModo('entra'),
-  className: bottone('secondario', 'normale', 'flex-1')
-}, L.t('auth.haiGiaAccount')), /*#__PURE__*/React.createElement("button", {
-  onClick: () => account.setModo('registra'),
-  className: bottone('secondario', 'normale', 'flex-1')
-}, L.t('auth.creaAccount'))), account.modo && /*#__PURE__*/React.createElement("div", {
-  className: "space-y-2 pt-1"
-}, account.modo === 'registra' && /*#__PURE__*/React.createElement("div", {
-  className: "grid grid-cols-2 gap-2"
-}, /*#__PURE__*/React.createElement("input", {
-  type: "text",
-  value: account.nome,
-  onChange: e => account.setNome(e.target.value),
-  placeholder: L.t('auth.nome'),
-  autoComplete: "given-name",
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-}), /*#__PURE__*/React.createElement("input", {
-  type: "text",
-  value: account.cognome,
-  onChange: e => account.setCognome(e.target.value),
-  placeholder: L.t('auth.cognome'),
-  autoComplete: "family-name",
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-})), /*#__PURE__*/React.createElement("input", {
-  type: "email",
-  inputMode: "email",
-  value: account.email,
-  onChange: e => account.setEmail(e.target.value),
-  placeholder: L.t('auth.email'),
-  autoComplete: "email",
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-}), /*#__PURE__*/React.createElement("input", {
-  type: "password",
-  value: account.password,
-  onChange: e => account.setPassword(e.target.value),
-  onKeyDown: e => e.key === 'Enter' && (account.modo === 'entra' ? account.entraConEmail() : account.registrati()),
-  placeholder: L.t('auth.password'),
-  autoComplete: account.modo === 'entra' ? 'current-password' : 'new-password',
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-}), /*#__PURE__*/React.createElement("div", {
-  className: "flex gap-2"
-}, /*#__PURE__*/React.createElement("button", {
-  onClick: account.chiudi,
-  className: bottone('testuale', 'normale', 'flex-1')
-}, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
-  onClick: account.modo === 'entra' ? account.entraConEmail : account.registrati,
-  disabled: account.occupato,
-  className: bottone('primario', 'normale', 'flex-1')
-}, L.t(account.modo === 'entra' ? 'auth.entra' : 'auth.registrati'))), account.modo === 'entra' && /*#__PURE__*/React.createElement("button", {
-  onClick: account.reimposta,
-  disabled: account.occupato,
-  className: bottone('testuale', 'minuscolo', 'w-full')
-}, L.t('auth.passwordDimenticata')))), account.problema && /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo font-bold text-red-700 leading-snug"
-}, L.t(account.problema, typeof window !== 'undefined' ? window.location.hostname : '')), account.fatto && /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-bosco leading-snug"
-}, L.t(account.fatto))), FEATURES.rooms && /*#__PURE__*/React.createElement("div", {
+}, L.t('pronto.tuttoBene')))), FEATURES.auth && schedaAccount({
+  account
+}), FEATURES.rooms && /*#__PURE__*/React.createElement("div", {
   className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
@@ -9823,5 +9745,173 @@ const schedaCompiti = ({
     className: "text-piccolo text-fuoco italic leading-snug px-1"
   }, L.t('compiti.senzaMembri')));
 };
+// ---------- L'ingresso ----------
+// Due pezzi, e il secondo esiste per via del primo.
+//
+// schedaAccount e' la tessera dell'account — entrare con Google, con email e
+// password, registrarsi — che fino al 26 settembre 2026 stava soltanto in
+// fondo alle Impostazioni. E' uscita di li' quando e' nata la schermata
+// d'apertura, che deve mostrare la STESSA tessera: due copie dello stesso
+// modulo di accesso divergono alla prima correzione, e un difetto riparato
+// in una resta vivo nell'altra. Lo spostamento e' verificato col confronto
+// del DOM: Impostazioni e' identica al carattere a com'era prima.
+//
+// Il titolo e' facoltativo per un motivo solo: sulla schermata d'apertura la
+// parola "Account" sopra i bottoni non dice niente che il logo non dica gia'.
+const schedaAccount = ({
+  account,
+  senzaTitolo
+}) => /*#__PURE__*/React.createElement("div", {
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+}, !senzaTitolo && /*#__PURE__*/React.createElement("h3", {
+  className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
+}, L.t('auth.titolo')), account.stato === 'registrato' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-bosco leading-snug"
+}, frase('auth.entratoCome', window.Auth.nomeVisibile({
+  nome: account.utente && account.utente.nome,
+  email: account.utente && account.utente.email
+}))), /*#__PURE__*/React.createElement("button", {
+  onClick: account.esci,
+  disabled: account.occupato,
+  className: bottone('secondario', 'normale', 'w-full')
+}, L.t('auth.esci'))), account.stato === 'daVerificare' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-legno leading-snug"
+}, frase('auth.daVerificare', account.utente && account.utente.email || '')), /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: account.controllaVerifica,
+  disabled: account.occupato,
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t('auth.hoVerificato')), /*#__PURE__*/React.createElement("button", {
+  onClick: account.rimandaVerifica,
+  disabled: account.occupato,
+  className: bottone('secondario', 'normale', 'flex-1')
+}, L.t('auth.rimandaEmail'))), /*#__PURE__*/React.createElement("button", {
+  onClick: account.esci,
+  disabled: account.occupato,
+  className: bottone('testuale', 'minuscolo', 'w-full')
+}, L.t('auth.esci'))), (account.stato === 'ospite' || account.stato === 'anonimo') && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-gray-500 leading-snug"
+}, frase('auth.aCosaServe')), /*#__PURE__*/React.createElement("button", {
+  onClick: account.entraConGoogle,
+  disabled: account.occupato,
+  className: bottone('primario', 'normale', 'w-full')
+}, L.t('auth.conGoogle')), !account.modo ? /*#__PURE__*/React.createElement("div", {
+  className: "flex items-center gap-2"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "flex-grow h-px bg-salvia/30"
+}), /*#__PURE__*/React.createElement("span", {
+  className: "text-minuto uppercase tracking-widest text-gray-400 shrink-0"
+}, L.t('auth.oppure')), /*#__PURE__*/React.createElement("span", {
+  className: "flex-grow h-px bg-salvia/30"
+})) : null, !account.modo && /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: () => account.setModo('entra'),
+  className: bottone('secondario', 'normale', 'flex-1')
+}, L.t('auth.haiGiaAccount')), /*#__PURE__*/React.createElement("button", {
+  onClick: () => account.setModo('registra'),
+  className: bottone('secondario', 'normale', 'flex-1')
+}, L.t('auth.creaAccount'))), account.modo && /*#__PURE__*/React.createElement("div", {
+  className: "space-y-2 pt-1"
+}, account.modo === 'registra' && /*#__PURE__*/React.createElement("div", {
+  className: "grid grid-cols-2 gap-2"
+}, /*#__PURE__*/React.createElement("input", {
+  type: "text",
+  value: account.nome,
+  onChange: e => account.setNome(e.target.value),
+  placeholder: L.t('auth.nome'),
+  autoComplete: "given-name",
+  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+}), /*#__PURE__*/React.createElement("input", {
+  type: "text",
+  value: account.cognome,
+  onChange: e => account.setCognome(e.target.value),
+  placeholder: L.t('auth.cognome'),
+  autoComplete: "family-name",
+  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+})), /*#__PURE__*/React.createElement("input", {
+  type: "email",
+  inputMode: "email",
+  value: account.email,
+  onChange: e => account.setEmail(e.target.value),
+  placeholder: L.t('auth.email'),
+  autoComplete: "email",
+  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+}), /*#__PURE__*/React.createElement("input", {
+  type: "password",
+  value: account.password,
+  onChange: e => account.setPassword(e.target.value),
+  onKeyDown: e => e.key === 'Enter' && (account.modo === 'entra' ? account.entraConEmail() : account.registrati()),
+  placeholder: L.t('auth.password'),
+  autoComplete: account.modo === 'entra' ? 'current-password' : 'new-password',
+  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+}), /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: account.chiudi,
+  className: bottone('testuale', 'normale', 'flex-1')
+}, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
+  onClick: account.modo === 'entra' ? account.entraConEmail : account.registrati,
+  disabled: account.occupato,
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t(account.modo === 'entra' ? 'auth.entra' : 'auth.registrati'))), account.modo === 'entra' && /*#__PURE__*/React.createElement("button", {
+  onClick: account.reimposta,
+  disabled: account.occupato,
+  className: bottone('testuale', 'minuscolo', 'w-full')
+}, L.t('auth.passwordDimenticata')))), account.problema && /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo font-bold text-red-700 leading-snug"
+}, L.t(account.problema, typeof window !== 'undefined' ? window.location.hostname : '')), account.fatto && /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-bosco leading-snug"
+}, L.t(account.fatto)));
+
+// ---------- La schermata d'apertura ----------
+// Quello che vede chi apre Camp Ops per la prima volta: il logo, e le strade
+// per entrare. Compare solo quando TUTTE e due le cose mancano — un account
+// vero e un campo — perche' ognuna delle due basta a sapere chi sei o dove
+// vai:
+//
+//   - chi e' gia' entrato con Google o con email resta dentro, sempre: la
+//     sessione la tiene Firebase, e questa schermata non la chiede di nuovo;
+//   - chi ha gia' un campo (una stanza scelta, un codice salvato) non deve
+//     ripassare di qui a ogni apertura: sarebbe un muro davanti a una porta
+//     che ha gia' la chiave.
+//
+// La terza strada, "Ho un codice", e' la regola scritta in CLAUDE.md —
+// l'account non e' un muro: per PARTECIPARE al campo di un altro basta il
+// codice che ti ha mandato. L'account serve a creare e amministrare. Se la
+// regola cambia (registrazione per tutti), si toglie questo bottone e basta:
+// il resto della schermata non dipende da lui.
+//
+const schermataIngresso = ({
+  account,
+  onCodice
+}) =>
+/*#__PURE__*/
+// data-schermata: il logo da solo non la distingue — c'e' anche nella
+// schermata di benvenuto che la precede e nel cassetto del menu dopo — e
+// una prova che cercava il logo misurava la schermata sbagliata.
+React.createElement("div", {
+  "data-schermata": "ingresso",
+  className: "min-h-screen bg-carta text-bosco flex flex-col items-center px-5 pt-10 pb-10"
+}, /*#__PURE__*/React.createElement("img", {
+  src: "./logo.png",
+  alt: BRAND.appTitle,
+  className: "w-52 h-52 object-contain mix-blend-darken"
+}), /*#__PURE__*/React.createElement("p", {
+  className: "-mt-2 text-normale text-legno text-center max-w-xs leading-snug"
+}, BRAND.splashTagline), /*#__PURE__*/React.createElement("div", {
+  className: "w-full max-w-sm mt-8"
+}, schedaAccount({
+  account,
+  senzaTitolo: true
+})), /*#__PURE__*/React.createElement("div", {
+  className: "w-full max-w-sm mt-6 text-center"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: onCodice,
+  className: bottone('secondario', 'normale', 'w-full')
+}, L.t('ingresso.hoUnCodice')), /*#__PURE__*/React.createElement("p", {
+  className: "mt-2 text-piccolo text-salvia leading-snug"
+}, L.t('ingresso.hoUnCodiceNota'))));
 const root = createRoot(document.getElementById('root'));
 root.render(/*#__PURE__*/React.createElement(App, null));

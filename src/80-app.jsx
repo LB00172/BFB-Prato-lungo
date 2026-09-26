@@ -13,6 +13,12 @@ function App() {
   const [locked, setLocked] = useState(() => !isUnlocked());
   const [lockReason, setLockReason] = useState('');
   const [showSplash, setShowSplash] = useState(true);
+  // "Ho un codice" dalla schermata d'apertura: si passa oltre per questa
+  // volta, verso la scheda della stanza. Non si ricorda: se chi l'ha premuto
+  // poi entra davvero in un campo, la schermata non torna comunque (c'e' un
+  // campo); se torna indietro senza entrare, alla prossima apertura la
+  // ritrova — che e' giusto, perche' un campo ancora non ce l'ha.
+  const [saltaIngresso, setSaltaIngresso] = useState(false);
   const [activeTab, setActiveTab] = useState('calendario');
   const [currentDate, setCurrentDate] = useState(() => parseDate(defaultDateStr()));
   const [selectedDateStr, setSelectedDateStr] = useState(defaultDateStr());
@@ -2474,6 +2480,29 @@ function App() {
     }).catch(() => {});
   }, [activeTab, cloud.connected]);
 
+  // Fuori da un campo quasi tutte le aree parlano di dati che non esistono:
+  // il Calendario mostra una settimana vuota, i Saldi conti a zero. La regola
+  // — quali restano — e' pura e sta in stanza.js, provata senza browser.
+  //
+  // "Dentro un campo" NON vuol dire "hai scelto una stanza": vuol dire che un
+  // campo c'e', comunque tu ci sia arrivato. La stanza scelta, il codice
+  // salvato dalla volta scorsa, o quello predefinito di questa installazione
+  // — sono le stesse tre strade da cui la sincronizzazione prende il codice
+  // venti righe piu' su, e devono restare le stesse: se il menu e i dati non
+  // fossero d'accordo su dove sei, l'app mostrerebbe un campo vuoto mentre ne
+  // sta scrivendo un altro.
+  //
+  // Definirlo come "hai scelto una stanza" ha fatto diventare rosse
+  // cinquantasei prove in un colpo, e avevano ragione loro: un'app con dentro
+  // un campo e' lo stato normale, non uno strano.
+  //
+  // Con le stanze spente (la versione privata) si e' sempre dentro: li' il
+  // campo c'e' per costruzione e non c'e' niente da nascondere.
+  const codiceInGioco = (stanzaStato.stanza && stanzaStato.stanza.codice)
+    || (window.CloudSync && window.CloudSync.savedCode())
+    || window.CAMP_CODE_DEFAULT || '';
+  const dentroUnCampo = !FEATURES.rooms || !!codiceInGioco;
+
   // ---------- Render ----------
   // Il blocco viene prima di tutto: senza password non si vede nulla.
   if (locked) return <LockScreen reason={lockReason} onUnlock={() => { setLockReason(''); setLocked(false); }} />;
@@ -2495,6 +2524,22 @@ function App() {
         </p>
       </div>
     );
+  }
+
+  // La schermata d'apertura: nessun account vero E nessun campo. Chi ha una
+  // delle due cose passa oltre — vedi src/88-scheda-ingresso.jsx per il
+  // perche'. Anonimo conta come "senza account": e' l'accesso che la
+  // sincronizzazione fa da sola aprendo l'app, non una scelta della persona.
+  const senzaAccount = account.stato === 'ospite' || account.stato === 'anonimo';
+  if (FEATURES.rooms && FEATURES.auth && senzaAccount && !dentroUnCampo && !saltaIngresso) {
+    return schermataIngresso({
+      account,
+      onCodice: () => {
+        setSaltaIngresso(true);
+        stanzaStato.setModo('entra');
+        setActiveTab('impostazioni');
+      },
+    });
   }
 
   // I titoli delle aree passano dal dizionario. Si ricalcolano a ogni disegno
@@ -2533,28 +2578,6 @@ function App() {
     { title: L.t('menu.altro'), items: ['gioco', 'archivio', 'guida', 'impostazioni'] },
   ];
 
-  // Fuori da un campo quasi tutte le aree parlano di dati che non esistono:
-  // il Calendario mostra una settimana vuota, i Saldi conti a zero. La regola
-  // — quali restano — e' pura e sta in stanza.js, provata senza browser.
-  //
-  // "Dentro un campo" NON vuol dire "hai scelto una stanza": vuol dire che un
-  // campo c'e', comunque tu ci sia arrivato. La stanza scelta, il codice
-  // salvato dalla volta scorsa, o quello predefinito di questa installazione
-  // — sono le stesse tre strade da cui la sincronizzazione prende il codice
-  // venti righe piu' su, e devono restare le stesse: se il menu e i dati non
-  // fossero d'accordo su dove sei, l'app mostrerebbe un campo vuoto mentre ne
-  // sta scrivendo un altro.
-  //
-  // Definirlo come "hai scelto una stanza" ha fatto diventare rosse
-  // cinquantasei prove in un colpo, e avevano ragione loro: un'app con dentro
-  // un campo e' lo stato normale, non uno strano.
-  //
-  // Con le stanze spente (la versione privata) si e' sempre dentro: li' il
-  // campo c'e' per costruzione e non c'e' niente da nascondere.
-  const codiceInGioco = (stanzaStato.stanza && stanzaStato.stanza.codice)
-    || (window.CloudSync && window.CloudSync.savedCode())
-    || window.CAMP_CODE_DEFAULT || '';
-  const dentroUnCampo = !FEATURES.rooms || !!codiceInGioco;
   const GRUPPI_VISIBILI = window.Stanza
     ? window.Stanza.gruppiMenu(MENU_GROUPS, dentroUnCampo)
     : MENU_GROUPS;

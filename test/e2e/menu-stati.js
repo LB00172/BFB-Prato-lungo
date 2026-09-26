@@ -15,7 +15,12 @@
 // La meta' che conta di piu' e' la SECONDA: dentro un campo il menu deve
 // restare intero. Una prova che controlla solo che fuori sia corto passerebbe
 // anche con un menu sempre vuoto.
-const { apri, ok, fine } = require('../lib/app');
+const { apri, ingressoFinto, ok, fine } = require('../lib/app');
+
+// Chi vede il menu a tre voci e' chi E' ENTRATO ma un campo non ce l'ha
+// ancora. Senza account e senza campo, dal 26 settembre, non si arriva al
+// menu: c'e' prima la schermata d'apertura (e2e/ingresso).
+const REGISTRATO = { uid: 'u-1', email: 'anna@example.com', nome: 'Anna Rossi', isAnonimo: false, emailVerificata: true };
 
 const vociDelMenu = async (page) => {
   await page.locator('header button').first().click();
@@ -30,23 +35,9 @@ const vociDelMenu = async (page) => {
   // dopo con un page.evaluate, l'app l'avrebbe gia' letta e il menu sarebbe
   // gia' stato disegnato (CLAUDE.md, il sabotaggio che non produceva rosso).
   const fuori = await apri({
-    // Non basta togliere la stanza: un campo c'e' anche quando arriva dal
-    // codice salvato o da quello predefinito, ed e' giusto cosi' — sono le
-    // stesse tre strade da cui la sincronizzazione prende il codice. Per
-    // essere DAVVERO senza campo vanno tolte tutte e tre.
-    initScript: () => {
-      try {
-        localStorage.removeItem('cambusa_stanza');
-        localStorage.removeItem('cambusa_camp_code');
-        // Lo script di avvio gira PRIMA di firebase-config.js, che poi
-        // riassegna CAMP_CODE_DEFAULT: un'assegnazione qui verrebbe
-        // sovrascritta e la prova misurerebbe un'app che il campo ce l'ha.
-        // Si blocca la proprieta' invece di scriverla — lo stesso modo con
-        // cui le prove si installano un blocco loro.
-        Object.defineProperty(window, 'CAMP_CODE_DEFAULT',
-          { value: '', writable: false, configurable: true });
-      } catch (e) { /* niente */ }
-    },
+    // Le tre strade da cui arriva un campo si tolgono tutte e tre, e si
+    // parte con un utente registrato: e' lo stato che questo menu racconta.
+    initScript: [ingressoFinto, { utente: REGISTRATO, senzaCampo: true }],
     viewport: { width: 390, height: 900 },
   });
   const senza = await vociDelMenu(fuori.page);

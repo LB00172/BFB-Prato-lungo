@@ -100,6 +100,50 @@ function fine(browser) {
 // ---- Apertura dell'app --------------------------------------------------
 // Restituisce { browser, ctx, page, menu, errori }: "errori" raccoglie le
 // eccezioni JS della pagina, che nessun test deve produrre.
+// ---------- Un Firebase Authentication finto, e un'app senza campo ----------
+// Serve alle prove che guardano COSA vede chi entra: la schermata d'apertura,
+// il menu. Firebase vero qui non c'e' — richiederebbe provider accesi e
+// domini autorizzati — e comunque non e' lui l'oggetto della prova.
+//
+// `utente` e' quello con cui si parte: null (ospite), o un oggetto nella forma
+// di auth.js (isAnonimo, nome, emailVerificata). `senzaCampo` toglie le TRE
+// strade da cui l'app prende un campo — la stanza scelta, il codice salvato e
+// quello predefinito — perche' toglierne una sola lascia le altre due, e la
+// prova misurerebbe un'app che il campo ce l'ha.
+//
+// Si usa come initScript: [ingressoFinto, { utente, senzaCampo }].
+function ingressoFinto(o) {
+  try {
+    if (o.senzaCampo) {
+      localStorage.removeItem('cambusa_stanza');
+      localStorage.removeItem('cambusa_camp_code');
+      // Lo script d'avvio gira PRIMA di firebase-config.js, che poi riassegna:
+      // si blocca la proprieta' invece di scriverla.
+      Object.defineProperty(window, 'CAMP_CODE_DEFAULT', { value: '', writable: false, configurable: true });
+    }
+  } catch (e) { /* niente */ }
+  window.__auth = { utente: o.utente || null, chiamate: [] };
+  let osservatori = [];
+  const annuncia = () => osservatori.forEach((cb) => cb(window.__auth.utente ? Object.assign({}, window.__auth.utente) : null));
+  Object.defineProperty(window, 'AuthCloud', {
+    configurable: true,
+    get() { return window.__ac; },
+    set() { /* il modulo vero si assegna e viene ignorato: comanda il finto */ },
+  });
+  window.__ac = {
+    disponibile: () => true,
+    utente: () => window.__auth.utente,
+    osserva: (cb) => { osservatori.push(cb); cb(window.__auth.utente); return () => { osservatori = osservatori.filter((x) => x !== cb); }; },
+    conGoogle: async () => {
+      window.__auth.chiamate.push('google');
+      window.__auth.utente = { uid: 'g-1', email: 'tizio@gmail.com', nome: 'Tizio Caio', isAnonimo: false, emailVerificata: true };
+      annuncia();
+      return window.__auth.utente;
+    },
+    esci: async () => { window.__auth.chiamate.push('esci'); window.__auth.utente = null; annuncia(); },
+  };
+}
+
 async function apri(opzioni) {
   const o = opzioni || {};
   const { chromium: pw } = require('playwright-core');
@@ -125,7 +169,11 @@ async function apri(opzioni) {
   page.on('dialog', (d) => d.accept());
 
   await page.goto(URL_APP + '/index.html', { waitUntil: 'load' });
-  await page.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
+  // Di solito si aspetta il menu, cioe' l'app pronta. Ma dal 26 settembre
+  // c'e' una schermata che viene PRIMA dell'app — quella d'apertura, per chi
+  // non ha ne' un account ne' un campo — e li' il menu non c'e' apposta: una
+  // prova che la guarda dice lei cosa aspettare.
+  await page.waitForSelector(o.aspetta || 'button[aria-label="Menu"]', { timeout: 20000 });
 
   const menu = async (voce, ms) => {
     const t = ms || 30000;
@@ -195,4 +243,4 @@ async function scontriniSalvati(page, n, ms) {
   }
 }
 
-module.exports = { chromium, apri, ok, fine, attendi, scontriniSalvati, fotoSalvate, URL_APP, SBLOCCO, bloccoDiProva, PASSWORD_PROVA, BLOCCO_PROVA };
+module.exports = { chromium, apri, ingressoFinto, ok, fine, attendi, scontriniSalvati, fotoSalvate, URL_APP, SBLOCCO, bloccoDiProva, PASSWORD_PROVA, BLOCCO_PROVA };
