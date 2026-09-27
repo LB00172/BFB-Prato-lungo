@@ -357,8 +357,9 @@ l'utente condiviso, che è la strada 1.
 >
 > Resta un vincolo: `conti.js`, `presenze.js`, `sync-merge.js` e `allarmi.js`
 > **non devono divergere**. Un errore sui soldi corretto da una parte sola è un
-> errore ancora vivo dall'altra. Prima della pubblicazione va deciso come
-> tenerli uguali — oggi non c'è niente che se ne accorga.
+> errore ancora vivo dall'altra. Dal 22 settembre una prova se ne accorge:
+> l'elenco `UGUALI` in `unita/compilazione` confronta quei file con `main` a
+> ogni `npm test`.
 
 
 **Percorso tecnico:** PWA → **TWA (Trusted Web Activity)**, generata con
@@ -366,29 +367,94 @@ PWABuilder o Bubblewrap. L'app resta la stessa: il pacchetto è un guscio che
 carica la PWA, quindi **gli aggiornamenti continuano a passare dal deploy web**
 senza ripubblicare sullo store ogni volta.
 
-Checklist:
+### Cosa chiede Google, tutto (verificato sulle norme il 27 settembre 2026)
 
-- [ ] Account Google Play Developer (**25 $ una tantum**).
-- [ ] `assetlinks.json` sul dominio per verificare la proprietà (rimuove la
-      barra del browser).
-- [ ] Icone e splash già presenti (`apple-touch-icon`, 192, 512).
-- [ ] **Privacy policy** pubblica (obbligatoria) + scheda "Sicurezza dei dati".
-- [ ] Percorso di **cancellazione account** (requisito Play).
+Diviso per chi lo fa. **Nessuna regola di Google chiede la registrazione**
+degli utenti: un'app usabile senza account è ammessa. Quello che segue è
+quello che chiede davvero.
+
+**L'account da sviluppatore** (Lorenzo)
+
+- [ ] Account Google Play Developer (**25 $ una tantum**) e verifica
+      dell'identità.
+- [ ] **Test chiuso: almeno 12 tester per 14 giorni di fila**, prima di
+      poter chiedere l'accesso alla produzione. Vale per gli account
+      personali creati dopo il 13 novembre 2023. *«Testers who opt in, test
+      for fewer than 14 days, and then opt out do not count»*: chi esce prima
+      non conta, e i giorni ripartono da capo per lui. **I venti del campo
+      2026 sono il gruppo di prova già pronto** — servono i loro account
+      Google e la pazienza di restare iscritti due settimane. Al momento di
+      chiedere la produzione Google fa domande su come è andato il test:
+      vale la pena raccogliere quello che dicono, che è anche la ricerca di
+      mercato di cui parla l'«ordine di lavoro».
+
+**Il pacchetto** (TWA, vedi sopra)
+
+- [ ] `assetlinks.json` sul dominio: verifica la proprietà e toglie la
+      barra del browser. Senza, l'app sembra un sito aperto dentro Chrome.
+- [ ] Il livello di API Android richiesto dall'anno in corso. Bubblewrap e
+      PWABuilder lo impostano da soli: va solo controllato prima di caricare.
+- [ ] Icone e splash: ci sono (`icon-192`, `icon-512`, `apple-touch-icon`).
+
+**Le dichiarazioni in Play Console**
+
+- [ ] **Informativa privacy — per TUTTE le app**, anche per quelle che non
+      raccolgono niente (*«Apps that do not access any personal and
+      sensitive user data must still submit a privacy policy»*). Va linkata
+      in Console **e** raggiungibile dentro l'app: una voce in Impostazioni.
+- [ ] **Scheda «Sicurezza dei dati».** Si dichiara quello che raccogliamo
+      davvero, e va guardato nel codice, non a memoria: nome e indirizzo
+      email (`users/<uid>`), le spese e le presenze che gli utenti scrivono,
+      **le foto degli scontrini**, la posizione del campo per il meteo.
+      Cifratura in transito: sì (Firestore). Se si possono cancellare: sì,
+      appena esiste il percorso qui sotto.
+- [ ] **Questionario di classificazione dei contenuti** (obbligatorio per
+      ogni app).
+- [ ] **Pubblico di destinazione.** Chi usa l'app sono gli adulti che
+      organizzano; i bambini compaiono solo come nomi nella lista dei
+      membri, non la usano. Va dichiarato così, e controllato con cura nella
+      compilazione: se il pubblico includesse minori di 13 anni si
+      applicherebbero le regole «Famiglie», che sono un'altra cosa.
+- [ ] **Accesso all'app per i revisori.** Creare un campo richiede un
+      account: in Console vanno date istruzioni e un account di prova, o la
+      revisione si ferma alla schermata d'apertura.
+
+**La cancellazione dell'account** (lavoro nostro)
+
+- [ ] Obbligatoria perché l'app permette di creare un account — *anche se
+      una parte si usa senza*, dicono le norme. Servono **due** strade:
+      una **dentro l'app** (in Impostazioni, vicino all'account) e una
+      **pagina web** dove chiederla senza avere l'app installata (basta una
+      pagina statica su Vercel).
+- [ ] Cosa cancella: il profilo `users/<uid>`, le schede `members/<uid>`
+      nelle stanze, l'utente in Firebase Authentication. **La domanda vera è
+      la stanza**: chi è proprietario di un campo non può sparire lasciandolo
+      senza padrone (le regole Firestore lo vietano già). Prima di cancellare
+      va passato il testimone, o cancellata la stanza — ed è il § 1 che lo
+      aveva già scritto: *è una domanda sulla room, non sull'account*.
+
+**Il marchio**
+
 - [x] **Nome e marchio: Camp Ops** (21 settembre). `APP_CONFIG.brand`,
       `<title>`, `manifest.json` e le quattro immagini (`logo.png`,
       `icon-512`, `icon-192`, `apple-touch-icon`) sono ricavate dal logo a
       2000 px in `marca/`. Il prefisso di `CACHE_NAME` è diventato
       `camp-ops-`: due nomi, due cache, due app.
-- [ ] **La tavolozza non è ancora quella del logo.** Il logo è verde petrolio,
-      arancione e crema; l'app è verde scuro `#2D392C` su `#F0F4F1`. Non
-      stonano, ma non sono la stessa cosa. Rifare i colori è lavoro del § 13
-      (c'è `RICOGNIZIONE-UI.md`), e il confronto del DOM lì è cieco: serve
-      guardare quello che disegna il browser.
+- [x] **La tavolozza è quella del logo** (22–23 settembre): crema, teal,
+      terracotta, in otto token chiamati per nome. Scelta sui numeri — la
+      prova `e2e/tavolozza` rifiutava ogni valore sotto soglia — e il debito
+      di contrasto è sceso da ventuno coppie illeggibili a una (il verde di
+      WhatsApp, che è loro). Icone disegnate al posto delle emoji nel menu e
+      nella Guida; le altre emoji possono solo scendere.
 - [ ] **Il gioco e Bandy vanno tolti da questo ramo.** `src/60-gioco.jsx`,
       `src/75-usa-gioco.jsx` e `bandy.png` sono roba della Brigata e non
       devono finire sullo store. Togliere un sorgente da `build.js` è facile;
       quello che costa sono le prove che lo guardano (`e2e/gioco`,
       `e2e/livelli`, e la classifica dentro la sincronizzazione).
+
+Fonti: [account deletion](https://support.google.com/googleplay/android-developer/answer/13327111),
+[User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311),
+[testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465).
 
 **Su Apple App Store**: Apple rifiuta di norma i "wrapper" di siti web
 (linea guida 4.2). Sull'ecosistema iOS la strada realistica resta
