@@ -336,6 +336,24 @@ if (!S) { fine(); }
       !!errore && errore.message === 'senza-utente');
     ok(`e dice il motivo vero (${C.motivo(errore)})`, C.motivo(errore) === 'stanza.senzaLinea');
 
+    // 4. RIENTRARE. Chi e' gia' membro e rimette il codice veniva respinto:
+    // riscriversi la scheda e' una modifica, e le modifiche le fa solo il
+    // proprietario (test/regole § 5-quater). Si rilegge prima, e il risultato
+    // si legge cosi'.
+    ok('scheda riletta ed esistente: sei gia\' dentro, non si scrive',
+      S.esitoRilettura({ esiste: true }, null) === 'gia-dentro');
+    ok('lettura negata: non sei membro, ti scrivi',
+      S.esitoRilettura(null, { code: 'permission-denied' }) === 'scriviti');
+    ok('riletta ma vuota: ti scrivi',
+      S.esitoRilettura({ esiste: false }, null) === 'scriviti');
+    // La meta' che protegge di piu': da offline NON si scrive. Il setDoc
+    // andrebbe in coda e le regole lo respingerebbero al ritorno della rete,
+    // in silenzio.
+    ok('senza linea non ci si scrive alla cieca',
+      S.esitoRilettura(null, { code: 'unavailable' }) === 'rilancia');
+    ok('e nemmeno davanti a un guasto mai visto',
+      S.esitoRilettura(null, new Error('boh')) === 'rilancia');
+
     // ---------- Il menu quando non sei in nessun campo ----------
     // Un menu pieno di sezioni vuote sembra un'app rotta, non un'app che
     // aspetta una cosa sola. La meta' che conta di piu' e' la prima: DENTRO

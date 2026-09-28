@@ -218,6 +218,24 @@
     return voluto;
   }
 
+  // ---------- Quando il collegamento a Google viene rifiutato ----------
+  // "Tieni il tuo posto" collega la sessione anonima a un account Google
+  // tenendo lo stesso uid. Ma se quell'account Google esiste GIA' — di solito
+  // perche' la persona l'ha collegato sul telefono di prima — Firebase rifiuta
+  // il collegamento: un account Google non puo' stare su due uid.
+  //
+  // In quel caso la cosa giusta e' diventare quell'account, non restare
+  // anonimi con un messaggio d'errore: e' la persona stessa che torna. Il
+  // posto nella stanza lo ritrova rientrando col codice gia' salvato sul
+  // telefono (usaStanza.riagganciaStanza), e rientrare adesso non scrive
+  // niente se era gia' dentro (Stanza.esitoRilettura).
+  //
+  // Ogni altro rifiuto resta un errore: la finestra chiusa, la rete, un
+  // dominio non autorizzato non sono "un altro account che esiste".
+  function passaAllAccountEsistente(errore) {
+    return String((errore && errore.code) || '') === 'auth/credential-already-in-use';
+  }
+
   // Il nome da mostrare: nome e cognome se ci sono, se no la parte davanti
   // alla chiocciola. Mai l'indirizzo intero — finisce nei saldi, accanto a
   // quanto deve, e l'indirizzo di tutti non e' un dato da spargere.
@@ -243,6 +261,7 @@
     motivo: motivo,
     profilo: profilo,
     spezzaNome: spezzaNome,
+    passaAllAccountEsistente: passaAllAccountEsistente,
     profiloDaSalvare: profiloDaSalvare,
     nomeVisibile: nomeVisibile,
   };
@@ -369,7 +388,17 @@
     const a = await init();
     const provider = new f.GoogleAuthProvider();
     if (root.Auth && root.Auth.promuovibile(nostro(a.currentUser))) {
-      await f.linkWithPopup(a.currentUser, provider);
+      try {
+        await f.linkWithPopup(a.currentUser, provider);
+      } catch (e) {
+        // Quell'account Google esiste gia': si diventa lui, con la credenziale
+        // che Firebase restituisce dentro l'errore — niente seconda finestra.
+        const credenziale = root.Auth.passaAllAccountEsistente(e)
+          && f.GoogleAuthProvider.credentialFromError
+          && f.GoogleAuthProvider.credentialFromError(e);
+        if (!credenziale) throw e;
+        await f.signInWithCredential(a, credenziale);
+      }
     } else {
       await f.signInWithPopup(a, provider);
     }

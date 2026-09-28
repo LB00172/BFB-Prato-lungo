@@ -3036,9 +3036,15 @@ const usaAccount = () => {
     setOccupato(true);
     pulisci();
     try {
-      await azione(ac);
+      // Si restituisce quello che l'azione restituisce — l'utente, per
+      // conGoogle — o true se non restituisce niente. Chi controlla solo che
+      // sia riuscita (if (await prova(...))) non vede differenze; "tieni il
+      // tuo posto" invece ha bisogno di sapere CHI si e' diventati, per
+      // rientrare nella stanza con l'uid giusto. Restituiva sempre true, e il
+      // rientro partiva a nome di un utente che non esisteva.
+      const esito = await azione(ac);
       if (dopo) setFatto(dopo);
-      return true;
+      return esito || true;
     } catch (e) {
       // motivo() restituisce null quando non c'e' niente da dire (la finestra
       // di Google chiusa con la X e' un ripensamento, non un guasto).
@@ -3299,6 +3305,21 @@ const usaStanza = () => {
     pulisci();
   };
 
+  // Rientrare nella stanza in cui si e' gia', con il codice salvato sul
+  // telefono, a nome dell'utente che si e' adesso. Serve a "tieni il tuo
+  // posto" quando il collegamento a Google fa DIVENTARE un altro account
+  // (quello gia' usato sul telefono di prima): il nuovo uid la scheda nella
+  // stanza puo' non averla ancora. Se ce l'ha, entra() non scrive niente.
+  //
+  // Solo su richiesta, mai da un effetto che scatta a ogni cambio d'identita':
+  // chi entra con un altro account su questo telefono non deve ritrovarsi
+  // iscritto al campo di chi c'era prima senza averlo chiesto.
+  const riagganciaStanza = async utente => {
+    if (!stanza || !stanza.codice) return;
+    const cod = await prova(c => c.entra(stanza.codice, utente));
+    if (cod) setFatto('stanza.postoTenuto');
+  };
+
   // Il link da mandare agli altri. Si costruisce sull'indirizzo di questa
   // pagina senza quello che c'era dopo ? o # — ci pensa linkInvito.
   const linkDaMandare = () => {
@@ -3346,7 +3367,8 @@ const usaStanza = () => {
     invito,
     accettaInvito,
     rifiutaInvito,
-    linkDaMandare
+    linkDaMandare,
+    riagganciaStanza
   };
 };
 function App() {
@@ -9186,7 +9208,21 @@ const schedaImpostazioni = ({
   className: bottone('primario', 'normale', 'flex-1')
 }, L.t('stanza.accettaInvito')))), stanzaStato.stanza ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-bosco leading-snug"
-}, frase('stanza.entrato', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice))), /*#__PURE__*/React.createElement("div", {
+}, frase('stanza.entrato', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice))), FEATURES.auth && (account.stato === 'ospite' || account.stato === 'anonimo') && /*#__PURE__*/React.createElement("div", {
+  "data-riquadro": "tieni-il-posto",
+  className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
+}, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-bosco leading-snug"
+}, frase('stanza.tieniIlPosto')), /*#__PURE__*/React.createElement("button", {
+  onClick: async () => {
+    const u = await account.entraConGoogle();
+    // Serve un utente VERO: un semplice "riuscito" non basta a
+    // sapere con quale uid rientrare.
+    if (u && u.uid && !u.isAnonimo) await stanzaStato.riagganciaStanza(u);
+  },
+  disabled: account.occupato || stanzaStato.occupato,
+  className: bottone('primario', 'normale', 'w-full')
+}, L.t('stanza.collegaGoogle'))), /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between gap-2 bg-carta/60 rounded p-2"
 }, /*#__PURE__*/React.createElement("span", {
   className: "font-mono text-medio tracking-widest text-bosco min-w-0 break-words"
@@ -9290,7 +9326,9 @@ const schedaImpostazioni = ({
   className: "text-piccolo font-bold text-red-700 leading-snug"
 }, L.t(stanzaStato.problema)), stanzaStato.fatto === 'stanza.creata' && stanzaStato.stanza && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-bosco leading-snug"
-}, frase('stanza.creata', Stanza.bello(stanzaStato.stanza.codice)))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
+}, frase('stanza.creata', Stanza.bello(stanzaStato.stanza.codice))), stanzaStato.fatto === 'stanza.postoTenuto' && /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-bosco leading-snug"
+}, L.t('stanza.postoTenuto'))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
   className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"

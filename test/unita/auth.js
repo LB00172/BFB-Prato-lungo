@@ -256,4 +256,18 @@ if (!A) { fine(); }
     A.profiloDaSalvare({ uid: 'x', email: '', displayName: '' }, null) === null);
 }
 
+// ---------- Quando il collegamento a Google viene rifiutato ----------
+// Il caso tipico di "tieni il tuo posto" sul secondo telefono: l'account
+// Google e' gia' legato al vecchio uid. Si diventa quell'account. Ma SOLO in
+// quel caso: la finestra chiusa o la rete che manca non sono un altro account
+// che esiste, e trattarli cosi' vorrebbe dire uscire dalla sessione anonima
+// per un motivo sbagliato.
+{
+  ok('account Google gia\' esistente: si passa a quello',
+    A.passaAllAccountEsistente({ code: 'auth/credential-already-in-use' }) === true);
+  ok('finestra chiusa: no', A.passaAllAccountEsistente({ code: 'auth/popup-closed-by-user' }) === false);
+  ok('rete che manca: no', A.passaAllAccountEsistente({ code: 'auth/network-request-failed' }) === false);
+  ok('e senza errore niente', A.passaAllAccountEsistente(null) === false);
+}
+
 fine();

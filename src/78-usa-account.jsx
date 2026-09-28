@@ -66,9 +66,15 @@ const usaAccount = () => {
     setOccupato(true);
     pulisci();
     try {
-      await azione(ac);
+      // Si restituisce quello che l'azione restituisce — l'utente, per
+      // conGoogle — o true se non restituisce niente. Chi controlla solo che
+      // sia riuscita (if (await prova(...))) non vede differenze; "tieni il
+      // tuo posto" invece ha bisogno di sapere CHI si e' diventati, per
+      // rientrare nella stanza con l'uid giusto. Restituiva sempre true, e il
+      // rientro partiva a nome di un utente che non esisteva.
+      const esito = await azione(ac);
       if (dopo) setFatto(dopo);
-      return true;
+      return esito || true;
     } catch (e) {
       // motivo() restituisce null quando non c'e' niente da dire (la finestra
       // di Google chiusa con la X e' un ripensamento, non un guasto).

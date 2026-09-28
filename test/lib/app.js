@@ -134,14 +134,50 @@ function ingressoFinto(o) {
     disponibile: () => true,
     utente: () => window.__auth.utente,
     osserva: (cb) => { osservatori.push(cb); cb(window.__auth.utente); return () => { osservatori = osservatori.filter((x) => x !== cb); }; },
+    // Come Firebase: da anonimo COLLEGA (lo stesso uid resta), a meno che
+    // quell'account Google non sia gia' usato altrove (`googleGiaUsato`) —
+    // allora si diventa lui, con il suo uid. La scelta di COSA fare in quel
+    // caso non sta qui: sta in Auth.passaAllAccountEsistente, provata da
+    // unita/auth. Il finto fa solo quello che Firebase farebbe.
     conGoogle: async () => {
-      window.__auth.chiamate.push('google');
-      window.__auth.utente = { uid: 'g-1', email: 'tizio@gmail.com', nome: 'Tizio Caio', isAnonimo: false, emailVerificata: true };
+      const prima = window.__auth.utente;
+      const collega = !!(prima && prima.isAnonimo && !o.googleGiaUsato);
+      window.__auth.chiamate.push(collega ? 'collega-google' : 'google');
+      window.__auth.utente = {
+        uid: collega ? prima.uid : (o.googleGiaUsato ? 'g-vecchio' : 'g-1'),
+        email: 'tizio@gmail.com', nome: 'Tizio Caio', isAnonimo: false, emailVerificata: true,
+      };
       annuncia();
       return window.__auth.utente;
     },
     esci: async () => { window.__auth.chiamate.push('esci'); window.__auth.utente = null; annuncia(); },
   };
+
+  // `stanza`: il codice della stanza in cui si e' gia' (salvato sul telefono).
+  // Con una stanza serve anche un StanzaCloud finto, o i bottoni parlerebbero
+  // col Firestore vero del progetto. Registra le chiamate, cosi' la prova
+  // guarda CHI entra e CON QUALE codice.
+  if (o.stanza) {
+    try { localStorage.setItem('cambusa_stanza', o.stanza); } catch (e) { /* niente */ }
+    window.__stanza = { chiamate: [] };
+    Object.defineProperty(window, 'StanzaCloud', {
+      configurable: true,
+      get() { return window.__sc; },
+      set() { /* il modulo vero si assegna e viene ignorato */ },
+    });
+    window.__sc = {
+      disponibile: () => true,
+      entra: async (codice, utente) => {
+        window.__stanza.chiamate.push({ che: 'entra', codice, uid: utente && utente.uid });
+        return codice;
+      },
+      crea: async () => { throw new Error('non serve in questa prova'); },
+      membri: async () => [],
+      leggi: async () => null,
+      impronta: async () => 'impronta-finta',
+      motivo: () => 'stanza.nonRiuscito',
+    };
+  }
 }
 
 async function apri(opzioni) {

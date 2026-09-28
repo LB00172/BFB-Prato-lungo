@@ -218,6 +218,22 @@ const permesso = async (msg, azione) => {
   // che avevano il ponte e l'utente condiviso — queste diventano rosse.
   // Cancellarle e basta avrebbe lasciato quel passo falso senza nessuno che
   // lo guarda.
+  // ---------- 5-quater) Rientrare in una stanza di cui sei gia' membro ----------
+  // Chi cambia telefono, o si rimette il codice dopo esserci gia' entrato,
+  // rifa' la stessa cosa del primo ingresso: StanzaCloud.entra scrive la
+  // propria scheda. Ma la seconda volta la scheda C'E' GIA', e per le regole
+  // un setDoc su un documento che esiste e' una MODIFICA — che puo' fare solo
+  // il proprietario, e mai sulla propria. Queste verifiche fissano le due
+  // cose su cui entra() conta per non sbattere contro quel muro: rileggere la
+  // propria scheda si puo', riscriverla no.
+  console.log('\n5-quater) Rientrare dove si e\' gia\' dentro');
+  await negato('un membro non puo\' riscriversi la scheda entrando di nuovo',
+    () => setDoc(doc(bruno, 'rooms/K7RX2MQP/members/bruno'), { ruolo: 'redattore', nome: 'Bruno', prova: IMPRONTA }));
+  await permesso('ma puo\' rileggerla, e sapere cosi\' che e\' gia\' dentro',
+    () => getDoc(doc(bruno, 'rooms/K7RX2MQP/members/bruno')));
+  await negato('mentre chi non e\' membro la propria scheda non la legge (non c\'e\')',
+    () => getDoc(doc(nonVerificato, 'rooms/K7RX2MQP/members/dino')));
+
   // ---------- 5-ter) Il profilo e' tuo e di nessun altro ----------
   // users/<uid> tiene nome, cognome e indirizzo. La meta' che conta e' quella
   // che nega: un indirizzo email, una volta uscito, non si fa rientrare, e

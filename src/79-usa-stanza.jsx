@@ -152,6 +152,21 @@ const usaStanza = () => {
   };
   const rifiutaInvito = () => { setInvito(null); pulisci(); };
 
+  // Rientrare nella stanza in cui si e' gia', con il codice salvato sul
+  // telefono, a nome dell'utente che si e' adesso. Serve a "tieni il tuo
+  // posto" quando il collegamento a Google fa DIVENTARE un altro account
+  // (quello gia' usato sul telefono di prima): il nuovo uid la scheda nella
+  // stanza puo' non averla ancora. Se ce l'ha, entra() non scrive niente.
+  //
+  // Solo su richiesta, mai da un effetto che scatta a ogni cambio d'identita':
+  // chi entra con un altro account su questo telefono non deve ritrovarsi
+  // iscritto al campo di chi c'era prima senza averlo chiesto.
+  const riagganciaStanza = async (utente) => {
+    if (!stanza || !stanza.codice) return;
+    const cod = await prova((c) => c.entra(stanza.codice, utente));
+    if (cod) setFatto('stanza.postoTenuto');
+  };
+
   // Il link da mandare agli altri. Si costruisce sull'indirizzo di questa
   // pagina senza quello che c'era dopo ? o # — ci pensa linkInvito.
   const linkDaMandare = () => {
@@ -182,6 +197,6 @@ const usaStanza = () => {
     nome, setNome, inizio, setInizio, fine, setFine, codice, setCodice,
     problema, fatto, occupato, chiudi,
     crea, entra, esci, aggiornaMembri,
-    invito, accettaInvito, rifiutaInvito, linkDaMandare,
+    invito, accettaInvito, rifiutaInvito, linkDaMandare, riagganciaStanza,
   };
 };

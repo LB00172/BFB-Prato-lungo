@@ -373,6 +373,12 @@ Diviso per chi lo fa. **Nessuna regola di Google chiede la registrazione**
 degli utenti: un'app usabile senza account è ammessa. Quello che segue è
 quello che chiede davvero.
 
+**Registrazione per tutti? No — deciso il 28 settembre.** Nessuna norma
+la chiede, e non renderebbe la stanza più sicura: a far entrare è il codice.
+Si entra col codice, l'account serve a creare e amministrare, e chi è
+entrato col codice ha **«tieni il tuo posto»** per legarsi a Google senza
+perdere la scheda nella stanza. Vedi `CLAUDE.md`, «L'account non è un muro».
+
 **L'account da sviluppatore** (Lorenzo)
 
 - [ ] Account Google Play Developer (**25 $ una tantum**) e verifica

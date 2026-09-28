@@ -126,6 +126,31 @@ const schedaImpostazioni = ({
       {stanzaStato.stanza ? (
         <>
           <p className="text-piccolo text-bosco leading-snug">{frase('stanza.entrato', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice))}</p>
+
+          {/* Tieni il tuo posto: per chi e' entrato col solo codice. Non e' un
+              muro — si usa il campo anche senza — ma e' l'unica cosa che
+              impedisce, cambiando telefono, di rientrare come una persona
+              nuova e perdere il ruolo. Da anonimo il collegamento tiene lo
+              stesso uid (Auth.promuovibile); se l'account Google era gia'
+              usato altrove si diventa quello (Auth.passaAllAccountEsistente)
+              e si rientra col codice salvato. Il posto si rilegge comunque:
+              una lettura in piu', e la conferma a schermo e' vera in tutti e
+              due i casi. */}
+          {FEATURES.auth && (account.stato === 'ospite' || account.stato === 'anonimo') && (
+            <div data-riquadro="tieni-il-posto" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
+              <p className="text-piccolo text-bosco leading-snug">{frase('stanza.tieniIlPosto')}</p>
+              <button
+                onClick={async () => {
+                  const u = await account.entraConGoogle();
+                  // Serve un utente VERO: un semplice "riuscito" non basta a
+                  // sapere con quale uid rientrare.
+                  if (u && u.uid && !u.isAnonimo) await stanzaStato.riagganciaStanza(u);
+                }}
+                disabled={account.occupato || stanzaStato.occupato}
+                className={bottone('primario', 'normale', 'w-full')}
+              >{L.t('stanza.collegaGoogle')}</button>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2 bg-carta/60 rounded p-2">
             <span className="font-mono text-medio tracking-widest text-bosco min-w-0 break-words">{Stanza.bello(stanzaStato.stanza.codice)}</span>
             <button
@@ -209,6 +234,12 @@ const schedaImpostazioni = ({
       {stanzaStato.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.problema)}</p>}
       {stanzaStato.fatto === 'stanza.creata' && stanzaStato.stanza && (
         <p className="text-piccolo text-bosco leading-snug">{frase('stanza.creata', Stanza.bello(stanzaStato.stanza.codice))}</p>
+      )}
+      {/* Uno per uno, non un {L.t(stanzaStato.fatto)} generico: alcune chiavi
+          vogliono un argomento (stanza.entrato vuole il nome del campo) e
+          senza stamperebbero "undefined" in mezzo alla frase. */}
+      {stanzaStato.fatto === 'stanza.postoTenuto' && (
+        <p className="text-piccolo text-bosco leading-snug">{L.t('stanza.postoTenuto')}</p>
       )}
     </div>
     )}

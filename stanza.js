@@ -275,6 +275,28 @@
     };
   }
 
+  // ---------- Rientrare: che cosa vuol dire la rilettura della scheda ----------
+  // Prima di scriversi fra i membri si rilegge la propria scheda (vedi
+  // StanzaCloud.entra, e test/regole § 5-quater). Il risultato si legge cosi':
+  //
+  //   - riletta ed esiste      -> gia' dentro: non si scrive niente, perche'
+  //                               riscriverla e' una modifica e verrebbe negata;
+  //   - "permesso negato"      -> non sei membro (le regole la scheda la fanno
+  //                               leggere solo ai membri): scriviti;
+  //   - qualunque altro errore -> NON si scrive. Soprattutto la linea che
+  //                               manca: da offline il setDoc andrebbe in coda
+  //                               e verrebbe respinto al ritorno, in silenzio.
+  //
+  // Sta qui e non nel trasporto perche' il trasporto nelle prove e' finto, e
+  // una decisione dentro il finto non la verifica nessuno.
+  function esitoRilettura(scheda, errore) {
+    if (errore) {
+      const codice = String((errore.code || errore.message) || '');
+      return /permission-denied/.test(codice) ? 'scriviti' : 'rilancia';
+    }
+    return scheda && scheda.esiste ? 'gia-dentro' : 'scriviti';
+  }
+
   // ---------- Cosa si puo' fare quando non sei in nessun campo ----------
   // Finche' non sei dentro un campo, quasi tutte le aree dell'app parlano di
   // dati che non esistono: Calendario mostra una settimana vuota, Saldi dei
@@ -319,6 +341,7 @@
     schedaProprietario,
     FUORI_DAL_CAMPO,
     gruppiMenu,
+    esitoRilettura,
     linkInvito,
     leggiInvito,
     CHIAVE_INVITO,
@@ -431,7 +454,24 @@
     const c = root.Stanza.normalizza(codice);
     const imp = await impronta(c);
     if (!imp) throw new Error('senza-impronta');
-    await f.setDoc(f.doc(d, 'rooms', c, 'members', utente.uid),
+    const scheda = f.doc(d, 'rooms', c, 'members', utente.uid);
+
+    // Gia' dentro? Chi cambia telefono, o rimette il codice di un campo in cui
+    // e' gia' entrato, arriva qui con la scheda che esiste gia'. Riscriverla
+    // per le regole e' una MODIFICA, che fa solo il proprietario: il setDoc
+    // veniva negato e a schermo usciva "codice sbagliato" a chi il codice
+    // giusto ce l'aveva in mano (test/regole, § 5-quater). Si rilegge prima:
+    // le regole lasciano leggere la propria scheda solo a chi e' membro,
+    // quindi se la lettura riesce e la scheda c'e', si e' gia' dentro.
+    //
+    // Come leggere il risultato lo dice Stanza.esitoRilettura, qui sopra.
+    let letta = null;
+    let errore = null;
+    try { const x = await f.getDoc(scheda); letta = { esiste: x.exists() }; } catch (e) { errore = e; }
+    const esito = root.Stanza.esitoRilettura(letta, errore);
+    if (esito === 'gia-dentro') return c;
+    if (esito === 'rilancia') throw errore;
+    await f.setDoc(scheda,
       root.Stanza.schedaIngresso((root.Auth && root.Auth.nomeVisibile(utente)) || '', imp));
     return c;
   }
