@@ -126,20 +126,9 @@ const quandoMeteo = (remote, serverMs, now) => {
 // Aggancio per le prove: la regola sopra si verifica senza aprire Firestore.
 if (typeof window !== 'undefined') window.__meteo = { quandoMeteo };
 
-// Dotazione personale base: uguale per tutti, non modificabile dall'app.
-// Le voci con emphasis: true sono mostrate in evidenza (piu' grandi e sottolineate).
-// Le regole dell'accampamento qui non ci sono: quelle scritte a mano erano
-// della Brigata (il Presidente, il minigioco), e nell'app pubblica ogni campo
-// scrive le sue — le scrive il capogruppo, e stanno nella stanza
-// (rooms/<codice>.regole, src/83-schede-gruppo.jsx).
-const BASE_GEAR = [
-  { text: 'SEDIA PERSONALE PER ADULTI E EVENTUALI BAMBINI', emphasis: true },
-  { text: 'Stoviglie, posate personali e bicchiere riutilizzabile', emphasis: true },
-  { text: 'Borraccia' },
-  { text: 'Canovacci' },
-  { text: 'Luci LED' },
-];
-
+// Nemmeno la dotazione di base sta qui: era quella della Brigata. Ogni
+// campo scrive la sua — la scrive il capogruppo, e sta nella stanza
+// (rooms/<codice>.dotazioni, src/83-schede-gruppo.jsx).
 // Galleria: quante foto può caricare ciascuno. È un accordo di gruppo, non un
 // lucchetto (il nome si sceglie da una tendina, nessuno verifica chi sei):
 // serve a far scegliere le foto belle invece di svuotare il rullino.

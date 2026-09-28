@@ -208,66 +208,65 @@ const schedaRegole = ({ stanzaStato }) => {
   );
 };
 
-const schedaDotazioni = ({
-  addGear,
-  gear,
-  newGearText,
-  removeGear,
-  setNewGearText,
-}) => (
-  <div className="space-y-4">
-    {/* Box fisso: dotazione base */}
-    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
-      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">{L.t('dotazioni.base')}</h3>
-      <ul className="space-y-2">
-        {BASE_GEAR.map((item) => (
-          <li
-            key={item.text}
-            className={`flex items-center gap-3 rounded border p-2.5 ${
-              item.emphasis
-                ? 'bg-fuoco/10 border-fuoco/40'
-                : 'bg-carta/60 border-salvia/20'
-            }`}
-          >
-            <span className={`shrink-0 rounded-full bg-fuoco ${item.emphasis ? 'w-2 h-2' : 'w-1.5 h-1.5'}`}></span>
-            <span className={item.emphasis
-              ? 'text-medio font-bold uppercase underline decoration-2 underline-offset-2 text-bosco leading-snug'
-              : 'text-normale text-bosco'}>
-              {item.text}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p className="text-minuto text-gray-400 italic mt-2">{L.t('dotazioni.obbligo')}</p>
-    </div>
-
-    {/* Box editabile: aggiunte dell'occasione */}
-    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('dotazioni.aggiunte')}</h3>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={newGearText}
-          onChange={(e) => setNewGearText(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addGear()}
-          placeholder={L.t('dotazioni.esempio')}
-          className="flex-grow p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-        />
-        <button onClick={addGear} aria-label={L.t('dotazioni.aggiungi')} className={bottoneIcona('pieno')}>+</button>
+// Le dotazioni: cosa ognuno deve portarsi. Le scrive il capogruppo — una
+// voce per riga, «!» davanti per metterla in evidenza — e stanno nella
+// stanza, come le regole. Nell'app pubblica e' una lista sola: le «aggiunte
+// del campo» che chiunque poteva scrivere erano della versione privata.
+const schedaDotazioni = ({ stanzaStato }) => {
+  const voci = stanzaStato.dotazioni || [];
+  const bozza = stanzaStato.bozzaDotazioni;
+  return (
+    <div data-scheda="dotazioni" className="space-y-4">
+      <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+        <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('dotazioni.base')}</h3>
+        {bozza !== null ? (
+          <div className="space-y-2">
+            <p className="text-minuto text-gray-500 leading-snug">{L.t('dotazioni.aiuto')}</p>
+            <textarea
+              value={bozza}
+              onChange={(e) => stanzaStato.setBozzaDotazioni(e.target.value)}
+              rows={10}
+              className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale leading-snug focus:outline-none focus:border-bosco"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => stanzaStato.setBozzaDotazioni(null)} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
+              <button
+                onClick={async () => { if (await stanzaStato.salvaDotazioni(bozza)) stanzaStato.setBozzaDotazioni(null); }}
+                disabled={stanzaStato.occupato}
+                className={bottone('primario', 'normale', 'flex-1')}
+              >{L.t('regole.salva')}</button>
+            </div>
+            {stanzaStato.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.problema)}</p>}
+          </div>
+        ) : voci.length === 0 ? (
+          <p className="text-piccolo text-gray-500 leading-snug">{L.t(stanzaStato.capogruppo ? 'dotazioni.scriviTu' : 'dotazioni.nessuna')}</p>
+        ) : (
+          <>
+            <ul className="space-y-2">
+              {voci.map((item, i) => (
+                <li
+                  key={i}
+                  className={`flex items-center gap-3 rounded border p-2.5 ${item.evidenza ? 'bg-fuoco/10 border-fuoco/40' : 'bg-carta/60 border-salvia/20'}`}
+                >
+                  <span className={`shrink-0 rounded-full bg-fuoco ${item.evidenza ? 'w-2 h-2' : 'w-1.5 h-1.5'}`}></span>
+                  <span className={item.evidenza
+                    ? 'text-medio font-bold uppercase underline decoration-2 underline-offset-2 text-bosco leading-snug'
+                    : 'text-normale text-bosco'}>
+                    {item.testo}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-minuto text-gray-400 italic">{L.t('dotazioni.obbligo')}</p>
+          </>
+        )}
+        {stanzaStato.capogruppo && bozza === null && (
+          <button
+            onClick={() => stanzaStato.setBozzaDotazioni(window.Stanza.testoDaDotazioni(voci))}
+            className={bottone('secondario', 'normale', 'w-full')}
+          >{L.t('dotazioni.modifica')}</button>
+        )}
       </div>
-      {gear.length === 0 ? (
-        <p className="text-normale text-gray-400 italic">{L.t('dotazioni.vuoto')}</p>
-      ) : (
-        <ul className="space-y-2">
-          {gear.map((g) => (
-            <li key={g.id} className="flex items-center gap-3 bg-carta/60 p-2.5 rounded border border-salvia/20">
-              <span className="w-1.5 h-1.5 bg-salvia rounded-full shrink-0"></span>
-              <span className="flex-grow text-normale text-bosco">{g.text}</span>
-              <button onClick={() => removeGear(g.id)} aria-label={L.t('dotazioni.rimuovi')} className={bottoneIcona('distruttivo')}>&times;</button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
-  </div>
-);
+  );
+};

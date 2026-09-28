@@ -320,7 +320,7 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     '30-tema-e-formati.jsx': 0,
     // Il marchio, le REGOLE del campo e la DOTAZIONE base: contenuto della
     // room, non dell'app. Restano in italiano per scelta (ROADMAP § 18).
-    '40-configurazione.jsx': 12,
+    '40-configurazione.jsx': 9,
     // Solo disegni: nessuna parola che l'utente legga. Le etichette stanno
     // accanto alle icone, e quelle passano dal dizionario come tutto il resto.
     '45-icone.jsx': 0,

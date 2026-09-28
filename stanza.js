@@ -408,9 +408,10 @@
       fuori = fuori.map((v) => {
         if (normalizza(v.codice) !== c) return v;
         const n = Object.assign({}, v);
-        ['pro', 'regole', 'vice', 'aiutante'].forEach((k) => { delete n[k]; });
+        ['pro', 'regole', 'dotazioni', 'vice', 'aiutante'].forEach((k) => { delete n[k]; });
         if (st.pro) n.pro = st.pro;
         if (Array.isArray(st.regole) && st.regole.length) n.regole = st.regole.slice();
+        if (Array.isArray(st.dotazioni) && st.dotazioni.length) n.dotazioni = st.dotazioni.slice();
         if (st.vice) n.vice = st.vice;
         if (st.aiutante) n.aiutante = true;
         if (st.proprietario) n.ruolo = 'proprietario';
@@ -462,6 +463,33 @@
   }
   function testoDaRegole(regole) {
     return (Array.isArray(regole) ? regole : []).join('\n\n');
+  }
+
+  // ---------- Le dotazioni del campo ----------
+  // Cosa ognuno deve portarsi. Come le regole, le scrive il capogruppo: una
+  // voce per riga, e un punto esclamativo davanti per metterla in evidenza
+  // («!Sedia personale»). Nel documento della stanza stanno come elenco di
+  // { testo, evidenza }.
+  const DOTAZIONI_MAX = 50;
+  const DOTAZIONE_MAX = 200;
+  function dotazioniDaTesto(testo) {
+    return String(testo || '')
+      .split('\n')
+      .map((r) => r.trim())
+      .filter((r) => r && r !== '!')
+      .slice(0, DOTAZIONI_MAX)
+      .map((r) => {
+        const evidenza = r.charAt(0) === '!';
+        const voce = { testo: (evidenza ? r.slice(1).trim() : r).slice(0, DOTAZIONE_MAX) };
+        if (evidenza) voce.evidenza = true;
+        return voce;
+      })
+      .filter((v) => v.testo);
+  }
+  function testoDaDotazioni(dotazioni) {
+    return (Array.isArray(dotazioni) ? dotazioni : [])
+      .map((v) => (v && v.evidenza ? '!' : '') + ((v && v.testo) || ''))
+      .join('\n');
   }
 
   // ---------- Il Pro e' del campo ----------
@@ -516,6 +544,8 @@
     campoPro,
     regoleDaTesto,
     testoDaRegole,
+    dotazioniDaTesto,
+    testoDaDotazioni,
     ordinaCampi,
     linkInvito,
     leggiInvito,
@@ -717,6 +747,7 @@
           nome: dati.nome || '', inizio: dati.inizio || '', fine: dati.fine || '',
           pro: dati.pro || null,
           regole: Array.isArray(dati.regole) ? dati.regole : [],
+          dotazioni: Array.isArray(dati.dotazioni) ? dati.dotazioni : [],
           // L'uid dell'aiutante lo vede solo chi lo ha nominato: agli altri
           // basta sapere se l'aiutante sono loro.
           vice: dati.proprietario === utente.uid ? (dati.vice || '') : '',

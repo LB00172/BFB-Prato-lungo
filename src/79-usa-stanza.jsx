@@ -49,6 +49,7 @@ const usaStanza = () => {
   // La bozza delle regole mentre il capogruppo le scrive (null: non le sta
   // scrivendo), e chi sta scegliendo come aiutante.
   const [bozzaRegole, setBozzaRegole] = useState(null);
+  const [bozzaDotazioni, setBozzaDotazioni] = useState(null);
   const [sceltaAiutante, setSceltaAiutante] = useState('');
   // Chi aveva gia' una stanza prima che la home esistesse la ritrova in
   // elenco: la stanza salvata entra da sola.
@@ -276,6 +277,7 @@ const usaStanza = () => {
   // arriva dall'elenco sul telefono e si corregge a ogni lettura del cloud;
   // a decidere davvero chi puo' cambiare cosa sono le regole Firestore.
   const regole = (voceAperta && voceAperta.regole) || [];
+  const dotazioni = (voceAperta && voceAperta.dotazioni) || [];
   const capogruppo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
   const aiutante = !!(voceAperta && voceAperta.aiutante);
   const vice = (voceAperta && voceAperta.vice) || '';
@@ -293,6 +295,13 @@ const usaStanza = () => {
     const elenco = window.Stanza.regoleDaTesto(testo);
     const fatto = await prova((c) => c.impostaStanza(stanza.codice, { regole: elenco }).then(() => true));
     if (fatto) aggiornaVoceAperta({ regole: elenco });
+    return !!fatto;
+  };
+  const salvaDotazioni = async (testo) => {
+    if (!stanza) return false;
+    const elenco = window.Stanza.dotazioniDaTesto(testo);
+    const fatto = await prova((c) => c.impostaStanza(stanza.codice, { dotazioni: elenco }).then(() => true));
+    if (fatto) aggiornaVoceAperta({ dotazioni: elenco });
     return !!fatto;
   };
   const nominaAiutante = async (uid) => {
@@ -323,6 +332,7 @@ const usaStanza = () => {
   return {
     pro, regole, capogruppo, aiutante, vice, salvaRegole, nominaAiutante, lasciaCampo,
     bozzaRegole, setBozzaRegole, sceltaAiutante, setSceltaAiutante,
+    dotazioni, bozzaDotazioni, setBozzaDotazioni, salvaDotazioni,
     stanza, membri, modo, setModo,
     nome, setNome, inizio, setInizio, fine, setFine, codice, setCodice,
     problema, fatto, occupato, chiudi,

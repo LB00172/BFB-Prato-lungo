@@ -670,26 +670,9 @@ if (typeof window !== 'undefined') window.__meteo = {
   quandoMeteo
 };
 
-// Dotazione personale base: uguale per tutti, non modificabile dall'app.
-// Le voci con emphasis: true sono mostrate in evidenza (piu' grandi e sottolineate).
-// Le regole dell'accampamento qui non ci sono: quelle scritte a mano erano
-// della Brigata (il Presidente, il minigioco), e nell'app pubblica ogni campo
-// scrive le sue — le scrive il capogruppo, e stanno nella stanza
-// (rooms/<codice>.regole, src/83-schede-gruppo.jsx).
-const BASE_GEAR = [{
-  text: 'SEDIA PERSONALE PER ADULTI E EVENTUALI BAMBINI',
-  emphasis: true
-}, {
-  text: 'Stoviglie, posate personali e bicchiere riutilizzabile',
-  emphasis: true
-}, {
-  text: 'Borraccia'
-}, {
-  text: 'Canovacci'
-}, {
-  text: 'Luci LED'
-}];
-
+// Nemmeno la dotazione di base sta qui: era quella della Brigata. Ogni
+// campo scrive la sua — la scrive il capogruppo, e sta nella stanza
+// (rooms/<codice>.dotazioni, src/83-schede-gruppo.jsx).
 // Galleria: quante foto può caricare ciascuno. È un accordo di gruppo, non un
 // lucchetto (il nome si sceglie da una tendina, nessuno verifica chi sei):
 // serve a far scegliere le foto belle invece di svuotare il rullino.
@@ -1914,6 +1897,7 @@ const usaStanza = () => {
   // La bozza delle regole mentre il capogruppo le scrive (null: non le sta
   // scrivendo), e chi sta scegliendo come aiutante.
   const [bozzaRegole, setBozzaRegole] = useState(null);
+  const [bozzaDotazioni, setBozzaDotazioni] = useState(null);
   const [sceltaAiutante, setSceltaAiutante] = useState('');
   // Chi aveva gia' una stanza prima che la home esistesse la ritrova in
   // elenco: la stanza salvata entra da sola.
@@ -2179,6 +2163,7 @@ const usaStanza = () => {
   // arriva dall'elenco sul telefono e si corregge a ogni lettura del cloud;
   // a decidere davvero chi puo' cambiare cosa sono le regole Firestore.
   const regole = voceAperta && voceAperta.regole || [];
+  const dotazioni = voceAperta && voceAperta.dotazioni || [];
   const capogruppo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
   const aiutante = !!(voceAperta && voceAperta.aiutante);
   const vice = voceAperta && voceAperta.vice || '';
@@ -2199,6 +2184,17 @@ const usaStanza = () => {
     }).then(() => true));
     if (fatto) aggiornaVoceAperta({
       regole: elenco
+    });
+    return !!fatto;
+  };
+  const salvaDotazioni = async testo => {
+    if (!stanza) return false;
+    const elenco = window.Stanza.dotazioniDaTesto(testo);
+    const fatto = await prova(c => c.impostaStanza(stanza.codice, {
+      dotazioni: elenco
+    }).then(() => true));
+    if (fatto) aggiornaVoceAperta({
+      dotazioni: elenco
     });
     return !!fatto;
   };
@@ -2243,6 +2239,10 @@ const usaStanza = () => {
     setBozzaRegole,
     sceltaAiutante,
     setSceltaAiutante,
+    dotazioni,
+    bozzaDotazioni,
+    setBozzaDotazioni,
+    salvaDotazioni,
     stanza,
     membri,
     modo,
@@ -5879,11 +5879,7 @@ function App({
   }), scheda === 'regole' && schedaRegole({
     stanzaStato
   }), scheda === 'dotazioni' && schedaDotazioni({
-    addGear,
-    gear,
-    newGearText,
-    removeGear,
-    setNewGearText
+    stanzaStato
   }), scheda === 'galleria' && schedaGalleria({
     PER_PAGINA_ALBUM,
     addPhotos,
@@ -7663,62 +7659,63 @@ const schedaRegole = ({
     className: bottone('secondario', 'normale', 'w-full')
   }, L.t('regole.modifica'))));
 };
+
+// Le dotazioni: cosa ognuno deve portarsi. Le scrive il capogruppo — una
+// voce per riga, «!» davanti per metterla in evidenza — e stanno nella
+// stanza, come le regole. Nell'app pubblica e' una lista sola: le «aggiunte
+// del campo» che chiunque poteva scrivere erano della versione privata.
 const schedaDotazioni = ({
-  addGear,
-  gear,
-  newGearText,
-  removeGear,
-  setNewGearText
-}) => /*#__PURE__*/React.createElement("div", {
-  className: "space-y-4"
-}, /*#__PURE__*/React.createElement("div", {
-  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
-}, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3"
-}, L.t('dotazioni.base')), /*#__PURE__*/React.createElement("ul", {
-  className: "space-y-2"
-}, BASE_GEAR.map(item => /*#__PURE__*/React.createElement("li", {
-  key: item.text,
-  className: `flex items-center gap-3 rounded border p-2.5 ${item.emphasis ? 'bg-fuoco/10 border-fuoco/40' : 'bg-carta/60 border-salvia/20'}`
-}, /*#__PURE__*/React.createElement("span", {
-  className: `shrink-0 rounded-full bg-fuoco ${item.emphasis ? 'w-2 h-2' : 'w-1.5 h-1.5'}`
-}), /*#__PURE__*/React.createElement("span", {
-  className: item.emphasis ? 'text-medio font-bold uppercase underline decoration-2 underline-offset-2 text-bosco leading-snug' : 'text-normale text-bosco'
-}, item.text)))), /*#__PURE__*/React.createElement("p", {
-  className: "text-minuto text-gray-400 italic mt-2"
-}, L.t('dotazioni.obbligo'))), /*#__PURE__*/React.createElement("div", {
-  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
-}, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
-}, L.t('dotazioni.aggiunte')), /*#__PURE__*/React.createElement("div", {
-  className: "flex gap-2"
-}, /*#__PURE__*/React.createElement("input", {
-  type: "text",
-  value: newGearText,
-  onChange: e => setNewGearText(e.target.value),
-  onKeyDown: e => e.key === 'Enter' && addGear(),
-  placeholder: L.t('dotazioni.esempio'),
-  className: "flex-grow p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-}), /*#__PURE__*/React.createElement("button", {
-  onClick: addGear,
-  "aria-label": L.t('dotazioni.aggiungi'),
-  className: bottoneIcona('pieno')
-}, "+")), gear.length === 0 ? /*#__PURE__*/React.createElement("p", {
-  className: "text-normale text-gray-400 italic"
-}, L.t('dotazioni.vuoto')) : /*#__PURE__*/React.createElement("ul", {
-  className: "space-y-2"
-}, gear.map(g => /*#__PURE__*/React.createElement("li", {
-  key: g.id,
-  className: "flex items-center gap-3 bg-carta/60 p-2.5 rounded border border-salvia/20"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "w-1.5 h-1.5 bg-salvia rounded-full shrink-0"
-}), /*#__PURE__*/React.createElement("span", {
-  className: "flex-grow text-normale text-bosco"
-}, g.text), /*#__PURE__*/React.createElement("button", {
-  onClick: () => removeGear(g.id),
-  "aria-label": L.t('dotazioni.rimuovi'),
-  className: bottoneIcona('distruttivo')
-}, "\xD7"))))));
+  stanzaStato
+}) => {
+  const voci = stanzaStato.dotazioni || [];
+  const bozza = stanzaStato.bozzaDotazioni;
+  return /*#__PURE__*/React.createElement("div", {
+    "data-scheda": "dotazioni",
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
+  }, L.t('dotazioni.base')), bozza !== null ? /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t('dotazioni.aiuto')), /*#__PURE__*/React.createElement("textarea", {
+    value: bozza,
+    onChange: e => stanzaStato.setBozzaDotazioni(e.target.value),
+    rows: 10,
+    className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale leading-snug focus:outline-none focus:border-bosco"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => stanzaStato.setBozzaDotazioni(null),
+    className: bottone('testuale', 'normale', 'flex-1')
+  }, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      if (await stanzaStato.salvaDotazioni(bozza)) stanzaStato.setBozzaDotazioni(null);
+    },
+    disabled: stanzaStato.occupato,
+    className: bottone('primario', 'normale', 'flex-1')
+  }, L.t('regole.salva'))), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo font-bold text-red-700 leading-snug"
+  }, L.t(stanzaStato.problema))) : voci.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500 leading-snug"
+  }, L.t(stanzaStato.capogruppo ? 'dotazioni.scriviTu' : 'dotazioni.nessuna')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-2"
+  }, voci.map((item, i) => /*#__PURE__*/React.createElement("li", {
+    key: i,
+    className: `flex items-center gap-3 rounded border p-2.5 ${item.evidenza ? 'bg-fuoco/10 border-fuoco/40' : 'bg-carta/60 border-salvia/20'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `shrink-0 rounded-full bg-fuoco ${item.evidenza ? 'w-2 h-2' : 'w-1.5 h-1.5'}`
+  }), /*#__PURE__*/React.createElement("span", {
+    className: item.evidenza ? 'text-medio font-bold uppercase underline decoration-2 underline-offset-2 text-bosco leading-snug' : 'text-normale text-bosco'
+  }, item.testo)))), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-400 italic"
+  }, L.t('dotazioni.obbligo'))), stanzaStato.capogruppo && bozza === null && /*#__PURE__*/React.createElement("button", {
+    onClick: () => stanzaStato.setBozzaDotazioni(window.Stanza.testoDaDotazioni(voci)),
+    className: bottone('secondario', 'normale', 'w-full')
+  }, L.t('dotazioni.modifica'))));
+};
 // ---------- Archivio e guida ----------
 // La Galleria sta a parte in 85-scheda-galleria.jsx: e' la piu' grossa delle
 // quattro ed e' stata la prima a uscire.

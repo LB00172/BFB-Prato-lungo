@@ -31,7 +31,7 @@ const scena = (o) => [(s) => {
   };
   // La stanza come la vede il cloud; il finto registra quello che gli si
   // chiede di scrivere.
-  window.__stanza = Object.assign({ regole: [], vice: '' }, o.stanza);
+  window.__stanza = Object.assign({ regole: [], dotazioni: [], vice: '' }, o.stanza);
   window.__scritture = [];
   Object.defineProperty(window, 'StanzaCloud', { configurable: true, get() { return window.__sc; }, set() {} });
   window.__sc = {
@@ -50,6 +50,7 @@ const scena = (o) => [(s) => {
       proprietario: window.__stanza.proprietario === utente.uid,
       nome: 'Campo di prova', pro: window.__stanza.pro || null,
       regole: window.__stanza.regole,
+      dotazioni: window.__stanza.dotazioni,
       vice: window.__stanza.proprietario === utente.uid ? window.__stanza.vice : '',
       aiutante: window.__stanza.vice === utente.uid,
     })),
@@ -96,6 +97,21 @@ const testo = (a) => a.page.locator('main').innerText();
     await attendi(a.page, () => document.querySelectorAll('[data-scheda="regole"] li').length === 2);
     ok('e si vedono subito, numerate', true);
 
+    // Le dotazioni: lo stesso schema, con il «!» per l'evidenza.
+    await a.menu('Dotazioni personali');
+    await attendi(a.page, () => /scrivi tu cosa deve portare/i.test(document.querySelector('main').innerText));
+    ok('nell\'app pubblica non resta la dotazione della Brigata',
+      !/sedia personale per adulti|canovacci/i.test(await testo(a)));
+    await a.page.locator('main button', { hasText: /modifica la lista/i }).click();
+    await a.page.locator('main textarea').fill('!Sacco a pelo\nBorraccia');
+    await a.page.locator('main button', { hasText: /^salva$/i }).click();
+    await attendi(a.page, () => window.__scritture.some((x) => x.campi && x.campi.dotazioni));
+    const dot = await a.page.evaluate(() => window.__scritture.find((x) => x.campi && x.campi.dotazioni).campi.dotazioni);
+    ok(`la lista va nella stanza, con l'evidenza (${JSON.stringify(dot)})`,
+      JSON.stringify(dot) === JSON.stringify([{ testo: 'Sacco a pelo', evidenza: true }, { testo: 'Borraccia' }]));
+    await attendi(a.page, () => document.querySelectorAll('[data-scheda="dotazioni"] li').length === 2);
+    ok('e si vede subito', true);
+
     await a.menu('Impostazioni');
     await attendi(a.page, () => !!document.querySelector('[data-riquadro="aiutante"] option[value="bruno"]'));
     const riquadro = a.page.locator('[data-riquadro="aiutante"]');
@@ -131,7 +147,7 @@ const testo = (a) => a.page.locator('main').innerText();
       admin: false,
       initScript: scena({
         utente: { uid: 'bruno', email: 'bruno@example.com', nome: 'Bruno', isAnonimo: false, emailVerificata: true },
-        stanza: { proprietario: 'anna', vice: 'bruno', regole: ['Si lava a turno.'] },
+        stanza: { proprietario: 'anna', vice: 'bruno', regole: ['Si lava a turno.'], dotazioni: [{ testo: 'Borraccia' }] },
       }),
     });
     await a.menu('Regole');
@@ -139,6 +155,10 @@ const testo = (a) => a.page.locator('main').innerText();
     ok('un membro legge le regole del campo', true);
     ok('ma non trova il tasto per cambiarle',
       (await a.page.locator('main button', { hasText: /modifica le regole/i }).count()) === 0);
+    await a.menu('Dotazioni personali');
+    await attendi(a.page, () => /borraccia/i.test(document.querySelector('main').innerText));
+    ok('un membro legge la lista delle dotazioni', true);
+    ok('ma non la cambia', (await a.page.locator('main button', { hasText: /modifica la lista/i }).count()) === 0);
     await a.menu('Impostazioni');
     await attendi(a.page, () => /sei l'aiutante/i.test(document.querySelector('main').innerText));
     ok('l\'aiutante sa di esserlo', true);

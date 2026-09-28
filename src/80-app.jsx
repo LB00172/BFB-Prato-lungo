@@ -3030,9 +3030,7 @@ function App({ eredita, cambiaCampo } = {}) {
         {scheda === 'regole' && schedaRegole({ stanzaStato })}
 
         {/* ---------- DOTAZIONI PERSONALI ---------- */}
-        {scheda === 'dotazioni' && schedaDotazioni({
-          addGear, gear, newGearText, removeGear, setNewGearText,
-        })}
+        {scheda === 'dotazioni' && schedaDotazioni({ stanzaStato })}
 
         {/* ---------- GALLERIA ---------- */}
         {scheda === 'galleria' && schedaGalleria({

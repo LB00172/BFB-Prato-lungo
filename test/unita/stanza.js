@@ -518,6 +518,20 @@ if (!S) { fine(); }
       ok('e quando il campo passa a lui, diventa capogruppo', l[0].ruolo === 'proprietario' && !l[0].aiutante);
     }
 
+    // ---------- Le dotazioni del campo ----------
+    {
+      const d = S.dotazioniDaTesto('!Sedia personale\n  Borraccia \n\n!\nLuci LED');
+      ok(`una voce per riga, il punto esclamativo la mette in evidenza (${JSON.stringify(d)})`,
+        JSON.stringify(d) === JSON.stringify([{ testo: 'Sedia personale', evidenza: true }, { testo: 'Borraccia' }, { testo: 'Luci LED' }]));
+      ok('e si torna al testo senza perdere niente',
+        JSON.stringify(S.dotazioniDaTesto(S.testoDaDotazioni(d))) === JSON.stringify(d));
+      let l = [{ codice: 'K7RX2MQP', dotazioni: [{ testo: 'Vecchia' }] }];
+      l = S.aggiornaCampi(l, [], [{ codice: 'K7RX2MQP', membro: true, proprietario: false, dotazioni: [] }]);
+      ok('dotazioni tolte dal capogruppo spariscono anche dal telefono', !l[0].dotazioni);
+      l = S.aggiornaCampi(l, [], [{ codice: 'K7RX2MQP', membro: true, proprietario: false, dotazioni: d }]);
+      ok('e quelle nuove arrivano', l[0].dotazioni.length === 3);
+    }
+
     fine();
   })();
 }

@@ -336,6 +336,10 @@ const permesso = async (msg, azione) => {
   await permesso('il capogruppo scrive le regole',
     () => setDoc(stanzaP(bruno), { regole: ['Si lava a turno.'] }, { merge: true }));
   await negato('un membro no', () => setDoc(stanzaP(carla), { regole: ['Niente turni.'] }, { merge: true }));
+  await permesso('il capogruppo scrive anche le dotazioni',
+    () => setDoc(stanzaP(bruno), { dotazioni: [{ testo: 'Borraccia' }] }, { merge: true }));
+  await negato('un membro le dotazioni non le tocca',
+    () => setDoc(stanzaP(carla), { dotazioni: [] }, { merge: true }));
   await permesso('e un membro le legge', () => getDoc(stanzaP(carla)));
   await negato('un estraneo non le legge', () => getDoc(stanzaP(nonVerificato)));
 
