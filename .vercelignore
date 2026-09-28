@@ -1,2 +1,5 @@
 node_modules
 test
+# Il server dei pagamenti va su Firebase (firebase deploy --only functions),
+# non sul sito.
+functions

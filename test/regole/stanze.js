@@ -387,6 +387,14 @@ const permesso = async (msg, azione) => {
   await pro({ attivo: true });
   await permesso('un Pro acceso senza scadenza vale', () => setDoc(scontrino(bruno, 'p5'), { data: 'x' }));
 
+  // Il registro degli acquisti e gli abbonati li scrive solo il server
+  // (functions/index.js). Un telefono che ci scrivesse si farebbe abbonato
+  // da solo, e il Pro dei suoi campi nuovi arriverebbe gratis.
+  await negato('nessun telefono si scrive abbonato', () => setDoc(doc(anna, 'abbonati/anna'), { scade: Timestamp.fromMillis(Date.now() + 365 * giorno) }));
+  await negato('né legge chi lo è', () => getDoc(doc(anna, 'abbonati/anna')));
+  await negato('né scrive il registro degli acquisti', () => setDoc(doc(anna, 'acquisti/qualcosa'), { uid: 'anna' }));
+  await negato('né lo legge', () => getDoc(doc(anna, 'acquisti/qualcosa')));
+
   console.log('\n7) Quello che non e\' previsto e\' chiuso');
   // Una collezione nuova non deve nascere aperta per distrazione.
   await negato('una collezione mai pensata non si legge', () => getDoc(doc(anna, 'qualcosa/altro')));
