@@ -124,6 +124,9 @@
     'auth/operation-not-allowed': 'auth.metodoSpento',
     'auth/credential-already-in-use': 'auth.giaCollegato',
     'auth/requires-recent-login': 'auth.rientra',
+    // Firestore non mette il prefisso auth/: la linea che manca durante la
+    // cancellazione dell'account (profilo, stanze) arriva cosi'.
+    'unavailable': 'auth.senzaLinea',
     // Il dominio da cui si apre l'app non e' fra quelli autorizzati nella
     // console Firebase. Capita ogni volta che si prova da un indirizzo nuovo
     // — un'anteprima di Vercel, un dominio appena comprato — e "riprova" e'
@@ -502,9 +505,45 @@
     }
   }
 
+  // ---------- Cancellare l'account (ROADMAP § 3, requisito di Google Play) ----------
+  // Le stanze che il profilo si e' segnato (StanzaCloud.segnaNelProfilo).
+  // Se il profilo non si legge — la linea, di solito — si alza l'errore: la
+  // cancellazione deve sapere di quali campi sei proprietario, e non puo'
+  // farlo alla cieca.
+  async function stanzeDelProfilo() {
+    const a = await init();
+    const u = a.currentUser;
+    if (!u) return [];
+    const f = await sdkFirestore();
+    const d = await dbase();
+    const x = await f.getDoc(f.doc(d, 'users', u.uid));
+    return (x.exists() && Array.isArray(x.data().stanze)) ? x.data().stanze : [];
+  }
+
+  // Il profilo, poi l'account. In QUEST'ORDINE per forza: senza account le
+  // regole non lasciano piu' cancellare il profilo, che resterebbe li' per
+  // sempre. Se la cancellazione dell'account chiede di rientrare
+  // (auth/requires-recent-login), il profilo e' gia' andato e l'account no:
+  // si rientra, si riprova, e il secondo giro trova niente da togliere e
+  // finisce il lavoro. Ogni passo si puo' ripetere senza danni.
+  async function cancellaProfiloEAccount() {
+    const a = await init();
+    const u = a.currentUser;
+    if (!u) return;
+    const f = await sdkFirestore();
+    const d = await dbase();
+    await f.deleteDoc(f.doc(d, 'users', u.uid));
+    const fa = await sdk();
+    await fa.deleteUser(u);
+    ultimo = null;
+    annuncia();
+  }
+
   root.AuthCloud = {
     disponibile: disponibile,
     sincronizzaProfilo: sincronizzaProfilo,
+    stanzeDelProfilo: stanzeDelProfilo,
+    cancellaProfiloEAccount: cancellaProfiloEAccount,
     osserva: osserva,
     utente: () => (ultimo ? Object.assign({}, ultimo) : null),
     registra: registra,

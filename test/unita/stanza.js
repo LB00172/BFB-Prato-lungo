@@ -354,6 +354,36 @@ if (!S) { fine(); }
     ok('e nemmeno davanti a un guasto mai visto',
       S.esitoRilettura(null, new Error('boh')) === 'rilancia');
 
+    // 5. CANCELLARE L'ACCOUNT. Il proprietario di un campo non puo' sparire:
+    // il campo resterebbe senza nessuno che lo amministra o lo cancella. La
+    // meta' che conta e' la prima: se si e' proprietari anche di UN solo
+    // campo, non si deve togliere NIENTE — nemmeno le altre schede.
+    {
+      const p1 = S.pianoCancellazione([
+        { codice: 'AAAA-2222', membro: true, proprietario: true },
+        { codice: 'BBBB-3333', membro: true, proprietario: false },
+      ]);
+      ok(`chi e' proprietario di un campo e' fermato (${p1.bloccata.join(', ')})`,
+        p1.bloccata.length === 1 && p1.bloccata[0] === S.normalizza('AAAA-2222'));
+      const p2 = S.pianoCancellazione([
+        { codice: 'BBBB-3333', membro: true, proprietario: false },
+        { codice: 'CCCC-4444', membro: false, proprietario: false },
+      ]);
+      ok('da semplice membro si toglie la propria scheda',
+        p2.bloccata.length === 0 && p2.daTogliere.length === 1 && p2.daTogliere[0] === S.normalizza('BBBB-3333'));
+      ok('e dove non si e\' piu\' membri non c\'e\' niente da togliere',
+        p2.daTogliere.indexOf(S.normalizza('CCCC-4444')) < 0);
+      // Lo stesso campo arriva dal profilo e dal telefono, scritto magari in
+      // due modi: si conta una volta sola.
+      const p3 = S.pianoCancellazione([
+        { codice: 'bbbb3333', membro: true, proprietario: false },
+        { codice: 'BBBB-3333', membro: true, proprietario: false },
+      ]);
+      ok('lo stesso campo visto due volte si toglie una volta sola', p3.daTogliere.length === 1);
+      ok('senza stanze non esplode',
+        JSON.stringify(S.pianoCancellazione(null)) === JSON.stringify({ bloccata: [], daTogliere: [] }));
+    }
+
     // ---------- Il menu quando non sei in nessun campo ----------
     // Un menu pieno di sezioni vuote sembra un'app rotta, non un'app che
     // aspetta una cosa sola. La meta' che conta di piu' e' la prima: DENTRO

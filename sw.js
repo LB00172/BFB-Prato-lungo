@@ -1,4 +1,4 @@
-const CACHE_NAME = 'camp-ops-f7cd3435f3';
+const CACHE_NAME = 'camp-ops-a12732b173';
 
 // Tutte le risorse sono locali (stesso dominio): il precache è affidabile.
 // Nessuna dipendenza da CDN esterni -> l'app funziona offline al 100%.
@@ -19,6 +19,8 @@ const ASSETS = [
   './magazzino-foto.js',
   './firebase-sync.js',
   './manifest.json',
+  './privacy.html',
+  './cancella-account.html',
   './logo.png',
   './bandy.png',
   './apple-touch-icon.png',

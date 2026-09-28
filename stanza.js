@@ -297,6 +297,39 @@
     return scheda && scheda.esiste ? 'gia-dentro' : 'scriviti';
   }
 
+  // ---------- Cancellare l'account: cosa si fa con le stanze ----------
+  // Google Play chiede che chi ha un account possa cancellarlo, con i suoi
+  // dati (ROADMAP § 3). Il nodo e' quello che il § 1 aveva gia' scritto: e'
+  // una domanda sulla stanza, non sull'account. Chi e' PROPRIETARIO di un
+  // campo non puo' sparire: il campo resterebbe senza nessuno che lo
+  // amministra, e senza nessuno che possa nemmeno cancellarlo — le regole
+  // Firestore non lasciano togliere la scheda del proprietario proprio per
+  // questo. Allora ci si ferma PRIMA di toccare qualunque cosa, e si dice
+  // quali sono i campi da cedere o cancellare.
+  //
+  // Dove si e' solo membro, invece, si toglie la propria scheda: e' il dato
+  // personale che sta dentro la stanza. Le spese e le presenze che hai
+  // scritto restano al campo — sono i conti del gruppo, come i messaggi in
+  // una chat di gruppo — e l'informativa lo dice.
+  //
+  // `stanze`: [{ codice, membro, proprietario }], da StanzaCloud.statoDi.
+  // Lo stesso campo puo' arrivare due volte (dal profilo e dal telefono): si
+  // conta una volta sola.
+  function pianoCancellazione(stanze) {
+    const visti = {};
+    const bloccata = [];
+    const daTogliere = [];
+    (stanze || []).forEach((x) => {
+      if (!x || !x.codice) return;
+      const c = normalizza(x.codice);
+      if (visti[c]) return;
+      visti[c] = true;
+      if (x.proprietario) bloccata.push(c);
+      else if (x.membro) daTogliere.push(c);
+    });
+    return { bloccata, daTogliere };
+  }
+
   // ---------- Cosa si puo' fare quando non sei in nessun campo ----------
   // Finche' non sei dentro un campo, quasi tutte le aree dell'app parlano di
   // dati che non esistono: Calendario mostra una settimana vuota, Saldi dei
@@ -342,6 +375,7 @@
     FUORI_DAL_CAMPO,
     gruppiMenu,
     esitoRilettura,
+    pianoCancellazione,
     linkInvito,
     leggiInvito,
     CHIAVE_INVITO,
@@ -418,6 +452,23 @@
   // Non e' una transazione, e va saputo: se il telefono muore a meta', resta
   // una stanza senza segreto — nessuno ci entra, nemmeno chi l'ha creata, e
   // si rifa'. E' il male minore rispetto a una Cloud Function.
+  // Il profilo si ricorda in quali stanze sei entrato o che hai creato. Serve
+  // a una cosa sola: cancellare l'account. Le regole non lasciano ELENCARE le
+  // stanze di qualcuno (una query su rooms/ non si puo' dimostrare sicura, e
+  // viene negata), quindi senza questo elenco la cancellazione non saprebbe
+  // di quali campi sei proprietario — e ne lascerebbe qualcuno senza padrone.
+  //
+  // Solo per chi ha un account vero: un anonimo non ha profilo (vedi
+  // Auth.profiloDaSalvare), e scriverglielo qui lo farebbe nascere lo stesso.
+  // E non e' una condizione per entrare: se non riesce, si entra comunque —
+  // la cancellazione guarda anche la stanza salvata sul telefono.
+  async function segnaNelProfilo(f, d, utente, c) {
+    if (!utente || !utente.uid || utente.isAnonimo || utente.isAnonymous) return;
+    try {
+      await f.setDoc(f.doc(d, 'users', utente.uid), { stanze: f.arrayUnion(c) }, { merge: true });
+    } catch (e) { /* un aiuto per la cancellazione, non un requisito per entrare */ }
+  }
+
   async function crea(dati, utente) {
     const f = await sdk();
     const d = await init();
@@ -435,6 +486,7 @@
     await f.setDoc(f.doc(d, 'rooms', codice, 'private', 'join'), { impronta: imp });
     await f.setDoc(f.doc(d, 'rooms', codice, 'members', utente.uid),
       root.Stanza.schedaProprietario((root.Auth && root.Auth.nomeVisibile(utente)) || ''));
+    await segnaNelProfilo(f, d, utente, codice);
     return codice;
   }
 
@@ -469,10 +521,11 @@
     let errore = null;
     try { const x = await f.getDoc(scheda); letta = { esiste: x.exists() }; } catch (e) { errore = e; }
     const esito = root.Stanza.esitoRilettura(letta, errore);
-    if (esito === 'gia-dentro') return c;
+    if (esito === 'gia-dentro') { await segnaNelProfilo(f, d, utente, c); return c; }
     if (esito === 'rilancia') throw errore;
     await f.setDoc(scheda,
       root.Stanza.schedaIngresso((root.Auth && root.Auth.nomeVisibile(utente)) || '', imp));
+    await segnaNelProfilo(f, d, utente, c);
     return c;
   }
 
@@ -498,6 +551,48 @@
   // Un permission-denied qui vuol dire quasi sempre una cosa sola: il codice
   // e' sbagliato. Dirlo cosi' e' piu' utile di "operazione non consentita",
   // che manda a cercare un guasto dove non c'e'.
+  // Per ogni codice: ci sei dentro? ne sei il proprietario? Si legge il
+  // documento della stanza: le regole lo fanno leggere solo ai membri, quindi
+  // "permesso negato" vuol dire "non sei membro". Ogni altro errore — la linea
+  // soprattutto — ferma tutto: una cancellazione non si fa alla cieca, e
+  // saltare un campo di cui sei proprietario vorrebbe dire lasciarlo orfano.
+  async function statoDi(codici, utente) {
+    if (!utente || !utente.uid) throw new Error('senza-utente');
+    const f = await sdk();
+    const d = await init();
+    const out = [];
+    for (const cod of (codici || [])) {
+      const c = root.Stanza.normalizza(cod);
+      if (!c) continue;
+      try {
+        const x = await f.getDoc(f.doc(d, 'rooms', c));
+        const dati = x.exists() ? x.data() : {};
+        // Se la lettura e' riuscita, per le regole sei membro — anche se la
+        // stanza nel frattempo non c'e' piu' e la tua scheda si'.
+        out.push({ codice: c, membro: true, proprietario: dati.proprietario === utente.uid });
+      } catch (e) {
+        if (/permission-denied/.test(String((e && (e.code || e.message)) || ''))) {
+          out.push({ codice: c, membro: false, proprietario: false });
+        } else {
+          throw e;
+        }
+      }
+    }
+    return out;
+  }
+
+  // Si toglie la propria scheda da ogni stanza dove si e' solo membri. Le
+  // regole lo permettono a se stessi, e lo vietano al proprietario — che qui
+  // non arriva mai, perche' Stanza.pianoCancellazione lo ha gia' fermato.
+  async function togliMe(codici, utente) {
+    if (!utente || !utente.uid) throw new Error('senza-utente');
+    const f = await sdk();
+    const d = await init();
+    for (const c of (codici || [])) {
+      await f.deleteDoc(f.doc(d, 'rooms', c, 'members', utente.uid));
+    }
+  }
+
   function motivo(errore) {
     const codice = String((errore && (errore.code || errore.message)) || '');
     if (/permission-denied/.test(codice)) return 'stanza.codiceSbagliato';
@@ -510,5 +605,5 @@
     return 'stanza.nonRiuscito';
   }
 
-  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, motivo };
+  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, statoDi, togliMe, motivo };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

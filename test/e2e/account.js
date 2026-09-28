@@ -174,7 +174,12 @@ const impostazioni = async (a) => {
   const verificato = await a.page.locator('main').innerText();
   ok(`toccando "Ho verificato" si diventa registrati (${/sei entrato come/i.test(verificato) ? 'sì' : 'no'})`,
     /sei entrato come/i.test(verificato) && /Mario Rossi/i.test(verificato));
-  ok('e compare il tasto per uscire', /\besci\b/i.test(verificato));
+  // Si cerca il BOTTONE, non la parola nel testo della pagina: innerText
+  // incolla i bottoni affiancati senza spazio, e da quando sotto "Esci" c'e'
+  // "Cancella l'account" il testo diceva "ESCICANCELLA L'ACCOUNT" — e
+  // \besci\b non trovava piu' il confine di parola, con il bottone li'.
+  ok('e compare il tasto per uscire',
+    (await a.page.locator('main button', { hasText: /^esci$/i }).count()) >= 1);
 
   ok('nessun errore JavaScript' + (a.errori.length ? ': ' + a.errori.join(' | ') : ''), a.errori.length === 0);
   await a.browser.close();

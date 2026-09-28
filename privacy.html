@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camp Ops · Informativa sulla privacy</title>
+  <link href="vendor/fonts.css" rel="stylesheet">
+  <!-- L'informativa che Google Play chiede a TUTTE le app (ROADMAP § 3).
+       Descrive quello che l'app fa DAVVERO, ed e' stata scritta guardando il
+       codice, non a memoria: l'app parla solo con Firebase, con Open-Meteo e
+       — quando la persona lo chiede — con WhatsApp; nessuna analitica e
+       nessuna pubblicita' (il measurementId in firebase-config.js c'e', ma lo
+       strumento non viene mai caricato). Se una di queste cose cambia, questa
+       pagina va cambiata insieme, nello stesso commit.
+       Titolare e contatto si leggono da firebase-config.js (APP_CONFIG.privacy). -->
+  <style>
+    :root { --carta: #FAF0D8; --scheda: #FFFBF0; --bosco: #00494A; --legno: #7A4A2A; --testo: #1f2a29; }
+    @media (prefers-color-scheme: dark) {
+      :root { --carta: #0E1A1A; --scheda: #142524; --bosco: #A9C2BC; --legno: #D7A878; --testo: #E4EDE4; }
+    }
+    body { margin: 0; background: var(--carta); color: var(--testo); font-family: 'Courier Prime', monospace; line-height: 1.55; }
+    main { max-width: 680px; margin: 0 auto; padding: 28px 18px 60px; }
+    h1 { font-family: 'Special Elite', system-ui, sans-serif; color: var(--bosco); font-size: 26px; margin: 0 0 4px; }
+    h2 { font-family: 'Special Elite', system-ui, sans-serif; color: var(--bosco); font-size: 19px; margin: 30px 0 8px; }
+    .scheda { background: var(--scheda); border: 2px solid color-mix(in srgb, var(--bosco) 20%, transparent); border-radius: 8px; padding: 14px 16px; }
+    .nota { color: var(--legno); font-size: 14px; }
+    .manca { color: #B91C1C; font-weight: bold; }
+    a { color: var(--bosco); }
+    ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Informativa sulla privacy</h1>
+  <p class="nota">Camp Ops · aggiornata il <span data-campo="aggiornata"></span></p>
+
+  <p>Camp Ops serve a un gruppo per organizzare un campo e dividerne le spese.
+  Qui trovi, senza giri di parole, quali dati usa, dove finiscono e come puoi
+  toglierli.</p>
+
+  <h2>Chi tratta i dati</h2>
+  <div class="scheda">
+    <p>Titolare: <strong data-campo="titolare"></strong><br>
+    Contatto: <span data-campo="contatto"></span></p>
+  </div>
+
+  <h2>Quali dati, e perché</h2>
+  <ul>
+    <li><strong>Se crei un account</strong> (con Google o con email e password):
+      nome, cognome e indirizzo email. Servono a creare e amministrare un campo
+      e a ritrovare il tuo posto se cambi telefono. La password la custodisce
+      Firebase: noi non la vediamo mai.</li>
+    <li><strong>Se entri col solo codice</strong>: un identificativo anonimo
+      generato da Firebase. Nessun nome, nessun indirizzo.</li>
+    <li><strong>I dati del campo</strong>, che scrivono i membri: i nomi dei
+      partecipanti (e se sono adulti o bambini), le presenze ai pasti, le
+      spese (importo, chi ha pagato, quando), i menù, le liste, i compiti, le
+      foto degli scontrini e della galleria. Li vedono <strong>solo i membri
+      di quel campo</strong>.</li>
+    <li><strong>Sul tuo telefono</strong>: una copia dei dati del campo, perché
+      l'app funzioni anche senza linea. Resta nella memoria del browser e si
+      toglie cancellando i dati del sito o disinstallando l'app.</li>
+  </ul>
+
+  <h2>Chi li riceve</h2>
+  <ul>
+    <li><strong>Google Firebase</strong>: l'accesso (Authentication) e il
+      database. Il database sta in Europa, a Torino.</li>
+    <li><strong>Vercel</strong>: ospita l'app. Come ogni server, registra dati
+      tecnici delle richieste, come l'indirizzo IP.</li>
+    <li><strong>Open-Meteo</strong>: riceve le coordinate del campo per le
+      previsioni del tempo. Nessun dato personale.</li>
+    <li><strong>WhatsApp</strong> o le altre app di condivisione del telefono:
+      solo quando sei tu a premere «Condividi», e ricevono solo quello che
+      stai condividendo.</li>
+  </ul>
+
+  <h2>Cosa non facciamo</h2>
+  <p>Niente pubblicità, niente strumenti di analisi, niente profilazione. I
+  dati non si vendono e non si cedono a nessuno.</p>
+
+  <h2>Per quanto tempo</h2>
+  <p>Il profilo resta finché esiste il tuo account. I dati di un campo restano
+  finché esiste il campo: li cancella chi lo amministra.</p>
+
+  <h2>Cancellare l'account</h2>
+  <p>Dall'app: <strong>Impostazioni → Account → Cancella l'account</strong>.
+  Si cancellano il tuo profilo, il tuo posto nei campi dove sei entrato e
+  l'account. Le spese e le presenze che hai scritto <strong>restano al
+  campo</strong>, perché sono i conti del gruppo — come i messaggi in una chat
+  di gruppo. Se sei il proprietario di un campo, prima va ceduto a qualcun
+  altro o cancellato: altrimenti resterebbe senza nessuno che lo possa
+  amministrare.</p>
+  <p>Senza l'app: <a href="cancella-account.html">chiedi la cancellazione qui</a>.</p>
+
+  <h2>I tuoi diritti</h2>
+  <p>Puoi chiedere di vedere, correggere o cancellare i tuoi dati, e di
+  riceverne una copia (dall'app: Impostazioni → Backup Dati → Esporta). Puoi
+  opporti al trattamento, e hai il diritto di rivolgerti al
+  <a href="https://www.garanteprivacy.it">Garante per la protezione dei dati
+  personali</a>.</p>
+
+  <h2>Bambini</h2>
+  <p>L'app è pensata per gli adulti che organizzano il campo. I bambini
+  compaiono solo come nomi nella lista dei partecipanti, scritti da chi
+  organizza: non usano l'app.</p>
+</main>
+<script src="firebase-config.js"></script>
+<script>
+  // Titolare, contatto e data vengono da firebase-config.js: scritti in un
+  // posto solo. Un contatto che manca si dice in rosso invece di inventarlo.
+  (function () {
+    var p = (window.APP_CONFIG && window.APP_CONFIG.privacy) || {};
+    document.querySelectorAll('[data-campo]').forEach(function (el) {
+      var v = p[el.getAttribute('data-campo')];
+      if (v) { el.textContent = v; return; }
+      el.textContent = 'da completare';
+      el.className = 'manca';
+    });
+    var c = document.querySelector('[data-campo="contatto"]');
+    if (p.contatto && c) { c.innerHTML = ''; var a = document.createElement('a'); a.href = 'mailto:' + p.contatto; a.textContent = p.contatto; c.appendChild(a); }
+  })();
+</script>
+</body>
+</html>

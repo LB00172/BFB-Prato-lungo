@@ -252,6 +252,11 @@ const permesso = async (msg, azione) => {
     () => getDoc(doc(ospite, 'users/anna')));
   await negato('e non se ne scrive uno a caso',
     () => setDoc(doc(ospite, 'users/chiunque'), { nome: 'X' }));
+  // La cancellazione dell'account (ROADMAP § 3, requisito di Google Play)
+  // toglie il profilo prima dell'account: dopo, senza utente, le regole non
+  // lo lascerebbero piu' toccare.
+  await permesso('ognuno cancella il proprio profilo', () => deleteDoc(doc(anna, 'users/anna')));
+  await negato('ma non quello di un altro', () => deleteDoc(doc(bruno, 'users/anna')));
 
   console.log('\n6) Il campo 2026 non abita in questo progetto');
   await negato('l\'utente condiviso non legge camps/',

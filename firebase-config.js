@@ -146,6 +146,16 @@ window.APP_CONFIG = {
     footerMotto: "",
     credits: "Camp Ops · Lorenzo Ballerini · © 2026",
   },
+  // Chi tratta i dati, per l'informativa (privacy.html) e la pagina di
+  // cancellazione (cancella-account.html): le due pagine li leggono da qui,
+  // cosi' il contatto si scrive in un posto solo. Google Play vuole un modo
+  // per raggiungere chi gestisce i dati; finche' `contatto` e' vuoto, le
+  // pagine lo dicono in rosso invece di inventarne uno.
+  privacy: {
+    titolare: "Lorenzo Ballerini",
+    contatto: "",
+    aggiornata: "28 settembre 2026",
+  },
   features: {
     // Accese il 21 settembre: i provider Google ed Email/Password sono attivi
     // nella console. Finche' le regole Firestore nuove non sono pubblicate,

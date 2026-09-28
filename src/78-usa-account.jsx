@@ -27,6 +27,10 @@ const usaAccount = () => {
   // Una chiave del dizionario, non una frase: i messaggi li sceglie il disegno
   // (§ 18). null vuol dire che non c'e' niente da dire.
   const [problema, setProblema] = useState(null);
+  // Un dato da mettere DENTRO il messaggio (i campi di cui sei proprietario,
+  // quando la cancellazione si ferma). Quando manca, il messaggio riceve
+  // l'indirizzo della pagina, che serve a quello del dominio non autorizzato.
+  const [problemaDati, setProblemaDati] = useState(null);
   const [occupato, setOccupato] = useState(false);
   // Una riga verde dopo un'azione riuscita: "email rimandata", "ti abbiamo
   // scritto". Senza, l'utente tocca due volte e riceve due email.
@@ -54,7 +58,7 @@ const usaAccount = () => {
 
   const stato = window.Auth ? window.Auth.stato(utente) : 'ospite';
 
-  const pulisci = () => { setProblema(null); setFatto(null); };
+  const pulisci = () => { setProblema(null); setProblemaDati(null); setFatto(null); };
   const chiudi = () => { setModo(''); setPassword(''); pulisci(); };
 
   // Ogni azione passa di qui: una sola strada per "occupato", per l'errore
@@ -88,6 +92,52 @@ const usaAccount = () => {
 
   const entraConGoogle = () => prova((ac) => ac.conGoogle());
 
+  // ---------- Cancellare l'account (ROADMAP § 3) ----------
+  // Tre passi, e il primo decide se si fanno gli altri due:
+  //
+  //   1. le stanze da guardare: quelle che il profilo si e' segnato, piu'
+  //      quella salvata su questo telefono (che copre chi e' entrato prima
+  //      che il profilo cominciasse a segnarsele);
+  //   2. se sei PROPRIETARIO anche di una sola, ci si ferma e non si tocca
+  //      niente: il campo resterebbe senza nessuno che lo amministri o lo
+  //      possa cancellare (Stanza.pianoCancellazione);
+  //   3. altrimenti si toglie la tua scheda dalle stanze, poi il profilo e
+  //      l'account.
+  //
+  // Se qualcosa si rompe a meta' (la linea, o Firebase che chiede di
+  // rientrare), rifarlo e' sicuro: ogni passo trova gia' fatto quello che
+  // era stato fatto.
+  const cancellaAccount = async (codiceLocale) => {
+    const ac = AC();
+    const sc = (typeof window !== 'undefined' && window.StanzaCloud) || null;
+    const S = (typeof window !== 'undefined' && window.Stanza) || null;
+    if (!ac || !ac.disponibile() || !ac.cancellaProfiloEAccount) { setProblema('auth.senzaFirebase'); return false; }
+    setOccupato(true);
+    pulisci();
+    try {
+      const dalProfilo = ac.stanzeDelProfilo ? await ac.stanzeDelProfilo() : [];
+      const codici = dalProfilo.concat(codiceLocale ? [codiceLocale] : []);
+      if (codici.length && sc && S) {
+        const piano = S.pianoCancellazione(await sc.statoDi(codici, utente));
+        if (piano.bloccata.length) {
+          setProblema('auth.cancellaBloccata');
+          setProblemaDati(piano.bloccata.map((c) => S.bello(c)).join(', '));
+          return false;
+        }
+        await sc.togliMe(piano.daTogliere, utente);
+      }
+      await ac.cancellaProfiloEAccount();
+      setFatto('auth.accountCancellato');
+      return true;
+    } catch (e) {
+      const chiave = window.Auth ? window.Auth.motivo(e) : 'auth.nonRiuscito';
+      if (chiave) setProblema(chiave);
+      return false;
+    } finally {
+      setOccupato(false);
+    }
+  };
+
   const entraConEmail = async () => {
     if (!email.trim() || !password) { setProblema('auth.serveEmailEPassword'); return; }
     if (await prova((ac) => ac.entra(email, password))) chiudi();
@@ -119,8 +169,8 @@ const usaAccount = () => {
   return {
     utente, stato, modo, setModo, nome, setNome, cognome, setCognome,
     email, setEmail, password, setPassword,
-    problema, fatto, occupato, chiudi,
-    entraConGoogle, entraConEmail, registrati, esci, reimposta,
+    problema, problemaDati, fatto, occupato, chiudi,
+    entraConGoogle, entraConEmail, registrati, esci, reimposta, cancellaAccount,
     rimandaVerifica, controllaVerifica,
   };
 };

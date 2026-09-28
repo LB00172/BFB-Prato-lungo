@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camp Ops · Cancellare l'account</title>
+  <link href="vendor/fonts.css" rel="stylesheet">
+  <!-- La pagina web per chiedere la cancellazione dell'account: Google Play
+       la vuole IN AGGIUNTA al percorso dentro l'app, per chi l'app non ce
+       l'ha piu' (ROADMAP § 3). Contatto letto da firebase-config.js. -->
+  <style>
+    :root { --carta: #FAF0D8; --scheda: #FFFBF0; --bosco: #00494A; --legno: #7A4A2A; --testo: #1f2a29; }
+    @media (prefers-color-scheme: dark) {
+      :root { --carta: #0E1A1A; --scheda: #142524; --bosco: #A9C2BC; --legno: #D7A878; --testo: #E4EDE4; }
+    }
+    body { margin: 0; background: var(--carta); color: var(--testo); font-family: 'Courier Prime', monospace; line-height: 1.55; }
+    main { max-width: 680px; margin: 0 auto; padding: 28px 18px 60px; }
+    h1 { font-family: 'Special Elite', system-ui, sans-serif; color: var(--bosco); font-size: 26px; margin: 0 0 4px; }
+    h2 { font-family: 'Special Elite', system-ui, sans-serif; color: var(--bosco); font-size: 19px; margin: 30px 0 8px; }
+    .scheda { background: var(--scheda); border: 2px solid color-mix(in srgb, var(--bosco) 20%, transparent); border-radius: 8px; padding: 14px 16px; }
+    .nota { color: var(--legno); font-size: 14px; }
+    .manca { color: #B91C1C; font-weight: bold; }
+    a { color: var(--bosco); }
+    ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Cancellare l'account</h1>
+  <p class="nota">Camp Ops</p>
+
+  <h2>Se hai l'app</h2>
+  <div class="scheda">
+    <p>Apri <strong>Impostazioni → Account → Cancella l'account</strong>. È
+    immediato: si cancellano il tuo profilo, il tuo posto nei campi dove sei
+    entrato e l'account.</p>
+  </div>
+
+  <h2>Se l'app non ce l'hai più</h2>
+  <p>Scrivi a <span data-campo="contatto"></span> <strong>dall'indirizzo email
+  del tuo account</strong>, chiedendo la cancellazione. Serve quell'indirizzo:
+  è l'unico modo di sapere che la richiesta viene davvero da te. La facciamo
+  entro 30 giorni e ti rispondiamo quando è fatta.</p>
+
+  <h2>Cosa si cancella, e cosa resta</h2>
+  <ul>
+    <li><strong>Si cancellano</strong>: il tuo profilo (nome, cognome,
+      indirizzo), il tuo posto nei campi dove sei entrato, l'account.</li>
+    <li><strong>Restano al campo</strong> le spese e le presenze che hai
+      scritto: sono i conti del gruppo, come i messaggi in una chat di
+      gruppo. Li cancella chi amministra il campo, cancellando il campo.</li>
+    <li>Se sei il <strong>proprietario</strong> di un campo, prima va ceduto a
+      qualcun altro o cancellato: altrimenti resterebbe senza nessuno che lo
+      possa amministrare.</li>
+  </ul>
+
+  <p><a href="privacy.html">L'informativa sulla privacy</a></p>
+</main>
+<script src="firebase-config.js"></script>
+<script>
+  // Titolare, contatto e data vengono da firebase-config.js: scritti in un
+  // posto solo. Un contatto che manca si dice in rosso invece di inventarlo.
+  (function () {
+    var p = (window.APP_CONFIG && window.APP_CONFIG.privacy) || {};
+    document.querySelectorAll('[data-campo]').forEach(function (el) {
+      var v = p[el.getAttribute('data-campo')];
+      if (v) { el.textContent = v; return; }
+      el.textContent = 'da completare';
+      el.className = 'manca';
+    });
+    var c = document.querySelector('[data-campo="contatto"]');
+    if (p.contatto && c) { c.innerHTML = ''; var a = document.createElement('a'); a.href = 'mailto:' + p.contatto; a.textContent = p.contatto; c.appendChild(a); }
+  })();
+</script>
+</body>
+</html>

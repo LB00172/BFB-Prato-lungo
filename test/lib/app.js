@@ -123,6 +123,9 @@ function ingressoFinto(o) {
     }
   } catch (e) { /* niente */ }
   window.__auth = { utente: o.utente || null, chiamate: [] };
+  // Un registro UNICO per i due finti: le chiamate stanno in due elenchi
+  // separati, e da due elenchi non si legge l'ordine in cui sono avvenute.
+  window.__ordine = [];
   let osservatori = [];
   const annuncia = () => osservatori.forEach((cb) => cb(window.__auth.utente ? Object.assign({}, window.__auth.utente) : null));
   Object.defineProperty(window, 'AuthCloud', {
@@ -151,6 +154,16 @@ function ingressoFinto(o) {
       return window.__auth.utente;
     },
     esci: async () => { window.__auth.chiamate.push('esci'); window.__auth.utente = null; annuncia(); },
+    // La cancellazione: le stanze che il profilo si e' segnato, e la
+    // cancellazione vera. Il finto registra, la DECISIONE (proprietario si',
+    // proprietario no) la prende Stanza.pianoCancellazione, quella vera.
+    stanzeDelProfilo: async () => (o.stanzeProfilo || []).slice(),
+    cancellaProfiloEAccount: async () => {
+      window.__auth.chiamate.push('cancella');
+      window.__ordine.push('cancella');
+      window.__auth.utente = null;
+      annuncia();
+    },
   };
 
   // `stanza`: il codice della stanza in cui si e' gia' (salvato sul telefono).
@@ -176,6 +189,16 @@ function ingressoFinto(o) {
       leggi: async () => null,
       impronta: async () => 'impronta-finta',
       motivo: () => 'stanza.nonRiuscito',
+      // `proprietario`: se vero, di ogni stanza guardata si risulta
+      // proprietari — il caso in cui la cancellazione deve fermarsi.
+      statoDi: async (codici) => {
+        window.__stanza.chiamate.push({ che: 'statoDi', codici: (codici || []).slice() });
+        return (codici || []).map((c) => ({ codice: c, membro: true, proprietario: !!o.proprietario }));
+      },
+      togliMe: async (codici, utente) => {
+        window.__stanza.chiamate.push({ che: 'togliMe', codici: (codici || []).slice(), uid: utente && utente.uid });
+        window.__ordine.push('togliMe');
+      },
     };
   }
 }

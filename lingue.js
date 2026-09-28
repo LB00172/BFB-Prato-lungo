@@ -456,6 +456,7 @@
     'tecnica.attivaTasto': 'Attiva',
     // Info
     'info.titolo': 'Info',
+    'info.privacy': 'Informativa sulla privacy',
     'info.versione': 'Versione installata',
     'info.aggiornamento': "L'app si aggiorna da sola: se non vedi una novità, chiudila e riaprila.",
     // Dentro la partita
@@ -1014,6 +1015,10 @@
     'auth.metodoSpento': "Questo modo di entrare non è attivo su questa installazione.",
     'auth.giaCollegato': 'Questo account è già collegato a un altro accesso.',
     'auth.rientra': 'Per farlo serve rientrare: esci e rientra, poi riprova.',
+    'auth.cancellaAccount': 'Cancella l\'account',
+    'auth.confermaCancella': 'Cancellare il tuo account? Si toglie il tuo profilo e il tuo posto nei campi dove sei entrato. Le spese e le presenze che hai scritto restano al campo: sono i conti del gruppo. Non si può annullare.',
+    'auth.cancellaBloccata': (campi) => `Sei il proprietario di ${campi}. Prima di cancellare l'account cedi il campo a qualcun altro o cancellalo: altrimenti resterebbe senza nessuno che lo possa amministrare.`,
+    'auth.accountCancellato': 'Account cancellato. Grazie di aver usato l\'app.',
     // Il nome del dominio NON e' un dettaglio tecnico da nascondere: e'
     // l'unica cosa che serve per riparare. Senza, si copia l'indirizzo
     // sbagliato — e' gia' successo, con un'anteprima Vercel che aveva
@@ -1432,6 +1437,7 @@
     'tecnica.password': 'Contraseña técnica',
     'tecnica.attivaTasto': 'Activar',
     'info.titolo': 'Info',
+    'info.privacy': 'Política de privacidad',
     'info.versione': 'Versión instalada',
     'info.aggiornamento': 'La aplicación se actualiza sola: si no ves una novedad, ciérrala y vuelve a abrirla.',
     'gioco.livello': (n) => `Nivel ${n}`,
@@ -1948,6 +1954,10 @@
     'auth.metodoSpento': 'Esta forma de entrar no está activa en esta instalación.',
     'auth.giaCollegato': 'Esta cuenta ya está vinculada a otro acceso.',
     'auth.rientra': 'Para hacerlo hay que volver a entrar: sal y entra otra vez, luego vuelve a probar.',
+    'auth.cancellaAccount': 'Borrar la cuenta',
+    'auth.confermaCancella': '¿Borrar tu cuenta? Se quita tu perfil y tu sitio en los campamentos donde entraste. Los gastos y las asistencias que escribiste se quedan en el campamento: son las cuentas del grupo. No se puede deshacer.',
+    'auth.cancellaBloccata': (campi) => `Eres el propietario de ${campi}. Antes de borrar la cuenta cede el campamento a otra persona o bórralo: si no, se quedaría sin nadie que lo pueda administrar.`,
+    'auth.accountCancellato': 'Cuenta borrada. Gracias por usar la app.',
     'auth.dominioNonAutorizzato': (dove) => `«${dove}» no está entre las direcciones autorizadas en Firebase: el acceso con Google no puede funcionar desde aquí. Hay que añadirla tal cual, en Authentication → Settings → Authorized domains.`,
     'auth.finestraBloccata': 'El navegador ha bloqueado la ventana de Google. Permite las ventanas para este sitio y vuelve a probar.',
     'auth.altroModoDiEntrare': 'Esta dirección ya existe, pero entró de otra forma. Prueba con correo y contraseña.',
@@ -2364,6 +2374,7 @@
     'tecnica.password': 'Mot de passe technique',
     'tecnica.attivaTasto': 'Activer',
     'info.titolo': 'Infos',
+    'info.privacy': 'Politique de confidentialité',
     'info.versione': 'Version installée',
     'info.aggiornamento': "L'application se met à jour toute seule : si tu ne vois pas une nouveauté, ferme-la et rouvre-la.",
     'gioco.livello': (n) => `Niveau ${n}`,
@@ -2880,6 +2891,10 @@
     'auth.metodoSpento': "Cette façon d'entrer n'est pas activée sur cette installation.",
     'auth.giaCollegato': 'Ce compte est déjà lié à un autre accès.',
     'auth.rientra': 'Pour ça il faut se reconnecter : déconnecte-toi, reviens, puis réessaie.',
+    'auth.cancellaAccount': 'Supprimer le compte',
+    'auth.confermaCancella': "Supprimer ton compte ? Ton profil et ta place dans les camps où tu es entré seront retirés. Les dépenses et les présences que tu as écrites restent au camp : ce sont les comptes du groupe. Impossible d'annuler.",
+    'auth.cancellaBloccata': (campi) => `Tu es le propriétaire de ${campi}. Avant de supprimer le compte, cède le camp à quelqu'un d'autre ou supprime-le : sinon il resterait sans personne pour l'administrer.`,
+    'auth.accountCancellato': "Compte supprimé. Merci d'avoir utilisé l'app.",
     'auth.dominioNonAutorizzato': (dove) => `« ${dove} » n'est pas parmi les adresses autorisées dans Firebase : l'accès avec Google ne peut pas marcher d'ici. Il faut l'ajouter telle quelle, dans Authentication → Settings → Authorized domains.`,
     'auth.finestraBloccata': 'Le navigateur a bloqué la fenêtre de Google. Autorise les fenêtres pour ce site et réessaie.',
     'auth.altroModoDiEntrare': "Cette adresse existe déjà, mais elle est entrée autrement. Essaie avec e-mail et mot de passe.",

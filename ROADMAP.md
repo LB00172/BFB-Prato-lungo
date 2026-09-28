@@ -404,10 +404,17 @@ perdere la scheda nella stanza. Vedi `CLAUDE.md`, «L'account non è un muro».
 
 **Le dichiarazioni in Play Console**
 
-- [ ] **Informativa privacy — per TUTTE le app**, anche per quelle che non
+- [x] **Informativa privacy — per TUTTE le app**, anche per quelle che non
       raccolgono niente (*«Apps that do not access any personal and
-      sensitive user data must still submit a privacy policy»*). Va linkata
-      in Console **e** raggiungibile dentro l'app: una voce in Impostazioni.
+      sensitive user data must still submit a privacy policy»*). **Fatta il
+      28 settembre**: `privacy.html`, raggiungibile da Impostazioni → Info.
+      Scritta guardando il codice; una guardia in `unita/compilazione` elenca
+      gli indirizzi esterni con cui l'app parla e diventa rossa se ne compare
+      uno che l'informativa non nomina. **Manca il contatto** del titolare
+      (`APP_CONFIG.privacy.contatto` in `firebase-config.js`): finché è vuoto
+      la pagina lo dice in rosso. In italiano: spagnolo e francese prima di
+      pubblicare in quei paesi.
+- [ ] Link all'informativa **in Play Console** (Lorenzo).
 - [ ] **Scheda «Sicurezza dei dati».** Si dichiara quello che raccogliamo
       davvero, e va guardato nel codice, non a memoria: nome e indirizzo
       email (`users/<uid>`), le spese e le presenze che gli utenti scrivono,
@@ -427,17 +434,23 @@ perdere la scheda nella stanza. Vedi `CLAUDE.md`, «L'account non è un muro».
 
 **La cancellazione dell'account** (lavoro nostro)
 
-- [ ] Obbligatoria perché l'app permette di creare un account — *anche se
-      una parte si usa senza*, dicono le norme. Servono **due** strade:
-      una **dentro l'app** (in Impostazioni, vicino all'account) e una
-      **pagina web** dove chiederla senza avere l'app installata (basta una
-      pagina statica su Vercel).
-- [ ] Cosa cancella: il profilo `users/<uid>`, le schede `members/<uid>`
-      nelle stanze, l'utente in Firebase Authentication. **La domanda vera è
-      la stanza**: chi è proprietario di un campo non può sparire lasciandolo
-      senza padrone (le regole Firestore lo vietano già). Prima di cancellare
-      va passato il testimone, o cancellata la stanza — ed è il § 1 che lo
-      aveva già scritto: *è una domanda sulla room, non sull'account*.
+- [x] **Fatta il 28 settembre**, tutte e due le strade. **Dentro l'app**:
+      Impostazioni → Account → Cancella l'account. **Sul web**:
+      `cancella-account.html`, per chi l'app non ce l'ha più (la richiesta
+      arriva per email al contatto dell'informativa, che va compilato).
+- [x] Cosa cancella: le schede `members/<uid>` nelle stanze dove si è
+      membri, il profilo `users/<uid>`, l'account — in quest'ordine, perché
+      senza account le regole non lasciano più toccare niente. **Il
+      proprietario di un campo viene fermato prima di toccare qualunque
+      cosa** (`Stanza.pianoCancellazione`): il campo resterebbe senza nessuno
+      che lo amministri. Per saperlo il profilo si segna le stanze in cui
+      entri o che crei — le regole non lasciano elencarle — e si guarda anche
+      quella salvata sul telefono. Le spese e le presenze scritte restano al
+      campo: sono i conti del gruppo.
+- [ ] **Cedere un campo** a un altro membro non esiste ancora: oggi chi è
+      proprietario, per cancellarsi, deve cancellare il campo. Va fatto
+      prima di pubblicare — altrimenti l'unica strada per andarsene è
+      distruggere i conti di tutti.
 
 **Il marchio**
 

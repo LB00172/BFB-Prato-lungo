@@ -11,7 +11,10 @@
 //
 // Il titolo e' facoltativo per un motivo solo: sulla schermata d'apertura la
 // parola "Account" sopra i bottoni non dice niente che il logo non dica gia'.
-const schedaAccount = ({ account, senzaTitolo }) => (
+// `onCancella`: chi disegna la tessera e sa in che stanza si e' (Impostazioni)
+// passa come cancellare l'account; la schermata d'apertura no, perche' li'
+// un account da cancellare non c'e' mai.
+const schedaAccount = ({ account, senzaTitolo, onCancella }) => (
     <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
       {!senzaTitolo && <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('auth.titolo')}</h3>}
 
@@ -19,6 +22,13 @@ const schedaAccount = ({ account, senzaTitolo }) => (
         <>
           <p className="text-piccolo text-bosco leading-snug">{frase('auth.entratoCome', window.Auth.nomeVisibile({ nome: account.utente && account.utente.nome, email: account.utente && account.utente.email }))}</p>
           <button onClick={account.esci} disabled={account.occupato} className={bottone('secondario', 'normale', 'w-full')}>{L.t('auth.esci')}</button>
+          {onCancella && (
+            <button
+              onClick={() => { if (window.confirm(L.t('auth.confermaCancella'))) onCancella(); }}
+              disabled={account.occupato}
+              className={bottone('distruttivo', 'minuscolo', 'w-full')}
+            >{L.t('auth.cancellaAccount')}</button>
+          )}
         </>
       )}
 
@@ -30,6 +40,13 @@ const schedaAccount = ({ account, senzaTitolo }) => (
             <button onClick={account.rimandaVerifica} disabled={account.occupato} className={bottone('secondario', 'normale', 'flex-1')}>{L.t('auth.rimandaEmail')}</button>
           </div>
           <button onClick={account.esci} disabled={account.occupato} className={bottone('testuale', 'minuscolo', 'w-full')}>{L.t('auth.esci')}</button>
+          {onCancella && (
+            <button
+              onClick={() => { if (window.confirm(L.t('auth.confermaCancella'))) onCancella(); }}
+              disabled={account.occupato}
+              className={bottone('distruttivo', 'minuscolo', 'w-full')}
+            >{L.t('auth.cancellaAccount')}</button>
+          )}
         </>
       )}
 
@@ -93,7 +110,7 @@ const schedaAccount = ({ account, senzaTitolo }) => (
       {/* L'indirizzo di questa pagina si passa sempre: le chiavi che sono
           stringhe lo ignorano, e quella del dominio non autorizzato ci
           scrive dentro il nome da copiare in Firebase. */}
-      {account.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(account.problema, typeof window !== 'undefined' ? window.location.hostname : '')}</p>}
+      {account.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(account.problema, account.problemaDati != null ? account.problemaDati : (typeof window !== 'undefined' ? window.location.hostname : ''))}</p>}
       {account.fatto && <p className="text-piccolo text-bosco leading-snug">{L.t(account.fatto)}</p>}
     </div>
 );

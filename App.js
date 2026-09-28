@@ -2990,6 +2990,10 @@ const usaAccount = () => {
   // Una chiave del dizionario, non una frase: i messaggi li sceglie il disegno
   // (§ 18). null vuol dire che non c'e' niente da dire.
   const [problema, setProblema] = useState(null);
+  // Un dato da mettere DENTRO il messaggio (i campi di cui sei proprietario,
+  // quando la cancellazione si ferma). Quando manca, il messaggio riceve
+  // l'indirizzo della pagina, che serve a quello del dominio non autorizzato.
+  const [problemaDati, setProblemaDati] = useState(null);
   const [occupato, setOccupato] = useState(false);
   // Una riga verde dopo un'azione riuscita: "email rimandata", "ti abbiamo
   // scritto". Senza, l'utente tocca due volte e riceve due email.
@@ -3016,6 +3020,7 @@ const usaAccount = () => {
   const stato = window.Auth ? window.Auth.stato(utente) : 'ospite';
   const pulisci = () => {
     setProblema(null);
+    setProblemaDati(null);
     setFatto(null);
   };
   const chiudi = () => {
@@ -3056,6 +3061,55 @@ const usaAccount = () => {
     }
   };
   const entraConGoogle = () => prova(ac => ac.conGoogle());
+
+  // ---------- Cancellare l'account (ROADMAP § 3) ----------
+  // Tre passi, e il primo decide se si fanno gli altri due:
+  //
+  //   1. le stanze da guardare: quelle che il profilo si e' segnato, piu'
+  //      quella salvata su questo telefono (che copre chi e' entrato prima
+  //      che il profilo cominciasse a segnarsele);
+  //   2. se sei PROPRIETARIO anche di una sola, ci si ferma e non si tocca
+  //      niente: il campo resterebbe senza nessuno che lo amministri o lo
+  //      possa cancellare (Stanza.pianoCancellazione);
+  //   3. altrimenti si toglie la tua scheda dalle stanze, poi il profilo e
+  //      l'account.
+  //
+  // Se qualcosa si rompe a meta' (la linea, o Firebase che chiede di
+  // rientrare), rifarlo e' sicuro: ogni passo trova gia' fatto quello che
+  // era stato fatto.
+  const cancellaAccount = async codiceLocale => {
+    const ac = AC();
+    const sc = typeof window !== 'undefined' && window.StanzaCloud || null;
+    const S = typeof window !== 'undefined' && window.Stanza || null;
+    if (!ac || !ac.disponibile() || !ac.cancellaProfiloEAccount) {
+      setProblema('auth.senzaFirebase');
+      return false;
+    }
+    setOccupato(true);
+    pulisci();
+    try {
+      const dalProfilo = ac.stanzeDelProfilo ? await ac.stanzeDelProfilo() : [];
+      const codici = dalProfilo.concat(codiceLocale ? [codiceLocale] : []);
+      if (codici.length && sc && S) {
+        const piano = S.pianoCancellazione(await sc.statoDi(codici, utente));
+        if (piano.bloccata.length) {
+          setProblema('auth.cancellaBloccata');
+          setProblemaDati(piano.bloccata.map(c => S.bello(c)).join(', '));
+          return false;
+        }
+        await sc.togliMe(piano.daTogliere, utente);
+      }
+      await ac.cancellaProfiloEAccount();
+      setFatto('auth.accountCancellato');
+      return true;
+    } catch (e) {
+      const chiave = window.Auth ? window.Auth.motivo(e) : 'auth.nonRiuscito';
+      if (chiave) setProblema(chiave);
+      return false;
+    } finally {
+      setOccupato(false);
+    }
+  };
   const entraConEmail = async () => {
     if (!email.trim() || !password) {
       setProblema('auth.serveEmailEPassword');
@@ -3112,6 +3166,7 @@ const usaAccount = () => {
     password,
     setPassword,
     problema,
+    problemaDati,
     fatto,
     occupato,
     chiudi,
@@ -3120,6 +3175,7 @@ const usaAccount = () => {
     registrati,
     esci,
     reimposta,
+    cancellaAccount,
     rimandaVerifica,
     controllaVerifica
   };
@@ -9188,7 +9244,14 @@ const schedaImpostazioni = ({
 }, c.no))))), readyOk && /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic"
 }, L.t('pronto.tuttoBene')))), FEATURES.auth && schedaAccount({
-  account
+  account,
+  // Cancellato l'account, si esce anche dalla stanza su questo telefono:
+  // la scheda li' dentro non c'e' piu', e la sincronizzazione andrebbe a
+  // sbattere contro un "permesso negato" a ogni apertura.
+  onCancella: async () => {
+    const fatto = await account.cancellaAccount(stanzaStato.stanza && stanzaStato.stanza.codice);
+    if (fatto) stanzaStato.esci();
+  }
 }), FEATURES.rooms && /*#__PURE__*/React.createElement("div", {
   className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
@@ -9681,7 +9744,12 @@ const schedaImpostazioni = ({
   className: "font-bold"
 }, swVersion || '—')), /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-carta/70 leading-snug"
-}, L.t('info.aggiornamento')), /*#__PURE__*/React.createElement("p", {
+}, L.t('info.aggiornamento')), /*#__PURE__*/React.createElement("a", {
+  href: "./privacy.html",
+  target: "_blank",
+  rel: "noopener",
+  className: "block text-piccolo text-carta underline"
+}, L.t('info.privacy')), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-salvia/80 pt-1"
 }, BRAND.credits)));
 // ---------- Scheda "Chi fa cosa": i compiti assegnati ----------
@@ -9796,9 +9864,13 @@ const schedaCompiti = ({
 //
 // Il titolo e' facoltativo per un motivo solo: sulla schermata d'apertura la
 // parola "Account" sopra i bottoni non dice niente che il logo non dica gia'.
+// `onCancella`: chi disegna la tessera e sa in che stanza si e' (Impostazioni)
+// passa come cancellare l'account; la schermata d'apertura no, perche' li'
+// un account da cancellare non c'e' mai.
 const schedaAccount = ({
   account,
-  senzaTitolo
+  senzaTitolo,
+  onCancella
 }) => /*#__PURE__*/React.createElement("div", {
   className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, !senzaTitolo && /*#__PURE__*/React.createElement("h3", {
@@ -9812,7 +9884,13 @@ const schedaAccount = ({
   onClick: account.esci,
   disabled: account.occupato,
   className: bottone('secondario', 'normale', 'w-full')
-}, L.t('auth.esci'))), account.stato === 'daVerificare' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+}, L.t('auth.esci')), onCancella && /*#__PURE__*/React.createElement("button", {
+  onClick: () => {
+    if (window.confirm(L.t('auth.confermaCancella'))) onCancella();
+  },
+  disabled: account.occupato,
+  className: bottone('distruttivo', 'minuscolo', 'w-full')
+}, L.t('auth.cancellaAccount'))), account.stato === 'daVerificare' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-legno leading-snug"
 }, frase('auth.daVerificare', account.utente && account.utente.email || '')), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
@@ -9828,7 +9906,13 @@ const schedaAccount = ({
   onClick: account.esci,
   disabled: account.occupato,
   className: bottone('testuale', 'minuscolo', 'w-full')
-}, L.t('auth.esci'))), (account.stato === 'ospite' || account.stato === 'anonimo') && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+}, L.t('auth.esci')), onCancella && /*#__PURE__*/React.createElement("button", {
+  onClick: () => {
+    if (window.confirm(L.t('auth.confermaCancella'))) onCancella();
+  },
+  disabled: account.occupato,
+  className: bottone('distruttivo', 'minuscolo', 'w-full')
+}, L.t('auth.cancellaAccount'))), (account.stato === 'ospite' || account.stato === 'anonimo') && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500 leading-snug"
 }, frase('auth.aCosaServe')), /*#__PURE__*/React.createElement("button", {
   onClick: account.entraConGoogle,
@@ -9899,7 +9983,7 @@ const schedaAccount = ({
   className: bottone('testuale', 'minuscolo', 'w-full')
 }, L.t('auth.passwordDimenticata')))), account.problema && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo font-bold text-red-700 leading-snug"
-}, L.t(account.problema, typeof window !== 'undefined' ? window.location.hostname : '')), account.fatto && /*#__PURE__*/React.createElement("p", {
+}, L.t(account.problema, account.problemaDati != null ? account.problemaDati : typeof window !== 'undefined' ? window.location.hostname : '')), account.fatto && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-bosco leading-snug"
 }, L.t(account.fatto)));
 

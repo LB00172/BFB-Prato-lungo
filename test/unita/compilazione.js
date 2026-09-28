@@ -753,4 +753,46 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
   }
 }
 
+// ---------- L'informativa dice con chi parla l'app ----------
+// privacy.html elenca a chi arrivano i dati (Firebase, Open-Meteo, WhatsApp).
+// E' stata scritta guardando il codice, ma il codice cambia: il giorno che
+// arriva un servizio nuovo — l'IA per gli scontrini del § 5, per dire —
+// l'informativa diventerebbe falsa senza che niente se ne accorga. Qui si
+// cercano gli indirizzi esterni nei sorgenti e si chiede che ognuno sia
+// NOMINATO nell'informativa. Chi aggiunge un servizio aggiunge una riga qui
+// sotto E una frase nella pagina: non una senza l'altra.
+{
+  const fs = require('fs');
+  const path = require('path');
+  const RADICE = path.join(__dirname, '..', '..');
+  // Indirizzo -> come lo chiama l'informativa.
+  const NOTI = {
+    'www.gstatic.com': 'Firebase',        // da li' arriva l'SDK di Firebase
+    'api.open-meteo.com': 'Open-Meteo',
+    'wa.me': 'WhatsApp',
+  };
+  const html = fs.readFileSync(path.join(RADICE, 'index.html'), 'utf8');
+  const caricati = [...html.matchAll(/<script\s+src="([^"]+)"/g)].map((m) => m[1])
+    .filter((f) => !/^https?:|^vendor\//.test(f));
+  const file = fs.readdirSync(path.join(RADICE, 'src')).filter((f) => f.endsWith('.jsx'))
+    .map((f) => path.join('src', f)).concat(caricati);
+  const trovati = new Set();
+  file.forEach((f) => {
+    const t = fs.readFileSync(path.join(RADICE, f), 'utf8');
+    [...t.matchAll(/https:\/\/([a-z0-9.-]+\.[a-z]{2,})/gi)].forEach((m) => trovati.add(m[1].toLowerCase()));
+  });
+  // Quelli che non trasportano dati dell'utente: link che l'utente apre da
+  // se' o testi di documentazione nei commenti.
+  const NEUTRI = ['www.garanteprivacy.it', 'support.google.com', 'console.firebase.google.com', 'www.google.com', 'maps.google.com'];
+  const privacy = fs.readFileSync(path.join(RADICE, 'privacy.html'), 'utf8');
+  const ignoti = [...trovati].filter((h) => !(h in NOTI) && NEUTRI.indexOf(h) < 0);
+  const taciuti = Object.keys(NOTI).filter((h) => trovati.has(h) && privacy.indexOf(NOTI[h]) < 0);
+  ok(`l'app parla solo con servizi che l'informativa conosce (${[...trovati].sort().join(', ')})`
+    + (ignoti.length ? ' — NUOVI, da aggiungere all\'informativa: ' + ignoti.join(', ') : ''),
+    ignoti.length === 0);
+  ok('e l\'informativa li nomina tutti'
+    + (taciuti.length ? ' — TACIUTI: ' + taciuti.map((h) => NOTI[h]).join(', ') : ''),
+    taciuti.length === 0);
+}
+
 fine();

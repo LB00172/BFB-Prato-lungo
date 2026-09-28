@@ -98,7 +98,16 @@ const schedaImpostazioni = ({
         del campo segna presenze e spese senza sapere che questa tessera
         esiste. L'account serve a creare e amministrare un campo — cioe' alle
         cose che nella versione pubblica hanno un proprietario. */}
-    {FEATURES.auth && schedaAccount({ account })}
+    {FEATURES.auth && schedaAccount({
+      account,
+      // Cancellato l'account, si esce anche dalla stanza su questo telefono:
+      // la scheda li' dentro non c'e' piu', e la sincronizzazione andrebbe a
+      // sbattere contro un "permesso negato" a ogni apertura.
+      onCancella: async () => {
+        const fatto = await account.cancellaAccount(stanzaStato.stanza && stanzaStato.stanza.codice);
+        if (fatto) stanzaStato.esci();
+      },
+    })}
 
     {/* La stanza (ROADMAP.md § 2 e § 9). Dietro FEATURES.rooms.
 
@@ -702,6 +711,9 @@ const schedaImpostazioni = ({
       <p className="text-piccolo text-carta/70 leading-snug">
         {L.t('info.aggiornamento')}
       </p>
+      {/* L'informativa: Google Play la vuole raggiungibile anche DENTRO
+          l'app, non solo nella scheda dello store (ROADMAP § 3). */}
+      <a href="./privacy.html" target="_blank" rel="noopener" className="block text-piccolo text-carta underline">{L.t('info.privacy')}</a>
       <p className="text-minuto text-salvia/80 pt-1">{BRAND.credits}</p>
     </div>
   </div>

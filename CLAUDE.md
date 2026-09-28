@@ -34,7 +34,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 78 prove, **due minuti e
+4. **Prima di dire "fatto" gira `npm test`.** 80 prove, **due minuti e
    mezzo**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
@@ -101,12 +101,13 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `stanza.js` | **la stanza**, in due metà come `auth.js`: `Stanza` sono le regole (alfabeto e generatore del codice, lettura di un codice digitato a mano, validazione del modulo, ruoli, **cosa si scrive entrando**), `StanzaCloud` il trasporto verso Firestore. La crittografia non c'è: è `improntaPassword` in `src/20-blocco-password.jsx`. Dietro `FEATURES.rooms` |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile`. **Dove** stanno i dati lo decide `percorso()`: `camps/<codice>` nella versione privata, `rooms/<codice>/dati/stato` in quella pubblica (`APP_CONFIG.dati`) |
 | `firebase-config.js` | chiavi Firebase e impronte delle password. Il progetto è **`camp-ops`**, non quello della Brigata: separarli è la decisione del 22 settembre |
+| `privacy.html`, `cancella-account.html` | **l'informativa e la richiesta di cancellazione** che Google Play pretende. Titolare e contatto da `APP_CONFIG.privacy`. Devono dire la verità sull'app di oggi: una guardia vieta che l'app parli con un servizio che l'informativa non nomina, e una prova controlla che il percorso descritto sia il nome vero del bottone |
 | `firestore.rules` | **chi può leggere e scrivere cosa** nel cloud. Su questo ramo parlano solo di `rooms/<id>`: `camps/` sta in un altro progetto Firebase e qui è chiuso come tutto il resto. Si provano con `npm run regole`, mai a occhio |
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
-| `test/` | 14 prove unitarie + 64 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo |
+| `test/` | 14 prove unitarie + 66 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
