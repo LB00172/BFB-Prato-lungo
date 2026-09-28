@@ -418,6 +418,7 @@ const schedaLista = ({
   addPurchase,
   addToBuy,
   attachReceiptTo,
+  fotoCloud,
   listaSection,
   manualOpen,
   newBuyName,
@@ -607,7 +608,13 @@ const schedaLista = ({
       {pReceipt && (
         <div className="flex items-center gap-3 bg-carta/60 p-2 rounded border border-salvia/30">
           <img src={pReceipt} alt={L.t('lista.scontrino')} className="w-12 h-12 object-cover rounded" />
-          <span className="flex-grow text-piccolo text-bosco font-bold">{L.t('lista.scontrinoAllegato')}</span>
+          <span className="flex-grow text-piccolo text-bosco font-bold leading-snug">
+            {L.t('lista.scontrinoAllegato')}
+            {/* In un campo gratuito la foto non va nel cloud: lo si dice qui,
+                altrimenti chi l'ha scattata non capisce perche' gli altri non
+                la vedono. */}
+            {fotoCloud === false && <span data-foto-solo-qui className="block font-normal text-minuto text-gray-500">{L.t('pro.fotoSoloQui')}</span>}
+          </span>
           <button onClick={() => setPReceipt(null)} aria-label={L.t('lista.rimuoviFoto')} className={bottoneIcona('distruttivo')}>&times;</button>
         </div>
       )}

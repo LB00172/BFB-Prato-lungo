@@ -121,7 +121,13 @@ function App({ eredita, cambiaCampo } = {}) {
   // Il luogo per il meteo lo sa gia' lo stato della stanza: l'elenco sul
   // telefono (che legge aggiornaPeriodoCampo) si salva dopo il disegno, e
   // chi ha appena scelto il luogo vedrebbe il meteo del posto di prima.
-  if (stanzaStato.stanza) window.CAMP_LOCATION = stanzaStato.luogo || LUOGO_PREDEFINITO;
+  // Senza Pro il meteo live non c'e': il luogo resta nella stanza, ma al
+  // meteo non arriva, e quindi non si scarica niente.
+  if (stanzaStato.stanza) window.CAMP_LOCATION = stanzaStato.sbloccata('meteo') ? (stanzaStato.luogo || LUOGO_PREDEFINITO) : null;
+  // Le foto degli scontrini nel cloud sono del Pro. Si dice qui, nel disegno,
+  // e non in un effetto: deve valere gia' per la prima foto allegata.
+  const fotoCloud = stanzaStato.sbloccata('fotoCloud');
+  if (window.CloudSync && window.CloudSync.impostaFotoCloud) window.CloudSync.impostaFotoCloud(fotoCloud);
 
   // Conto separato: giorni le cui presenze fanno cassa a parte. Il cibo e le
   // bevande marcati "separato" si dividono solo sui pasti di questi giorni;
@@ -3037,7 +3043,7 @@ function App({ eredita, cambiaCampo } = {}) {
         {/* ---------- CALENDARIO ---------- */}
         {scheda === 'campi' && schedaCampi({ stanzaStato, account, codiceInGioco, onApri: apriCampo })}
         {scheda === 'calendario' && schedaCalendario({
-          admin, campoInCorso, capogruppo: stanzaStato.capogruppo, fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
+          admin, campoInCorso, capogruppo: stanzaStato.capogruppo, meteoAperto: stanzaStato.sbloccata('meteo'), fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
         })}
 
         {/* ---------- MENÙ ---------- */}
@@ -3046,10 +3052,15 @@ function App({ eredita, cambiaCampo } = {}) {
         })}
 
         {/* ---------- CHI FA COSA ---------- */}
-        {scheda === 'compiti' && FEATURES.compiti && schedaCompiti({
+        {scheda === 'compiti' && FEATURES.compiti && stanzaStato.sbloccata('compiti') && schedaCompiti({
           addCompito, compiti, daCompitoASpesa, members, nuovoCompito, nuovoCompitoChi,
           removeCompito, renderBuyerSelect, setCompitoCampo, setNuovoCompito, setNuovoCompitoChi, toggleCompito,
         })}
+        {/* «Chi fa cosa» e' del Pro. I compiti non sono soldi: nascondendoli
+            non si toglie a nessuno un conto. */}
+        {scheda === 'compiti' && FEATURES.compiti && !stanzaStato.sbloccata('compiti') && (
+          <div data-scheda="compiti">{avvisoPro({ funzione: 'compiti', capogruppo: stanzaStato.capogruppo, goTo })}</div>
+        )}
 
         {/* ---------- MEMBRI ---------- */}
         {scheda === 'membri' && schedaMembri({
@@ -3068,7 +3079,7 @@ function App({ eredita, cambiaCampo } = {}) {
 
         {/* ---------- TACCUINO DELLE SPESE ---------- */}
         {scheda === 'lista' && schedaLista({
-          addPurchase, addToBuy, attachReceiptTo, listaSection, manualOpen, newBuyName, newBuyQty, onReceiptFile, openEditPurchase, pAccount, pBuyer, pName, pPrice, pReceipt, pType, purchaseQuery, purchases, receipts, removePurchase, removeToBuy, renderBuyerSelect, sepDays, setBuying, setListaSection, setManualOpen, setNewBuyName, setNewBuyQty, setPAccount, setPBuyer, setPName, setPPrice, setPReceipt, setPType, setPurchaseQuery, setToBuyQuery, setViewReceipt, spesePotenzialmenteDoppie, toBuy, toBuyQuery, totals,
+          addPurchase, addToBuy, attachReceiptTo, fotoCloud, listaSection, manualOpen, newBuyName, newBuyQty, onReceiptFile, openEditPurchase, pAccount, pBuyer, pName, pPrice, pReceipt, pType, purchaseQuery, purchases, receipts, removePurchase, removeToBuy, renderBuyerSelect, sepDays, setBuying, setListaSection, setManualOpen, setNewBuyName, setNewBuyQty, setPAccount, setPBuyer, setPName, setPPrice, setPReceipt, setPType, setPurchaseQuery, setToBuyQuery, setViewReceipt, spesePotenzialmenteDoppie, toBuy, toBuyQuery, totals,
         })}
 
         {/* ---------- AGGIUNTA ATTREZZATURA ---------- */}
@@ -3077,10 +3088,10 @@ function App({ eredita, cambiaCampo } = {}) {
         })}
 
         {/* ---------- REGOLE ---------- */}
-        {scheda === 'regole' && schedaRegole({ stanzaStato })}
+        {scheda === 'regole' && schedaRegole({ stanzaStato, goTo })}
 
         {/* ---------- DOTAZIONI PERSONALI ---------- */}
-        {scheda === 'dotazioni' && schedaDotazioni({ stanzaStato })}
+        {scheda === 'dotazioni' && schedaDotazioni({ stanzaStato, goTo })}
 
         {/* ---------- GALLERIA ---------- */}
         {scheda === 'galleria' && schedaGalleria({
@@ -3090,6 +3101,8 @@ function App({ eredita, cambiaCampo } = {}) {
         {/* ---------- ARCHIVIO (campi chiusi) ---------- */}
         {scheda === 'archivio' && schedaArchivio({
           album, archives, cloud, downloadArchive, members, openAlbum, openPhoto, photos, purchases, removeArchive, setAlbum, setViewArchive, totals,
+          aperto: stanzaStato.sbloccata('archivio'),
+          avviso: avvisoPro({ funzione: 'archivio', capogruppo: stanzaStato.capogruppo, goTo }),
         })}
 
         {/* ---------- COME FUNZIONA (guida) ---------- */}
@@ -3134,6 +3147,7 @@ function App({ eredita, cambiaCampo } = {}) {
             </div>
             <p className="text-piccolo text-gray-500 -mt-1">
               {L.t(receipts[buying.id] ? 'lista.scontrinoGiaLi' : 'lista.scontrinoDaMettere')}
+              {receipts[buying.id] && !fotoCloud && <span data-foto-solo-qui className="block text-minuto">{L.t('pro.fotoSoloQui')}</span>}
             </p>
             <div>
               <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.prezzo')}</label>

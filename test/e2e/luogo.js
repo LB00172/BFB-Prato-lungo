@@ -26,7 +26,8 @@ const scena = (o) => [(s) => {
   });
   window.APP_CONFIG = {};
   localStorage.setItem('cambusa_stanza', o.codice);
-  localStorage.setItem('cambusa_campi', JSON.stringify([{ codice: o.codice, nome: 'Campo di luglio', inizio: o.giorni[0], fine: o.giorni[2], ruolo: o.capo ? 'proprietario' : 'redattore' }]));
+  // Campi Pro: il meteo live e' del Pro (test/e2e/pro.js prova il resto).
+  localStorage.setItem('cambusa_campi', JSON.stringify([{ codice: o.codice, nome: 'Campo di luglio', inizio: o.giorni[0], fine: o.giorni[2], ruolo: o.capo ? 'proprietario' : 'redattore', pro: { attivo: true } }]));
   Object.defineProperty(window, 'AuthCloud', { configurable: true, get() { return window.__ac; }, set() {} });
   window.__ac = {
     disponibile: () => true, utente: () => o.utente,
@@ -44,7 +45,7 @@ const scena = (o) => [(s) => {
     membri: async () => [],
     statoDi: async (codici) => codici.map((c) => ({
       codice: c, membro: true, proprietario: o.capo, nome: 'Campo di luglio',
-      inizio: o.giorni[0], fine: o.giorni[2], luogo: window.__stanza.luogo || null,
+      inizio: o.giorni[0], fine: o.giorni[2], luogo: window.__stanza.luogo || null, pro: { attivo: true },
     })),
     impostaStanza: async (c, campi) => {
       window.__scritture.push(campi);

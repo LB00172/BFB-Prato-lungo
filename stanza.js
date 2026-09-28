@@ -585,6 +585,38 @@
     return true;
   }
 
+  // ---------- Cosa sblocca il Pro ----------
+  // Deciso da Lorenzo il 28 settembre. Una tabella sola: le funzioni la
+  // interrogano per nome, e aggiungerne una al Pro e' una riga qui.
+  // Si limita la quantita' e il superfluo, MAI la correttezza: presenze,
+  // spese, quote e saldi non stanno qui dentro e non ci entreranno.
+  //
+  //   meteo      il meteo live del luogo del campo
+  //   compiti    «Chi fa cosa»
+  //   regole     le regole del campo, scritte dal capogruppo
+  //   dotazioni  la lista di cosa portare
+  //   archivio   i campi chiusi, consultabili nell'app
+  //   fotoCloud  le foto degli scontrini nel cloud, visibili a tutti
+  //   piuCampi   piu' di un campo gratuito attivo alla volta
+  const FUNZIONI_PRO = ['meteo', 'compiti', 'regole', 'dotazioni', 'archivio', 'fotoCloud', 'piuCampi'];
+  function sbloccata(funzione, stanza, oggi) {
+    if (FUNZIONI_PRO.indexOf(funzione) < 0) return true;
+    return campoPro(stanza, oggi);
+  }
+
+  // Un campo gratuito attivo alla volta, per chi lo crea. Attivo vuol dire
+  // non ancora finito (senza date, si conta: non si sa quando finisce).
+  // I campi Pro non contano, e nemmeno quelli di cui si e' solo membri:
+  // partecipare e' sempre illimitato.
+  function campiGratisAttivi(campi, oggi) {
+    return (campi || []).filter((v) => v && v.ruolo === 'proprietario'
+      && !campoPro(v, oggi)
+      && !((v.fine || v.inizio) && (v.fine || v.inizio) < oggi));
+  }
+  function puoCreareCampo(campi, oggi) {
+    return campiGratisAttivi(campi, oggi).length === 0;
+  }
+
   // Il proprietario non si puo' togliere da solo: una stanza senza
   // proprietario non la amministra piu' nessuno e non si puo' nemmeno
   // cancellare. Per andarsene, prima passa il testimone.
@@ -616,6 +648,10 @@
     ricordaCampo,
     aggiornaCampi,
     campoPro,
+    FUNZIONI_PRO,
+    sbloccata,
+    campiGratisAttivi,
+    puoCreareCampo,
     regoleDaTesto,
     testoDaRegole,
     dotazioniDaTesto,

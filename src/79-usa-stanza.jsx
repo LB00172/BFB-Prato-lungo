@@ -179,6 +179,10 @@ const usaStanza = () => {
       setProblema('stanza.serveAccount');
       return;
     }
+    // Un campo gratuito attivo alla volta (Stanza.puoCreareCampo): il
+    // secondo lo crea chi ha reso Pro il primo, o chi aspetta che finisca.
+    // Si dice prima di scrivere il modulo, non dopo averlo compilato.
+    if (!regole.puoCreareCampo(campi, toDateStr(new Date()))) { setProblema('pro.unCampoGratis'); return; }
     const problemi = regole.validaModulo({ nome, inizio, fine });
     // Si mostra il primo: un elenco di righe rosse sotto una maschera di
     // quattro caselle scoraggia piu' del problema che descrive.
@@ -279,7 +283,16 @@ const usaStanza = () => {
   const voceAperta = stanza && window.Stanza
     ? campi.find((v) => window.Stanza.normalizza(v.codice) === window.Stanza.normalizza(stanza.codice))
     : null;
-  const pro = !!(window.Stanza && window.Stanza.campoPro(voceAperta, toDateStr(new Date())));
+  const oggi = toDateStr(new Date());
+  const pro = !!(window.Stanza && window.Stanza.campoPro(voceAperta, oggi));
+  // Fino a quando (compreso), se il Pro ha una scadenza.
+  const proFino = (pro && voceAperta.pro && voceAperta.pro.fino) || '';
+  // «Questa funzione e' aperta qui?» (Stanza.sbloccata). Senza stanza — la
+  // versione privata, o un campo entrato col vecchio codice — non c'e' un
+  // Pro da chiedere, e tutto resta com'era: aperto.
+  const sbloccata = (funzione) => !stanza || !window.Stanza || window.Stanza.sbloccata(funzione, voceAperta, oggi);
+  // Si puo' creare un altro campo? Si chiede prima di aprire il modulo.
+  const puoCreare = !window.Stanza || window.Stanza.puoCreareCampo(campi, oggi);
   // Cosa si sa del campo aperto: le sue regole, e chi lo guida. Come il Pro,
   // arriva dall'elenco sul telefono e si corregge a ogni lettura del cloud;
   // a decidere davvero chi puo' cambiare cosa sono le regole Firestore.
@@ -399,7 +412,7 @@ const usaStanza = () => {
   };
 
   return {
-    pro, regole, capogruppo, aiutante, vice, salvaRegole, nominaAiutante, lasciaCampo,
+    pro, proFino, sbloccata, puoCreare, regole, capogruppo, aiutante, vice, salvaRegole, nominaAiutante, lasciaCampo,
     bozzaRegole, setBozzaRegole, sceltaAiutante, setSceltaAiutante,
     dotazioni, bozzaDotazioni, setBozzaDotazioni, salvaDotazioni,
     voci, cambiaVoce,

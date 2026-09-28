@@ -532,6 +532,37 @@ if (!S) { fine(); }
       ok('e quelle nuove arrivano', l[0].dotazioni.length === 3);
     }
 
+    // ---------- Cosa sblocca il Pro ----------
+    {
+      const oggi = '2027-07-13';
+      const gratis = { codice: 'AAAAAAAA', ruolo: 'proprietario', inizio: '2027-07-12', fine: '2027-07-20' };
+      const pro = Object.assign({}, gratis, { codice: 'BBBBBBBB', pro: { attivo: true, fino: '2027-10-20' } });
+      const scaduto = Object.assign({}, gratis, { codice: 'CCCCCCCC', pro: { attivo: true, fino: '2027-07-01' } });
+      S.FUNZIONI_PRO.forEach((f) => {
+        ok(`${f}: chiusa nel campo gratuito, aperta nel campo Pro, chiusa quando il Pro scade`,
+          S.sbloccata(f, gratis, oggi) === false && S.sbloccata(f, pro, oggi) === true && S.sbloccata(f, scaduto, oggi) === false);
+      });
+      // La regola che non si negozia: i conti non sono mai del Pro.
+      ['presenze', 'spese', 'quote', 'saldi', 'membri', 'lista'].forEach((f) => {
+        ok(`${f} non è mai del Pro`, S.FUNZIONI_PRO.indexOf(f) < 0 && S.sbloccata(f, gratis, oggi) === true);
+      });
+      ok('le sette funzioni decise, e solo quelle',
+        JSON.stringify(S.FUNZIONI_PRO.slice().sort()) === JSON.stringify(['archivio', 'compiti', 'dotazioni', 'fotoCloud', 'meteo', 'piuCampi', 'regole']));
+
+      ok('senza campi se ne crea uno', S.puoCreareCampo([], oggi) === true);
+      ok('con un campo gratuito in corso il secondo no', S.puoCreareCampo([gratis], oggi) === false);
+      ok('un campo gratuito finito non conta',
+        S.puoCreareCampo([Object.assign({}, gratis, { fine: '2027-07-12' })], oggi) === true);
+      ok('un campo gratuito che deve ancora cominciare conta',
+        S.puoCreareCampo([Object.assign({}, gratis, { inizio: '2027-08-01', fine: '2027-08-05' })], oggi) === false);
+      ok('un campo senza date conta: non si sa quando finisce',
+        S.puoCreareCampo([{ codice: 'DDDDDDDD', ruolo: 'proprietario' }], oggi) === false);
+      ok('un campo Pro non conta', S.puoCreareCampo([pro], oggi) === true);
+      ok('ma se il suo Pro è scaduto sì', S.puoCreareCampo([scaduto], oggi) === false);
+      ok('i campi degli altri non contano: partecipare è illimitato',
+        S.puoCreareCampo([Object.assign({}, gratis, { ruolo: 'redattore' }), Object.assign({}, gratis, { ruolo: 'lettore' })], oggi) === true);
+    }
+
     // ---------- Il luogo del campo, per il meteo ----------
     {
       const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);

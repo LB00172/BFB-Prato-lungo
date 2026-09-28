@@ -201,6 +201,25 @@ const schedaImpostazioni = ({
           {stanzaStato.membri.length > 0 && (
             <p className="text-piccolo text-gray-500">{L.t('stanza.dentro', stanzaStato.membri.length)}</p>
           )}
+          {/* Il Pro del campo. Lo vedono tutti: sapere se il campo e' Pro serve
+              anche a chi non lo paga, per capire perche' una cosa non c'e'. */}
+          <div data-riquadro="pro" className={`rounded border p-3 space-y-2 ${stanzaStato.pro ? 'border-fuoco/40 bg-fuoco/10' : 'border-bosco/25 bg-orlo/40'}`}>
+            <p className="text-piccolo font-bold text-bosco flex items-center gap-2">
+              {segnoPro()}
+              {stanzaStato.pro
+                ? (stanzaStato.proFino ? L.t('pro.attivoFino', L.data(parseDate(stanzaStato.proFino), 'breve')) : L.t('pro.attivo'))
+                : L.t('pro.gratuito')}
+            </p>
+            {!stanzaStato.pro && (
+              <>
+                <p className="text-minuto text-gray-600 leading-snug">{L.t(stanzaStato.capogruppo ? 'pro.cosaSblocca' : 'pro.perMembro')}</p>
+                <ul className="text-minuto text-bosco space-y-0.5 pl-1">
+                  {window.Stanza.FUNZIONI_PRO.map((f) => <li key={f}>· {L.t(NOME_PRO[f])}</li>)}
+                </ul>
+                <p className="text-minuto text-gray-500 leading-snug">{L.t('pro.maiIConti')}</p>
+              </>
+            )}
+          </div>
           {/* L'aiutante: il capogruppo lo nomina fra chi c'e', e se deve
               lasciare il campo lo passa a lui. Il Pro non passa: l'ha pagato
               chi se ne va (firestore.rules lo spegne nel passaggio). */}
@@ -251,7 +270,8 @@ const schedaImpostazioni = ({
               tutti: le previsioni sono una sola per tutto il campo. Una
               casella sola: un nome da cercare, oppure un link di Google Maps
               o due coordinate incollate. */}
-          {stanzaStato.capogruppo && (() => {
+          {stanzaStato.capogruppo && !stanzaStato.sbloccata('meteo') && avvisoPro({ funzione: 'meteo', capogruppo: true })}
+          {stanzaStato.capogruppo && stanzaStato.sbloccata('meteo') && (() => {
             const campoTesto = 'p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco';
             const l = stanzaStato.luogo;
             const c = stanzaStato.candidatoLuogo;

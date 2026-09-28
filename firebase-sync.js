@@ -497,8 +497,18 @@
 
   // Carica/aggiorna la foto di uno scontrino. Non aspetta: entra in coda e
   // parte da sola, anche se in questo momento la rete non c'è.
+  //
+  // Nell'app pubblica e' del Pro (Stanza.sbloccata('fotoCloud')): in un campo
+  // gratuito la foto resta sul telefono di chi l'ha scattata. Lo dice App()
+  // con impostaFotoCloud; senza che nessuno lo dica — la versione privata —
+  // le foto vanno nel cloud come sempre. Se il campo diventa Pro, quelle
+  // rimaste sul telefono le carica la riconciliazione di usaScontrini, che
+  // manda su le foto locali che nel cloud mancano.
+  let fotoCloud = true;
+  function impostaFotoCloud(si) { fotoCloud = si !== false; }
   function putReceipt(purchaseId, dataUrl) {
     if (!purchaseId || !dataUrl) return;
+    if (!fotoCloud) return;
     accodaFoto({ tipo: 'scontrino', id: purchaseId, dati: dataUrl });
   }
 
@@ -825,6 +835,7 @@
     inSospeso: () => !!pendingJson,
     fotoInCoda: () => codaFoto.length,
     putReceipt,
+    impostaFotoCloud,
     deleteReceipt,
     putPhoto,
     watchPhotos,

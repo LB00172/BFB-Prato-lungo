@@ -159,7 +159,10 @@ const schedaMembri = ({
 // regola per paragrafo); gli altri le leggono. Stanno nel documento della
 // stanza e le regole Firestore le fanno scrivere solo a lui: il tasto che
 // qui compare solo al capogruppo e' una cortesia, la serratura e' li'.
-const schedaRegole = ({ stanzaStato }) => {
+const schedaRegole = ({ stanzaStato, goTo }) => {
+  // Senza Pro si legge quello che c'e' (non si toglie niente a nessuno),
+  // ma non si scrive.
+  const aperta = stanzaStato.sbloccata('regole');
   const regole = stanzaStato.regole || [];
   const bozza = stanzaStato.bozzaRegole;
   return (
@@ -186,7 +189,9 @@ const schedaRegole = ({ stanzaStato }) => {
             {stanzaStato.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.problema)}</p>}
           </div>
         ) : regole.length === 0 ? (
-          <p className="text-piccolo text-gray-500 leading-snug">{L.t(stanzaStato.capogruppo ? 'regole.scriviTu' : 'regole.nessuna')}</p>
+          aperta
+            ? <p className="text-piccolo text-gray-500 leading-snug">{L.t(stanzaStato.capogruppo ? 'regole.scriviTu' : 'regole.nessuna')}</p>
+            : avvisoPro({ funzione: 'regole', capogruppo: stanzaStato.capogruppo, goTo })
         ) : (
           <ol className="space-y-3">
             {regole.map((text, i) => (
@@ -197,7 +202,8 @@ const schedaRegole = ({ stanzaStato }) => {
             ))}
           </ol>
         )}
-        {stanzaStato.capogruppo && bozza === null && (
+        {stanzaStato.capogruppo && bozza === null && !aperta && regole.length > 0 && avvisoPro({ funzione: 'regole', capogruppo: true, goTo })}
+        {stanzaStato.capogruppo && bozza === null && aperta && (
           <button
             onClick={() => stanzaStato.setBozzaRegole(window.Stanza.testoDaRegole(regole))}
             className={bottone('secondario', 'normale', 'w-full')}
@@ -212,7 +218,10 @@ const schedaRegole = ({ stanzaStato }) => {
 // voce per riga, «!» davanti per metterla in evidenza — e stanno nella
 // stanza, come le regole. Nell'app pubblica e' una lista sola: le «aggiunte
 // del campo» che chiunque poteva scrivere erano della versione privata.
-const schedaDotazioni = ({ stanzaStato }) => {
+const schedaDotazioni = ({ stanzaStato, goTo }) => {
+  // Senza Pro si legge quello che c'e' (non si toglie niente a nessuno),
+  // ma non si scrive.
+  const aperta = stanzaStato.sbloccata('dotazioni');
   const voci = stanzaStato.dotazioni || [];
   const bozza = stanzaStato.bozzaDotazioni;
   return (
@@ -239,7 +248,9 @@ const schedaDotazioni = ({ stanzaStato }) => {
             {stanzaStato.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.problema)}</p>}
           </div>
         ) : voci.length === 0 ? (
-          <p className="text-piccolo text-gray-500 leading-snug">{L.t(stanzaStato.capogruppo ? 'dotazioni.scriviTu' : 'dotazioni.nessuna')}</p>
+          aperta
+            ? <p className="text-piccolo text-gray-500 leading-snug">{L.t(stanzaStato.capogruppo ? 'dotazioni.scriviTu' : 'dotazioni.nessuna')}</p>
+            : avvisoPro({ funzione: 'dotazioni', capogruppo: stanzaStato.capogruppo, goTo })
         ) : (
           <>
             <ul className="space-y-2">
@@ -260,7 +271,8 @@ const schedaDotazioni = ({ stanzaStato }) => {
             <p className="text-minuto text-gray-400 italic">{L.t('dotazioni.obbligo')}</p>
           </>
         )}
-        {stanzaStato.capogruppo && bozza === null && (
+        {stanzaStato.capogruppo && bozza === null && !aperta && voci.length > 0 && avvisoPro({ funzione: 'dotazioni', capogruppo: true, goTo })}
+        {stanzaStato.capogruppo && bozza === null && aperta && (
           <button
             onClick={() => stanzaStato.setBozzaDotazioni(window.Stanza.testoDaDotazioni(voci))}
             className={bottone('secondario', 'normale', 'w-full')}

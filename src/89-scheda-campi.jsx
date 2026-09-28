@@ -29,7 +29,15 @@ const moduloStanza = ({ stanzaStato, account }) => (
       </div>
     )}
 
-    {stanzaStato.modo === 'crea' && (
+    {/* Un campo gratuito attivo alla volta: si dice PRIMA del modulo. */}
+    {stanzaStato.modo === 'crea' && !stanzaStato.puoCreare && (
+      <div data-pro-bloccata="piuCampi" className="rounded border border-fuoco/40 bg-fuoco/10 p-3 space-y-2">
+        <p className="text-piccolo font-bold text-bosco flex items-center gap-2">{segnoPro()}{L.t('pro.piuCampi')}</p>
+        <p className="text-minuto text-gray-600 leading-snug">{L.t('pro.unCampoGratis')}</p>
+        <button onClick={stanzaStato.chiudi} className={bottone('testuale', 'normale', 'w-full')}>{L.t('galleria.annulla')}</button>
+      </div>
+    )}
+    {stanzaStato.modo === 'crea' && stanzaStato.puoCreare && (
       <div className="space-y-2 pt-1">
         <input type="text" value={stanzaStato.nome} onChange={(e) => stanzaStato.setNome(e.target.value)}
           placeholder={L.t('stanza.nome')}

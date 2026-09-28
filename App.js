@@ -1093,6 +1093,41 @@ const fraseVestita = (classe, chiave, ...resto) => L.pezzi(chiave, ...resto).map
   key: i
 }, p.testo));
 const frase = (chiave, ...resto) => fraseVestita('font-bold', chiave, ...resto);
+
+// ---------- La serratura del Pro ----------
+// Quello che si vede al posto di una funzione Pro, in un campo che il Pro non
+// ce l'ha. Due parole diverse secondo chi guarda: il capogruppo lo puo'
+// attivare (e trova il tasto per farlo), gli altri no — a loro si dice chi
+// puo', non si mette davanti un tasto che non li riguarda.
+// NOME_PRO tiene le CHIAVI: il nome si chiede al disegno (la lingua cambia).
+const NOME_PRO = {
+  meteo: 'pro.meteo',
+  compiti: 'pro.compiti',
+  regole: 'pro.regole',
+  dotazioni: 'pro.dotazioni',
+  archivio: 'pro.archivio',
+  fotoCloud: 'pro.fotoCloud',
+  piuCampi: 'pro.piuCampi'
+};
+const segnoPro = extra => /*#__PURE__*/React.createElement("span", {
+  className: `shrink-0 text-minuto uppercase font-bold px-2 py-0.5 rounded bg-fuoco text-white ${extra || ''}`
+}, L.t('campi.pro'));
+// goTo: se c'e', il capogruppo trova il tasto che porta al riquadro del Pro.
+const avvisoPro = ({
+  funzione,
+  capogruppo,
+  goTo
+}) => /*#__PURE__*/React.createElement("div", {
+  "data-pro-bloccata": funzione,
+  className: "rounded border border-fuoco/40 bg-fuoco/10 p-3 space-y-2"
+}, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo font-bold text-bosco flex items-center gap-2"
+}, segnoPro(), L.t(NOME_PRO[funzione])), /*#__PURE__*/React.createElement("p", {
+  className: "text-minuto text-gray-600 leading-snug"
+}, L.t(capogruppo ? 'pro.perCapogruppo' : 'pro.perMembro')), capogruppo && goTo && /*#__PURE__*/React.createElement("button", {
+  onClick: () => goTo('impostazioni'),
+  className: bottone('avviso', 'minuscolo', 'w-full')
+}, L.t('pro.scopri')));
 // ============================================================================
 //  SCHERMATA DI BLOCCO
 // ============================================================================
@@ -2112,6 +2147,13 @@ const usaStanza = () => {
       setProblema('stanza.serveAccount');
       return;
     }
+    // Un campo gratuito attivo alla volta (Stanza.puoCreareCampo): il
+    // secondo lo crea chi ha reso Pro il primo, o chi aspetta che finisca.
+    // Si dice prima di scrivere il modulo, non dopo averlo compilato.
+    if (!regole.puoCreareCampo(campi, toDateStr(new Date()))) {
+      setProblema('pro.unCampoGratis');
+      return;
+    }
     const problemi = regole.validaModulo({
       nome,
       inizio,
@@ -2237,7 +2279,16 @@ const usaStanza = () => {
   // vale per quello che il telefono fa da solo. Quello che costa (spazio,
   // server) lo decidono le regole Firestore, che leggono la stanza vera.
   const voceAperta = stanza && window.Stanza ? campi.find(v => window.Stanza.normalizza(v.codice) === window.Stanza.normalizza(stanza.codice)) : null;
-  const pro = !!(window.Stanza && window.Stanza.campoPro(voceAperta, toDateStr(new Date())));
+  const oggi = toDateStr(new Date());
+  const pro = !!(window.Stanza && window.Stanza.campoPro(voceAperta, oggi));
+  // Fino a quando (compreso), se il Pro ha una scadenza.
+  const proFino = pro && voceAperta.pro && voceAperta.pro.fino || '';
+  // «Questa funzione e' aperta qui?» (Stanza.sbloccata). Senza stanza — la
+  // versione privata, o un campo entrato col vecchio codice — non c'e' un
+  // Pro da chiedere, e tutto resta com'era: aperto.
+  const sbloccata = funzione => !stanza || !window.Stanza || window.Stanza.sbloccata(funzione, voceAperta, oggi);
+  // Si puo' creare un altro campo? Si chiede prima di aprire il modulo.
+  const puoCreare = !window.Stanza || window.Stanza.puoCreareCampo(campi, oggi);
   // Cosa si sa del campo aperto: le sue regole, e chi lo guida. Come il Pro,
   // arriva dall'elenco sul telefono e si corregge a ogni lettura del cloud;
   // a decidere davvero chi puo' cambiare cosa sono le regole Firestore.
@@ -2395,6 +2446,9 @@ const usaStanza = () => {
   };
   return {
     pro,
+    proFino,
+    sbloccata,
+    puoCreare,
     regole,
     capogruppo,
     aiutante,
@@ -2596,7 +2650,13 @@ function App({
   // Il luogo per il meteo lo sa gia' lo stato della stanza: l'elenco sul
   // telefono (che legge aggiornaPeriodoCampo) si salva dopo il disegno, e
   // chi ha appena scelto il luogo vedrebbe il meteo del posto di prima.
-  if (stanzaStato.stanza) window.CAMP_LOCATION = stanzaStato.luogo || LUOGO_PREDEFINITO;
+  // Senza Pro il meteo live non c'e': il luogo resta nella stanza, ma al
+  // meteo non arriva, e quindi non si scarica niente.
+  if (stanzaStato.stanza) window.CAMP_LOCATION = stanzaStato.sbloccata('meteo') ? stanzaStato.luogo || LUOGO_PREDEFINITO : null;
+  // Le foto degli scontrini nel cloud sono del Pro. Si dice qui, nel disegno,
+  // e non in un effetto: deve valere gia' per la prima foto allegata.
+  const fotoCloud = stanzaStato.sbloccata('fotoCloud');
+  if (window.CloudSync && window.CloudSync.impostaFotoCloud) window.CloudSync.impostaFotoCloud(fotoCloud);
 
   // Conto separato: giorni le cui presenze fanno cassa a parte. Il cibo e le
   // bevande marcati "separato" si dividono solo sui pasti di questi giorni;
@@ -5947,6 +6007,7 @@ function App({
     admin,
     campoInCorso,
     capogruppo: stanzaStato.capogruppo,
+    meteoAperto: stanzaStato.sbloccata('meteo'),
     fetchWeather,
     getDayData,
     getMeal,
@@ -5979,7 +6040,7 @@ function App({
     setSelectedDateStr,
     toBuy,
     updateDayData
-  }), scheda === 'compiti' && FEATURES.compiti && schedaCompiti({
+  }), scheda === 'compiti' && FEATURES.compiti && stanzaStato.sbloccata('compiti') && schedaCompiti({
     addCompito,
     compiti,
     daCompitoASpesa,
@@ -5992,7 +6053,13 @@ function App({
     setNuovoCompito,
     setNuovoCompitoChi,
     toggleCompito
-  }), scheda === 'membri' && schedaMembri({
+  }), scheda === 'compiti' && FEATURES.compiti && !stanzaStato.sbloccata('compiti') && /*#__PURE__*/React.createElement("div", {
+    "data-scheda": "compiti"
+  }, avvisoPro({
+    funzione: 'compiti',
+    capogruppo: stanzaStato.capogruppo,
+    goTo
+  })), scheda === 'membri' && schedaMembri({
     addMember,
     infoMember,
     members,
@@ -6066,6 +6133,7 @@ function App({
     addPurchase,
     addToBuy,
     attachReceiptTo,
+    fotoCloud,
     listaSection,
     manualOpen,
     newBuyName,
@@ -6120,9 +6188,11 @@ function App({
     setViewReceipt,
     toggleEquipBought
   }), scheda === 'regole' && schedaRegole({
-    stanzaStato
+    stanzaStato,
+    goTo
   }), scheda === 'dotazioni' && schedaDotazioni({
-    stanzaStato
+    stanzaStato,
+    goTo
   }), scheda === 'galleria' && schedaGalleria({
     PER_PAGINA_ALBUM,
     addPhotos,
@@ -6166,7 +6236,13 @@ function App({
     removeArchive,
     setAlbum,
     setViewArchive,
-    totals
+    totals,
+    aperto: stanzaStato.sbloccata('archivio'),
+    avviso: avvisoPro({
+      funzione: 'archivio',
+      capogruppo: stanzaStato.capogruppo,
+      goTo
+    })
   }), scheda === 'guida' && schedaGuida({
     GUIDE,
     guideOpen,
@@ -6247,7 +6323,10 @@ function App({
     className: "hidden"
   }))), /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo text-gray-500 -mt-1"
-  }, L.t(receipts[buying.id] ? 'lista.scontrinoGiaLi' : 'lista.scontrinoDaMettere')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, L.t(receipts[buying.id] ? 'lista.scontrinoGiaLi' : 'lista.scontrinoDaMettere'), receipts[buying.id] && !fotoCloud && /*#__PURE__*/React.createElement("span", {
+    "data-foto-solo-qui": true,
+    className: "block text-minuto"
+  }, L.t('pro.fotoSoloQui'))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, L.t('lista.prezzo')), /*#__PURE__*/React.createElement("input", {
     type: "number",
@@ -6523,6 +6602,7 @@ function App({
 const schedaCalendario = ({
   admin,
   capogruppo,
+  meteoAperto,
   fetchWeather,
   getDayData,
   getMeal,
@@ -6608,6 +6688,12 @@ const schedaCalendario = ({
   // Senza luogo il meteo non c'e' e basta. Solo a chi lo puo'
   // scegliere — il capogruppo — si dice dove: agli altri una riga
   // «da impostare» sarebbe solo un rimprovero per una cosa non loro.
+  // Il meteo live e' del Pro: al capogruppo si dice, agli altri niente.
+  if (!meteoAperto) return capogruppo ? avvisoPro({
+    funzione: 'meteo',
+    capogruppo: true,
+    goTo
+  }) : null;
   if (!locOk) {
     if (!capogruppo) return null;
     return /*#__PURE__*/React.createElement("button", {
@@ -7314,6 +7400,7 @@ const schedaLista = ({
   addPurchase,
   addToBuy,
   attachReceiptTo,
+  fotoCloud,
   listaSection,
   manualOpen,
   newBuyName,
@@ -7482,8 +7569,11 @@ const schedaLista = ({
   alt: L.t('lista.scontrino'),
   className: "w-12 h-12 object-cover rounded"
 }), /*#__PURE__*/React.createElement("span", {
-  className: "flex-grow text-piccolo text-bosco font-bold"
-}, L.t('lista.scontrinoAllegato')), /*#__PURE__*/React.createElement("button", {
+  className: "flex-grow text-piccolo text-bosco font-bold leading-snug"
+}, L.t('lista.scontrinoAllegato'), fotoCloud === false && /*#__PURE__*/React.createElement("span", {
+  "data-foto-solo-qui": true,
+  className: "block font-normal text-minuto text-gray-500"
+}, L.t('pro.fotoSoloQui'))), /*#__PURE__*/React.createElement("button", {
   onClick: () => setPReceipt(null),
   "aria-label": L.t('lista.rimuoviFoto'),
   className: bottoneIcona('distruttivo')
@@ -7887,8 +7977,12 @@ const schedaMembri = ({
 // stanza e le regole Firestore le fanno scrivere solo a lui: il tasto che
 // qui compare solo al capogruppo e' una cortesia, la serratura e' li'.
 const schedaRegole = ({
-  stanzaStato
+  stanzaStato,
+  goTo
 }) => {
+  // Senza Pro si legge quello che c'e' (non si toglie niente a nessuno),
+  // ma non si scrive.
+  const aperta = stanzaStato.sbloccata('regole');
   const regole = stanzaStato.regole || [];
   const bozza = stanzaStato.bozzaRegole;
   return /*#__PURE__*/React.createElement("div", {
@@ -7920,9 +8014,13 @@ const schedaRegole = ({
     className: bottone('primario', 'normale', 'flex-1')
   }, L.t('regole.salva'))), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo font-bold text-red-700 leading-snug"
-  }, L.t(stanzaStato.problema))) : regole.length === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, L.t(stanzaStato.problema))) : regole.length === 0 ? aperta ? /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo text-gray-500 leading-snug"
-  }, L.t(stanzaStato.capogruppo ? 'regole.scriviTu' : 'regole.nessuna')) : /*#__PURE__*/React.createElement("ol", {
+  }, L.t(stanzaStato.capogruppo ? 'regole.scriviTu' : 'regole.nessuna')) : avvisoPro({
+    funzione: 'regole',
+    capogruppo: stanzaStato.capogruppo,
+    goTo
+  }) : /*#__PURE__*/React.createElement("ol", {
     className: "space-y-3"
   }, regole.map((text, i) => /*#__PURE__*/React.createElement("li", {
     key: i,
@@ -7931,7 +8029,11 @@ const schedaRegole = ({
     className: "font-rustic text-grande text-legno leading-none shrink-0"
   }, i + 1, "."), /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo leading-relaxed font-bold text-bosco"
-  }, text)))), stanzaStato.capogruppo && bozza === null && /*#__PURE__*/React.createElement("button", {
+  }, text)))), stanzaStato.capogruppo && bozza === null && !aperta && regole.length > 0 && avvisoPro({
+    funzione: 'regole',
+    capogruppo: true,
+    goTo
+  }), stanzaStato.capogruppo && bozza === null && aperta && /*#__PURE__*/React.createElement("button", {
     onClick: () => stanzaStato.setBozzaRegole(window.Stanza.testoDaRegole(regole)),
     className: bottone('secondario', 'normale', 'w-full')
   }, L.t('regole.modifica'))));
@@ -7942,8 +8044,12 @@ const schedaRegole = ({
 // stanza, come le regole. Nell'app pubblica e' una lista sola: le «aggiunte
 // del campo» che chiunque poteva scrivere erano della versione privata.
 const schedaDotazioni = ({
-  stanzaStato
+  stanzaStato,
+  goTo
 }) => {
+  // Senza Pro si legge quello che c'e' (non si toglie niente a nessuno),
+  // ma non si scrive.
+  const aperta = stanzaStato.sbloccata('dotazioni');
   const voci = stanzaStato.dotazioni || [];
   const bozza = stanzaStato.bozzaDotazioni;
   return /*#__PURE__*/React.createElement("div", {
@@ -7975,9 +8081,13 @@ const schedaDotazioni = ({
     className: bottone('primario', 'normale', 'flex-1')
   }, L.t('regole.salva'))), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo font-bold text-red-700 leading-snug"
-  }, L.t(stanzaStato.problema))) : voci.length === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, L.t(stanzaStato.problema))) : voci.length === 0 ? aperta ? /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo text-gray-500 leading-snug"
-  }, L.t(stanzaStato.capogruppo ? 'dotazioni.scriviTu' : 'dotazioni.nessuna')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ul", {
+  }, L.t(stanzaStato.capogruppo ? 'dotazioni.scriviTu' : 'dotazioni.nessuna')) : avvisoPro({
+    funzione: 'dotazioni',
+    capogruppo: stanzaStato.capogruppo,
+    goTo
+  }) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ul", {
     className: "space-y-2"
   }, voci.map((item, i) => /*#__PURE__*/React.createElement("li", {
     key: i,
@@ -7988,7 +8098,11 @@ const schedaDotazioni = ({
     className: item.evidenza ? 'text-medio font-bold uppercase underline decoration-2 underline-offset-2 text-bosco leading-snug' : 'text-normale text-bosco'
   }, item.testo)))), /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-gray-400 italic"
-  }, L.t('dotazioni.obbligo'))), stanzaStato.capogruppo && bozza === null && /*#__PURE__*/React.createElement("button", {
+  }, L.t('dotazioni.obbligo'))), stanzaStato.capogruppo && bozza === null && !aperta && voci.length > 0 && avvisoPro({
+    funzione: 'dotazioni',
+    capogruppo: true,
+    goTo
+  }), stanzaStato.capogruppo && bozza === null && aperta && /*#__PURE__*/React.createElement("button", {
     onClick: () => stanzaStato.setBozzaDotazioni(window.Stanza.testoDaDotazioni(voci)),
     className: bottone('secondario', 'normale', 'w-full')
   }, L.t('dotazioni.modifica'))));
@@ -7999,7 +8113,9 @@ const schedaDotazioni = ({
 
 const schedaArchivio = ({
   album,
+  aperto,
   archives,
+  avviso,
   cloud,
   downloadArchive,
   members,
@@ -8017,7 +8133,9 @@ const schedaArchivio = ({
   className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3"
-}, L.t('area.archivio')), archives.length === 0 ? /*#__PURE__*/React.createElement("p", {
+}, L.t('area.archivio')), !aperto && /*#__PURE__*/React.createElement("div", {
+  className: "mb-3"
+}, avviso), archives.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-normale text-gray-400 italic"
 }, frase('archivio.vuoto')) : /*#__PURE__*/React.createElement("ul", {
   className: "space-y-3"
@@ -8040,10 +8158,10 @@ const schedaArchivio = ({
   className: "text-salvia italic"
 }, L.t('archivio.soloCloud'))), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
-}, /*#__PURE__*/React.createElement("button", {
+}, aperto && /*#__PURE__*/React.createElement("button", {
   onClick: () => setViewArchive(a),
   className: bottone('primario', 'normale', 'flex-1')
-}, L.t('archivio.resoconto')), a.photos > 0 && /*#__PURE__*/React.createElement("button", {
+}, L.t('archivio.resoconto')), aperto && a.photos > 0 && /*#__PURE__*/React.createElement("button", {
   onClick: () => openAlbum(a),
   className: "flex-1 py-2 bg-salvia text-white rounded text-piccolo font-bold uppercase hover:brightness-95"
 }, L.t('archivio.album')), /*#__PURE__*/React.createElement("button", {
@@ -8484,7 +8602,20 @@ const schedaImpostazioni = ({
   className: bottone('secondario', 'normale', 'flex-1')
 }, L.t('stanza.copiaLink'))), stanzaStato.membri.length > 0 && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500"
-}, L.t('stanza.dentro', stanzaStato.membri.length)), stanzaStato.capogruppo && (() => {
+}, L.t('stanza.dentro', stanzaStato.membri.length)), /*#__PURE__*/React.createElement("div", {
+  "data-riquadro": "pro",
+  className: `rounded border p-3 space-y-2 ${stanzaStato.pro ? 'border-fuoco/40 bg-fuoco/10' : 'border-bosco/25 bg-orlo/40'}`
+}, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo font-bold text-bosco flex items-center gap-2"
+}, segnoPro(), stanzaStato.pro ? stanzaStato.proFino ? L.t('pro.attivoFino', L.data(parseDate(stanzaStato.proFino), 'breve')) : L.t('pro.attivo') : L.t('pro.gratuito')), !stanzaStato.pro && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-minuto text-gray-600 leading-snug"
+}, L.t(stanzaStato.capogruppo ? 'pro.cosaSblocca' : 'pro.perMembro')), /*#__PURE__*/React.createElement("ul", {
+  className: "text-minuto text-bosco space-y-0.5 pl-1"
+}, window.Stanza.FUNZIONI_PRO.map(f => /*#__PURE__*/React.createElement("li", {
+  key: f
+}, "\xB7 ", L.t(NOME_PRO[f])))), /*#__PURE__*/React.createElement("p", {
+  className: "text-minuto text-gray-500 leading-snug"
+}, L.t('pro.maiIConti')))), stanzaStato.capogruppo && (() => {
   const io = account.utente && account.utente.uid;
   const altri = stanzaStato.membri.filter(m => m.uid !== io);
   const nomeDi = uid => {
@@ -8525,7 +8656,10 @@ const schedaImpostazioni = ({
     disabled: stanzaStato.occupato,
     className: bottone('distruttivo', 'minuscolo', 'w-full')
   }, L.t('stanza.lasciaCampo', nomeDi(stanzaStato.vice))));
-})(), stanzaStato.capogruppo && (() => {
+})(), stanzaStato.capogruppo && !stanzaStato.sbloccata('meteo') && avvisoPro({
+  funzione: 'meteo',
+  capogruppo: true
+}), stanzaStato.capogruppo && stanzaStato.sbloccata('meteo') && (() => {
   const campoTesto = 'p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco';
   const l = stanzaStato.luogo;
   const c = stanzaStato.candidatoLuogo;
@@ -9348,7 +9482,17 @@ const moduloStanza = ({
 }, L.t('stanza.creaTitolo')), /*#__PURE__*/React.createElement("button", {
   onClick: () => stanzaStato.setModo('entra'),
   className: bottone('secondario', 'normale', 'flex-1')
-}, L.t('stanza.entraTitolo'))), stanzaStato.modo === 'crea' && /*#__PURE__*/React.createElement("div", {
+}, L.t('stanza.entraTitolo'))), stanzaStato.modo === 'crea' && !stanzaStato.puoCreare && /*#__PURE__*/React.createElement("div", {
+  "data-pro-bloccata": "piuCampi",
+  className: "rounded border border-fuoco/40 bg-fuoco/10 p-3 space-y-2"
+}, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo font-bold text-bosco flex items-center gap-2"
+}, segnoPro(), L.t('pro.piuCampi')), /*#__PURE__*/React.createElement("p", {
+  className: "text-minuto text-gray-600 leading-snug"
+}, L.t('pro.unCampoGratis')), /*#__PURE__*/React.createElement("button", {
+  onClick: stanzaStato.chiudi,
+  className: bottone('testuale', 'normale', 'w-full')
+}, L.t('galleria.annulla'))), stanzaStato.modo === 'crea' && stanzaStato.puoCreare && /*#__PURE__*/React.createElement("div", {
   className: "space-y-2 pt-1"
 }, /*#__PURE__*/React.createElement("input", {
   type: "text",

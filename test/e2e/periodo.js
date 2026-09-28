@@ -14,7 +14,7 @@ const { apri, ok, fine } = require('../lib/app');
 const campo = (voce) => [(o) => {
   localStorage.setItem('cambusa_stanza', o.codice);
   localStorage.setItem('cambusa_campi', JSON.stringify([o]));
-}, Object.assign({ codice: 'K7RX2MQP', nome: 'Campo di luglio', ruolo: 'proprietario' }, voce)];
+}, Object.assign({ codice: 'K7RX2MQP', nome: 'Campo di luglio', ruolo: 'proprietario', pro: { attivo: true } }, voce)];
 
 (async () => {
   // ---------- 1. Dentro un campo con le sue date ----------

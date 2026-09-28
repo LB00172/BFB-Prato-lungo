@@ -4,7 +4,9 @@
 
 const schedaArchivio = ({
   album,
+  aperto,
   archives,
+  avviso,
   cloud,
   downloadArchive,
   members,
@@ -20,6 +22,9 @@ const schedaArchivio = ({
   <div className="space-y-4">
     <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
       <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">{L.t('area.archivio')}</h3>
+      {/* Consultarlo nell'app e' del Pro. Scaricarlo no: esportare i propri
+          dati resta a chiunque, ed e' la strada per non perderli. */}
+      {!aperto && <div className="mb-3">{avviso}</div>}
       {archives.length === 0 ? (
         <p className="text-normale text-gray-400 italic">
           {frase('archivio.vuoto')}
@@ -45,8 +50,8 @@ const schedaArchivio = ({
                 {!a.state && <span className="text-salvia italic">{L.t('archivio.soloCloud')}</span>}
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setViewArchive(a)} className={bottone('primario', 'normale', 'flex-1')}>{L.t('archivio.resoconto')}</button>
-                {a.photos > 0 && (
+                {aperto && <button onClick={() => setViewArchive(a)} className={bottone('primario', 'normale', 'flex-1')}>{L.t('archivio.resoconto')}</button>}
+                {aperto && a.photos > 0 && (
                   <button onClick={() => openAlbum(a)} className="flex-1 py-2 bg-salvia text-white rounded text-piccolo font-bold uppercase hover:brightness-95">{L.t('archivio.album')}</button>
                 )}
                 <button onClick={() => downloadArchive(a)} className={bottone('bruno', 'normale', 'flex-1')}>{L.t('archivio.scarica')}</button>

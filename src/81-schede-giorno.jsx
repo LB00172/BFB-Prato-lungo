@@ -8,6 +8,7 @@
 const schedaCalendario = ({
   admin,
   capogruppo,
+  meteoAperto,
   fetchWeather,
   getDayData,
   getMeal,
@@ -125,6 +126,8 @@ const schedaCalendario = ({
         // Senza luogo il meteo non c'e' e basta. Solo a chi lo puo'
         // scegliere — il capogruppo — si dice dove: agli altri una riga
         // «da impostare» sarebbe solo un rimprovero per una cosa non loro.
+        // Il meteo live e' del Pro: al capogruppo si dice, agli altri niente.
+        if (!meteoAperto) return capogruppo ? avvisoPro({ funzione: 'meteo', capogruppo: true, goTo }) : null;
         if (!locOk) {
           if (!capogruppo) return null;
           return (

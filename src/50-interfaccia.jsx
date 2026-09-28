@@ -217,3 +217,27 @@ const fraseVestita = (classe, chiave, ...resto) => L.pezzi(chiave, ...resto).map
     : <React.Fragment key={i}>{p.testo}</React.Fragment>
 ));
 const frase = (chiave, ...resto) => fraseVestita('font-bold', chiave, ...resto);
+
+// ---------- La serratura del Pro ----------
+// Quello che si vede al posto di una funzione Pro, in un campo che il Pro non
+// ce l'ha. Due parole diverse secondo chi guarda: il capogruppo lo puo'
+// attivare (e trova il tasto per farlo), gli altri no — a loro si dice chi
+// puo', non si mette davanti un tasto che non li riguarda.
+// NOME_PRO tiene le CHIAVI: il nome si chiede al disegno (la lingua cambia).
+const NOME_PRO = {
+  meteo: 'pro.meteo', compiti: 'pro.compiti', regole: 'pro.regole', dotazioni: 'pro.dotazioni',
+  archivio: 'pro.archivio', fotoCloud: 'pro.fotoCloud', piuCampi: 'pro.piuCampi',
+};
+const segnoPro = (extra) => (
+  <span className={`shrink-0 text-minuto uppercase font-bold px-2 py-0.5 rounded bg-fuoco text-white ${extra || ''}`}>{L.t('campi.pro')}</span>
+);
+// goTo: se c'e', il capogruppo trova il tasto che porta al riquadro del Pro.
+const avvisoPro = ({ funzione, capogruppo, goTo }) => (
+  <div data-pro-bloccata={funzione} className="rounded border border-fuoco/40 bg-fuoco/10 p-3 space-y-2">
+    <p className="text-piccolo font-bold text-bosco flex items-center gap-2">{segnoPro()}{L.t(NOME_PRO[funzione])}</p>
+    <p className="text-minuto text-gray-600 leading-snug">{L.t(capogruppo ? 'pro.perCapogruppo' : 'pro.perMembro')}</p>
+    {capogruppo && goTo && (
+      <button onClick={() => goTo('impostazioni')} className={bottone('avviso', 'minuscolo', 'w-full')}>{L.t('pro.scopri')}</button>
+    )}
+  </div>
+);
