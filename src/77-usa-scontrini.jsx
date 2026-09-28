@@ -40,7 +40,15 @@ const usaScontrini = ({ purchases, toBuy, equipment }) => {
     const MF = window.MagazzinoFoto;
     if (!MF) return;
     let vivo = true;
-    codaMagazzinoRef.current = codaMagazzinoRef.current.then(() => MF.migra()).then((esito) => {
+    // Prima di tutto il magazzino dev'essere del campo in gioco: se si e'
+    // appena cambiato campo contiene ancora le foto di quello di prima, e
+    // caricarle qui vorrebbe dire mostrarle — e mandarle nel cloud — dentro
+    // un altro campo (cassetti.js).
+    const Cas = window.Cassetti;
+    const codice = Cas ? Cas.di(localStorage, null) : null;
+    codaMagazzinoRef.current = codaMagazzinoRef.current
+      .then(() => (Cas && codice !== null ? Cas.allineaFoto(localStorage, MF, codice) : null))
+      .then(() => MF.migra()).then((esito) => {
       if (!vivo) return;
       receiptsSalvatiRef.current = esito.mappa || {};
       setReceipts((prev) => ({ ...(esito.mappa || {}), ...prev }));
@@ -73,13 +81,17 @@ const usaScontrini = ({ purchases, toBuy, equipment }) => {
   // cancellato da un altro dispositivo). Vanno considerate TUTTE le liste che
   // possono avere uno scontrino, altrimenti si perdono le foto delle voci
   // ancora da acquistare o dell'attrezzatura.
+  // Le voci del campo che possono avere una foto. Serve anche fuori da
+  // questo effetto: al cloud si mandano solo le foto di queste voci.
+  const idsRef = useRef(new Set());
   useEffect(() => {
+    const ids = new Set([
+      ...purchases.map((p) => p.id),
+      ...toBuy.map((t) => t.id),
+      ...equipment.map((e) => e.id),
+    ]);
+    idsRef.current = ids;
     setReceipts((prev) => {
-      const ids = new Set([
-        ...purchases.map((p) => p.id),
-        ...toBuy.map((t) => t.id),
-        ...equipment.map((e) => e.id),
-      ]);
       const keys = Object.keys(prev);
       if (keys.every((k) => ids.has(k))) return prev;
       const copy = {};
@@ -100,8 +112,12 @@ const usaScontrini = ({ purchases, toBuy, equipment }) => {
   const handleCloudReceipts = (cloudMap) => {
     const local = receiptsRef.current;
     const CS = window.CloudSync;
+    // Solo le foto di voci di QUESTO campo. Una foto che in memoria c'e' ma
+    // non appartiene a niente di qui e' di un altro campo, o di una voce gia'
+    // cancellata: in tutti e due i casi, caricarla nel cloud la mostrerebbe a
+    // gente che non doveva vederla.
     Object.keys(local).forEach((id) => {
-      if (!cloudMap[id] && CS && CS.isConnected()) CS.putReceipt(id, local[id]);
+      if (!cloudMap[id] && idsRef.current.has(id) && CS && CS.isConnected()) CS.putReceipt(id, local[id]);
     });
     setReceipts((prev) => ({ ...prev, ...cloudMap }));
   };

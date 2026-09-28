@@ -309,6 +309,32 @@ Due cose che l'hanno corretta strada facendo: la radice pubblica era
 sarebbe esploso; e `'camps'` era scritto in trentasette punti, adesso una
 prova vieta di riscriverne uno a mano.
 
+### Un cassetto per campo — 28 settembre
+
+Chiedendosi «chi segue più campi è coperto?» è saltato fuori un difetto che
+precedeva la domanda: sul telefono i dati del campo non dicevano di quale campo
+fossero, ed entrare in un secondo campo **fondeva i due** e li rimandava su.
+Riprodotto prima di curarlo (`e2e/cassetti`: sei verifiche rosse sul codice di
+prima), poi curato con `cassetti.js`: le chiavi di sempre tengono il campo in
+gioco, gli altri stanno da parte. Chi aveva già dei dati li ritrova nel campo
+in cui era (si **adottano**, non si spostano).
+
+Quello che viene dopo, deciso con Lorenzo il 28 settembre:
+
+- [ ] **La home «I miei campi»**: prima schermata dopo l'accesso, con i campi
+      dell'utente e i due tasti Crea / Partecipa; toccando un campo si apre
+      l'app di oggi. Per chi è registrato l'elenco sta nel profilo
+      (`users/<uid>.stanze`, che c'è già) e lo segue su ogni telefono; per chi
+      è entrato col codice sta sul telefono. Senza i cassetti, una home
+      avrebbe reso più facile proprio il mescolamento.
+- [ ] **Il Pro è del campo, non della persona.** Un attributo della stanza,
+      acceso perché ha pagato chi l'ha creata: chi entra non porta niente con
+      sé, e chi è Pro in un altro gruppo non lo trascina nel tuo. **Nessun
+      telefono può scriverlo**, proprietario compreso — altrimenti chiunque si
+      regala il Pro: le regole lo vietano a tutti e lo accende solo il server
+      che verifica l'acquisto su Google Play. Le funzioni Pro chiedono a una
+      domanda sola, «questo campo è Pro?», mai all'utente.
+
 **Cosa manca al § 2 e al § 9:** il QR, l'invito monouso, e la migrazione dei
 dati del 2026. E, prima di tutto, incollare le regole nuove in console — cosa
 che non va fatta finché il modulo non esiste, altrimenti si pubblicano regole

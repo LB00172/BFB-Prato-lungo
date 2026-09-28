@@ -2843,7 +2843,13 @@ const usaScontrini = ({
     const MF = window.MagazzinoFoto;
     if (!MF) return;
     let vivo = true;
-    codaMagazzinoRef.current = codaMagazzinoRef.current.then(() => MF.migra()).then(esito => {
+    // Prima di tutto il magazzino dev'essere del campo in gioco: se si e'
+    // appena cambiato campo contiene ancora le foto di quello di prima, e
+    // caricarle qui vorrebbe dire mostrarle — e mandarle nel cloud — dentro
+    // un altro campo (cassetti.js).
+    const Cas = window.Cassetti;
+    const codice = Cas ? Cas.di(localStorage, null) : null;
+    codaMagazzinoRef.current = codaMagazzinoRef.current.then(() => Cas && codice !== null ? Cas.allineaFoto(localStorage, MF, codice) : null).then(() => MF.migra()).then(esito => {
       if (!vivo) return;
       receiptsSalvatiRef.current = esito.mappa || {};
       setReceipts(prev => ({
@@ -2879,9 +2885,13 @@ const usaScontrini = ({
   // cancellato da un altro dispositivo). Vanno considerate TUTTE le liste che
   // possono avere uno scontrino, altrimenti si perdono le foto delle voci
   // ancora da acquistare o dell'attrezzatura.
+  // Le voci del campo che possono avere una foto. Serve anche fuori da
+  // questo effetto: al cloud si mandano solo le foto di queste voci.
+  const idsRef = useRef(new Set());
   useEffect(() => {
+    const ids = new Set([...purchases.map(p => p.id), ...toBuy.map(t => t.id), ...equipment.map(e => e.id)]);
+    idsRef.current = ids;
     setReceipts(prev => {
-      const ids = new Set([...purchases.map(p => p.id), ...toBuy.map(t => t.id), ...equipment.map(e => e.id)]);
       const keys = Object.keys(prev);
       if (keys.every(k => ids.has(k))) return prev;
       const copy = {};
@@ -2904,8 +2914,12 @@ const usaScontrini = ({
   const handleCloudReceipts = cloudMap => {
     const local = receiptsRef.current;
     const CS = window.CloudSync;
+    // Solo le foto di voci di QUESTO campo. Una foto che in memoria c'e' ma
+    // non appartiene a niente di qui e' di un altro campo, o di una voce gia'
+    // cancellata: in tutti e due i casi, caricarla nel cloud la mostrerebbe a
+    // gente che non doveva vederla.
     Object.keys(local).forEach(id => {
-      if (!cloudMap[id] && CS && CS.isConnected()) CS.putReceipt(id, local[id]);
+      if (!cloudMap[id] && idsRef.current.has(id) && CS && CS.isConnected()) CS.putReceipt(id, local[id]);
     });
     setReceipts(prev => ({
       ...prev,
@@ -3200,10 +3214,25 @@ const usaAccount = () => {
 // controllo che manca QUI si vede solo come un permission-denied, quindi le
 // cose che l'utente puo' correggere da solo (un codice della forma sbagliata,
 // una data storta) si dicono prima di disturbare la rete.
+// La stanza salvata si legge SUBITO, nello stato iniziale. Si leggeva in un
+// effetto, cioe' dopo il primo disegno: per quel primo disegno l'app credeva
+// di non essere in nessuna stanza, prendeva il codice predefinito e — da
+// quando ogni campo ha il suo cassetto (cassetti.js) — cambiava cassetto
+// verso il campo sbagliato, per poi tornare indietro al giro dopo.
+const leggiStanzaSalvata = () => {
+  try {
+    const c = localStorage.getItem('cambusa_stanza');
+    return c ? {
+      codice: c
+    } : null;
+  } catch (e) {
+    return null; /* niente: si resta senza stanza */
+  }
+};
 const usaStanza = () => {
   // La stanza di adesso: null vuol dire "nessuna", che e' il caso normale
   // finche' la versione pubblica non esiste davvero.
-  const [stanza, setStanza] = useState(null);
+  const [stanza, setStanza] = useState(leggiStanzaSalvata);
   const [membri, setMembri] = useState([]);
   // Quale maschera e' aperta: '' | 'crea' | 'entra'.
   const [modo, setModo] = useState('');
@@ -3222,15 +3251,8 @@ const usaStanza = () => {
   // fuori sarebbe come non esserci mai entrati. Si scrive con scriviLocale
   // (10-fondamenta), che ha il try/catch: un setItem nudo dentro un effetto
   // smonta React quando la quota e' piena (CLAUDE.md). NON salvaLocale —
-  // quello vive dentro App() e da un hook non si vede.
-  useEffect(() => {
-    try {
-      const c = localStorage.getItem('cambusa_stanza');
-      if (c) setStanza({
-        codice: c
-      });
-    } catch (e) {/* niente: si resta senza stanza */}
-  }, []);
+  // quello vive dentro App() e da un hook non si vede. Si RILEGGE invece
+  // nello stato iniziale (leggiStanzaSalvata, sopra), non in un effetto.
 
   // ---------- L'invito arrivato da un link ----------
   // Chi apre "…#stanza=K7RX-2MQP" ha un invito in mano. NON lo si accetta da
@@ -3427,7 +3449,12 @@ const usaStanza = () => {
     riagganciaStanza
   };
 };
-function App() {
+// `eredita` e `cambiaCampo` arrivano da Radice (90-avvio): servono a cambiare
+// campo senza mescolare i dati di due campi (cassetti.js).
+function App({
+  eredita,
+  cambiaCampo
+} = {}) {
   // ---------- La lingua ----------
   // Dietro FEATURES.lingue finche' i dizionari non sono completi: mostrare
   // meta' app in spagnolo e meta' in italiano e' peggio che non offrirla.
@@ -3447,7 +3474,7 @@ function App() {
   // campo); se torna indietro senza entrare, alla prossima apertura la
   // ritrova — che e' giusto, perche' un campo ancora non ce l'ha.
   const [saltaIngresso, setSaltaIngresso] = useState(false);
-  const [activeTab, setActiveTab] = useState('calendario');
+  const [activeTab, setActiveTab] = useState(() => eredita && eredita.tab || 'calendario');
   const [currentDate, setCurrentDate] = useState(() => parseDate(defaultDateStr()));
   const [selectedDateStr, setSelectedDateStr] = useState(defaultDateStr());
   const [members, setMembers] = useState(() => load('cambusa_members', []));
@@ -4005,6 +4032,10 @@ function App() {
       const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
       if (CS && CS.isConfigured() && !cloudConnectedRef.current && !optedOut) {
         const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
+        // Solo nel campo di cui si hanno i dati: al cambio ci pensa l'effetto
+        // qui sotto, che smonta e rimonta.
+        const Cas = window.Cassetti;
+        if (Cas && Cas.di(localStorage, code) !== code) return;
         if (code) CS.connect(window.FIREBASE_CONFIG, code, applyRemote, {
           password: sessionPassword
         }).catch(() => {});
@@ -4212,6 +4243,34 @@ function App() {
     localStorage.removeItem(RESCUE_KEY);
     window.alert(L.t('diag.annullato'));
   };
+
+  // ---------- Il cassetto giusto prima del cloud ----------
+  // Collegarsi a un campo con i dati di un altro in memoria vuol dire FONDERLI
+  // e rimandarli su: e' cosi' che i membri di A finivano in B (cassetti.js).
+  // Se i dati sul telefono non sono di `code`, non ci si collega: si stacca
+  // quello che c'e', e si chiede a Radice di cambiare cassetto — l'App nuova
+  // che ne esce si colleghera' da sola, con i dati giusti.
+  //
+  // Se lo scambio e' gia' stato tentato ed e' fallito (memoria piena), non lo
+  // si ritenta a vuoto: si resta fuori dal cloud, col campo di prima, e lo si
+  // dice. Collegarsi lo stesso sarebbe il difetto da cui si viene.
+  const cassettoFallito = !!(eredita && eredita.cassetto && eredita.cassetto.esito === 'pieno');
+  const cassettoGiusto = code => {
+    const Cas = window.Cassetti;
+    if (!Cas || !cambiaCampo) return true;
+    if (Cas.di(localStorage, code) === code) return true;
+    if (cassettoFallito && eredita.cassetto.a === code) return false;
+    const CS = window.CloudSync;
+    if (CS && CS.isConnected()) CS.disconnect();
+    cambiaCampo(code, {
+      tab: activeTab
+    });
+    return false;
+  };
+  useEffect(() => {
+    if (cassettoFallito) window.alert(L.t('cassetto.pieno'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const connectCloud = async code => {
     const CS = window.CloudSync;
     if (!CS || !CS.isConfigured()) {
@@ -4224,6 +4283,12 @@ function App() {
       return;
     }
     localStorage.removeItem('cambusa_sync_optout'); // riattiva l'auto-connessione
+    if (!cassettoGiusto(c)) {
+      // Il codice si scrive DOPO lo stacco, che lo cancella: l'App che
+      // rinasce lo deve trovare per collegarsi.
+      scriviLocale('cambusa_camp_code', c);
+      return;
+    }
     try {
       await CS.connect(window.FIREBASE_CONFIG, c, applyRemote, {
         password: sessionPassword
@@ -4266,6 +4331,9 @@ function App() {
     // membro. Tenerne due diversi vorrebbe dire scrivere in una stanza di
     // cui non si fa parte — permesso negato su tutto, e nessuna spiegazione.
     const code = stanzaStato.stanza && stanzaStato.stanza.codice || CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
+    // Prima di tutto il resto, anche a sincronizzazione spenta: i dati a
+    // schermo devono essere quelli del campo in gioco, collegati o no.
+    if (!cassettoGiusto(code)) return;
     if (!code || !CS.isConfigured() || optedOut) return;
 
     // DOVE si scrive (la stanza) e CHI scrive (l'uid) decidono insieme se la
@@ -6332,9 +6400,10 @@ function App() {
     // indietro i megabyte, cioe' proprio la cosa che questo tasto promette di
     // togliere. Si aspetta che il magazzino sia vuoto prima di ricaricare,
     // altrimenti la pagina se ne va a meta' cancellazione.
+    // E le foto degli altri campi, messe da parte nei loro cassetti.
     const MF = window.MagazzinoFoto;
-    (MF ? MF.svuota() : Promise.resolve()).then(() => window.location.reload());
-    return;
+    const Cas = window.Cassetti;
+    return Promise.all([MF ? MF.svuota() : null, Cas ? Cas.svuotaFoto() : null]).then(() => window.location.reload());
   };
 
   // Quando si apre l'Archivio si recuperano anche i campi chiusi da altri
@@ -10035,5 +10104,53 @@ React.createElement("div", {
 }, L.t('ingresso.hoUnCodice')), /*#__PURE__*/React.createElement("p", {
   className: "mt-2 text-piccolo text-salvia leading-snug"
 }, L.t('ingresso.hoUnCodiceNota'))));
+
+// ---------- Un cassetto per campo (cassetti.js) ----------
+// Le chiavi di sempre contengono i dati del campo in gioco; quelli degli
+// altri campi stanno messi da parte. Si allinea una volta qui, PRIMA che App
+// legga qualunque cosa: se il codice e' cambiato mentre l'app era chiusa, i
+// dati giusti devono essere al loro posto quando i useState li leggono.
+const primoCassetto = window.Cassetti ? window.Cassetti.allinea(localStorage, window.Cassetti.codiceInGioco(localStorage, window.CloudSync, window.CAMP_CODE_DEFAULT)) : null;
+
+// Cambiare campo con l'app accesa vuol dire smontarla, scambiare i cassetti
+// e rimontarla. In quest'ordine, e l'ordine e' il punto: con App montata un
+// effetto qualsiasi — il salvataggio dei membri, la copia della fascia, il
+// registro — potrebbe scrivere i dati di A nelle chiavi mentre ci stanno gia'
+// quelli di B. Smontata, non scrive nessuno. E rimontarla invece di
+// ricaricare la pagina lascia al loro posto il cloud finto delle prove e la
+// password del database, che sta in memoria.
+//
+// `eredita` porta di la' le due cose che chi ha cambiato campo si aspetta di
+// ritrovare: la scheda su cui era, e com'e' andato lo scambio.
+const Radice = () => {
+  const [giro, setGiro] = useState({
+    n: 0,
+    verso: null,
+    eredita: {
+      cassetto: primoCassetto
+    }
+  });
+  useEffect(() => {
+    if (giro.verso === null) return;
+    const esito = window.Cassetti.allinea(localStorage, giro.verso);
+    setGiro(g => ({
+      n: g.n + 1,
+      verso: null,
+      eredita: Object.assign({}, g.eredita, {
+        cassetto: esito
+      })
+    }));
+  }, [giro.verso]);
+  if (giro.verso !== null) return null;
+  return /*#__PURE__*/React.createElement(App, {
+    key: giro.n,
+    eredita: giro.eredita,
+    cambiaCampo: (codice, eredita) => setGiro(g => ({
+      n: g.n,
+      verso: codice,
+      eredita
+    }))
+  });
+};
 const root = createRoot(document.getElementById('root'));
-root.render(/*#__PURE__*/React.createElement(App, null));
+root.render(/*#__PURE__*/React.createElement(Radice, null));

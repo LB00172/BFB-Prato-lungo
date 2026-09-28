@@ -66,6 +66,14 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 - **Le chiavi `localStorage` con prefisso `cambusa_*` sono un contratto**, non
   un residuo estetico. Rinominarle fa perdere i dati a ogni telefono che non
   migra: è una migrazione con codice di compatibilità, non una rinomina.
+- **Ogni chiave `cambusa_*` è del campo o del telefono, e va dichiarata.**
+  Dal 28 settembre 2026 le chiavi del campo contengono i dati del campo **in
+  gioco**; quelli degli altri campi stanno da parte (`cambusa_cassetto:…`,
+  `cassetti.js`). Una chiave nuova che non sta in `Cassetti.DEL_CAMPO` né in
+  `Cassetti.DEL_TELEFONO` fa diventare rossa `unita/cassetti`: se è del campo
+  e la si mette fra quelle del telefono, i dati di un campo compaiono negli
+  altri. Cambiare campo **smonta e rimonta** `App` (`src/90-avvio.jsx`): non è
+  un difetto da togliere con un aggiornamento dello stato in loco.
 - **Le foto degli scontrini non stanno in `localStorage`.** Stanno in IndexedDB
   (`magazzino-foto.js`) e arrivano in modo **asincrono**, dopo il primo
   disegno. Non è un'astrazione di troppo: in `localStorage` occupavano 3,18 MB

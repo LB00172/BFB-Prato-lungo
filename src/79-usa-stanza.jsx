@@ -18,10 +18,22 @@
 // controllo che manca QUI si vede solo come un permission-denied, quindi le
 // cose che l'utente puo' correggere da solo (un codice della forma sbagliata,
 // una data storta) si dicono prima di disturbare la rete.
+// La stanza salvata si legge SUBITO, nello stato iniziale. Si leggeva in un
+// effetto, cioe' dopo il primo disegno: per quel primo disegno l'app credeva
+// di non essere in nessuna stanza, prendeva il codice predefinito e — da
+// quando ogni campo ha il suo cassetto (cassetti.js) — cambiava cassetto
+// verso il campo sbagliato, per poi tornare indietro al giro dopo.
+const leggiStanzaSalvata = () => {
+  try {
+    const c = localStorage.getItem('cambusa_stanza');
+    return c ? { codice: c } : null;
+  } catch (e) { return null; /* niente: si resta senza stanza */ }
+};
+
 const usaStanza = () => {
   // La stanza di adesso: null vuol dire "nessuna", che e' il caso normale
   // finche' la versione pubblica non esiste davvero.
-  const [stanza, setStanza] = useState(null);
+  const [stanza, setStanza] = useState(leggiStanzaSalvata);
   const [membri, setMembri] = useState([]);
   // Quale maschera e' aperta: '' | 'crea' | 'entra'.
   const [modo, setModo] = useState('');
@@ -41,13 +53,8 @@ const usaStanza = () => {
   // fuori sarebbe come non esserci mai entrati. Si scrive con scriviLocale
   // (10-fondamenta), che ha il try/catch: un setItem nudo dentro un effetto
   // smonta React quando la quota e' piena (CLAUDE.md). NON salvaLocale —
-  // quello vive dentro App() e da un hook non si vede.
-  useEffect(() => {
-    try {
-      const c = localStorage.getItem('cambusa_stanza');
-      if (c) setStanza({ codice: c });
-    } catch (e) { /* niente: si resta senza stanza */ }
-  }, []);
+  // quello vive dentro App() e da un hook non si vede. Si RILEGGE invece
+  // nello stato iniziale (leggiStanzaSalvata, sopra), non in un effetto.
 
   // ---------- L'invito arrivato da un link ----------
   // Chi apre "…#stanza=K7RX-2MQP" ha un invito in mano. NON lo si accetta da

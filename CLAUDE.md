@@ -34,7 +34,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 80 prove, **due minuti e
+4. **Prima di dire "fatto" gira `npm test`.** 82 prove, **due minuti e
    mezzo**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
@@ -99,6 +99,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `allarmi.js` | **quando svegliare qualcuno**: orologio di un altro telefono avanti di giorni, e perdite che meritano un allarme invece di essere il recupero di un ritardo. Pure, fuori da `src/` |
 | `auth.js` | **chi sei, e cosa ti lascia fare l'app**: `Auth` sono le regole (stati, permessi, validazione, codici d'errore tradotti), `AuthCloud` è il trasporto verso Firebase Authentication. Fuori da `src/`. Dietro `FEATURES.auth` |
 | `stanza.js` | **la stanza**, in due metà come `auth.js`: `Stanza` sono le regole (alfabeto e generatore del codice, lettura di un codice digitato a mano, validazione del modulo, ruoli, **cosa si scrive entrando**), `StanzaCloud` il trasporto verso Firestore. La crittografia non c'è: è `improntaPassword` in `src/20-blocco-password.jsx`. Dietro `FEATURES.rooms` |
+| `cassetti.js` | **un cassetto per campo**: le chiavi di sempre tengono i dati del campo in gioco, gli altri campi stanno da parte sotto il loro codice. Lo scambio si fa all'avvio e a ogni cambio di campo, con `App` smontata (`src/90-avvio.jsx`); le foto si scambiano a parte, in modo asincrono. Ogni chiave `cambusa_*` dei sorgenti deve stare in `DEL_CAMPO` o in `DEL_TELEFONO`: una prova lo pretende |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile`. **Dove** stanno i dati lo decide `percorso()`: `camps/<codice>` nella versione privata, `rooms/<codice>/dati/stato` in quella pubblica (`APP_CONFIG.dati`) |
 | `firebase-config.js` | chiavi Firebase e impronte delle password. Il progetto è **`camp-ops`**, non quello della Brigata: separarli è la decisione del 22 settembre |
 | `privacy.html`, `cancella-account.html` | **l'informativa e la richiesta di cancellazione** che Google Play pretende. Titolare e contatto da `APP_CONFIG.privacy`. Devono dire la verità sull'app di oggi: una guardia vieta che l'app parli con un servizio che l'informativa non nomina, e una prova controlla che il percorso descritto sia il nome vero del bottone |
@@ -107,7 +108,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `build.js` | compilazione + versione della cache |
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
-| `test/` | 14 prove unitarie + 66 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo |
+| `test/` | 15 prove unitarie + 67 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -292,6 +293,19 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   aspetta la CONDIZIONE (`waitForFunction`), mai un numero di millisecondi —
   tranne quando si verifica che qualcosa NON succeda, dove un'attesa fissa è
   l'unica cosa possibile.
+- **I dati sul telefono non dicevano di quale campo erano.** Membri, spese,
+  presenze e cronologia della fusione stavano in chiavi fisse. Entrando in un
+  secondo campo, l'app si collegava al codice nuovo e **fondeva** i due campi,
+  poi rimandava su il risultato: i membri di A finivano in B per tutti, una
+  stanza nuova e vuota si prendeva il campo intero di prima, e le foto degli
+  scontrini di A venivano caricate nella stanza di B. La fusione faceva il suo
+  mestiere: le si davano da fondere due campi diversi. Nessuno se n'era accorto
+  perché ad agosto il campo era uno. Adesso ogni campo ha il suo cassetto
+  (`cassetti.js`, `e2e/cassetti`). E un effetto che legge lo stato **dopo** il
+  primo disegno è un primo disegno che mente: la stanza salvata si leggeva in
+  un effetto, e per un istante l'app si credeva nel campo predefinito — prima
+  dei cassetti non costava niente, con i cassetti scambiava verso il campo
+  sbagliato.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.

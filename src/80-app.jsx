@@ -1,4 +1,6 @@
-function App() {
+// `eredita` e `cambiaCampo` arrivano da Radice (90-avvio): servono a cambiare
+// campo senza mescolare i dati di due campi (cassetti.js).
+function App({ eredita, cambiaCampo } = {}) {
   // ---------- La lingua ----------
   // Dietro FEATURES.lingue finche' i dizionari non sono completi: mostrare
   // meta' app in spagnolo e meta' in italiano e' peggio che non offrirla.
@@ -19,7 +21,7 @@ function App() {
   // campo); se torna indietro senza entrare, alla prossima apertura la
   // ritrova — che e' giusto, perche' un campo ancora non ce l'ha.
   const [saltaIngresso, setSaltaIngresso] = useState(false);
-  const [activeTab, setActiveTab] = useState('calendario');
+  const [activeTab, setActiveTab] = useState(() => (eredita && eredita.tab) || 'calendario');
   const [currentDate, setCurrentDate] = useState(() => parseDate(defaultDateStr()));
   const [selectedDateStr, setSelectedDateStr] = useState(defaultDateStr());
 
@@ -493,6 +495,10 @@ function App() {
       const optedOut = localStorage.getItem('cambusa_sync_optout') === '1';
       if (CS && CS.isConfigured() && !cloudConnectedRef.current && !optedOut) {
         const code = CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
+        // Solo nel campo di cui si hanno i dati: al cambio ci pensa l'effetto
+        // qui sotto, che smonta e rimonta.
+        const Cas = window.Cassetti;
+        if (Cas && Cas.di(localStorage, code) !== code) return;
         if (code) CS.connect(window.FIREBASE_CONFIG, code, applyRemote, { password: sessionPassword }).catch(() => {});
       }
     };
@@ -693,6 +699,32 @@ function App() {
     window.alert(L.t('diag.annullato'));
   };
 
+  // ---------- Il cassetto giusto prima del cloud ----------
+  // Collegarsi a un campo con i dati di un altro in memoria vuol dire FONDERLI
+  // e rimandarli su: e' cosi' che i membri di A finivano in B (cassetti.js).
+  // Se i dati sul telefono non sono di `code`, non ci si collega: si stacca
+  // quello che c'e', e si chiede a Radice di cambiare cassetto — l'App nuova
+  // che ne esce si colleghera' da sola, con i dati giusti.
+  //
+  // Se lo scambio e' gia' stato tentato ed e' fallito (memoria piena), non lo
+  // si ritenta a vuoto: si resta fuori dal cloud, col campo di prima, e lo si
+  // dice. Collegarsi lo stesso sarebbe il difetto da cui si viene.
+  const cassettoFallito = !!(eredita && eredita.cassetto && eredita.cassetto.esito === 'pieno');
+  const cassettoGiusto = (code) => {
+    const Cas = window.Cassetti;
+    if (!Cas || !cambiaCampo) return true;
+    if (Cas.di(localStorage, code) === code) return true;
+    if (cassettoFallito && eredita.cassetto.a === code) return false;
+    const CS = window.CloudSync;
+    if (CS && CS.isConnected()) CS.disconnect();
+    cambiaCampo(code, { tab: activeTab });
+    return false;
+  };
+  useEffect(() => {
+    if (cassettoFallito) window.alert(L.t('cassetto.pieno'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const connectCloud = async (code) => {
     const CS = window.CloudSync;
     if (!CS || !CS.isConfigured()) {
@@ -702,6 +734,12 @@ function App() {
     const c = (code || '').trim();
     if (!c) { window.alert(L.t('cloud.senzaCodice')); return; }
     localStorage.removeItem('cambusa_sync_optout'); // riattiva l'auto-connessione
+    if (!cassettoGiusto(c)) {
+      // Il codice si scrive DOPO lo stacco, che lo cancella: l'App che
+      // rinasce lo deve trovare per collegarsi.
+      scriviLocale('cambusa_camp_code', c);
+      return;
+    }
     try {
       await CS.connect(window.FIREBASE_CONFIG, c, applyRemote, { password: sessionPassword });
     } catch (e) {
@@ -741,6 +779,9 @@ function App() {
     // cui non si fa parte — permesso negato su tutto, e nessuna spiegazione.
     const code = (stanzaStato.stanza && stanzaStato.stanza.codice)
       || CS.savedCode() || window.CAMP_CODE_DEFAULT || '';
+    // Prima di tutto il resto, anche a sincronizzazione spenta: i dati a
+    // schermo devono essere quelli del campo in gioco, collegati o no.
+    if (!cassettoGiusto(code)) return;
     if (!code || !CS.isConfigured() || optedOut) return;
 
     // DOVE si scrive (la stanza) e CHI scrive (l'uid) decidono insieme se la
@@ -2458,9 +2499,11 @@ function App() {
     // indietro i megabyte, cioe' proprio la cosa che questo tasto promette di
     // togliere. Si aspetta che il magazzino sia vuoto prima di ricaricare,
     // altrimenti la pagina se ne va a meta' cancellazione.
+    // E le foto degli altri campi, messe da parte nei loro cassetti.
     const MF = window.MagazzinoFoto;
-    (MF ? MF.svuota() : Promise.resolve()).then(() => window.location.reload());
-    return;
+    const Cas = window.Cassetti;
+    return Promise.all([MF ? MF.svuota() : null, Cas ? Cas.svuotaFoto() : null])
+      .then(() => window.location.reload());
   };
 
   // Quando si apre l'Archivio si recuperano anche i campi chiusi da altri
