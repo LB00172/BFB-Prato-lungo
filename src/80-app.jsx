@@ -1816,6 +1816,12 @@ function App({ eredita, cambiaCampo } = {}) {
       lines.push('');
       lines.push(L.t('report.senzaAcquirente', money(t.unattributed)));
     }
+    // Il fuori conto nel messaggio al gruppo: senza, racconterebbe un campo
+    // piu' economico di quello vero.
+    if (fuoriConto.totale > 0.005) {
+      lines.push('');
+      lines.push(L.t('report.fuoriConto', money(fuoriConto.totale)));
+    }
     // Un resoconto che non quadra non va mandato nel gruppo senza dirlo: chi
     // lo legge farebbe i bonifici sbagliati.
     if (t.nonRipartito > 0.005) {
@@ -1834,7 +1840,9 @@ function App({ eredita, cambiaCampo } = {}) {
     }
     const text = buildReport();
     if (navigator.share) {
-      try { await navigator.share({ title: 'Prato Lungo 2026 — Conti', text }); return; }
+      // Il titolo dal marchio, non scritto a mano: c'era «Prato Lungo 2026»,
+      // che nell'app pubblica usciva in ogni condivisione.
+      try { await navigator.share({ title: BRAND.appTitle, text }); return; }
       catch (e) { if (e && e.name === 'AbortError') return; /* altrimenti prova WhatsApp */ }
     }
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
@@ -1977,14 +1985,22 @@ function App({ eredita, cambiaCampo } = {}) {
   // Stanno in conti.js, fuori da src/: sono una funzione pura di sei cose e
   // vanno provati sui numeri veri di un campo vero, con una prova unitaria,
   // invece che leggendo cifre a schermo. Qui resta solo cosa gli si passa.
+  // Prima dei conti si tolgono le voci che il gruppo gestisce fuori
+  // dall'app (§ 8, voci.js): conti.js resta identico nelle due versioni, e
+  // quello che esce si dichiara a parte — il fuori conto — invece di
+  // sparire. Senza stanza (la versione privata) non esce niente.
+  const perIConti = window.Voci
+    ? window.Voci.separa(purchases, equipment, FEATURES.rooms ? stanzaStato.voci : null)
+    : { purchases, equipment, fuori: { totale: 0, perCategoria: {} } };
+  const fuoriConto = perIConti.fuori;
   const totals = Conti.calcola({
-    members, campData, purchases, equipment, sepDays, freeDays,
+    members, campData, purchases: perIConti.purchases, equipment: perIConti.equipment, sepDays, freeDays,
     equipExemption: FEATURES.equipExemption,
   });
   // Aggancio per le prove (come canvas.__game): i conti esatti, non ricavati
   // dal testo a schermo. La prova "oracolo" li confronta con un calcolo
   // indipendente e con scenari fatti a mano.
-  if (typeof window !== 'undefined') window.__totali = totals;
+  if (typeof window !== 'undefined') { window.__totali = totals; window.__fuoriConto = fuoriConto; }
 
   // La cassa separata esiste solo se c'è qualcosa dentro: senza giorni
   // spuntati l'app resta com'era, con una cassa sola.
@@ -3013,7 +3029,7 @@ function App({ eredita, cambiaCampo } = {}) {
 
         {/* ---------- SPESA ---------- */}
         {scheda === 'spesa' && schedaSpesa({
-          admin, archives, bloccoConti, campCodeInput, cassaSepAttiva, cassaUnica, chiudiConti, cloud, connectCloud, disconnectCloud, exportData, goTo, importData, isOnline, openClose, openRestore, pastiDi, riapriConti, risparmio, saldiOttimizzati, schedaQuote, schedaSaldi, setCampCodeInput, setSaldiOttimizzati, setSpesaSection, shareReport, spesaSection, totals,
+          admin, archives, bloccoConti, campCodeInput, cassaSepAttiva, cassaUnica, chiudiConti, cloud, connectCloud, disconnectCloud, exportData, goTo, importData, isOnline, openClose, openRestore, pastiDi, riapriConti, risparmio, saldiOttimizzati, schedaQuote, schedaSaldi, setCampCodeInput, setSaldiOttimizzati, setSpesaSection, shareReport, spesaSection, totals, fuoriConto,
         })}
 
         {/* ---------- TACCUINO DELLE SPESE ---------- */}
@@ -3050,6 +3066,7 @@ function App({ eredita, cambiaCampo } = {}) {
         {/* ---------- IMPOSTAZIONI ---------- */}
         {scheda === 'impostazioni' && schedaImpostazioni({
           account, stanzaStato, admin, adminErr, adminPwd, annullaSync, askAlways, bloccoOpen, campData, campoInCorso, cloud, datiOpen, diagTick, entraAdmin, esciAdmin, esportaRegistro, exportData, fotoDove, goTo, isDark, isOnline, lingua, lockNow, logOpen, members, metaRef, photoCap, purchases, readyChecks, readyOk, receipts, setAdminErr, setAdminPwd, setBloccoOpen, setDatiOpen, setDiagTick, setLingua, setLogOpen, setLostSync, setPhotoCap, setTecnicaOpen, setTheme, swVersion, syncStateRef, tecnicaOpen, theme, toggleAskAlways, wipeLocal,
+          contiBloccati: !!bloccoConti(),
         })}
       </main>
 

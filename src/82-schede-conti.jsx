@@ -30,6 +30,7 @@ const schedaSpesa = ({
   shareReport,
   spesaSection,
   totals,
+  fuoriConto,
 }) => (
   <div className="space-y-4">
     {/* Sotto-sezioni della Spesa */}
@@ -71,6 +72,18 @@ const schedaSpesa = ({
         <span className="font-bold text-piccolo uppercase">{L.t('spesa.importoComplessivo')}</span>
         <span className="font-rustic font-bold text-grande text-bosco">{money(totals.overallTotal)} €</span>
       </div>
+      {/* Il fuori conto: registrato, ma non si divide qui — lo gestisce il
+          gruppo (§ 8). Si dichiara sempre: un euro tolto dal conto non si
+          toglie dalla vista. */}
+      {fuoriConto && fuoriConto.totale > 0.005 && (
+        <div data-fuori-conto className="bg-carta/60 px-3 py-2 rounded border border-dashed border-legno/50 space-y-0.5">
+          <div className="flex justify-between items-center">
+            <span className="text-piccolo uppercase font-bold text-legno">{L.t('voci.fuoriConto')}</span>
+            <span className="font-bold text-legno">{money(fuoriConto.totale)} €</span>
+          </div>
+          <p className="text-minuto text-gray-500 leading-snug">{L.t('voci.fuoriContoNota')}</p>
+        </div>
+      )}
     </div>
 
     <div className="bg-bosco text-carta p-4 rounded-lg border-b-4 border-legno shadow-md space-y-4">

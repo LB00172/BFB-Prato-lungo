@@ -278,6 +278,9 @@ const usaStanza = () => {
   // a decidere davvero chi puo' cambiare cosa sono le regole Firestore.
   const regole = (voceAperta && voceAperta.regole) || [];
   const dotazioni = (voceAperta && voceAperta.dotazioni) || [];
+  // Quali voci di spesa si dividono qui (voci.js). E' della stanza: le quote
+  // devono essere le stesse su tutti i telefoni.
+  const voci = (voceAperta && voceAperta.voci) || null;
   const capogruppo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
   const aiutante = !!(voceAperta && voceAperta.aiutante);
   const vice = (voceAperta && voceAperta.vice) || '';
@@ -303,6 +306,15 @@ const usaStanza = () => {
     const fatto = await prova((c) => c.impostaStanza(stanza.codice, { dotazioni: elenco }).then(() => true));
     if (fatto) aggiornaVoceAperta({ dotazioni: elenco });
     return !!fatto;
+  };
+  // Una voce accesa o spenta. Si scrive la mappa intera: e' piccola, e cosi'
+  // quello che resta nella stanza e' esattamente quello che si vede qui.
+  const cambiaVoce = async (categoria, fuori) => {
+    if (!stanza) return;
+    const mappa = Object.assign({}, voci || {});
+    if (fuori) mappa[categoria] = 'fuori'; else delete mappa[categoria];
+    const fatto = await prova((c) => c.impostaStanza(stanza.codice, { voci: mappa }).then(() => true));
+    if (fatto) aggiornaVoceAperta({ voci: mappa });
   };
   const nominaAiutante = async (uid) => {
     if (!stanza || !uid) return;
@@ -333,6 +345,7 @@ const usaStanza = () => {
     pro, regole, capogruppo, aiutante, vice, salvaRegole, nominaAiutante, lasciaCampo,
     bozzaRegole, setBozzaRegole, sceltaAiutante, setSceltaAiutante,
     dotazioni, bozzaDotazioni, setBozzaDotazioni, salvaDotazioni,
+    voci, cambiaVoce,
     stanza, membri, modo, setModo,
     nome, setNome, inizio, setInizio, fine, setFine, codice, setCodice,
     problema, fatto, occupato, chiudi,

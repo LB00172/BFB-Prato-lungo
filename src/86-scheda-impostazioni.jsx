@@ -2,6 +2,15 @@
 // La piu' grande di tutte, e la piu' intrecciata: aspetto, blocco, backup,
 // modalita' tecnica, chiusura del campo. Sta da sola apposta.
 
+// Il nome di ogni voce di spesa, come CHIAVE: le chiavi scritte per intero le
+// controlla la guardia del dizionario, quelle composte a pezzi no.
+const NOME_VOCE = {
+  alimentare: 'voci.nome.alimentare',
+  bevande: 'voci.nome.bevande',
+  logistica: 'voci.nome.logistica',
+  attrezzatura: 'voci.nome.attrezzatura',
+};
+
 const schedaImpostazioni = ({
   admin,
   adminErr,
@@ -51,6 +60,7 @@ const schedaImpostazioni = ({
   theme,
   toggleAskAlways,
   wipeLocal,
+  contiBloccati,
 }) => (
   <div className="space-y-4">
     {/* Pronto per il campo.
@@ -236,6 +246,34 @@ const schedaImpostazioni = ({
               </div>
             );
           })()}
+          {/* Le voci che si dividono (§ 8). Le sceglie il capogruppo per tutto
+              il campo: le quote devono essere le stesse su ogni telefono.
+              Spegnerne una a rimborsi gia' fatti riscrive le quote di tutti,
+              quindi a conti chiusi non si muove, e prima di cambiare chiede. */}
+          {stanzaStato.capogruppo && window.Voci && (
+            <div data-riquadro="voci" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
+              <p className="text-piccolo font-bold text-bosco">{L.t('voci.titolo')}</p>
+              <p className="text-minuto text-gray-500 leading-snug">{L.t('voci.spiega')}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {window.Voci.CATEGORIE.map((cat) => {
+                  const spenta = !!(stanzaStato.voci && stanzaStato.voci[cat] === 'fuori');
+                  return (
+                    <button
+                      key={cat}
+                      data-voce={cat}
+                      onClick={() => {
+                        if (!window.confirm(L.t('voci.conferma', L.t(NOME_VOCE[cat]), !spenta))) return;
+                        stanzaStato.cambiaVoce(cat, !spenta);
+                      }}
+                      disabled={contiBloccati || stanzaStato.occupato}
+                      className={bottoneScelta('interruttore', 'bordato', !spenta, 'minuscolo', contiBloccati ? 'opacity-60 cursor-not-allowed' : '')}
+                    >{L.t(NOME_VOCE[cat])}</button>
+                  );
+                })}
+              </div>
+              <p className="text-minuto text-gray-500 leading-snug">{L.t(contiBloccati ? 'voci.chiuse' : 'voci.legenda')}</p>
+            </div>
+          )}
           {stanzaStato.aiutante && (
             <p className="text-piccolo text-bosco leading-snug">{L.t('stanza.seiAiutante')}</p>
           )}

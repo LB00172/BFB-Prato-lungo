@@ -1,4 +1,4 @@
-const CACHE_NAME = 'camp-ops-581439c047';
+const CACHE_NAME = 'camp-ops-7741f9ce68';
 
 // Tutte le risorse sono locali (stesso dominio): il precache è affidabile.
 // Nessuna dipendenza da CDN esterni -> l'app funziona offline al 100%.
@@ -10,6 +10,7 @@ const ASSETS = [
   './sync-merge.js',
   './pdf-ricordo.js',
   './conti.js',
+  './voci.js',
   './presenze.js',
   './allarmi.js',
   './lingue.js',

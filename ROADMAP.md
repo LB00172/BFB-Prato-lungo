@@ -823,6 +823,15 @@ prodotto vero, pubblicato, con utenti reali.
 
 ## 8. Voci di spesa che si possono spegnere
 
+**Fatto il 28 settembre** su `camp-ops`. Il capogruppo sceglie in Impostazioni
+cosa si divide (cibo, bevande, logistica, attrezzatura); la scelta sta nella
+stanza (`rooms/<codice>.voci`), vale per tutti i telefoni e a conti chiusi
+non si muove. Le voci spente escono dai conti **prima** di arrivarci
+(`voci.js`): `conti.js` è rimasto identico a quello di `main`, com'è
+obbligatorio. Il fuori conto si dichiara nei totali e nel resoconto, e non
+diventa il falso allarme dei soldi non ripartiti. Prove: `unita/voci` sui
+conti veri, `e2e/voci` a schermo.
+
 **Obiettivo:** un interruttore per categoria — logistica, attrezzatura, e in
 generale qualunque tipologia — che dica **«questa voce non si divide qui: la
 gestiamo fuori dall'app»**. Serve ai gruppi che comprano il gasolio con la

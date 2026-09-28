@@ -336,7 +336,7 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     '79-usa-stanza.jsx': 1,          // una scheggia di codice
     // Un console.warn, il titolo del foglio di condivisione (che porta il
     // nome del campo) e quattordici schegge di codice.
-    '80-app.jsx': 17,
+    '80-app.jsx': 16,
     '81-schede-giorno.jsx': 1,       // una scheggia di codice
     '82-schede-conti.jsx': 0,
     '83-schede-gruppo.jsx': 0,

@@ -408,10 +408,11 @@
       fuori = fuori.map((v) => {
         if (normalizza(v.codice) !== c) return v;
         const n = Object.assign({}, v);
-        ['pro', 'regole', 'dotazioni', 'vice', 'aiutante'].forEach((k) => { delete n[k]; });
+        ['pro', 'regole', 'dotazioni', 'voci', 'vice', 'aiutante'].forEach((k) => { delete n[k]; });
         if (st.pro) n.pro = st.pro;
         if (Array.isArray(st.regole) && st.regole.length) n.regole = st.regole.slice();
         if (Array.isArray(st.dotazioni) && st.dotazioni.length) n.dotazioni = st.dotazioni.slice();
+        if (st.voci && typeof st.voci === 'object') n.voci = Object.assign({}, st.voci);
         if (st.vice) n.vice = st.vice;
         if (st.aiutante) n.aiutante = true;
         if (st.proprietario) n.ruolo = 'proprietario';
@@ -748,6 +749,7 @@
           pro: dati.pro || null,
           regole: Array.isArray(dati.regole) ? dati.regole : [],
           dotazioni: Array.isArray(dati.dotazioni) ? dati.dotazioni : [],
+          voci: dati.voci && typeof dati.voci === 'object' ? dati.voci : null,
           // L'uid dell'aiutante lo vede solo chi lo ha nominato: agli altri
           // basta sapere se l'aiutante sono loro.
           vice: dati.proprietario === utente.uid ? (dati.vice || '') : '',

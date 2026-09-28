@@ -2164,6 +2164,9 @@ const usaStanza = () => {
   // a decidere davvero chi puo' cambiare cosa sono le regole Firestore.
   const regole = voceAperta && voceAperta.regole || [];
   const dotazioni = voceAperta && voceAperta.dotazioni || [];
+  // Quali voci di spesa si dividono qui (voci.js). E' della stanza: le quote
+  // devono essere le stesse su tutti i telefoni.
+  const voci = voceAperta && voceAperta.voci || null;
   const capogruppo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
   const aiutante = !!(voceAperta && voceAperta.aiutante);
   const vice = voceAperta && voceAperta.vice || '';
@@ -2197,6 +2200,19 @@ const usaStanza = () => {
       dotazioni: elenco
     });
     return !!fatto;
+  };
+  // Una voce accesa o spenta. Si scrive la mappa intera: e' piccola, e cosi'
+  // quello che resta nella stanza e' esattamente quello che si vede qui.
+  const cambiaVoce = async (categoria, fuori) => {
+    if (!stanza) return;
+    const mappa = Object.assign({}, voci || {});
+    if (fuori) mappa[categoria] = 'fuori';else delete mappa[categoria];
+    const fatto = await prova(c => c.impostaStanza(stanza.codice, {
+      voci: mappa
+    }).then(() => true));
+    if (fatto) aggiornaVoceAperta({
+      voci: mappa
+    });
   };
   const nominaAiutante = async uid => {
     if (!stanza || !uid) return;
@@ -2243,6 +2259,8 @@ const usaStanza = () => {
     bozzaDotazioni,
     setBozzaDotazioni,
     salvaDotazioni,
+    voci,
+    cambiaVoce,
     stanza,
     membri,
     modo,
@@ -4478,6 +4496,12 @@ function App({
       lines.push('');
       lines.push(L.t('report.senzaAcquirente', money(t.unattributed)));
     }
+    // Il fuori conto nel messaggio al gruppo: senza, racconterebbe un campo
+    // piu' economico di quello vero.
+    if (fuoriConto.totale > 0.005) {
+      lines.push('');
+      lines.push(L.t('report.fuoriConto', money(fuoriConto.totale)));
+    }
     // Un resoconto che non quadra non va mandato nel gruppo senza dirlo: chi
     // lo legge farebbe i bonifici sbagliati.
     if (t.nonRipartito > 0.005) {
@@ -4495,9 +4519,11 @@ function App({
     }
     const text = buildReport();
     if (navigator.share) {
+      // Il titolo dal marchio, non scritto a mano: c'era «Prato Lungo 2026»,
+      // che nell'app pubblica usciva in ogni condivisione.
       try {
         await navigator.share({
-          title: 'Prato Lungo 2026 — Conti',
+          title: BRAND.appTitle,
           text
         });
         return;
@@ -4683,11 +4709,24 @@ function App({
   // Stanno in conti.js, fuori da src/: sono una funzione pura di sei cose e
   // vanno provati sui numeri veri di un campo vero, con una prova unitaria,
   // invece che leggendo cifre a schermo. Qui resta solo cosa gli si passa.
+  // Prima dei conti si tolgono le voci che il gruppo gestisce fuori
+  // dall'app (§ 8, voci.js): conti.js resta identico nelle due versioni, e
+  // quello che esce si dichiara a parte — il fuori conto — invece di
+  // sparire. Senza stanza (la versione privata) non esce niente.
+  const perIConti = window.Voci ? window.Voci.separa(purchases, equipment, FEATURES.rooms ? stanzaStato.voci : null) : {
+    purchases,
+    equipment,
+    fuori: {
+      totale: 0,
+      perCategoria: {}
+    }
+  };
+  const fuoriConto = perIConti.fuori;
   const totals = Conti.calcola({
     members,
     campData,
-    purchases,
-    equipment,
+    purchases: perIConti.purchases,
+    equipment: perIConti.equipment,
     sepDays,
     freeDays,
     equipExemption: FEATURES.equipExemption
@@ -4695,7 +4734,10 @@ function App({
   // Aggancio per le prove (come canvas.__game): i conti esatti, non ricavati
   // dal testo a schermo. La prova "oracolo" li confronta con un calcolo
   // indipendente e con scenari fatti a mano.
-  if (typeof window !== 'undefined') window.__totali = totals;
+  if (typeof window !== 'undefined') {
+    window.__totali = totals;
+    window.__fuoriConto = fuoriConto;
+  }
 
   // La cassa separata esiste solo se c'è qualcosa dentro: senza giorni
   // spuntati l'app resta com'era, con una cassa sola.
@@ -5818,7 +5860,8 @@ function App({
     setSpesaSection,
     shareReport,
     spesaSection,
-    totals
+    totals,
+    fuoriConto
   }), scheda === 'lista' && schedaLista({
     addPurchase,
     addToBuy,
@@ -5976,7 +6019,8 @@ function App({
     tecnicaOpen,
     theme,
     toggleAskAlways,
-    wipeLocal
+    wipeLocal,
+    contiBloccati: !!bloccoConti()
   })), buying && /*#__PURE__*/React.createElement("div", {
     onClick: () => setBuying(null),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5"
@@ -6769,7 +6813,8 @@ const schedaSpesa = ({
   setSpesaSection,
   shareReport,
   spesaSection,
-  totals
+  totals,
+  fuoriConto
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
@@ -6807,7 +6852,18 @@ const schedaSpesa = ({
   className: "font-bold text-piccolo uppercase"
 }, L.t('spesa.importoComplessivo')), /*#__PURE__*/React.createElement("span", {
   className: "font-rustic font-bold text-grande text-bosco"
-}, money(totals.overallTotal), " \u20AC"))), /*#__PURE__*/React.createElement("div", {
+}, money(totals.overallTotal), " \u20AC")), fuoriConto && fuoriConto.totale > 0.005 && /*#__PURE__*/React.createElement("div", {
+  "data-fuori-conto": true,
+  className: "bg-carta/60 px-3 py-2 rounded border border-dashed border-legno/50 space-y-0.5"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "flex justify-between items-center"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "text-piccolo uppercase font-bold text-legno"
+}, L.t('voci.fuoriConto')), /*#__PURE__*/React.createElement("span", {
+  className: "font-bold text-legno"
+}, money(fuoriConto.totale), " \u20AC")), /*#__PURE__*/React.createElement("p", {
+  className: "text-minuto text-gray-500 leading-snug"
+}, L.t('voci.fuoriContoNota')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-bosco text-carta p-4 rounded-lg border-b-4 border-legno shadow-md space-y-4"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-1"
@@ -8042,6 +8098,14 @@ const schedaGalleria = ({
 // La piu' grande di tutte, e la piu' intrecciata: aspetto, blocco, backup,
 // modalita' tecnica, chiusura del campo. Sta da sola apposta.
 
+// Il nome di ogni voce di spesa, come CHIAVE: le chiavi scritte per intero le
+// controlla la guardia del dizionario, quelle composte a pezzi no.
+const NOME_VOCE = {
+  alimentare: 'voci.nome.alimentare',
+  bevande: 'voci.nome.bevande',
+  logistica: 'voci.nome.logistica',
+  attrezzatura: 'voci.nome.attrezzatura'
+};
 const schedaImpostazioni = ({
   admin,
   adminErr,
@@ -8090,7 +8154,8 @@ const schedaImpostazioni = ({
   stanzaStato,
   theme,
   toggleAskAlways,
-  wipeLocal
+  wipeLocal,
+  contiBloccati
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
@@ -8238,7 +8303,30 @@ const schedaImpostazioni = ({
     disabled: stanzaStato.occupato,
     className: bottone('distruttivo', 'minuscolo', 'w-full')
   }, L.t('stanza.lasciaCampo', nomeDi(stanzaStato.vice))));
-})(), stanzaStato.aiutante && /*#__PURE__*/React.createElement("p", {
+})(), stanzaStato.capogruppo && window.Voci && /*#__PURE__*/React.createElement("div", {
+  "data-riquadro": "voci",
+  className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
+}, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo font-bold text-bosco"
+}, L.t('voci.titolo')), /*#__PURE__*/React.createElement("p", {
+  className: "text-minuto text-gray-500 leading-snug"
+}, L.t('voci.spiega')), /*#__PURE__*/React.createElement("div", {
+  className: "grid grid-cols-2 gap-2"
+}, window.Voci.CATEGORIE.map(cat => {
+  const spenta = !!(stanzaStato.voci && stanzaStato.voci[cat] === 'fuori');
+  return /*#__PURE__*/React.createElement("button", {
+    key: cat,
+    "data-voce": cat,
+    onClick: () => {
+      if (!window.confirm(L.t('voci.conferma', L.t(NOME_VOCE[cat]), !spenta))) return;
+      stanzaStato.cambiaVoce(cat, !spenta);
+    },
+    disabled: contiBloccati || stanzaStato.occupato,
+    className: bottoneScelta('interruttore', 'bordato', !spenta, 'minuscolo', contiBloccati ? 'opacity-60 cursor-not-allowed' : '')
+  }, L.t(NOME_VOCE[cat]));
+})), /*#__PURE__*/React.createElement("p", {
+  className: "text-minuto text-gray-500 leading-snug"
+}, L.t(contiBloccati ? 'voci.chiuse' : 'voci.legenda'))), stanzaStato.aiutante && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-bosco leading-snug"
 }, L.t('stanza.seiAiutante')), /*#__PURE__*/React.createElement("button", {
   onClick: () => {
