@@ -1,3 +1,4 @@
+const { campoDiProva } = require('../lib/app');
 const { chromium } = require('playwright-core');
 (async () => {
   const b = await chromium.launch({ executablePath: require('../lib/app').chromium(), args: ['--no-sandbox'] });
@@ -5,7 +6,7 @@ const { chromium } = require('playwright-core');
   await p.addInitScript((h) => localStorage.setItem('cambusa_unlock', h), require('../lib/app').SBLOCCO);
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   const dialogs = []; p.on('dialog', async d => { dialogs.push(d.message()); await d.accept(); });
-  await p.addInitScript(...require('../lib/app').campoDiProva());
+  await p.addInitScript(...campoDiProva());
   await p.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
   await p.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
   await p.click('button[aria-label="Menu"]'); await p.waitForTimeout(350);

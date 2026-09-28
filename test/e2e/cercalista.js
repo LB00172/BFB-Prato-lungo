@@ -1,3 +1,4 @@
+const { campoDiProva } = require('../lib/app');
 const { chromium } = require('playwright-core');
 // L'impronta del blocco si LEGGE da firebase-config.js (test/lib/app.js).
 // Ricopiata qui, il giorno in cui cambia la password del campo questa prova
@@ -24,7 +25,7 @@ const H = require('../lib/app').SBLOCCO;
     localStorage.setItem('cambusa_tobuy', JSON.stringify(d.lista));
     localStorage.setItem('cambusa_members', JSON.stringify([{ id: 'a', name: 'Alice' }]));
   }, { H, lista });
-  await p.addInitScript(...require('../lib/app').campoDiProva());
+  await p.addInitScript(...campoDiProva());
   await p.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
   await p.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
   await p.click('button[aria-label="Menu"]'); await p.waitForTimeout(300);

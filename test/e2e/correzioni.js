@@ -1,4 +1,5 @@
 // Matita per correggere, ricerca in cronologia, controllo "pronto per il campo".
+const { campoDiProva } = require('../lib/app');
 const { chromium } = require('playwright-core');
 // L'impronta del blocco si LEGGE da firebase-config.js (test/lib/app.js).
 // Ricopiata qui, il giorno in cui cambia la password del campo questa prova
@@ -23,7 +24,7 @@ const H = require('../lib/app').SBLOCCO;
     localStorage.setItem('cambusa_camp_data', JSON.stringify({ '2026-08-11': { meals: { a: { lunch: true, dinner: true }, b: { lunch: true, dinner: true } } } }));
   }, { H, spese });
   const menu = async (v) => { await p.click('button[aria-label="Menu"]'); await p.waitForTimeout(280); await p.locator('nav button', { hasText: v }).first().click(); await p.waitForTimeout(320); };
-  await p.addInitScript(...require('../lib/app').campoDiProva());
+  await p.addInitScript(...campoDiProva());
   await p.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
   await p.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
 

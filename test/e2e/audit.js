@@ -2,6 +2,7 @@
 // Semina i dati reali in localStorage, apre l'app e legge i numeri MOSTRATI,
 // poi verifica le invarianti contabili. Nessuna logica duplicata: si testa
 // il codice vero dell'app.
+const { campoDiProva } = require('../lib/app');
 const { chromium } = require('playwright-core');
 
 const DAY = '2026-08-11';
@@ -288,7 +289,7 @@ const close = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.051 : tol
       localStorage.setItem('cambusa_equipment', JSON.stringify(s.attrezzatura));
       localStorage.setItem('cambusa_sepdays', JSON.stringify(s.giorniSeparati || []));
     }, sc);
-    await p.addInitScript(...require('../lib/app').campoDiProva());
+    await p.addInitScript(...campoDiProva());
     await p.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
     await p.evaluate(() => { try { localStorage.setItem('cambusa_unlock', window.APP_LOCK.hash); } catch(e){} });
     await p.reload({ waitUntil: 'load' });

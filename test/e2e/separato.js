@@ -1,5 +1,6 @@
 // Percorso completo dell'utente: spunta i giorni in Calendario, registra una
 // spesa sul conto separato e controlla che le quote cambino di conseguenza.
+const { campoDiProva } = require('../lib/app');
 const { chromium } = require('playwright-core');
 
 const DAY = '2026-08-11';   // giorno del conto separato
@@ -33,7 +34,7 @@ const L = { lunch: true, dinner: false };
     await p.waitForTimeout(280);
   };
 
-  await p.addInitScript(...require('../lib/app').campoDiProva());
+  await p.addInitScript(...campoDiProva());
   await p.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
   await p.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
 
