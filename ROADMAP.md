@@ -498,10 +498,15 @@ perdere la scheda nella stanza. Vedi `CLAUDE.md`, «L'account non è un muro».
       entri o che crei — le regole non lasciano elencarle — e si guarda anche
       quella salvata sul telefono. Le spese e le presenze scritte restano al
       campo: sono i conti del gruppo.
-- [ ] **Cedere un campo** a un altro membro non esiste ancora: oggi chi è
-      proprietario, per cancellarsi, deve cancellare il campo. Va fatto
-      prima di pubblicare — altrimenti l'unica strada per andarsene è
-      distruggere i conti di tutti.
+- [x] **Cedere un campo** — fatto il 28 settembre con l'**aiutante**: il
+      capogruppo ne nomina uno fra i membri e, lasciando il campo, lo passa a
+      lui (Impostazioni → Il tuo aiutante). Il Pro non passa: si spegne nel
+      passaggio. Le regole Firestore permettono il passaggio solo verso
+      l'aiutante nominato (`test/regole/stanze.js` § 9).
+- [ ] **Resta da collegare alla cancellazione dell'account**: oggi un
+      capogruppo che vuole cancellarsi viene ancora fermato. La strada giusta
+      è proporgli, lì, di lasciare il campo all'aiutante — e se l'aiutante
+      non c'è, dirgli di nominarlo prima.
 
 **Il marchio**
 

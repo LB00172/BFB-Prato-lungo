@@ -46,6 +46,10 @@ const usaStanza = () => {
   // finche' la versione pubblica non esiste davvero.
   const [stanza, setStanza] = useState(leggiStanzaSalvata);
   const [membri, setMembri] = useState([]);
+  // La bozza delle regole mentre il capogruppo le scrive (null: non le sta
+  // scrivendo), e chi sta scegliendo come aiutante.
+  const [bozzaRegole, setBozzaRegole] = useState(null);
+  const [sceltaAiutante, setSceltaAiutante] = useState('');
   // Chi aveva gia' una stanza prima che la home esistesse la ritrova in
   // elenco: la stanza salvata entra da sola.
   const [campi, setCampi] = useState(() => {
@@ -250,6 +254,13 @@ const usaStanza = () => {
     setMembri([]);
     pulisci();
     scriviLocale('cambusa_stanza', '');
+    // Il codice del campo salvato dalla sincronizzazione e' quello della
+    // stanza da cui si esce (collegandosi lo scrive lei): lasciarlo li'
+    // vorrebbe dire restare in quel campo — dati a schermo e collegamento —
+    // dopo aver premuto «Esci».
+    try {
+      if (stanza && localStorage.getItem('cambusa_camp_code') === stanza.codice) localStorage.removeItem('cambusa_camp_code');
+    } catch (e) { /* niente: al peggio si resta dove si era */ }
   };
 
   // «Questo campo e' Pro?» — l'unica domanda che le funzioni Pro devono fare
@@ -261,9 +272,57 @@ const usaStanza = () => {
     ? campi.find((v) => window.Stanza.normalizza(v.codice) === window.Stanza.normalizza(stanza.codice))
     : null;
   const pro = !!(window.Stanza && window.Stanza.campoPro(voceAperta, toDateStr(new Date())));
+  // Cosa si sa del campo aperto: le sue regole, e chi lo guida. Come il Pro,
+  // arriva dall'elenco sul telefono e si corregge a ogni lettura del cloud;
+  // a decidere davvero chi puo' cambiare cosa sono le regole Firestore.
+  const regole = (voceAperta && voceAperta.regole) || [];
+  const capogruppo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
+  const aiutante = !!(voceAperta && voceAperta.aiutante);
+  const vice = (voceAperta && voceAperta.vice) || '';
+
+  // Si scrive nel documento della stanza e, subito, nell'elenco sul telefono:
+  // chi ha appena salvato deve vedere quello che ha scritto, anche senza
+  // linea (Firestore mette la scrittura in coda da solo).
+  const aggiornaVoceAperta = (campi) => {
+    if (!stanza) return;
+    const c = window.Stanza.normalizza(stanza.codice);
+    setCampi((l) => l.map((v) => (window.Stanza.normalizza(v.codice) === c ? Object.assign({}, v, campi) : v)));
+  };
+  const salvaRegole = async (testo) => {
+    if (!stanza) return false;
+    const elenco = window.Stanza.regoleDaTesto(testo);
+    const fatto = await prova((c) => c.impostaStanza(stanza.codice, { regole: elenco }).then(() => true));
+    if (fatto) aggiornaVoceAperta({ regole: elenco });
+    return !!fatto;
+  };
+  const nominaAiutante = async (uid) => {
+    if (!stanza || !uid) return;
+    const fatto = await prova((c) => c.impostaStanza(stanza.codice, { vice: uid }).then(() => true));
+    if (!fatto) return;
+    aggiornaVoceAperta({ vice: uid });
+    setFatto('stanza.aiutanteNominato');
+  };
+  // Il capogruppo se ne va: il campo passa all'aiutante (senza il Pro), e
+  // su questo telefono il campo sparisce dall'elenco e si esce.
+  // `prima`: quello che chi chiama vuole fare prima di uscire (portare la
+  // scheda alla home). Deve stare nello stesso giro dell'uscita: uscire
+  // cambia cassetto e rimonta l'app, e dopo non c'e' piu' nessuno a cui
+  // chiederlo.
+  const lasciaCampo = async (utente, prima) => {
+    if (!stanza) return false;
+    const c = window.Stanza.normalizza(stanza.codice);
+    const fatto = await prova((sc) => sc.lasciaAllAiutante(stanza.codice, utente).then(() => true));
+    if (!fatto) return false;
+    setCampi((l) => l.filter((v) => window.Stanza.normalizza(v.codice) !== c));
+    if (prima) prima();
+    esci();
+    setFatto('stanza.campoLasciato');
+    return true;
+  };
 
   return {
-    pro,
+    pro, regole, capogruppo, aiutante, vice, salvaRegole, nominaAiutante, lasciaCampo,
+    bozzaRegole, setBozzaRegole, sceltaAiutante, setSceltaAiutante,
     stanza, membri, modo, setModo,
     nome, setNome, inizio, setInizio, fine, setFine, codice, setCodice,
     problema, fatto, occupato, chiudi,

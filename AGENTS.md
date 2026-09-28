@@ -66,6 +66,11 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
 - **Le chiavi `localStorage` con prefisso `cambusa_*` sono un contratto**, non
   un residuo estetico. Rinominarle fa perdere i dati a ogni telefono che non
   migra: è una migrazione con codice di compatibilità, non una rinomina.
+- **Chi amministra una stanza lo dice `rooms/<id>.proprietario`, non la
+  scheda in `members/`.** Dopo un passaggio all'aiutante la scheda di chi se
+  ne va può dire ancora «proprietario» per un attimo (o per sempre, se è
+  offline): è voluto che non conti. Non «semplificare» `amministra()`
+  tornando al ruolo della scheda — `test/regole/stanze.js` § 9 diventa rosso.
 - **Ogni chiave `cambusa_*` è del campo o del telefono, e va dichiarata.**
   Dal 28 settembre 2026 le chiavi del campo contengono i dati del campo **in
   gioco**; quelli degli altri campi stanno da parte (`cambusa_cassetto:…`,

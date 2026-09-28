@@ -128,18 +128,10 @@ if (typeof window !== 'undefined') window.__meteo = { quandoMeteo };
 
 // Dotazione personale base: uguale per tutti, non modificabile dall'app.
 // Le voci con emphasis: true sono mostrate in evidenza (piu' grandi e sottolineate).
-// Regole dell'accampamento (mostrate in maiuscolo e sottolineate).
-// Testo VERBATIM come scritto da Lorenzo: non correggere.
-const CAMP_RULES = [
-  'Amici, parenti e prole al seguito sono sotto la stretta giurisdizione di chi li ha trascinati qui. Siete i domatori ufficiali delle vostre creature, grandi o piccole che siano: fate in modo che rispettino le regole dell\'accampamento. Istruiteli a dovere anche sull\' attrezzatura da portarsi.',
-  'Il vincitore del minigioco Bandy, sarà premiato dal EL Presidente  in una sontuosa cerimonia',
-  'Siamo in montagna, non ad Hogwarts. La griglia non si accende per magia, l\'acqua non levita fino alla cucina e le incrostazioni sulle pentole non scompaiono con un incantesimo. E\' richiesto l\'impegno di tutti, per far rilassare tutti.',
-  'Il bicchiere di chi sta cuocendo sulla braticola deve essere sempre pieno, adoperatevi di conseguenza se non volete incorrere nelle ire del presidente.',
-  'Gli ospiti non fanno ospiti. Niente di personale ovviamente. Per fortuna la montagna offre notevole spazio.',
-  'Membri o ospiti single, di ambo i sessi, sono sempre i ben accetti nella tenda del El Presidente.',
-  'Se Madre Natura ti offre gentilmente il suo bagno all\'aperto, cerca di essere educato. Usa esclusivamente prodotti che la foresta possa digerire in fretta e lascia tutto pulito e sistemato. Copri o sotterra i fazzolettini biodegradabili ad ogni utilizzo per il bene di tutti.',
-];
-
+// Le regole dell'accampamento qui non ci sono: quelle scritte a mano erano
+// della Brigata (il Presidente, il minigioco), e nell'app pubblica ogni campo
+// scrive le sue — le scrive il capogruppo, e stanno nella stanza
+// (rooms/<codice>.regole, src/83-schede-gruppo.jsx).
 const BASE_GEAR = [
   { text: 'SEDIA PERSONALE PER ADULTI E EVENTUALI BAMBINI', emphasis: true },
   { text: 'Stoviglie, posate personali e bicchiere riutilizzabile', emphasis: true },

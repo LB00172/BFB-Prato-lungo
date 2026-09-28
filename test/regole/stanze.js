@@ -16,7 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, collection, getDocs } = require('firebase/firestore');
 
 const RADICE = path.join(__dirname, '..', '..');
 const CONDIVISO = 'campo@brigatabandone.it';
@@ -295,6 +295,49 @@ const permesso = async (msg, azione) => {
     () => setDoc(doc(anna, 'rooms/BCDFGHJK'), { nome: 'Pagato e rinominato' }, { merge: true }));
   await permesso('e il campo gratuito resta suo come prima',
     () => setDoc(doc(anna, 'rooms/K7RX2MQP'), { nome: 'Prato Lungo 2027 bis' }, { merge: true }));
+
+  console.log('\n9) L\'aiutante, il passaggio, e il Pro che non passa');
+  // Una stanza a se', per non dipendere da quello che le prove sopra hanno
+  // fatto a K7RX2MQP. Anna capogruppo col Pro, Bruno e Carla membri.
+  await env.withSecurityRulesDisabled(async (c) => {
+    const db = c.firestore();
+    await setDoc(doc(db, 'rooms/MNPQRSTV'), { nome: 'Passaggio', proprietario: 'anna', pro: { attivo: true } });
+    await setDoc(doc(db, 'rooms/MNPQRSTV/members/anna'), { ruolo: 'proprietario', nome: 'Anna' });
+    await setDoc(doc(db, 'rooms/MNPQRSTV/members/bruno'), { ruolo: 'redattore', nome: 'Bruno' });
+    await setDoc(doc(db, 'rooms/MNPQRSTV/members/carla'), { ruolo: 'redattore', nome: 'Carla' });
+  });
+  const stanzaP = (db) => doc(db, 'rooms/MNPQRSTV');
+  await negato('un membro non si nomina aiutante da solo',
+    () => setDoc(stanzaP(bruno), { vice: 'bruno' }, { merge: true }));
+  await negato('il capogruppo non nomina aiutante chi non è nel campo',
+    () => setDoc(stanzaP(anna), { vice: 'dino' }, { merge: true }));
+  await negato('e nemmeno se stesso', () => setDoc(stanzaP(anna), { vice: 'anna' }, { merge: true }));
+  await permesso('il capogruppo nomina aiutante un membro',
+    () => setDoc(stanzaP(anna), { vice: 'bruno' }, { merge: true }));
+  await negato('l\'aiutante non si prende il campo da solo',
+    () => setDoc(stanzaP(bruno), { proprietario: 'bruno' }, { merge: true }));
+  await negato('il capogruppo non lo passa a chi non è l\'aiutante',
+    () => updateDoc(stanzaP(anna), { proprietario: 'carla', vice: deleteField(), pro: deleteField() }));
+  // IL caso: il Pro l'ha pagato chi se ne va, e non passa di mano.
+  await negato('passandolo all\'aiutante il Pro non si porta dietro',
+    () => updateDoc(stanzaP(anna), { proprietario: 'bruno', vice: deleteField() }));
+  await permesso('lo passa all\'aiutante, e il Pro si spegne nello stesso gesto',
+    () => updateDoc(stanzaP(anna), { proprietario: 'bruno', vice: deleteField(), pro: deleteField() }));
+  // Dopo il passaggio la scheda di Anna dice ancora «proprietario» finché
+  // non se ne va: non deve contare niente. Comanda il documento della stanza.
+  await negato('dopo il passaggio chi se ne va non amministra più, anche se la sua scheda non è ancora sparita',
+    () => setDoc(stanzaP(anna), { nome: 'Rubato' }, { merge: true }));
+  await permesso('e può andarsene: la sua scheda la toglie da sé',
+    () => deleteDoc(doc(anna, 'rooms/MNPQRSTV/members/anna')));
+  await permesso('il nuovo capogruppo amministra', () => setDoc(stanzaP(bruno), { nome: 'Di Bruno' }, { merge: true }));
+  await negato('ma il Pro non se lo riaccende', () => setDoc(stanzaP(bruno), { pro: { attivo: true } }, { merge: true }));
+
+  console.log('\n10) Le regole del campo le scrive il capogruppo');
+  await permesso('il capogruppo scrive le regole',
+    () => setDoc(stanzaP(bruno), { regole: ['Si lava a turno.'] }, { merge: true }));
+  await negato('un membro no', () => setDoc(stanzaP(carla), { regole: ['Niente turni.'] }, { merge: true }));
+  await permesso('e un membro le legge', () => getDoc(stanzaP(carla)));
+  await negato('un estraneo non le legge', () => getDoc(stanzaP(nonVerificato)));
 
   console.log('\n7) Quello che non e\' previsto e\' chiuso');
   // Una collezione nuova non deve nascere aperta per distrazione.

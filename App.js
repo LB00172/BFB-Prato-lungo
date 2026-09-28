@@ -672,9 +672,10 @@ if (typeof window !== 'undefined') window.__meteo = {
 
 // Dotazione personale base: uguale per tutti, non modificabile dall'app.
 // Le voci con emphasis: true sono mostrate in evidenza (piu' grandi e sottolineate).
-// Regole dell'accampamento (mostrate in maiuscolo e sottolineate).
-// Testo VERBATIM come scritto da Lorenzo: non correggere.
-const CAMP_RULES = ['Amici, parenti e prole al seguito sono sotto la stretta giurisdizione di chi li ha trascinati qui. Siete i domatori ufficiali delle vostre creature, grandi o piccole che siano: fate in modo che rispettino le regole dell\'accampamento. Istruiteli a dovere anche sull\' attrezzatura da portarsi.', 'Il vincitore del minigioco Bandy, sarà premiato dal EL Presidente  in una sontuosa cerimonia', 'Siamo in montagna, non ad Hogwarts. La griglia non si accende per magia, l\'acqua non levita fino alla cucina e le incrostazioni sulle pentole non scompaiono con un incantesimo. E\' richiesto l\'impegno di tutti, per far rilassare tutti.', 'Il bicchiere di chi sta cuocendo sulla braticola deve essere sempre pieno, adoperatevi di conseguenza se non volete incorrere nelle ire del presidente.', 'Gli ospiti non fanno ospiti. Niente di personale ovviamente. Per fortuna la montagna offre notevole spazio.', 'Membri o ospiti single, di ambo i sessi, sono sempre i ben accetti nella tenda del El Presidente.', 'Se Madre Natura ti offre gentilmente il suo bagno all\'aperto, cerca di essere educato. Usa esclusivamente prodotti che la foresta possa digerire in fretta e lascia tutto pulito e sistemato. Copri o sotterra i fazzolettini biodegradabili ad ogni utilizzo per il bene di tutti.'];
+// Le regole dell'accampamento qui non ci sono: quelle scritte a mano erano
+// della Brigata (il Presidente, il minigioco), e nell'app pubblica ogni campo
+// scrive le sue — le scrive il capogruppo, e stanno nella stanza
+// (rooms/<codice>.regole, src/83-schede-gruppo.jsx).
 const BASE_GEAR = [{
   text: 'SEDIA PERSONALE PER ADULTI E EVENTUALI BAMBINI',
   emphasis: true
@@ -1910,6 +1911,10 @@ const usaStanza = () => {
   // finche' la versione pubblica non esiste davvero.
   const [stanza, setStanza] = useState(leggiStanzaSalvata);
   const [membri, setMembri] = useState([]);
+  // La bozza delle regole mentre il capogruppo le scrive (null: non le sta
+  // scrivendo), e chi sta scegliendo come aiutante.
+  const [bozzaRegole, setBozzaRegole] = useState(null);
+  const [sceltaAiutante, setSceltaAiutante] = useState('');
   // Chi aveva gia' una stanza prima che la home esistesse la ritrova in
   // elenco: la stanza salvata entra da sola.
   const [campi, setCampi] = useState(() => {
@@ -2154,6 +2159,13 @@ const usaStanza = () => {
     setMembri([]);
     pulisci();
     scriviLocale('cambusa_stanza', '');
+    // Il codice del campo salvato dalla sincronizzazione e' quello della
+    // stanza da cui si esce (collegandosi lo scrive lei): lasciarlo li'
+    // vorrebbe dire restare in quel campo — dati a schermo e collegamento —
+    // dopo aver premuto «Esci».
+    try {
+      if (stanza && localStorage.getItem('cambusa_camp_code') === stanza.codice) localStorage.removeItem('cambusa_camp_code');
+    } catch (e) {/* niente: al peggio si resta dove si era */}
   };
 
   // «Questo campo e' Pro?» — l'unica domanda che le funzioni Pro devono fare
@@ -2163,8 +2175,74 @@ const usaStanza = () => {
   // server) lo decidono le regole Firestore, che leggono la stanza vera.
   const voceAperta = stanza && window.Stanza ? campi.find(v => window.Stanza.normalizza(v.codice) === window.Stanza.normalizza(stanza.codice)) : null;
   const pro = !!(window.Stanza && window.Stanza.campoPro(voceAperta, toDateStr(new Date())));
+  // Cosa si sa del campo aperto: le sue regole, e chi lo guida. Come il Pro,
+  // arriva dall'elenco sul telefono e si corregge a ogni lettura del cloud;
+  // a decidere davvero chi puo' cambiare cosa sono le regole Firestore.
+  const regole = voceAperta && voceAperta.regole || [];
+  const capogruppo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
+  const aiutante = !!(voceAperta && voceAperta.aiutante);
+  const vice = voceAperta && voceAperta.vice || '';
+
+  // Si scrive nel documento della stanza e, subito, nell'elenco sul telefono:
+  // chi ha appena salvato deve vedere quello che ha scritto, anche senza
+  // linea (Firestore mette la scrittura in coda da solo).
+  const aggiornaVoceAperta = campi => {
+    if (!stanza) return;
+    const c = window.Stanza.normalizza(stanza.codice);
+    setCampi(l => l.map(v => window.Stanza.normalizza(v.codice) === c ? Object.assign({}, v, campi) : v));
+  };
+  const salvaRegole = async testo => {
+    if (!stanza) return false;
+    const elenco = window.Stanza.regoleDaTesto(testo);
+    const fatto = await prova(c => c.impostaStanza(stanza.codice, {
+      regole: elenco
+    }).then(() => true));
+    if (fatto) aggiornaVoceAperta({
+      regole: elenco
+    });
+    return !!fatto;
+  };
+  const nominaAiutante = async uid => {
+    if (!stanza || !uid) return;
+    const fatto = await prova(c => c.impostaStanza(stanza.codice, {
+      vice: uid
+    }).then(() => true));
+    if (!fatto) return;
+    aggiornaVoceAperta({
+      vice: uid
+    });
+    setFatto('stanza.aiutanteNominato');
+  };
+  // Il capogruppo se ne va: il campo passa all'aiutante (senza il Pro), e
+  // su questo telefono il campo sparisce dall'elenco e si esce.
+  // `prima`: quello che chi chiama vuole fare prima di uscire (portare la
+  // scheda alla home). Deve stare nello stesso giro dell'uscita: uscire
+  // cambia cassetto e rimonta l'app, e dopo non c'e' piu' nessuno a cui
+  // chiederlo.
+  const lasciaCampo = async (utente, prima) => {
+    if (!stanza) return false;
+    const c = window.Stanza.normalizza(stanza.codice);
+    const fatto = await prova(sc => sc.lasciaAllAiutante(stanza.codice, utente).then(() => true));
+    if (!fatto) return false;
+    setCampi(l => l.filter(v => window.Stanza.normalizza(v.codice) !== c));
+    if (prima) prima();
+    esci();
+    setFatto('stanza.campoLasciato');
+    return true;
+  };
   return {
     pro,
+    regole,
+    capogruppo,
+    aiutante,
+    vice,
+    salvaRegole,
+    nominaAiutante,
+    lasciaCampo,
+    bozzaRegole,
+    setBozzaRegole,
+    sceltaAiutante,
+    setSceltaAiutante,
     stanza,
     membri,
     modo,
@@ -5187,6 +5265,22 @@ function App({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheda, account.utente && account.utente.uid]);
 
+  // Entrando in un campo si rilegge anche lui: chi e' il capogruppo, chi
+  // l'aiutante, le regole. Senza, un capogruppo che non passa dalla home non
+  // vedrebbe mai il tasto per scriverle.
+  useEffect(() => {
+    if (!FEATURES.rooms || !stanzaStato.stanza) return;
+    stanzaStato.aggiornaCampi(account.utente, account.stato === 'registrato' || account.stato === 'daVerificare');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stanzaStato.stanza && stanzaStato.stanza.codice, account.utente && account.utente.uid]);
+
+  // Il capogruppo, aprendo Impostazioni, deve poter scegliere l'aiutante fra
+  // chi c'e': l'elenco dei membri si chiede li', e solo a lui.
+  useEffect(() => {
+    if (FEATURES.rooms && scheda === 'impostazioni' && stanzaStato.capogruppo) stanzaStato.aggiornaMembri();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheda, stanzaStato.capogruppo]);
+
   // Toccare un campo nella home: si apre, e si parte dal Calendario. Se e'
   // un altro campo, il cambio di cassetto lo fa l'effetto della
   // sincronizzazione (cassettoGiusto), che porta di la' la scheda.
@@ -5782,7 +5876,9 @@ function App({
     setNewEquipText,
     setViewReceipt,
     toggleEquipBought
-  }), scheda === 'regole' && schedaRegole(), scheda === 'dotazioni' && schedaDotazioni({
+  }), scheda === 'regole' && schedaRegole({
+    stanzaStato
+  }), scheda === 'dotazioni' && schedaDotazioni({
     addGear,
     gear,
     newGearText,
@@ -7513,22 +7609,60 @@ const schedaMembri = ({
 
 // Le Regole non dipendono da niente: e' l'unica scheda che si disegna da
 // sola, e infatti l'elenco delle dipendenze e' vuoto.
-const schedaRegole = () => /*#__PURE__*/React.createElement("div", {
-  className: "space-y-4"
-}, /*#__PURE__*/React.createElement("div", {
-  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
-}, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3"
-}, L.t('regole.titolo')), /*#__PURE__*/React.createElement("ol", {
-  className: "space-y-3"
-}, CAMP_RULES.map((text, i) => /*#__PURE__*/React.createElement("li", {
-  key: i,
-  className: "flex gap-3 bg-carta/60 p-3 rounded border border-salvia/20"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "font-rustic text-grande text-legno leading-none shrink-0"
-}, i + 1, "."), /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo leading-relaxed uppercase underline underline-offset-2 decoration-salvia/70 font-bold text-bosco"
-}, text))))));
+// Le regole del campo. Le scrive il capogruppo, in una casella sola (una
+// regola per paragrafo); gli altri le leggono. Stanno nel documento della
+// stanza e le regole Firestore le fanno scrivere solo a lui: il tasto che
+// qui compare solo al capogruppo e' una cortesia, la serratura e' li'.
+const schedaRegole = ({
+  stanzaStato
+}) => {
+  const regole = stanzaStato.regole || [];
+  const bozza = stanzaStato.bozzaRegole;
+  return /*#__PURE__*/React.createElement("div", {
+    "data-scheda": "regole",
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
+  }, L.t('regole.titolo')), bozza !== null ? /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t('regole.aiuto')), /*#__PURE__*/React.createElement("textarea", {
+    value: bozza,
+    onChange: e => stanzaStato.setBozzaRegole(e.target.value),
+    rows: 10,
+    className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale leading-snug focus:outline-none focus:border-bosco"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => stanzaStato.setBozzaRegole(null),
+    className: bottone('testuale', 'normale', 'flex-1')
+  }, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      if (await stanzaStato.salvaRegole(bozza)) stanzaStato.setBozzaRegole(null);
+    },
+    disabled: stanzaStato.occupato,
+    className: bottone('primario', 'normale', 'flex-1')
+  }, L.t('regole.salva'))), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo font-bold text-red-700 leading-snug"
+  }, L.t(stanzaStato.problema))) : regole.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500 leading-snug"
+  }, L.t(stanzaStato.capogruppo ? 'regole.scriviTu' : 'regole.nessuna')) : /*#__PURE__*/React.createElement("ol", {
+    className: "space-y-3"
+  }, regole.map((text, i) => /*#__PURE__*/React.createElement("li", {
+    key: i,
+    className: "flex gap-3 bg-carta/60 p-3 rounded border border-salvia/20"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic text-grande text-legno leading-none shrink-0"
+  }, i + 1, "."), /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo leading-relaxed font-bold text-bosco"
+  }, text)))), stanzaStato.capogruppo && bozza === null && /*#__PURE__*/React.createElement("button", {
+    onClick: () => stanzaStato.setBozzaRegole(window.Stanza.testoDaRegole(regole)),
+    className: bottone('secondario', 'normale', 'w-full')
+  }, L.t('regole.modifica'))));
+};
 const schedaDotazioni = ({
   addGear,
   gear,
@@ -8047,7 +8181,7 @@ const schedaImpostazioni = ({
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => {
     const link = stanzaStato.linkDaMandare();
-    const testo = L.t('stanza.invitoTesto')(stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice), link);
+    const testo = L.t('stanza.invitoTesto', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice), link);
     if (navigator.share) {
       navigator.share({
         text: testo
@@ -8066,7 +8200,50 @@ const schedaImpostazioni = ({
   className: bottone('secondario', 'normale', 'flex-1')
 }, L.t('stanza.copiaLink'))), stanzaStato.membri.length > 0 && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500"
-}, L.t('stanza.dentro')(stanzaStato.membri.length)), /*#__PURE__*/React.createElement("button", {
+}, L.t('stanza.dentro', stanzaStato.membri.length)), stanzaStato.capogruppo && (() => {
+  const io = account.utente && account.utente.uid;
+  const altri = stanzaStato.membri.filter(m => m.uid !== io);
+  const nomeDi = uid => {
+    const m = stanzaStato.membri.find(x => x.uid === uid);
+    return m && m.nome || L.t('stanza.unMembro');
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    "data-riquadro": "aiutante",
+    className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo font-bold text-bosco"
+  }, L.t('stanza.aiutanteTitolo')), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t('stanza.aiutanteSpiega')), stanzaStato.vice && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-bosco leading-snug"
+  }, frase('stanza.aiutanteE', nomeDi(stanzaStato.vice))), altri.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("select", {
+    value: stanzaStato.sceltaAiutante,
+    onChange: e => stanzaStato.setSceltaAiutante(e.target.value),
+    className: "flex-1 min-w-0 p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, L.t('stanza.aiutanteScegli')), altri.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m.uid,
+    value: m.uid
+  }, m.nome || L.t('stanza.unMembro')))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => stanzaStato.nominaAiutante(stanzaStato.sceltaAiutante),
+    disabled: !stanzaStato.sceltaAiutante || stanzaStato.occupato,
+    className: bottone('secondario', 'normale', 'shrink-0')
+  }, L.t('stanza.aiutanteNomina'))), stanzaStato.fatto === 'stanza.aiutanteNominato' && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-bosco leading-snug"
+  }, L.t('stanza.aiutanteNominato')), stanzaStato.vice && /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      if (!window.confirm(L.t('stanza.confermaLascia', nomeDi(stanzaStato.vice), stanzaStato.pro))) return;
+      await stanzaStato.lasciaCampo(account.utente, () => goTo('campi'));
+    },
+    disabled: stanzaStato.occupato,
+    className: bottone('distruttivo', 'minuscolo', 'w-full')
+  }, L.t('stanza.lasciaCampo', nomeDi(stanzaStato.vice))));
+})(), stanzaStato.aiutante && /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-bosco leading-snug"
+}, L.t('stanza.seiAiutante')), /*#__PURE__*/React.createElement("button", {
   onClick: () => {
     stanzaStato.esci();
     goTo('campi');
@@ -8848,14 +9025,16 @@ const schedaCampi = ({
     className: "block font-bold text-bosco truncate"
   }, v.nome || Stanza.bello(v.codice)), /*#__PURE__*/React.createElement("span", {
     className: "block text-minuto text-gray-500 truncate"
-  }, [date(v), L.t(v.ruolo === 'proprietario' ? 'campi.organizzi' : 'campi.partecipi')].filter(Boolean).join(' · '))), window.Stanza.campoPro(v, oggi) && /*#__PURE__*/React.createElement("span", {
+  }, [date(v), L.t(v.ruolo === 'proprietario' ? 'campi.organizzi' : v.aiutante ? 'campi.aiutante' : 'campi.partecipi')].filter(Boolean).join(' · '))), window.Stanza.campoPro(v, oggi) && /*#__PURE__*/React.createElement("span", {
     "data-pro": true,
     className: "shrink-0 text-minuto uppercase font-bold px-2 py-1 rounded bg-fuoco text-white"
   }, L.t('campi.pro')), v.codice === qui && /*#__PURE__*/React.createElement("span", {
     className: "shrink-0 text-minuto uppercase font-bold px-2 py-1 rounded bg-bosco text-carta"
   }, L.t('campi.seiQui')))))), /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-gray-400 leading-snug"
-  }, L.t(registrato ? 'campi.notaProfilo' : 'campi.notaTelefono'))), /*#__PURE__*/React.createElement("div", {
+  }, L.t(registrato ? 'campi.notaProfilo' : 'campi.notaTelefono')), stanzaStato.fatto === 'stanza.campoLasciato' && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-bosco leading-snug"
+  }, L.t('stanza.campoLasciato'))), /*#__PURE__*/React.createElement("div", {
     className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"

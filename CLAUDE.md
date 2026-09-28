@@ -422,6 +422,16 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   solo il server che verifica l'acquisto. Le funzioni Pro chiedono a
   `stanzaStato.pro` (`Stanza.campoPro`, che riceve la stanza) e **mai** a
   qualcosa della persona.
+- **Il capogruppo, l'aiutante, le regole del campo** (28 settembre). Il
+  capogruppo è il proprietario della stanza, e **lo dice il documento della
+  stanza, non la scheda del membro** (`amministra()` in `firestore.rules`):
+  chi ha appena ceduto il campo ha ancora per un attimo una scheda con scritto
+  «proprietario», e non deve contare. Il capogruppo nomina un **aiutante** fra
+  i membri; lasciando il campo lo passa a lui, e a nessun altro, e il **Pro
+  si spegne nel passaggio** (l'ha pagato chi se ne va). È l'unica scrittura
+  con cui un telefono tocca `pro`: per toglierlo, mai per darlo. Le **regole
+  del campo** stanno nella stanza (`rooms/<codice>.regole`) e le scrive solo
+  il capogruppo; quelle della Brigata restano su `main`.
 - **Importazione, ripristino di emergenza e chiusura del campo stanno in
   modalità tecnica.** Non modificano i dati: li RIMPIAZZANO, e si portano
   via i blocchi insieme al resto. Erano le ultime tre strade aperte a

@@ -36,7 +36,9 @@ const chiamate = (page) => page.evaluate(() => ({
     await page.locator('main button', { hasText: BOTTONE }).first().click();
     await page.waitForFunction(() => window.__auth.chiamate.indexOf('cancella') >= 0, null, { timeout: 8000 }).catch(() => {});
     const c = await chiamate(page);
-    const guardate = (c.stanza.find((x) => x.che === 'statoDi') || {}).codici || [];
+    // L'ultima lettura, quella della cancellazione: dal 28 settembre anche
+    // entrare nel campo rilegge la stanza (regole, capogruppo, aiutante).
+    const guardate = (c.stanza.filter((x) => x.che === 'statoDi').pop() || {}).codici || [];
     ok(`si guardano le stanze del profilo E quella del telefono (${guardate.join(', ')})`,
       guardate.indexOf('BBBB3333') >= 0 && guardate.indexOf(CODICE) >= 0);
     const tolte = c.stanza.find((x) => x.che === 'togliMe');

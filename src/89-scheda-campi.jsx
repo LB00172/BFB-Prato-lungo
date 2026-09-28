@@ -90,7 +90,7 @@ const schedaCampi = ({ stanzaStato, account, codiceInGioco, onApri }) => {
                   <span className="min-w-0">
                     <span className="block font-bold text-bosco truncate">{v.nome || Stanza.bello(v.codice)}</span>
                     <span className="block text-minuto text-gray-500 truncate">
-                      {[date(v), L.t(v.ruolo === 'proprietario' ? 'campi.organizzi' : 'campi.partecipi')].filter(Boolean).join(' · ')}
+                      {[date(v), L.t(v.ruolo === 'proprietario' ? 'campi.organizzi' : v.aiutante ? 'campi.aiutante' : 'campi.partecipi')].filter(Boolean).join(' · ')}
                     </span>
                   </span>
                   {window.Stanza.campoPro(v, oggi) && (
@@ -105,6 +105,7 @@ const schedaCampi = ({ stanzaStato, account, codiceInGioco, onApri }) => {
           </ul>
         )}
         <p className="text-minuto text-gray-400 leading-snug">{L.t(registrato ? 'campi.notaProfilo' : 'campi.notaTelefono')}</p>
+        {stanzaStato.fatto === 'stanza.campoLasciato' && <p className="text-piccolo text-bosco leading-snug">{L.t('stanza.campoLasciato')}</p>}
       </div>
 
       <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">

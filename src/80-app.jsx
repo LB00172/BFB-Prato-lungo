@@ -2553,6 +2553,22 @@ function App({ eredita, cambiaCampo } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheda, account.utente && account.utente.uid]);
 
+  // Entrando in un campo si rilegge anche lui: chi e' il capogruppo, chi
+  // l'aiutante, le regole. Senza, un capogruppo che non passa dalla home non
+  // vedrebbe mai il tasto per scriverle.
+  useEffect(() => {
+    if (!FEATURES.rooms || !stanzaStato.stanza) return;
+    stanzaStato.aggiornaCampi(account.utente, account.stato === 'registrato' || account.stato === 'daVerificare');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stanzaStato.stanza && stanzaStato.stanza.codice, account.utente && account.utente.uid]);
+
+  // Il capogruppo, aprendo Impostazioni, deve poter scegliere l'aiutante fra
+  // chi c'e': l'elenco dei membri si chiede li', e solo a lui.
+  useEffect(() => {
+    if (FEATURES.rooms && scheda === 'impostazioni' && stanzaStato.capogruppo) stanzaStato.aggiornaMembri();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheda, stanzaStato.capogruppo]);
+
   // Toccare un campo nella home: si apre, e si parte dal Calendario. Se e'
   // un altro campo, il cambio di cassetto lo fa l'effetto della
   // sincronizzazione (cassettoGiusto), che porta di la' la scheda.
@@ -3011,7 +3027,7 @@ function App({ eredita, cambiaCampo } = {}) {
         })}
 
         {/* ---------- REGOLE ---------- */}
-        {scheda === 'regole' && schedaRegole()}
+        {scheda === 'regole' && schedaRegole({ stanzaStato })}
 
         {/* ---------- DOTAZIONI PERSONALI ---------- */}
         {scheda === 'dotazioni' && schedaDotazioni({

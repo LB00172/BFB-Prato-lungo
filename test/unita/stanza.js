@@ -494,6 +494,30 @@ if (!S) { fine(); }
         S.campoPro(S.aggiornaCampi(l, [], [])[0], oggi) === true);
     }
 
+    // ---------- Le regole del campo e il passaggio all'aiutante ----------
+    {
+      const r = S.regoleDaTesto('  Si lava a turno.  \n\n\n Niente musica\n dopo mezzanotte. \n\n  ');
+      ok(`una regola per paragrafo, pulita (${JSON.stringify(r)})`,
+        JSON.stringify(r) === JSON.stringify(['Si lava a turno.', 'Niente musica dopo mezzanotte.']));
+      ok('e si torna al testo senza perdere niente',
+        JSON.stringify(S.regoleDaTesto(S.testoDaRegole(r))) === JSON.stringify(r));
+      ok('un testo vuoto non fa regole vuote', S.regoleDaTesto('\n\n  \n').length === 0);
+      const tante = Array.from({ length: 50 }, (_, k) => 'Regola ' + k).join('\n\n');
+      ok('non più di trenta', S.regoleDaTesto(tante).length === 30);
+
+      // Anna era capogruppo con il Pro; ha passato il campo a Bruno.
+      let l = [{ codice: 'K7RX2MQP', nome: 'Campo', ruolo: 'proprietario', pro: { attivo: true }, vice: 'bruno', regole: ['Vecchia'] }];
+      l = S.aggiornaCampi(l, [], [{ codice: 'K7RX2MQP', membro: true, proprietario: false, regole: [], vice: '', aiutante: false }]);
+      ok('dopo il passaggio chi l\'ha ceduto non risulta più capogruppo', l[0].ruolo === 'redattore');
+      ok('e il Pro e l\'aiutante di ieri non restano', !l[0].pro && !l[0].vice);
+      ok('regole tolte dal capogruppo spariscono anche qui', !l[0].regole);
+      l = S.aggiornaCampi(l, [], [{ codice: 'K7RX2MQP', membro: true, proprietario: false, regole: ['Nuova'], aiutante: true }]);
+      ok('chi è stato nominato aiutante lo sa, e le regole nuove arrivano',
+        l[0].aiutante === true && l[0].regole[0] === 'Nuova');
+      l = S.aggiornaCampi(l, [], [{ codice: 'K7RX2MQP', membro: true, proprietario: true }]);
+      ok('e quando il campo passa a lui, diventa capogruppo', l[0].ruolo === 'proprietario' && !l[0].aiutante);
+    }
+
     fine();
   })();
 }

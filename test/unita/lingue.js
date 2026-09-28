@@ -300,4 +300,22 @@ const UN_GIORNO = new Date(2026, 7, 11, 14, 5);  // martedì 11 agosto 2026, 14:
   });
 }
 
+// ---------- Una voce-funzione si chiama PASSANDO gli argomenti a t() ----------
+// t() la chiama gia' da se' e restituisce la frase: scrivere L.t('chiave')(x)
+// vuol dire chiamare una stringa, e l'app sparisce. E' successo due volte
+// senza che nessuno lo vedesse — il tasto «Condividi» dell'invito e il
+// conteggio dei membri — perche' quelle righe non giravano in nessuna prova.
+{
+  const fs = require('fs');
+  const path = require('path');
+  const cartella = path.join(__dirname, '..', '..', 'src');
+  const sbagliate = [];
+  fs.readdirSync(cartella).filter((f) => f.endsWith('.jsx')).forEach((f) => {
+    fs.readFileSync(path.join(cartella, f), 'utf8').split('\n').forEach((r, n) => {
+      if (/\bL\.t\(\s*'[^']+'\s*\)\s*\(/.test(r)) sbagliate.push(`${f}:${n + 1}`);
+    });
+  });
+  ok(`nessuna voce chiamata due volte, L.t('…')(…) (${sbagliate.join(', ') || 'nessuna'})`, sbagliate.length === 0);
+}
+
 fine();

@@ -399,20 +399,23 @@
         fuori = fuori.filter((v) => normalizza(v.codice) !== c);
         return;
       }
-      fuori = ricordaCampo(fuori, {
-        codice: c, nome: st.nome, inizio: st.inizio, fine: st.fine,
-        // Il ruolo si sa per certo solo dal proprietario: gli altri restano
-        // come li si era segnati entrando.
-        ruolo: st.proprietario ? 'proprietario' : undefined,
-      });
-      // Il Pro invece si prende com'e', anche quando manca: qui il vuoto e'
-      // una risposta. Tenere il Pro di ieri perche' oggi «non c'e' niente»
-      // vorrebbe dire non farlo scadere mai.
+      fuori = ricordaCampo(fuori, { codice: c, nome: st.nome, inizio: st.inizio, fine: st.fine });
+      // Il resto si prende com'e', anche quando manca: qui il vuoto e' una
+      // risposta. Tenere il Pro di ieri perche' oggi «non c'e' niente» vorrebbe
+      // dire non farlo scadere mai; tenere il ruolo di capogruppo dopo averlo
+      // passato all'aiutante vorrebbe dire mostrare tasti che le regole
+      // rifiutano.
       fuori = fuori.map((v) => {
         if (normalizza(v.codice) !== c) return v;
-        const senza = Object.assign({}, v);
-        delete senza.pro;
-        return st.pro ? Object.assign(senza, { pro: st.pro }) : senza;
+        const n = Object.assign({}, v);
+        ['pro', 'regole', 'vice', 'aiutante'].forEach((k) => { delete n[k]; });
+        if (st.pro) n.pro = st.pro;
+        if (Array.isArray(st.regole) && st.regole.length) n.regole = st.regole.slice();
+        if (st.vice) n.vice = st.vice;
+        if (st.aiutante) n.aiutante = true;
+        if (st.proprietario) n.ruolo = 'proprietario';
+        else if (v.ruolo === 'proprietario') n.ruolo = 'redattore';
+        return n;
       });
     });
     return fuori;
@@ -440,6 +443,25 @@
       if (fa === 2) return confronta(b.fine || b.inizio, a.fine || a.inizio);
       return String(a.nome || a.codice).localeCompare(String(b.nome || b.codice));
     });
+  }
+
+  // ---------- Le regole del campo ----------
+  // Le scrive il capogruppo, in una casella sola: una regola per paragrafo,
+  // cioe' separate da una riga vuota. Si salvano come elenco, per poterle
+  // numerare. Un tetto sul numero e sulla lunghezza, perche' il documento
+  // della stanza lo leggono tutti a ogni aggiornamento della home.
+  const REGOLE_MAX = 30;
+  const REGOLA_MAX = 1000;
+  function regoleDaTesto(testo) {
+    return String(testo || '')
+      .split(/\n\s*\n/)
+      .map((r) => r.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .slice(0, REGOLE_MAX)
+      .map((r) => r.slice(0, REGOLA_MAX));
+  }
+  function testoDaRegole(regole) {
+    return (Array.isArray(regole) ? regole : []).join('\n\n');
   }
 
   // ---------- Il Pro e' del campo ----------
@@ -492,6 +514,8 @@
     ricordaCampo,
     aggiornaCampi,
     campoPro,
+    regoleDaTesto,
+    testoDaRegole,
     ordinaCampi,
     linkInvito,
     leggiInvito,
@@ -692,6 +716,11 @@
           codice: c, membro: true, proprietario: dati.proprietario === utente.uid,
           nome: dati.nome || '', inizio: dati.inizio || '', fine: dati.fine || '',
           pro: dati.pro || null,
+          regole: Array.isArray(dati.regole) ? dati.regole : [],
+          // L'uid dell'aiutante lo vede solo chi lo ha nominato: agli altri
+          // basta sapere se l'aiutante sono loro.
+          vice: dati.proprietario === utente.uid ? (dati.vice || '') : '',
+          aiutante: !!dati.vice && dati.vice === utente.uid,
         });
       } catch (e) {
         if (/permission-denied/.test(String((e && (e.code || e.message)) || ''))) {
@@ -725,8 +754,43 @@
     if (/unavailable|network|senza-utente/.test(codice)) return 'stanza.senzaLinea';
     if (/firebase-non-configurato/.test(codice)) return 'stanza.senzaFirebase';
     if (/senza-impronta/.test(codice)) return 'stanza.senzaCaso';
+    if (/senza-aiutante/.test(codice)) return 'stanza.senzaAiutante';
     return 'stanza.nonRiuscito';
   }
 
-  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, statoDi, togliMe, motivo };
+  // Il capogruppo cambia il suo campo: le regole, l'aiutante. Un merge, non
+  // una transazione: il documento della stanza lo scrive lui solo (le regole
+  // lo vietano a tutti gli altri), quindi non c'e' nessuno da pestare.
+  async function impostaStanza(codice, campi) {
+    const f = await sdk();
+    const d = await init();
+    await f.setDoc(f.doc(d, 'rooms', root.Stanza.normalizza(codice)), campi, { merge: true });
+  }
+
+  // Il capogruppo se ne va e lascia il campo all'aiutante. In due tempi, e
+  // nell'ordine giusto: prima il campo passa di mano — con il Pro che si
+  // spegne, perche' l'ha pagato chi se ne va — poi si toglie la propria
+  // scheda. Al contrario non si potrebbe: il capogruppo la sua scheda non la
+  // puo' togliere (firestore.rules), e se se ne andasse per primo il campo
+  // resterebbe senza nessuno che lo amministri.
+  async function lasciaAllAiutante(codice, utente) {
+    if (!utente || !utente.uid) throw new Error('senza-utente');
+    const f = await sdk();
+    const d = await init();
+    const c = root.Stanza.normalizza(codice);
+    const x = await f.getDoc(f.doc(d, 'rooms', c));
+    const vice = x.exists() ? x.data().vice : '';
+    if (!vice) throw new Error('senza-aiutante');
+    await f.updateDoc(f.doc(d, 'rooms', c), { proprietario: vice, vice: f.deleteField(), pro: f.deleteField() });
+    await f.deleteDoc(f.doc(d, 'rooms', c, 'members', utente.uid));
+    // E il profilo se lo dimentica: resterebbe una stanza da rileggere a ogni
+    // apertura della home, per sentirsi dire ogni volta «non sei membro».
+    if (!utente.isAnonimo) {
+      try { await f.setDoc(f.doc(d, 'users', utente.uid), { stanze: f.arrayRemove(c) }, { merge: true }); }
+      catch (e) { /* non e' grave: la home la toglie lo stesso alla prima lettura */ }
+    }
+    return vice;
+  }
+
+  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, statoDi, togliMe, impostaStanza, lasciaAllAiutante, motivo };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

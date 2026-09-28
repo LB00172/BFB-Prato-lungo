@@ -54,8 +54,21 @@ service cloud.firestore {
       return get(scheda(stanza)).data.ruolo;
     }
 
+    // Chi amministra lo dice il DOCUMENTO DELLA STANZA, non la scheda del
+    // membro. Dal 28 settembre il campo puo' passare di mano (all'aiutante):
+    // chi lo cede ha ancora per un attimo una scheda con scritto
+    // «proprietario», finche' non se ne va — e se non riuscisse ad andarsene
+    // (senza linea), quella scheda non deve valere niente.
+    function stanzaDoc(stanza) {
+      return get(/databases/$(database)/documents/rooms/$(stanza)).data;
+    }
+
     function amministra(stanza) {
-      return membro(stanza) && ruolo(stanza) == 'proprietario';
+      return membro(stanza) && stanzaDoc(stanza).proprietario == request.auth.uid;
+    }
+
+    function membroDi(stanza, uid) {
+      return exists(/databases/$(database)/documents/rooms/$(stanza)/members/$(uid));
     }
 
     function modifica(stanza) {
@@ -82,12 +95,29 @@ service cloud.firestore {
         && request.resource.data.proprietario == request.auth.uid
         && !('pro' in request.resource.data);
 
-      allow update: if amministra(stanza)
-        // Il proprietario non si riscrive: cedere una stanza e' un gesto che
-        // merita una strada sua, non un campo cambiato di nascosto.
-        && request.resource.data.proprietario == resource.data.proprietario
-        // Il Pro non si accende, non si allunga e non si toglie da qui.
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['pro']);
+      // Due strade, e basta.
+      allow update: if amministra(stanza) && (
+        // 1. Il capogruppo cambia il suo campo: nome, date, regole, e chi e'
+        //    l'aiutante — un membro, e non se stesso. Il capogruppo non si
+        //    riscrive, e il Pro non si accende, non si allunga e non si
+        //    toglie.
+        (request.resource.data.proprietario == resource.data.proprietario
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['pro'])
+          && (!('vice' in request.resource.data)
+              || (request.resource.data.vice != request.auth.uid
+                  && membroDi(stanza, request.resource.data.vice))))
+        ||
+        // 2. Il capogruppo lascia il campo all'AIUTANTE che aveva nominato,
+        //    e a nessun altro. Il Pro l'ha pagato chi se ne va e non passa
+        //    di mano: il passaggio lo deve spegnere nello stesso gesto. E'
+        //    l'unica scrittura con cui un telefono tocca il Pro — per
+        //    toglierlo, mai per darlo.
+        ('vice' in resource.data
+          && request.resource.data.proprietario == resource.data.vice
+          && membroDi(stanza, resource.data.vice)
+          && !('pro' in request.resource.data)
+          && !('vice' in request.resource.data))
+      );
 
       allow delete: if amministra(stanza);
 
@@ -137,6 +167,7 @@ service cloud.firestore {
         // ruolo da soli lascerebbe una stanza che non amministra piu'
         // nessuno e che non si puo' nemmeno cancellare.
         allow update: if amministra(stanza) && uid != request.auth.uid;
+        // (ruolo() resta per modifica(): chi scrive i dati lo dice la scheda.)
 
         // Si esce da soli, o ti toglie il proprietario. Il proprietario no:
         // stesso vicolo cieco di sopra.

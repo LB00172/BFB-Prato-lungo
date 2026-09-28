@@ -155,23 +155,58 @@ const schedaMembri = ({
 
 // Le Regole non dipendono da niente: e' l'unica scheda che si disegna da
 // sola, e infatti l'elenco delle dipendenze e' vuoto.
-const schedaRegole = () => (
-  <div className="space-y-4">
-    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
-      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">{L.t('regole.titolo')}</h3>
-      <ol className="space-y-3">
-        {CAMP_RULES.map((text, i) => (
-          <li key={i} className="flex gap-3 bg-carta/60 p-3 rounded border border-salvia/20">
-            <span className="font-rustic text-grande text-legno leading-none shrink-0">{i + 1}.</span>
-            <p className="text-piccolo leading-relaxed uppercase underline underline-offset-2 decoration-salvia/70 font-bold text-bosco">
-              {text}
-            </p>
-          </li>
-        ))}
-      </ol>
+// Le regole del campo. Le scrive il capogruppo, in una casella sola (una
+// regola per paragrafo); gli altri le leggono. Stanno nel documento della
+// stanza e le regole Firestore le fanno scrivere solo a lui: il tasto che
+// qui compare solo al capogruppo e' una cortesia, la serratura e' li'.
+const schedaRegole = ({ stanzaStato }) => {
+  const regole = stanzaStato.regole || [];
+  const bozza = stanzaStato.bozzaRegole;
+  return (
+    <div data-scheda="regole" className="space-y-4">
+      <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
+        <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('regole.titolo')}</h3>
+        {bozza !== null ? (
+          <div className="space-y-2">
+            <p className="text-minuto text-gray-500 leading-snug">{L.t('regole.aiuto')}</p>
+            <textarea
+              value={bozza}
+              onChange={(e) => stanzaStato.setBozzaRegole(e.target.value)}
+              rows={10}
+              className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale leading-snug focus:outline-none focus:border-bosco"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => stanzaStato.setBozzaRegole(null)} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
+              <button
+                onClick={async () => { if (await stanzaStato.salvaRegole(bozza)) stanzaStato.setBozzaRegole(null); }}
+                disabled={stanzaStato.occupato}
+                className={bottone('primario', 'normale', 'flex-1')}
+              >{L.t('regole.salva')}</button>
+            </div>
+            {stanzaStato.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.problema)}</p>}
+          </div>
+        ) : regole.length === 0 ? (
+          <p className="text-piccolo text-gray-500 leading-snug">{L.t(stanzaStato.capogruppo ? 'regole.scriviTu' : 'regole.nessuna')}</p>
+        ) : (
+          <ol className="space-y-3">
+            {regole.map((text, i) => (
+              <li key={i} className="flex gap-3 bg-carta/60 p-3 rounded border border-salvia/20">
+                <span className="font-rustic text-grande text-legno leading-none shrink-0">{i + 1}.</span>
+                <p className="text-piccolo leading-relaxed font-bold text-bosco">{text}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+        {stanzaStato.capogruppo && bozza === null && (
+          <button
+            onClick={() => stanzaStato.setBozzaRegole(window.Stanza.testoDaRegole(regole))}
+            className={bottone('secondario', 'normale', 'w-full')}
+          >{L.t('regole.modifica')}</button>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const schedaDotazioni = ({
   addGear,

@@ -176,7 +176,7 @@ const schedaImpostazioni = ({
             <button
               onClick={() => {
                 const link = stanzaStato.linkDaMandare();
-                const testo = L.t('stanza.invitoTesto')(stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice), link);
+                const testo = L.t('stanza.invitoTesto', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice), link);
                 if (navigator.share) { navigator.share({ text: testo }).catch(() => { /* annullato: non e' un guasto */ }); }
                 else { window.open('https://wa.me/?text=' + encodeURIComponent(testo), '_blank'); }
               }}
@@ -188,7 +188,56 @@ const schedaImpostazioni = ({
             >{L.t('stanza.copiaLink')}</button>
           </div>
           {stanzaStato.membri.length > 0 && (
-            <p className="text-piccolo text-gray-500">{L.t('stanza.dentro')(stanzaStato.membri.length)}</p>
+            <p className="text-piccolo text-gray-500">{L.t('stanza.dentro', stanzaStato.membri.length)}</p>
+          )}
+          {/* L'aiutante: il capogruppo lo nomina fra chi c'e', e se deve
+              lasciare il campo lo passa a lui. Il Pro non passa: l'ha pagato
+              chi se ne va (firestore.rules lo spegne nel passaggio). */}
+          {stanzaStato.capogruppo && (() => {
+            const io = account.utente && account.utente.uid;
+            const altri = stanzaStato.membri.filter((m) => m.uid !== io);
+            const nomeDi = (uid) => {
+              const m = stanzaStato.membri.find((x) => x.uid === uid);
+              return (m && m.nome) || L.t('stanza.unMembro');
+            };
+            return (
+              <div data-riquadro="aiutante" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
+                <p className="text-piccolo font-bold text-bosco">{L.t('stanza.aiutanteTitolo')}</p>
+                <p className="text-minuto text-gray-500 leading-snug">{L.t('stanza.aiutanteSpiega')}</p>
+                {stanzaStato.vice && <p className="text-piccolo text-bosco leading-snug">{frase('stanza.aiutanteE', nomeDi(stanzaStato.vice))}</p>}
+                {altri.length > 0 && (
+                  <div className="flex gap-2">
+                    <select
+                      value={stanzaStato.sceltaAiutante}
+                      onChange={(e) => stanzaStato.setSceltaAiutante(e.target.value)}
+                      className="flex-1 min-w-0 p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+                    >
+                      <option value="">{L.t('stanza.aiutanteScegli')}</option>
+                      {altri.map((m) => (<option key={m.uid} value={m.uid}>{m.nome || L.t('stanza.unMembro')}</option>))}
+                    </select>
+                    <button
+                      onClick={() => stanzaStato.nominaAiutante(stanzaStato.sceltaAiutante)}
+                      disabled={!stanzaStato.sceltaAiutante || stanzaStato.occupato}
+                      className={bottone('secondario', 'normale', 'shrink-0')}
+                    >{L.t('stanza.aiutanteNomina')}</button>
+                  </div>
+                )}
+                {stanzaStato.fatto === 'stanza.aiutanteNominato' && <p className="text-piccolo text-bosco leading-snug">{L.t('stanza.aiutanteNominato')}</p>}
+                {stanzaStato.vice && (
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm(L.t('stanza.confermaLascia', nomeDi(stanzaStato.vice), stanzaStato.pro))) return;
+                      await stanzaStato.lasciaCampo(account.utente, () => goTo('campi'));
+                    }}
+                    disabled={stanzaStato.occupato}
+                    className={bottone('distruttivo', 'minuscolo', 'w-full')}
+                  >{L.t('stanza.lasciaCampo', nomeDi(stanzaStato.vice))}</button>
+                )}
+              </div>
+            );
+          })()}
+          {stanzaStato.aiutante && (
+            <p className="text-piccolo text-bosco leading-snug">{L.t('stanza.seiAiutante')}</p>
           )}
           <button onClick={() => { stanzaStato.esci(); goTo('campi'); }} disabled={stanzaStato.occupato} className={bottone('testuale', 'minuscolo', 'w-full')}>{L.t('stanza.esci')}</button>
         </>
