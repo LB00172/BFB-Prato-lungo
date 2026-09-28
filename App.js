@@ -3494,7 +3494,16 @@ const usaStanza = () => {
     pulisci();
     scriviLocale('cambusa_stanza', '');
   };
+
+  // «Questo campo e' Pro?» — l'unica domanda che le funzioni Pro devono fare
+  // (Stanza.campoPro). Guarda il campo aperto, mai la persona. E' letta
+  // dall'elenco sul telefono, quindi chi smonta l'app puo' falsarla per se':
+  // vale per quello che il telefono fa da solo. Quello che costa (spazio,
+  // server) lo decidono le regole Firestore, che leggono la stanza vera.
+  const voceAperta = stanza && window.Stanza ? campi.find(v => window.Stanza.normalizza(v.codice) === window.Stanza.normalizza(stanza.codice)) : null;
+  const pro = !!(window.Stanza && window.Stanza.campoPro(voceAperta, toDateStr(new Date())));
   return {
+    pro,
     stanza,
     membri,
     modo,
@@ -10289,7 +10298,10 @@ const schedaCampi = ({
     className: "block font-bold text-bosco truncate"
   }, v.nome || Stanza.bello(v.codice)), /*#__PURE__*/React.createElement("span", {
     className: "block text-minuto text-gray-500 truncate"
-  }, [date(v), L.t(v.ruolo === 'proprietario' ? 'campi.organizzi' : 'campi.partecipi')].filter(Boolean).join(' · '))), v.codice === qui && /*#__PURE__*/React.createElement("span", {
+  }, [date(v), L.t(v.ruolo === 'proprietario' ? 'campi.organizzi' : 'campi.partecipi')].filter(Boolean).join(' · '))), window.Stanza.campoPro(v, oggi) && /*#__PURE__*/React.createElement("span", {
+    "data-pro": true,
+    className: "shrink-0 text-minuto uppercase font-bold px-2 py-1 rounded bg-fuoco text-white"
+  }, L.t('campi.pro')), v.codice === qui && /*#__PURE__*/React.createElement("span", {
     className: "shrink-0 text-minuto uppercase font-bold px-2 py-1 rounded bg-bosco text-carta"
   }, L.t('campi.seiQui')))))), /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-gray-400 leading-snug"

@@ -405,6 +405,15 @@
         // come li si era segnati entrando.
         ruolo: st.proprietario ? 'proprietario' : undefined,
       });
+      // Il Pro invece si prende com'e', anche quando manca: qui il vuoto e'
+      // una risposta. Tenere il Pro di ieri perche' oggi «non c'e' niente»
+      // vorrebbe dire non farlo scadere mai.
+      fuori = fuori.map((v) => {
+        if (normalizza(v.codice) !== c) return v;
+        const senza = Object.assign({}, v);
+        delete senza.pro;
+        return st.pro ? Object.assign(senza, { pro: st.pro }) : senza;
+      });
     });
     return fuori;
   }
@@ -431,6 +440,25 @@
       if (fa === 2) return confronta(b.fine || b.inizio, a.fine || a.inizio);
       return String(a.nome || a.codice).localeCompare(String(b.nome || b.codice));
     });
+  }
+
+  // ---------- Il Pro e' del campo ----------
+  // La domanda e' una sola, e le funzioni Pro la fanno tutte qui: «questo
+  // CAMPO e' Pro?». Non «questa persona e' Pro?»: il Pro lo paga chi crea il
+  // campo, e vale per tutti quelli che ci sono dentro. Chi e' Pro in un altro
+  // gruppo non porta niente con se', perche' questa funzione la persona non
+  // la guarda nemmeno — riceve la stanza, e basta.
+  //
+  // `pro` sta nel documento della stanza e lo scrive solo il server che
+  // verifica l'acquisto: le regole Firestore lo vietano a ogni telefono,
+  // proprietario compreso (test/regole/stanze.js, § 8). `fino` e' facoltativo
+  // ('AAAA-MM-GG', compreso): senza, il Pro non scade. `oggi` si passa da
+  // fuori, come in ordinaCampi.
+  function campoPro(stanza, oggi) {
+    const p = stanza && stanza.pro;
+    if (!p || p.attivo !== true) return false;
+    if (p.fino && oggi && oggi > p.fino) return false;
+    return true;
   }
 
   // Il proprietario non si puo' togliere da solo: una stanza senza
@@ -463,6 +491,7 @@
     pianoCancellazione,
     ricordaCampo,
     aggiornaCampi,
+    campoPro,
     ordinaCampi,
     linkInvito,
     leggiInvito,
@@ -662,6 +691,7 @@
         out.push({
           codice: c, membro: true, proprietario: dati.proprietario === utente.uid,
           nome: dati.nome || '', inizio: dati.inizio || '', fine: dati.fine || '',
+          pro: dati.pro || null,
         });
       } catch (e) {
         if (/permission-denied/.test(String((e && (e.code || e.message)) || ''))) {

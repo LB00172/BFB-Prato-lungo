@@ -93,6 +93,9 @@ const schedaCampi = ({ stanzaStato, account, codiceInGioco, onApri }) => {
                       {[date(v), L.t(v.ruolo === 'proprietario' ? 'campi.organizzi' : 'campi.partecipi')].filter(Boolean).join(' · ')}
                     </span>
                   </span>
+                  {window.Stanza.campoPro(v, oggi) && (
+                    <span data-pro className="shrink-0 text-minuto uppercase font-bold px-2 py-1 rounded bg-fuoco text-white">{L.t('campi.pro')}</span>
+                  )}
                   {v.codice === qui && (
                     <span className="shrink-0 text-minuto uppercase font-bold px-2 py-1 rounded bg-bosco text-carta">{L.t('campi.seiQui')}</span>
                   )}

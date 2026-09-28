@@ -53,7 +53,7 @@ const scena = (o) => [(s) => {
       return (codici || []).map((c) => {
         const st = (o.stanze || {})[c];
         if (!st || st.membro === false) return { codice: c, membro: false, proprietario: false };
-        return { codice: c, membro: true, proprietario: st.proprietario === utente.uid, nome: st.nome, inizio: st.inizio, fine: st.fine };
+        return { codice: c, membro: true, proprietario: st.proprietario === utente.uid, nome: st.nome, inizio: st.inizio, fine: st.fine, pro: st.pro || null };
       });
     },
   };
@@ -81,7 +81,8 @@ const vociMenu = async (a) => {
         profilo: ['K7RX2MQP', 'BCDFGHJK'],
         stanze: {
           K7RX2MQP: { nome: 'Estate in Abruzzo', inizio: '2027-08-11', fine: '2027-08-16', proprietario: 'anna-1' },
-          BCDFGHJK: { nome: 'Capodanno in baita', inizio: '2026-12-30', fine: '2027-01-02', proprietario: 'altri' },
+          // Pro perche' l'ha pagato chi l'ha creato — che non e' Anna.
+          BCDFGHJK: { nome: 'Capodanno in baita', inizio: '2026-12-30', fine: '2027-01-02', proprietario: 'altri', pro: { attivo: true } },
         },
       }),
     });
@@ -91,6 +92,9 @@ const vociMenu = async (a) => {
     ok('l\'elenco arriva dal profilo, con i nomi letti dalle stanze',
       /Estate in Abruzzo/.test(t) && /Capodanno in baita/.test(t));
     ok('con il ruolo di ognuno', /organizzi tu/i.test(t) && /partecipi/i.test(t));
+    const segniPro = await a.page.locator('[data-campo] [data-pro]').count();
+    const proSuQuale = await a.page.locator('[data-campo="BCDFGHJK"] [data-pro]').count();
+    ok(`il segno Pro sta sul campo Pro e solo lì (${segniPro} in tutto)`, segniPro === 1 && proSuQuale === 1);
     ok('e la nota giusta per chi è registrato', /ti segue su ogni telefono/i.test(t));
     ok('le due strade per un campo nuovo ci sono', /crea una stanza/i.test(t) && /entra con un codice/i.test(t));
 

@@ -70,14 +70,24 @@ service cloud.firestore {
       // senza un padrone raggiungibile non si amministra: serve un indirizzo
       // verificato. E' la stessa riga della tabella dei permessi di auth.js
       // ('creare' vuole REGISTRATO), scritta dove conta davvero.
+      //
+      // Il Pro. E' del CAMPO, non della persona: lo accende il server che
+      // verifica l'acquisto fatto da chi ha creato il campo, con la chiave di
+      // servizio — che queste regole non le guarda. Da un telefono non lo
+      // scrive nessuno, proprietario compreso: se potesse lui, se lo
+      // regalerebbe chiunque crei un campo. E chi entra non porta niente con
+      // se': chi e' Pro in un altro gruppo qui non ha nessun campo da toccare.
       allow create: if request.auth != null
         && request.auth.token.email_verified == true
-        && request.resource.data.proprietario == request.auth.uid;
+        && request.resource.data.proprietario == request.auth.uid
+        && !('pro' in request.resource.data);
 
       allow update: if amministra(stanza)
         // Il proprietario non si riscrive: cedere una stanza e' un gesto che
         // merita una strada sua, non un campo cambiato di nascosto.
-        && request.resource.data.proprietario == resource.data.proprietario;
+        && request.resource.data.proprietario == resource.data.proprietario
+        // Il Pro non si accende, non si allunga e non si toglie da qui.
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['pro']);
 
       allow delete: if amministra(stanza);
 

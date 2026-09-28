@@ -339,13 +339,26 @@ Quello che viene dopo, deciso con Lorenzo il 28 settembre:
       pubblica non ha più un campo predefinito, e si apre come la vedrà chi
       la scarica. Le prove il campo se lo danno da sole
       (`CAMPO_DI_PROVA` in `test/lib/app.js`).
-- [ ] **Il Pro è del campo, non della persona.** Un attributo della stanza,
-      acceso perché ha pagato chi l'ha creata: chi entra non porta niente con
-      sé, e chi è Pro in un altro gruppo non lo trascina nel tuo. **Nessun
-      telefono può scriverlo**, proprietario compreso — altrimenti chiunque si
-      regala il Pro: le regole lo vietano a tutti e lo accende solo il server
-      che verifica l'acquisto su Google Play. Le funzioni Pro chiedono a una
-      domanda sola, «questo campo è Pro?», mai all'utente.
+- [x] **Il Pro è del campo, non della persona** — la parte che si può fare
+      senza pagamenti è fatta (28 settembre). Il Pro è `pro: { attivo, fino }`
+      nel documento della stanza: acceso perché ha pagato chi l'ha creata, e
+      chi entra non porta niente con sé — chi è Pro in un altro gruppo non lo
+      trascina nel tuo. **Nessun telefono può scriverlo**, proprietario
+      compreso: le regole negano di crearlo, accenderlo, allungarlo e
+      toglierlo (`test/regole/stanze.js` § 8, vista rossa riga per riga). Lo
+      accenderà solo il server che verifica l'acquisto su Google Play. Le
+      funzioni Pro fanno una domanda sola, `stanzaStato.pro`
+      (`Stanza.campoPro`), che riceve la stanza e non guarda mai la persona.
+      Nella home un segno «Pro» sta accanto ai campi Pro.
+- [ ] **Quello che manca al Pro**: il pagamento (Google Play Billing) e il
+      server che, verificato l'acquisto, scrive `pro` nella stanza con la
+      chiave di servizio — una Cloud Function, quindi il piano Blaze. E un
+      limite da sapere: `stanzaStato.pro` si legge dall'elenco sul telefono,
+      quindi chi smonta l'app può falsarlo **per sé**. Per quello che il
+      telefono fa da solo (un export) è il prezzo di ogni app web; quello che
+      costa davvero (foto nel cloud, spazio) deve deciderlo una regola
+      Firestore che legge la stanza vera, e va scritto insieme alla funzione
+      Pro che lo usa.
 
 **Cosa manca al § 2 e al § 9:** il QR, l'invito monouso, e la migrazione dei
 dati del 2026. E, prima di tutto, incollare le regole nuove in console — cosa

@@ -468,6 +468,32 @@ if (!S) { fine(); }
         && S.aggiornaCampi(null, null, null).length === 0);
     }
 
+    // ---------- Il Pro e' del campo, non della persona ----------
+    {
+      const oggi = '2027-08-13';
+      ok('un campo senza Pro non è Pro', S.campoPro({ codice: 'K7RX2MQP' }, oggi) === false);
+      ok('un campo Pro lo è', S.campoPro({ pro: { attivo: true } }, oggi) === true);
+      ok('fino all\'ultimo giorno compreso', S.campoPro({ pro: { attivo: true, fino: oggi } }, oggi) === true);
+      ok('e dopo non più', S.campoPro({ pro: { attivo: true, fino: '2027-08-12' } }, oggi) === false);
+      ok('«attivo» deve essere proprio vero, non una stringa qualsiasi',
+        S.campoPro({ pro: { attivo: 'si' } }, oggi) === false);
+      ok('senza campo non esplode', S.campoPro(null, oggi) === false && S.campoPro(undefined, oggi) === false);
+      // IL caso di Lorenzo: un amico Pro in un altro gruppo entra nel tuo.
+      // La domanda riceve la stanza; se qualcuno le passasse la persona, o
+      // la scheda del membro, non deve rispondere di si'.
+      ok('la persona Pro non rende Pro il campo',
+        S.campoPro({ codice: 'K7RX2MQP', utente: { pro: { attivo: true } }, membro: { pro: { attivo: true } } }, oggi) === false);
+
+      let l = [{ codice: 'K7RX2MQP', nome: 'Pagato', pro: { attivo: true } }];
+      l = S.aggiornaCampi(l, [], [{ codice: 'K7RX2MQP', membro: true, proprietario: false, nome: 'Pagato', pro: null }]);
+      ok('se il cloud dice che il Pro non c\'è più, sparisce: non resta quello di ieri',
+        !l[0].pro && S.campoPro(l[0], oggi) === false);
+      l = S.aggiornaCampi(l, [], [{ codice: 'K7RX2MQP', membro: true, proprietario: false, pro: { attivo: true } }]);
+      ok('e se c\'è, arriva', S.campoPro(l[0], oggi) === true);
+      ok('una stanza senza risposta tiene il Pro che si sapeva',
+        S.campoPro(S.aggiornaCampi(l, [], [])[0], oggi) === true);
+    }
+
     fine();
   })();
 }

@@ -272,6 +272,30 @@ const permesso = async (msg, azione) => {
   await negato('un estraneo resta fuori', () => getDoc(doc(bruno, 'camps/Bandone')));
   await negato('e un ospite senza account pure', () => getDoc(doc(ospite, 'camps/Bandone')));
 
+  console.log('\n8) Il Pro e\' del campo, e nessun telefono se lo scrive');
+  // Il Pro si accende perche' chi ha creato il campo ha pagato, e lo accende
+  // il server che verifica l'acquisto (con la chiave di servizio, che le
+  // regole non le guarda). Da qui dentro NESSUNO lo tocca: se potesse il
+  // proprietario, se lo regalerebbe chiunque crei un campo.
+  await negato('non si crea un campo gia\' Pro',
+    () => setDoc(doc(anna, 'rooms/PROVAPRO'), { nome: 'Gratis?', proprietario: 'anna', pro: { attivo: true } }));
+  await negato('il proprietario non si accende il Pro da solo',
+    () => setDoc(doc(anna, 'rooms/K7RX2MQP'), { pro: { attivo: true } }, { merge: true }));
+  await negato('e un membro nemmeno', () => setDoc(doc(bruno, 'rooms/K7RX2MQP'), { pro: { attivo: true } }, { merge: true }));
+  await env.withSecurityRulesDisabled(async (c) => {
+    await setDoc(doc(c.firestore(), 'rooms/BCDFGHJK'), { nome: 'Pagato', proprietario: 'anna', pro: { attivo: true, fino: '2027-12-31' } });
+    await setDoc(doc(c.firestore(), 'rooms/BCDFGHJK/members/anna'), { ruolo: 'proprietario', nome: 'Anna' });
+  });
+  await negato('non se lo allunga', () => setDoc(doc(anna, 'rooms/BCDFGHJK'),
+    { pro: { attivo: true, fino: '2099-12-31' } }, { merge: true }));
+  await negato('e non lo toglie', () => setDoc(doc(anna, 'rooms/BCDFGHJK'), { nome: 'Pagato', proprietario: 'anna' }));
+  // L'altra meta': il Pro non deve bloccare il resto. Un campo Pro che non
+  // si puo' piu' rinominare sarebbe un campo che ha pagato per peggiorare.
+  await permesso('ma il proprietario di un campo Pro lo rinomina come prima',
+    () => setDoc(doc(anna, 'rooms/BCDFGHJK'), { nome: 'Pagato e rinominato' }, { merge: true }));
+  await permesso('e il campo gratuito resta suo come prima',
+    () => setDoc(doc(anna, 'rooms/K7RX2MQP'), { nome: 'Prato Lungo 2027 bis' }, { merge: true }));
+
   console.log('\n7) Quello che non e\' previsto e\' chiuso');
   // Una collezione nuova non deve nascere aperta per distrazione.
   await negato('una collezione mai pensata non si legge', () => getDoc(doc(anna, 'qualcosa/altro')));

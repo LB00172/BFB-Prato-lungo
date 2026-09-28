@@ -63,6 +63,7 @@ ok(`il dizionario italiano ha ${CHIAVI.length} voci`, CHIAVI.length > 20);
 // parola sarebbe invece una traduzione dimenticata.
 {
   const UGUALI_SUL_SERIO = [
+    'es:campi.pro', 'fr:campi.pro',                // "Pro" e' il nome del piano, uguale ovunque
     'es:area.gioco', 'fr:area.gioco',              // nome proprio del gioco
     'es:area.calendario',                          // "Calendario" e' anche spagnolo
     'es:membri.adulto',                            // "Adulto" e' anche spagnolo

@@ -252,7 +252,18 @@ const usaStanza = () => {
     scriviLocale('cambusa_stanza', '');
   };
 
+  // «Questo campo e' Pro?» — l'unica domanda che le funzioni Pro devono fare
+  // (Stanza.campoPro). Guarda il campo aperto, mai la persona. E' letta
+  // dall'elenco sul telefono, quindi chi smonta l'app puo' falsarla per se':
+  // vale per quello che il telefono fa da solo. Quello che costa (spazio,
+  // server) lo decidono le regole Firestore, che leggono la stanza vera.
+  const voceAperta = stanza && window.Stanza
+    ? campi.find((v) => window.Stanza.normalizza(v.codice) === window.Stanza.normalizza(stanza.codice))
+    : null;
+  const pro = !!(window.Stanza && window.Stanza.campoPro(voceAperta, toDateStr(new Date())));
+
   return {
+    pro,
     stanza, membri, modo, setModo,
     nome, setNome, inizio, setInizio, fine, setFine, codice, setCodice,
     problema, fatto, occupato, chiudi,

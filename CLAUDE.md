@@ -414,6 +414,12 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   restare la stessa cosa nei due rami, perché un errore sui conti corretto una
   volta sola sarebbe un errore ancora vivo dall'altra parte. Se uno di quei
   file diverge, è un problema da risolvere, non una conseguenza accettabile.
+- **Il Pro è del campo, non della persona** (28 settembre). Lo paga chi crea
+  il campo e vale per tutti quelli dentro; chi è Pro in un altro gruppo non lo
+  porta con sé. Nessun telefono lo scrive, proprietario compreso: lo accende
+  solo il server che verifica l'acquisto. Le funzioni Pro chiedono a
+  `stanzaStato.pro` (`Stanza.campoPro`, che riceve la stanza) e **mai** a
+  qualcosa della persona.
 - **Importazione, ripristino di emergenza e chiusura del campo stanno in
   modalità tecnica.** Non modificano i dati: li RIMPIAZZANO, e si portano
   via i blocchi insieme al resto. Erano le ultime tre strade aperte a
