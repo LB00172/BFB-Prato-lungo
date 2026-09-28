@@ -532,6 +532,59 @@ if (!S) { fine(); }
       ok('e quelle nuove arrivano', l[0].dotazioni.length === 3);
     }
 
+    // ---------- Il luogo del campo, per il meteo ----------
+    {
+      const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const pl = { lat: 42.0486, lon: 13.14855 };
+      // Le forme vere, copiate da Google Maps e da OpenStreetMap.
+      const link = {
+        segnaposto: 'https://www.google.com/maps/place/Prato+Lungo/@42.05,13.1,15z/data=!3m1!4b1!4m6!3m5!1s0x0:0x0!8m2!3d42.0486!4d13.14855',
+        centro: 'https://www.google.com/maps/@42.0486,13.14855,17z',
+        ricerca: 'https://www.google.com/maps/search/?api=1&query=42.0486%2C13.14855',
+        q: 'https://maps.google.com/?q=42.0486,13.14855',
+        osm: 'https://www.openstreetmap.org/#map=16/42.0486/13.14855',
+        mano: '42.0486, 13.14855',
+        manoVirgola: '42,0486 13,14855',
+      };
+      Object.keys(link).forEach((k) => {
+        const l = S.luogoDaTesto(link[k]);
+        ok(`il luogo si legge da ${k} (${JSON.stringify(l)})`, eq(l, pl));
+      });
+      // Il segnaposto vince sul centro della mappa: e' il punto scelto,
+      // l'altro e' solo dove era la vista.
+      ok('dal segnaposto, non dal centro della vista', S.luogoDaTesto(link.segnaposto).lat === 42.0486);
+      ok('un link corto si riconosce e si dice perché non va',
+        S.luogoDaTesto('https://maps.app.goo.gl/AbCdEf123').errore === 'luogo.linkCorto');
+      ok('un testo qualsiasi non diventa un luogo, ma si può cercare come nome',
+        S.luogoDaTesto('vicino al lago').errore === 'luogo.nonCapito' && !S.luogoDaTesto('vicino al lago').link);
+      ok('un link che non si capisce resta un link: non si cerca come nome',
+        S.luogoDaTesto('https://www.google.com/maps/dir/Roma/Pereto').link === true
+        && S.luogoDaTesto('https://maps.app.goo.gl/AbCdEf123').link === true);
+      ok('il vuoto nemmeno', S.luogoDaTesto('  ').errore === 'luogo.vuoto');
+      ok('una latitudine fuori scala non è un luogo strano: non è un luogo',
+        S.luogoDaTesto('142.0, 13.1').errore === 'luogo.nonCapito' && S.luogoValido({ lat: 12, lon: 200 }) === null);
+      ok('senza coordinate niente luogo', S.luogoValido({ label: 'Prato' }) === null
+        && S.luogoValido({ lat: null, lon: null }) === null && S.luogoValido(null) === null);
+      ok('cinque decimali, un\'altitudine intera e un nome pulito',
+        eq(S.luogoValido({ lat: '42.048612345', lon: 13.148551, alt: '1337.4', label: '  Prato   Lungo ' }),
+          { lat: 42.04861, lon: 13.14855, alt: 1337, label: 'Prato Lungo' }));
+      ok('un\'altitudine assurda si lascia fuori, il luogo resta',
+        eq(S.luogoValido({ lat: 42, lon: 13, alt: 40000 }), { lat: 42, lon: 13 }));
+      const r = S.luogoDaRicerca({ name: 'Pereto', latitude: 42.0583, longitude: 13.1024, elevation: 800, admin1: 'Abruzzo', admin2: "L'Aquila", country: 'Italia', country_code: 'IT' });
+      ok(`dalla ricerca, con la provincia per distinguere gli omonimi (${JSON.stringify(r)})`,
+        eq(r, { lat: 42.0583, lon: 13.1024, alt: 800, label: "Pereto (L'Aquila)" }));
+      ok('e fuori Italia anche il paese',
+        S.luogoDaRicerca({ name: 'Chamonix', latitude: 45.92, longitude: 6.87, admin1: 'Auvergne-Rhône-Alpes', admin2: 'Haute-Savoie', country: 'Francia', country_code: 'FR' }).label === 'Chamonix (Haute-Savoie, Francia)');
+
+      let l = [{ codice: 'K7RX2MQP', luogo: { lat: 1, lon: 1 } }];
+      l = S.aggiornaCampi(l, [], [{ codice: 'K7RX2MQP', membro: true, proprietario: false, luogo: { lat: 42.0486, lon: 13.14855, alt: 1337 } }]);
+      ok('il luogo arriva dalla stanza', eq(l[0].luogo, { lat: 42.0486, lon: 13.14855, alt: 1337 }));
+      l = S.aggiornaCampi(l, [], [{ codice: 'K7RX2MQP', membro: true, proprietario: false, luogo: null }]);
+      ok('e tolto dal capogruppo sparisce anche dal telefono', !l[0].luogo);
+      l = S.aggiornaCampi(l, [], [{ codice: 'K7RX2MQP', membro: true, proprietario: false, luogo: { lat: 'x', lon: 13 } }]);
+      ok('un luogo storto dal cloud non entra', !l[0].luogo);
+    }
+
     fine();
   })();
 }

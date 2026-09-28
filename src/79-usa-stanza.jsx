@@ -51,6 +51,13 @@ const usaStanza = () => {
   const [bozzaRegole, setBozzaRegole] = useState(null);
   const [bozzaDotazioni, setBozzaDotazioni] = useState(null);
   const [sceltaAiutante, setSceltaAiutante] = useState('');
+  // Il luogo del campo, mentre il capogruppo lo sceglie: quello che ha
+  // scritto, cosa ha trovato la ricerca, e il candidato da salvare.
+  const [cercaLuogo, setCercaLuogo] = useState(null);   // null = riquadro chiuso
+  const [trovatiLuogo, setTrovatiLuogo] = useState([]);
+  const [candidatoLuogo, setCandidatoLuogo] = useState(null);
+  const [erroreLuogo, setErroreLuogo] = useState('');
+  const [cercandoLuogo, setCercandoLuogo] = useState(false);
   // Chi aveva gia' una stanza prima che la home esistesse la ritrova in
   // elenco: la stanza salvata entra da sola.
   const [campi, setCampi] = useState(() => {
@@ -284,6 +291,9 @@ const usaStanza = () => {
   const capogruppo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
   const aiutante = !!(voceAperta && voceAperta.aiutante);
   const vice = (voceAperta && voceAperta.vice) || '';
+  // Il luogo per il meteo. Passa da luogoValido anche qui: l'elenco sul
+  // telefono lo scrive un'app, e un'app puo' essere vecchia.
+  const luogo = (voceAperta && window.Stanza.luogoValido(voceAperta.luogo)) || null;
 
   // Si scrive nel documento della stanza e, subito, nell'elenco sul telefono:
   // chi ha appena salvato deve vedere quello che ha scritto, anche senza
@@ -316,6 +326,53 @@ const usaStanza = () => {
     const fatto = await prova((c) => c.impostaStanza(stanza.codice, { voci: mappa }).then(() => true));
     if (fatto) aggiornaVoceAperta({ voci: mappa });
   };
+  // ---------- Il luogo del campo ----------
+  // Una casella sola per due cose: se quello che si scrive e' un link di
+  // Google Maps o due coordinate, il luogo c'e' gia'; altrimenti e' un nome,
+  // e si chiede a Open-Meteo (lo stesso servizio del meteo, gratuito e senza
+  // chiave) quali posti si chiamano cosi'.
+  const apriLuogo = () => {
+    setCercaLuogo('');
+    setTrovatiLuogo([]);
+    setCandidatoLuogo(luogo ? Object.assign({}, luogo) : null);
+    setErroreLuogo('');
+  };
+  const chiudiLuogo = () => { setCercaLuogo(null); setTrovatiLuogo([]); setCandidatoLuogo(null); setErroreLuogo(''); };
+  const trovaLuogo = async () => {
+    const testo = String(cercaLuogo || '').trim();
+    setTrovatiLuogo([]);
+    setErroreLuogo('');
+    if (!testo) { setErroreLuogo('luogo.vuoto'); return; }
+    const letto = window.Stanza.luogoDaTesto(testo);
+    if (!letto.errore) { setCandidatoLuogo(letto); return; }
+    if (letto.link) { setErroreLuogo(letto.errore); return; }
+    if (!navigator.onLine) { setErroreLuogo('luogo.senzaLinea'); return; }
+    setCercandoLuogo(true);
+    try {
+      const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=6&format=json'
+        + '&language=' + encodeURIComponent(L.codice) + '&name=' + encodeURIComponent(testo));
+      const j = await r.json();
+      const trovati = ((j && j.results) || []).map(window.Stanza.luogoDaRicerca).filter(Boolean);
+      setTrovatiLuogo(trovati);
+      if (!trovati.length) setErroreLuogo('luogo.nessuno');
+    } catch (e) {
+      setErroreLuogo('luogo.senzaLinea');
+    } finally {
+      setCercandoLuogo(false);
+    }
+  };
+  const salvaLuogo = async (l) => {
+    if (!stanza) return false;
+    // null toglie il luogo; un luogo storto non si scrive, nemmeno per errore.
+    const pulito = l === null ? null : window.Stanza.luogoValido(l);
+    if (l !== null && !pulito) { setErroreLuogo('luogo.nonCapito'); return false; }
+    const fatto = await prova((c) => c.impostaStanza(stanza.codice, { luogo: pulito }).then(() => true));
+    if (!fatto) return false;
+    aggiornaVoceAperta({ luogo: pulito });
+    chiudiLuogo();
+    return true;
+  };
+
   const nominaAiutante = async (uid) => {
     if (!stanza || !uid) return;
     const fatto = await prova((c) => c.impostaStanza(stanza.codice, { vice: uid }).then(() => true));
@@ -346,6 +403,8 @@ const usaStanza = () => {
     bozzaRegole, setBozzaRegole, sceltaAiutante, setSceltaAiutante,
     dotazioni, bozzaDotazioni, setBozzaDotazioni, salvaDotazioni,
     voci, cambiaVoce,
+    luogo, salvaLuogo, apriLuogo, chiudiLuogo, trovaLuogo,
+    cercaLuogo, setCercaLuogo, trovatiLuogo, candidatoLuogo, setCandidatoLuogo, erroreLuogo, cercandoLuogo,
     stanza, membri, modo, setModo,
     nome, setNome, inizio, setInizio, fine, setFine, codice, setCodice,
     problema, fatto, occupato, chiudi,

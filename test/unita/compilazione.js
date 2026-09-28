@@ -809,6 +809,7 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
   const NOTI = {
     'www.gstatic.com': 'Firebase',        // da li' arriva l'SDK di Firebase
     'api.open-meteo.com': 'Open-Meteo',
+    'geocoding-api.open-meteo.com': 'Open-Meteo',   // la ricerca del luogo per nome
     'wa.me': 'WhatsApp',
   };
   const html = fs.readFileSync(path.join(RADICE, 'index.html'), 'utf8');

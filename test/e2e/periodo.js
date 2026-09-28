@@ -24,10 +24,12 @@ const campo = (voce) => [(o) => {
   ok(`il calendario si apre sul primo giorno del campo (${(cal.match(/\d+ (luglio|agosto)/i) || [''])[0]})`,
     /12 luglio/i.test(cal));
   ok('e non sull\'agosto 2026 della Brigata', !/11 agosto/i.test(cal));
-  // Il meteo nell'app pubblica e' spento (niente luogo in firebase-config.js):
-  // prima si vedeva quello di Prato Lungo, ovunque si campeggiasse.
-  ok('e senza un luogo il meteo non compare, nemmeno per dire che manca',
-    !/meteo|località del campo/i.test(cal)
+  // Prima si vedeva il meteo di Prato Lungo, ovunque si campeggiasse.
+  // Il meteo nell'app pubblica e' spento finche' il capogruppo non sceglie
+  // il luogo: a lui (qui si e' proprietari) si dice dove farlo, e basta.
+  ok('e senza un luogo il meteo non compare: al capogruppo solo l\'invito a sceglierlo',
+    !/previsioni|località del campo/i.test(cal)
+    && (await b.page.locator('[data-luogo-manca]').count()) === 1
     && (await b.page.evaluate(() => window.CAMP_LOCATION)) === null);
   const periodo = await b.page.evaluate(() => [CAMP_START, CAMP_END]);
   ok(`le date del campo sono quelle della stanza (${periodo.join(' → ')})`,

@@ -254,6 +254,11 @@ async function apri(opzioni) {
   // initScript: una funzione, oppure [funzione, argomento] se le serve un dato.
   if (o.initScript) await page.addInitScript(...[].concat(o.initScript));
 
+  // prima: quello che deve essere pronto PRIMA che l'app si apra — le
+  // strade di rete finte, per esempio. Installate dopo, la prima richiesta
+  // (quella dell'apertura) passerebbe loro davanti.
+  if (o.prima) await o.prima(page);
+
   const errori = [];
   page.on('pageerror', (e) => errori.push(e.message));
   page.on('dialog', (d) => d.accept());

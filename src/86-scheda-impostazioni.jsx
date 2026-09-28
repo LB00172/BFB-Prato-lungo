@@ -247,6 +247,114 @@ const schedaImpostazioni = ({
               </div>
             );
           })()}
+          {/* Il luogo del campo, per il meteo. Lo sceglie il capogruppo per
+              tutti: le previsioni sono una sola per tutto il campo. Una
+              casella sola: un nome da cercare, oppure un link di Google Maps
+              o due coordinate incollate. */}
+          {stanzaStato.capogruppo && (() => {
+            const campoTesto = 'p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco';
+            const l = stanzaStato.luogo;
+            const c = stanzaStato.candidatoLuogo;
+            return (
+              <div data-riquadro="luogo" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
+                <p className="text-piccolo font-bold text-bosco flex items-center gap-1.5">{icona('luogo', 'w-4 h-4')}{L.t('luogo.titolo')}</p>
+                <p className="text-minuto text-gray-500 leading-snug">{L.t('luogo.spiega')}</p>
+                {stanzaStato.cercaLuogo === null ? (
+                  <>
+                    {l ? (
+                      <p data-luogo-scelto className="text-piccolo text-bosco leading-snug">
+                        <span className="font-bold">{l.label || L.t('luogo.senzaNome')}</span>
+                        <span className="block text-minuto text-gray-500 font-mono">
+                          {l.lat}, {l.lon}{typeof l.alt === 'number' ? ` · ${L.t('luogo.aQuota', l.alt)}` : ` · ${L.t('luogo.quotaNonDetta')}`}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-piccolo text-gray-500 leading-snug">{L.t('luogo.nonScelto')}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button onClick={stanzaStato.apriLuogo} disabled={stanzaStato.occupato} className={bottone('secondario', 'normale', 'flex-1')}>
+                        {L.t(l ? 'luogo.cambia' : 'luogo.scegli')}
+                      </button>
+                      {l && (
+                        <button
+                          onClick={() => { if (window.confirm(L.t('luogo.confermaTogli'))) stanzaStato.salvaLuogo(null); }}
+                          disabled={stanzaStato.occupato}
+                          className={bottone('testuale', 'normale', 'shrink-0')}
+                        >{L.t('luogo.togli')}</button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <input
+                        data-cerca-luogo
+                        value={stanzaStato.cercaLuogo}
+                        onChange={(e) => stanzaStato.setCercaLuogo(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') stanzaStato.trovaLuogo(); }}
+                        placeholder={L.t('luogo.segnaposto')}
+                        className={`flex-1 min-w-0 ${campoTesto}`}
+                      />
+                      <button onClick={stanzaStato.trovaLuogo} disabled={stanzaStato.cercandoLuogo} className={bottone('secondario', 'normale', 'shrink-0')}>
+                        {stanzaStato.cercandoLuogo ? '…' : L.t('luogo.cerca')}
+                      </button>
+                    </div>
+                    <p className="text-minuto text-gray-500 leading-snug">{L.t('luogo.aiuto')}</p>
+                    {stanzaStato.trovatiLuogo.length > 0 && (
+                      <div className="rounded border border-salvia/30 bg-scheda divide-y divide-salvia/20">
+                        {stanzaStato.trovatiLuogo.map((t, i) => {
+                          const scelto = !!(c && c.lat === t.lat && c.lon === t.lon);
+                          return (
+                            <button key={i} data-trovato={i} onClick={() => stanzaStato.setCandidatoLuogo(t)} className={bottoneRiga()}>
+                              <span className={`text-piccolo leading-snug ${scelto ? 'font-bold text-bosco' : 'text-gray-700'}`}>{t.label}</span>
+                              <span className="text-minuto text-gray-400 shrink-0">{typeof t.alt === 'number' ? L.t('luogo.aQuota', t.alt) : ''}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {stanzaStato.erroreLuogo && (
+                      <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.erroreLuogo)}</p>
+                    )}
+                    {c && (
+                      <div data-candidato className="rounded border border-bosco/30 bg-scheda p-2 space-y-2">
+                        <input
+                          data-nome-luogo
+                          value={c.label || ''}
+                          onChange={(e) => stanzaStato.setCandidatoLuogo(Object.assign({}, c, { label: e.target.value }))}
+                          placeholder={L.t('luogo.nome')}
+                          className={`w-full ${campoTesto}`}
+                        />
+                        <p className="text-minuto text-gray-500 font-mono">{c.lat}, {c.lon}</p>
+                        <label className="flex items-center gap-2 text-piccolo text-gray-600">
+                          <span>{L.t('luogo.quota')}</span>
+                          <input
+                            data-quota-luogo
+                            type="number"
+                            inputMode="numeric"
+                            value={typeof c.alt === 'number' || typeof c.alt === 'string' ? c.alt : ''}
+                            onChange={(e) => stanzaStato.setCandidatoLuogo(Object.assign({}, c, { alt: e.target.value }))}
+                            className={`w-24 ${campoTesto}`}
+                          />
+                          <span>m</span>
+                        </label>
+                        <p className="text-minuto text-gray-500 leading-snug">{L.t('luogo.quotaSpiega')}</p>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        data-salva-luogo
+                        onClick={() => stanzaStato.salvaLuogo(c)}
+                        disabled={!c || stanzaStato.occupato}
+                        className={bottone('primario', 'normale', 'flex-1')}
+                      >{L.t('luogo.salva')}</button>
+                      <button onClick={stanzaStato.chiudiLuogo} className={bottone('testuale', 'normale', 'shrink-0')}>{L.t('luogo.annulla')}</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
           {/* Le voci che si dividono (§ 8). Le sceglie il capogruppo per tutto
               il campo: le quote devono essere le stesse su ogni telefono.
               Spegnerne una a rimborsi gia' fatti riscrive le quote di tutti,

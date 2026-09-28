@@ -36,31 +36,57 @@ const CAMP_END_PREDEFINITO = '2026-08-16';
 let CAMP_START = CAMP_START_PREDEFINITO;
 let CAMP_END = CAMP_END_PREDEFINITO;
 
-// Le date del campo aperto, lette da dove l'app le tiene sul telefono: la
-// stanza scelta e l'elenco dei campi (src/79-usa-stanza.jsx). Si legge il
-// telefono e non lo stato di React perche' serve PRIMA che lo stato esista.
-// Una data che manca o e' storta non vale: si resta sul ripiego invece di
-// mostrare un calendario vuoto.
-const periodoDelCampo = () => {
-  const giorno = /^\d{4}-\d{2}-\d{2}$/;
+// La voce del campo aperto nell'elenco sul telefono: la stanza scelta e
+// l'elenco dei campi (src/79-usa-stanza.jsx). Si legge il telefono e non lo
+// stato di React perche' serve PRIMA che lo stato esista.
+const voceCampoAperto = () => {
   try {
     const codice = localStorage.getItem('cambusa_stanza');
-    if (codice && window.Stanza) {
-      const campi = JSON.parse(localStorage.getItem('cambusa_campi') || '[]');
-      const c = window.Stanza.normalizza(codice);
-      const v = (Array.isArray(campi) ? campi : []).find((x) => x && window.Stanza.normalizza(x.codice) === c);
-      if (v && giorno.test(v.inizio || '')) {
-        const fine = giorno.test(v.fine || '') && v.fine >= v.inizio ? v.fine : v.inizio;
-        return { da: v.inizio, a: fine };
-      }
-    }
-  } catch (e) { /* memoria illeggibile: si resta sul ripiego */ }
+    if (!codice || !window.Stanza) return null;
+    const campi = JSON.parse(localStorage.getItem('cambusa_campi') || '[]');
+    const c = window.Stanza.normalizza(codice);
+    return (Array.isArray(campi) ? campi : []).find((x) => x && window.Stanza.normalizza(x.codice) === c) || null;
+  } catch (e) { return null; /* memoria illeggibile: si resta sul ripiego */ }
+};
+
+// Le date del campo aperto. Una data che manca o e' storta non vale: si
+// resta sul ripiego invece di mostrare un calendario vuoto.
+const periodoDelCampo = () => {
+  const giorno = /^\d{4}-\d{2}-\d{2}$/;
+  const v = voceCampoAperto();
+  if (v && giorno.test(v.inizio || '')) {
+    const fine = giorno.test(v.fine || '') && v.fine >= v.inizio ? v.fine : v.inizio;
+    return { da: v.inizio, a: fine };
+  }
   return { da: CAMP_START_PREDEFINITO, a: CAMP_END_PREDEFINITO };
 };
+
+// Il luogo del campo, per il meteo. Nella versione privata sta scritto a mano
+// in firebase-config.js; nella pubblica lo sceglie il capogruppo e sta nella
+// stanza. Stessa storia delle date: window.CAMP_LOCATION la riscrive App() a
+// ogni disegno, e quello di firebase-config.js resta il ripiego — preso
+// UNA volta qui, prima che il primo disegno lo sovrascriva.
+const LUOGO_PREDEFINITO = window.CAMP_LOCATION || null;
+const luogoDelCampo = () => {
+  const v = voceCampoAperto();
+  const l = v && window.Stanza && window.Stanza.luogoValido(v.luogo);
+  return l || LUOGO_PREDEFINITO;
+};
+
+// La previsione salvata e' di questo luogo? Le previsioni si tengono con le
+// coordinate con cui sono state chieste; senza (quelle di prima) si
+// considerano del luogo attuale, come sono sempre state.
+const stessoLuogo = (wx, loc) => {
+  if (!wx || !loc) return false;
+  if (typeof wx.lat !== 'number' || typeof wx.lon !== 'number') return true;
+  return Math.abs(wx.lat - loc.lat) < 1e-4 && Math.abs(wx.lon - loc.lon) < 1e-4;
+};
+
 const aggiornaPeriodoCampo = () => {
   const p = periodoDelCampo();
   CAMP_START = p.da;
   CAMP_END = p.a;
+  window.CAMP_LOCATION = luogoDelCampo();
 };
 const defaultDateStr = () => {
   const today = toDateStr(new Date());

@@ -538,37 +538,64 @@ const CAMP_END_PREDEFINITO = '2026-08-16';
 let CAMP_START = CAMP_START_PREDEFINITO;
 let CAMP_END = CAMP_END_PREDEFINITO;
 
-// Le date del campo aperto, lette da dove l'app le tiene sul telefono: la
-// stanza scelta e l'elenco dei campi (src/79-usa-stanza.jsx). Si legge il
-// telefono e non lo stato di React perche' serve PRIMA che lo stato esista.
-// Una data che manca o e' storta non vale: si resta sul ripiego invece di
-// mostrare un calendario vuoto.
-const periodoDelCampo = () => {
-  const giorno = /^\d{4}-\d{2}-\d{2}$/;
+// La voce del campo aperto nell'elenco sul telefono: la stanza scelta e
+// l'elenco dei campi (src/79-usa-stanza.jsx). Si legge il telefono e non lo
+// stato di React perche' serve PRIMA che lo stato esista.
+const voceCampoAperto = () => {
   try {
     const codice = localStorage.getItem('cambusa_stanza');
-    if (codice && window.Stanza) {
-      const campi = JSON.parse(localStorage.getItem('cambusa_campi') || '[]');
-      const c = window.Stanza.normalizza(codice);
-      const v = (Array.isArray(campi) ? campi : []).find(x => x && window.Stanza.normalizza(x.codice) === c);
-      if (v && giorno.test(v.inizio || '')) {
-        const fine = giorno.test(v.fine || '') && v.fine >= v.inizio ? v.fine : v.inizio;
-        return {
-          da: v.inizio,
-          a: fine
-        };
-      }
-    }
-  } catch (e) {/* memoria illeggibile: si resta sul ripiego */}
+    if (!codice || !window.Stanza) return null;
+    const campi = JSON.parse(localStorage.getItem('cambusa_campi') || '[]');
+    const c = window.Stanza.normalizza(codice);
+    return (Array.isArray(campi) ? campi : []).find(x => x && window.Stanza.normalizza(x.codice) === c) || null;
+  } catch (e) {
+    return null; /* memoria illeggibile: si resta sul ripiego */
+  }
+};
+
+// Le date del campo aperto. Una data che manca o e' storta non vale: si
+// resta sul ripiego invece di mostrare un calendario vuoto.
+const periodoDelCampo = () => {
+  const giorno = /^\d{4}-\d{2}-\d{2}$/;
+  const v = voceCampoAperto();
+  if (v && giorno.test(v.inizio || '')) {
+    const fine = giorno.test(v.fine || '') && v.fine >= v.inizio ? v.fine : v.inizio;
+    return {
+      da: v.inizio,
+      a: fine
+    };
+  }
   return {
     da: CAMP_START_PREDEFINITO,
     a: CAMP_END_PREDEFINITO
   };
 };
+
+// Il luogo del campo, per il meteo. Nella versione privata sta scritto a mano
+// in firebase-config.js; nella pubblica lo sceglie il capogruppo e sta nella
+// stanza. Stessa storia delle date: window.CAMP_LOCATION la riscrive App() a
+// ogni disegno, e quello di firebase-config.js resta il ripiego — preso
+// UNA volta qui, prima che il primo disegno lo sovrascriva.
+const LUOGO_PREDEFINITO = window.CAMP_LOCATION || null;
+const luogoDelCampo = () => {
+  const v = voceCampoAperto();
+  const l = v && window.Stanza && window.Stanza.luogoValido(v.luogo);
+  return l || LUOGO_PREDEFINITO;
+};
+
+// La previsione salvata e' di questo luogo? Le previsioni si tengono con le
+// coordinate con cui sono state chieste; senza (quelle di prima) si
+// considerano del luogo attuale, come sono sempre state.
+const stessoLuogo = (wx, loc) => {
+  if (!wx || !loc) return false;
+  if (typeof wx.lat !== 'number' || typeof wx.lon !== 'number') return true;
+  return Math.abs(wx.lat - loc.lat) < 1e-4 && Math.abs(wx.lon - loc.lon) < 1e-4;
+};
 const aggiornaPeriodoCampo = () => {
   const p = periodoDelCampo();
   CAMP_START = p.da;
   CAMP_END = p.a;
+  window.CAMP_LOCATION = luogoDelCampo();
 };
 const defaultDateStr = () => {
   const today = toDateStr(new Date());
@@ -843,7 +870,9 @@ const ICONE = {
   // Due alias: la stessa cosa detta in un altro punto dell'app non merita un
   // disegno diverso, o l'utente pensa che parlino di due cose.
   separato: 'M12 8a5 5 0 1 1 0 10 5 5 0 0 1 0-10z M4 3v8 M4 11v10 M2 3v5a2 2 0 0 0 4 0V3 M20 3v18 M20 3c-1.5 1-2 3-2 5s.5 3 2 3',
-  pronto: 'M7 8h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3z M9 8V6a3 3 0 0 1 6 0v2 M9 14h6 M10 21v-4h4v4'
+  pronto: 'M7 8h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3z M9 8V6a3 3 0 0 1 6 0v2 M9 14h6 M10 21v-4h4v4',
+  // Il luogo del campo: il segnaposto, il gesto che tutti conoscono dalle mappe.
+  luogo: 'M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z M12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6z'
 };
 
 // Restituisce il disegno, o null se il nome non c'e'. **Null e non un
@@ -1942,6 +1971,13 @@ const usaStanza = () => {
   const [bozzaRegole, setBozzaRegole] = useState(null);
   const [bozzaDotazioni, setBozzaDotazioni] = useState(null);
   const [sceltaAiutante, setSceltaAiutante] = useState('');
+  // Il luogo del campo, mentre il capogruppo lo sceglie: quello che ha
+  // scritto, cosa ha trovato la ricerca, e il candidato da salvare.
+  const [cercaLuogo, setCercaLuogo] = useState(null); // null = riquadro chiuso
+  const [trovatiLuogo, setTrovatiLuogo] = useState([]);
+  const [candidatoLuogo, setCandidatoLuogo] = useState(null);
+  const [erroreLuogo, setErroreLuogo] = useState('');
+  const [cercandoLuogo, setCercandoLuogo] = useState(false);
   // Chi aveva gia' una stanza prima che la home esistesse la ritrova in
   // elenco: la stanza salvata entra da sola.
   const [campi, setCampi] = useState(() => {
@@ -2213,6 +2249,9 @@ const usaStanza = () => {
   const capogruppo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
   const aiutante = !!(voceAperta && voceAperta.aiutante);
   const vice = voceAperta && voceAperta.vice || '';
+  // Il luogo per il meteo. Passa da luogoValido anche qui: l'elenco sul
+  // telefono lo scrive un'app, e un'app puo' essere vecchia.
+  const luogo = voceAperta && window.Stanza.luogoValido(voceAperta.luogo) || null;
 
   // Si scrive nel documento della stanza e, subito, nell'elenco sul telefono:
   // chi ha appena salvato deve vedere quello che ha scritto, anche senza
@@ -2256,6 +2295,75 @@ const usaStanza = () => {
     if (fatto) aggiornaVoceAperta({
       voci: mappa
     });
+  };
+  // ---------- Il luogo del campo ----------
+  // Una casella sola per due cose: se quello che si scrive e' un link di
+  // Google Maps o due coordinate, il luogo c'e' gia'; altrimenti e' un nome,
+  // e si chiede a Open-Meteo (lo stesso servizio del meteo, gratuito e senza
+  // chiave) quali posti si chiamano cosi'.
+  const apriLuogo = () => {
+    setCercaLuogo('');
+    setTrovatiLuogo([]);
+    setCandidatoLuogo(luogo ? Object.assign({}, luogo) : null);
+    setErroreLuogo('');
+  };
+  const chiudiLuogo = () => {
+    setCercaLuogo(null);
+    setTrovatiLuogo([]);
+    setCandidatoLuogo(null);
+    setErroreLuogo('');
+  };
+  const trovaLuogo = async () => {
+    const testo = String(cercaLuogo || '').trim();
+    setTrovatiLuogo([]);
+    setErroreLuogo('');
+    if (!testo) {
+      setErroreLuogo('luogo.vuoto');
+      return;
+    }
+    const letto = window.Stanza.luogoDaTesto(testo);
+    if (!letto.errore) {
+      setCandidatoLuogo(letto);
+      return;
+    }
+    if (letto.link) {
+      setErroreLuogo(letto.errore);
+      return;
+    }
+    if (!navigator.onLine) {
+      setErroreLuogo('luogo.senzaLinea');
+      return;
+    }
+    setCercandoLuogo(true);
+    try {
+      const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=6&format=json' + '&language=' + encodeURIComponent(L.codice) + '&name=' + encodeURIComponent(testo));
+      const j = await r.json();
+      const trovati = (j && j.results || []).map(window.Stanza.luogoDaRicerca).filter(Boolean);
+      setTrovatiLuogo(trovati);
+      if (!trovati.length) setErroreLuogo('luogo.nessuno');
+    } catch (e) {
+      setErroreLuogo('luogo.senzaLinea');
+    } finally {
+      setCercandoLuogo(false);
+    }
+  };
+  const salvaLuogo = async l => {
+    if (!stanza) return false;
+    // null toglie il luogo; un luogo storto non si scrive, nemmeno per errore.
+    const pulito = l === null ? null : window.Stanza.luogoValido(l);
+    if (l !== null && !pulito) {
+      setErroreLuogo('luogo.nonCapito');
+      return false;
+    }
+    const fatto = await prova(c => c.impostaStanza(stanza.codice, {
+      luogo: pulito
+    }).then(() => true));
+    if (!fatto) return false;
+    aggiornaVoceAperta({
+      luogo: pulito
+    });
+    chiudiLuogo();
+    return true;
   };
   const nominaAiutante = async uid => {
     if (!stanza || !uid) return;
@@ -2304,6 +2412,18 @@ const usaStanza = () => {
     salvaDotazioni,
     voci,
     cambiaVoce,
+    luogo,
+    salvaLuogo,
+    apriLuogo,
+    chiudiLuogo,
+    trovaLuogo,
+    cercaLuogo,
+    setCercaLuogo,
+    trovatiLuogo,
+    candidatoLuogo,
+    setCandidatoLuogo,
+    erroreLuogo,
+    cercandoLuogo,
     stanza,
     membri,
     modo,
@@ -2473,6 +2593,10 @@ function App({
   // Dietro FEATURES.rooms. Come l'account, l'hook gira comunque: senza
   // bandiera nessuno guarda il suo stato.
   const stanzaStato = usaStanza();
+  // Il luogo per il meteo lo sa gia' lo stato della stanza: l'elenco sul
+  // telefono (che legge aggiornaPeriodoCampo) si salva dopo il disegno, e
+  // chi ha appena scelto il luogo vedrebbe il meteo del posto di prima.
+  if (stanzaStato.stanza) window.CAMP_LOCATION = stanzaStato.luogo || LUOGO_PREDEFINITO;
 
   // Conto separato: giorni le cui presenze fanno cassa a parte. Il cibo e le
   // bevande marcati "separato" si dividono solo sui pasti di questi giorni;
@@ -2852,7 +2976,9 @@ function App({
     // differenza viene negativa, cade sotto l'ora di attesa e il meteo non si
     // aggiorna più. Una foto col futuro addosso è sempre da rifare.
     const eta = Date.now() - (weatherRef.current.fetchedAt || 0);
-    if (!force && eta >= 0 && eta < 60 * 60 * 1000) return;
+    // Una previsione di un altro posto non e' in cache: e' da rifare. Succede
+    // quando il capogruppo sceglie o cambia il luogo del campo.
+    if (!force && eta >= 0 && eta < 60 * 60 * 1000 && stessoLuogo(weatherRef.current, loc)) return;
     setWxBusy(true);
     // Se in firebase-config.js c'è l'altitudine del campo la si passa: senza,
     // Open-Meteo usa la quota media della sua cella (~1 km di lato), e in
@@ -2914,10 +3040,11 @@ function App({
       if (window.CloudSync && window.CloudSync.putWeather) window.CloudSync.putWeather(next);
     }).catch(() => {/* offline o API non raggiungibile: resta la cache */}).finally(() => setWxBusy(false));
   };
+  const luogoMeteo = window.CAMP_LOCATION ? window.CAMP_LOCATION.lat + ',' + window.CAMP_LOCATION.lon : '';
   useEffect(() => {
     fetchWeather(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOnline, selectedDateStr]);
+  }, [isOnline, selectedDateStr, luogoMeteo]);
 
   // Previsioni in arrivo da un altro dispositivo: si adottano se più recenti
   // delle nostre, così tutti guardano gli stessi numeri.
@@ -5819,6 +5946,7 @@ function App({
   }), scheda === 'calendario' && schedaCalendario({
     admin,
     campoInCorso,
+    capogruppo: stanzaStato.capogruppo,
     fetchWeather,
     getDayData,
     getMeal,
@@ -6394,6 +6522,7 @@ function App({
 
 const schedaCalendario = ({
   admin,
+  capogruppo,
   fetchWeather,
   getDayData,
   getMeal,
@@ -6473,11 +6602,26 @@ const schedaCalendario = ({
 }, L.data(parseDate(selectedDateStr), 'completa')), (() => {
   const loc = window.CAMP_LOCATION;
   const locOk = loc && typeof loc.lat === 'number' && typeof loc.lon === 'number';
-  const wx = weather.byDate[selectedDateStr];
-  // Senza luogo il meteo non c'e' e basta: nell'app pubblica il luogo
-  // non si puo' ancora impostare, e una riga che dice «da impostare» a
-  // chi non puo' farlo e' solo un rimprovero.
-  if (!locOk) return null;
+  // La previsione di un altro posto non si mostra: e' quella del luogo
+  // di prima, finche' non arriva la nuova.
+  const wx = stessoLuogo(weather, loc) ? weather.byDate[selectedDateStr] : null;
+  // Senza luogo il meteo non c'e' e basta. Solo a chi lo puo'
+  // scegliere — il capogruppo — si dice dove: agli altri una riga
+  // «da impostare» sarebbe solo un rimprovero per una cosa non loro.
+  if (!locOk) {
+    if (!capogruppo) return null;
+    return /*#__PURE__*/React.createElement("button", {
+      "data-luogo-manca": true,
+      onClick: () => goTo('impostazioni'),
+      className: bottoneRiga('rounded border border-salvia/20 bg-carta/60')
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-bosco shrink-0"
+    }, icona('luogo', 'w-5 h-5')), /*#__PURE__*/React.createElement("span", {
+      className: "text-piccolo text-gray-600 leading-snug"
+    }, L.t('luogo.scegliPerIlMeteo'))));
+  }
   return /*#__PURE__*/React.createElement("div", {
     className: "bg-carta/60 px-3 py-2 rounded border border-salvia/20 space-y-1"
   }, /*#__PURE__*/React.createElement("div", {
@@ -8381,6 +8525,108 @@ const schedaImpostazioni = ({
     disabled: stanzaStato.occupato,
     className: bottone('distruttivo', 'minuscolo', 'w-full')
   }, L.t('stanza.lasciaCampo', nomeDi(stanzaStato.vice))));
+})(), stanzaStato.capogruppo && (() => {
+  const campoTesto = 'p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco';
+  const l = stanzaStato.luogo;
+  const c = stanzaStato.candidatoLuogo;
+  return /*#__PURE__*/React.createElement("div", {
+    "data-riquadro": "luogo",
+    className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo font-bold text-bosco flex items-center gap-1.5"
+  }, icona('luogo', 'w-4 h-4'), L.t('luogo.titolo')), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t('luogo.spiega')), stanzaStato.cercaLuogo === null ? /*#__PURE__*/React.createElement(React.Fragment, null, l ? /*#__PURE__*/React.createElement("p", {
+    "data-luogo-scelto": true,
+    className: "text-piccolo text-bosco leading-snug"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, l.label || L.t('luogo.senzaNome')), /*#__PURE__*/React.createElement("span", {
+    className: "block text-minuto text-gray-500 font-mono"
+  }, l.lat, ", ", l.lon, typeof l.alt === 'number' ? ` · ${L.t('luogo.aQuota', l.alt)}` : ` · ${L.t('luogo.quotaNonDetta')}`)) : /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500 leading-snug"
+  }, L.t('luogo.nonScelto')), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: stanzaStato.apriLuogo,
+    disabled: stanzaStato.occupato,
+    className: bottone('secondario', 'normale', 'flex-1')
+  }, L.t(l ? 'luogo.cambia' : 'luogo.scegli')), l && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (window.confirm(L.t('luogo.confermaTogli'))) stanzaStato.salvaLuogo(null);
+    },
+    disabled: stanzaStato.occupato,
+    className: bottone('testuale', 'normale', 'shrink-0')
+  }, L.t('luogo.togli')))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    "data-cerca-luogo": true,
+    value: stanzaStato.cercaLuogo,
+    onChange: e => stanzaStato.setCercaLuogo(e.target.value),
+    onKeyDown: e => {
+      if (e.key === 'Enter') stanzaStato.trovaLuogo();
+    },
+    placeholder: L.t('luogo.segnaposto'),
+    className: `flex-1 min-w-0 ${campoTesto}`
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: stanzaStato.trovaLuogo,
+    disabled: stanzaStato.cercandoLuogo,
+    className: bottone('secondario', 'normale', 'shrink-0')
+  }, stanzaStato.cercandoLuogo ? '…' : L.t('luogo.cerca'))), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t('luogo.aiuto')), stanzaStato.trovatiLuogo.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "rounded border border-salvia/30 bg-scheda divide-y divide-salvia/20"
+  }, stanzaStato.trovatiLuogo.map((t, i) => {
+    const scelto = !!(c && c.lat === t.lat && c.lon === t.lon);
+    return /*#__PURE__*/React.createElement("button", {
+      key: i,
+      "data-trovato": i,
+      onClick: () => stanzaStato.setCandidatoLuogo(t),
+      className: bottoneRiga()
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-piccolo leading-snug ${scelto ? 'font-bold text-bosco' : 'text-gray-700'}`
+    }, t.label), /*#__PURE__*/React.createElement("span", {
+      className: "text-minuto text-gray-400 shrink-0"
+    }, typeof t.alt === 'number' ? L.t('luogo.aQuota', t.alt) : ''));
+  })), stanzaStato.erroreLuogo && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo font-bold text-red-700 leading-snug"
+  }, L.t(stanzaStato.erroreLuogo)), c && /*#__PURE__*/React.createElement("div", {
+    "data-candidato": true,
+    className: "rounded border border-bosco/30 bg-scheda p-2 space-y-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    "data-nome-luogo": true,
+    value: c.label || '',
+    onChange: e => stanzaStato.setCandidatoLuogo(Object.assign({}, c, {
+      label: e.target.value
+    })),
+    placeholder: L.t('luogo.nome'),
+    className: `w-full ${campoTesto}`
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 font-mono"
+  }, c.lat, ", ", c.lon), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 text-piccolo text-gray-600"
+  }, /*#__PURE__*/React.createElement("span", null, L.t('luogo.quota')), /*#__PURE__*/React.createElement("input", {
+    "data-quota-luogo": true,
+    type: "number",
+    inputMode: "numeric",
+    value: typeof c.alt === 'number' || typeof c.alt === 'string' ? c.alt : '',
+    onChange: e => stanzaStato.setCandidatoLuogo(Object.assign({}, c, {
+      alt: e.target.value
+    })),
+    className: `w-24 ${campoTesto}`
+  }), /*#__PURE__*/React.createElement("span", null, "m")), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t('luogo.quotaSpiega'))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-salva-luogo": true,
+    onClick: () => stanzaStato.salvaLuogo(c),
+    disabled: !c || stanzaStato.occupato,
+    className: bottone('primario', 'normale', 'flex-1')
+  }, L.t('luogo.salva')), /*#__PURE__*/React.createElement("button", {
+    onClick: stanzaStato.chiudiLuogo,
+    className: bottone('testuale', 'normale', 'shrink-0')
+  }, L.t('luogo.annulla')))));
 })(), stanzaStato.capogruppo && window.Voci && /*#__PURE__*/React.createElement("div", {
   "data-riquadro": "voci",
   className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"

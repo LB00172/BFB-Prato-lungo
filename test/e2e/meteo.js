@@ -77,12 +77,13 @@ function bollettino(tmax, tmin, code, rain, opz) {
 
 // Previsione gia' in cache sul telefono, con una temperatura impossibile che
 // si riconosce a colpo d'occhio se rimane appiccicata allo schermo.
-function inCache(quando) {
+// Scaricata per il luogo del campo, salvo che la prova ne dica un altro.
+function inCache(quando, dove) {
   const byDate = {};
   giorniCoperti().forEach((g) => {
     byDate[g] = { code: 0, tmax: 99, tmin: 88, rain: 3 };
   });
-  return { fetchedAt: quando, stampa: quando, byDate, lat: 42.059, lon: 13.1 };
+  return Object.assign({ fetchedAt: quando, stampa: quando, byDate, lat: 42.0486, lon: 13.14855 }, dove);
 }
 
 // Semina la cache e sostituisce la chiamata a Open-Meteo: le prove non devono
@@ -243,6 +244,16 @@ const testo = (p) => p.locator('main').innerText();
   ok('e si dice anche che altrove ce ne sono di piu\' fresche', /piu' fresche|più fresche/i.test(t3));
   ok('i dati in cache restano comunque visibili', /99°\s*\/\s*88°/.test(t3));
   ok('nessun errore JS con la rete giu\'', a.errori.length === 0);
+  await a.browser.close();
+
+  // ---- 3-bis. La previsione di un altro posto non si mostra -------------
+  // Il capogruppo ha cambiato il luogo del campo, e senza linea la nuova
+  // previsione non arriva: quella in cache e' del posto di prima. Mostrarla
+  // vorrebbe dire dare il meteo della Valle d'Aosta a chi e' in Abruzzo.
+  a = await apri({ initScript: [seme, { wx: inCache(Date.now() - 10 * 60 * 1000, { lat: 45.7, lon: 7.3 }), rete: 'ko' }] });
+  await a.menu('Calendario');
+  await a.page.waitForTimeout(600);
+  ok('la previsione in cache di un altro luogo non si spaccia per questa', !/99°\s*\/\s*88°/.test(await testo(a.page)));
   await a.browser.close();
 
   // ---- 4. Previsione fresca: nessun allarme, e regge anche offline -------

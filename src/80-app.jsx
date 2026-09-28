@@ -118,6 +118,10 @@ function App({ eredita, cambiaCampo } = {}) {
   // Dietro FEATURES.rooms. Come l'account, l'hook gira comunque: senza
   // bandiera nessuno guarda il suo stato.
   const stanzaStato = usaStanza();
+  // Il luogo per il meteo lo sa gia' lo stato della stanza: l'elenco sul
+  // telefono (che legge aggiornaPeriodoCampo) si salva dopo il disegno, e
+  // chi ha appena scelto il luogo vedrebbe il meteo del posto di prima.
+  if (stanzaStato.stanza) window.CAMP_LOCATION = stanzaStato.luogo || LUOGO_PREDEFINITO;
 
   // Conto separato: giorni le cui presenze fanno cassa a parte. Il cibo e le
   // bevande marcati "separato" si dividono solo sui pasti di questi giorni;
@@ -427,7 +431,9 @@ function App({ eredita, cambiaCampo } = {}) {
     // differenza viene negativa, cade sotto l'ora di attesa e il meteo non si
     // aggiorna più. Una foto col futuro addosso è sempre da rifare.
     const eta = Date.now() - (weatherRef.current.fetchedAt || 0);
-    if (!force && eta >= 0 && eta < 60 * 60 * 1000) return;
+    // Una previsione di un altro posto non e' in cache: e' da rifare. Succede
+    // quando il capogruppo sceglie o cambia il luogo del campo.
+    if (!force && eta >= 0 && eta < 60 * 60 * 1000 && stessoLuogo(weatherRef.current, loc)) return;
     setWxBusy(true);
     // Se in firebase-config.js c'è l'altitudine del campo la si passa: senza,
     // Open-Meteo usa la quota media della sua cella (~1 km di lato), e in
@@ -493,10 +499,11 @@ function App({ eredita, cambiaCampo } = {}) {
       .finally(() => setWxBusy(false));
   };
 
+  const luogoMeteo = window.CAMP_LOCATION ? window.CAMP_LOCATION.lat + ',' + window.CAMP_LOCATION.lon : '';
   useEffect(() => {
     fetchWeather(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOnline, selectedDateStr]);
+  }, [isOnline, selectedDateStr, luogoMeteo]);
 
   // Previsioni in arrivo da un altro dispositivo: si adottano se più recenti
   // delle nostre, così tutti guardano gli stessi numeri.
@@ -3030,7 +3037,7 @@ function App({ eredita, cambiaCampo } = {}) {
         {/* ---------- CALENDARIO ---------- */}
         {scheda === 'campi' && schedaCampi({ stanzaStato, account, codiceInGioco, onApri: apriCampo })}
         {scheda === 'calendario' && schedaCalendario({
-          admin, campoInCorso, fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
+          admin, campoInCorso, capogruppo: stanzaStato.capogruppo, fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
         })}
 
         {/* ---------- MENÙ ---------- */}

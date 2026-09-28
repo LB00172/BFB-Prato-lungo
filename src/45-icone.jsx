@@ -78,6 +78,8 @@ const ICONE = {
   // disegno diverso, o l'utente pensa che parlino di due cose.
   separato: 'M12 8a5 5 0 1 1 0 10 5 5 0 0 1 0-10z M4 3v8 M4 11v10 M2 3v5a2 2 0 0 0 4 0V3 M20 3v18 M20 3c-1.5 1-2 3-2 5s.5 3 2 3',
   pronto: 'M7 8h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3z M9 8V6a3 3 0 0 1 6 0v2 M9 14h6 M10 21v-4h4v4',
+  // Il luogo del campo: il segnaposto, il gesto che tutti conoscono dalle mappe.
+  luogo: 'M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z M12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6z',
 };
 
 // Restituisce il disegno, o null se il nome non c'e'. **Null e non un

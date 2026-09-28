@@ -408,8 +408,10 @@
       fuori = fuori.map((v) => {
         if (normalizza(v.codice) !== c) return v;
         const n = Object.assign({}, v);
-        ['pro', 'regole', 'dotazioni', 'voci', 'vice', 'aiutante'].forEach((k) => { delete n[k]; });
+        ['pro', 'regole', 'dotazioni', 'voci', 'vice', 'aiutante', 'luogo'].forEach((k) => { delete n[k]; });
         if (st.pro) n.pro = st.pro;
+        const luogo = luogoValido(st.luogo);
+        if (luogo) n.luogo = luogo;
         if (Array.isArray(st.regole) && st.regole.length) n.regole = st.regole.slice();
         if (Array.isArray(st.dotazioni) && st.dotazioni.length) n.dotazioni = st.dotazioni.slice();
         if (st.voci && typeof st.voci === 'object') n.voci = Object.assign({}, st.voci);
@@ -493,6 +495,77 @@
       .join('\n');
   }
 
+  // ---------- Il luogo del campo, per il meteo ----------
+  // Lo sceglie il capogruppo e sta nella stanza: `{ lat, lon, alt, label }`,
+  // la stessa forma che nella versione privata sta scritta a mano in
+  // firebase-config.js (window.CAMP_LOCATION). L'altitudine e' facoltativa
+  // ma conta: senza, Open-Meteo usa la quota media della sua cella (~1 km),
+  // e a 1300 m il meteo del paese in fondovalle e' un'altra cosa.
+  //
+  // Tutto quello che arriva — da una ricerca, da un link incollato, dal cloud
+  // — passa da qui. Una coordinata fuori scala non e' un luogo strano: e' un
+  // meteo inventato, e nessuno se ne accorgerebbe.
+  function luogoValido(l) {
+    if (!l || typeof l !== 'object') return null;
+    const lat = Number(l.lat);
+    const lon = Number(l.lon);
+    if (!isFinite(lat) || !isFinite(lon) || l.lat === null || l.lon === null || l.lat === '' || l.lon === '') return null;
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+    // Cinque decimali sono un metro: di piu' e' finta precisione.
+    const r5 = (x) => Math.round(x * 1e5) / 1e5;
+    const out = { lat: r5(lat), lon: r5(lon) };
+    const alt = l.alt === '' || l.alt == null ? NaN : Number(l.alt);
+    if (isFinite(alt) && alt >= -500 && alt <= 9000) out.alt = Math.round(alt);
+    const label = String(l.label || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (label) out.label = label;
+    return out;
+  }
+
+  // Un link di Google Maps (o di OpenStreetMap), oppure due numeri scritti a
+  // mano. Restituisce il luogo, oppure { errore: chiave } da far dire al
+  // disegno. I link corti (maps.app.goo.gl, goo.gl/maps) le coordinate non
+  // le portano: le sa solo Google, dopo un reindirizzamento che da qui non
+  // si puo' seguire. Si dice, invece di non trovare niente.
+  function luogoDaTesto(testo) {
+    const t = String(testo || '').trim();
+    if (!t) return { errore: 'luogo.vuoto' };
+    // `link` dice a chi chiama che non e' un nome da cercare: un link che non
+    // si capisce, cercato come nome, non troverebbe niente e direbbe la cosa
+    // sbagliata.
+    const link = /^(https?:\/\/|www\.)/i.test(t);
+    if (/(maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(t)) return { errore: 'luogo.linkCorto', link: true };
+    const num = '(-?\\d{1,3}(?:[.,]\\d+)?)';
+    const prove = [
+      new RegExp('!3d' + num + '!4d' + num),                  // il segnaposto di Google
+      new RegExp('@' + num + ',' + num),                       // il centro della mappa
+      new RegExp('[?&](?:q|query|ll|destination)=' + num + '(?:,|%2C)\\s*' + num, 'i'),
+      new RegExp('#map=\\d+/' + num + '/' + num),              // OpenStreetMap
+      new RegExp('^' + num + '\\s*[,;\\s]\\s*' + num + '$'),   // «42.0486, 13.1486»
+    ];
+    for (const re of prove) {
+      const m = t.match(re);
+      if (!m) continue;
+      // «42,0486 13,1486» si scrive cosi' in Italia: la virgola decimale va
+      // bene solo quando i due numeri sono separati da altro.
+      const n = (x) => Number(String(x).replace(',', '.'));
+      const l = luogoValido({ lat: n(m[1]), lon: n(m[2]) });
+      if (l) return l;
+    }
+    return link ? { errore: 'luogo.nonCapito', link: true } : { errore: 'luogo.nonCapito' };
+  }
+
+  // Un risultato della ricerca per nome (geocoding di Open-Meteo): il nome
+  // con la provincia, cosi' si distingue Pereto (AQ) da un altro Pereto.
+  function luogoDaRicerca(r) {
+    if (!r) return null;
+    const dove = [r.admin2 || r.admin1, r.country_code && r.country_code !== 'IT' ? r.country : '']
+      .filter(Boolean).join(', ');
+    return luogoValido({
+      lat: r.latitude, lon: r.longitude, alt: r.elevation,
+      label: r.name + (dove ? ' (' + dove + ')' : ''),
+    });
+  }
+
   // ---------- Il Pro e' del campo ----------
   // La domanda e' una sola, e le funzioni Pro la fanno tutte qui: «questo
   // CAMPO e' Pro?». Non «questa persona e' Pro?»: il Pro lo paga chi crea il
@@ -547,6 +620,9 @@
     testoDaRegole,
     dotazioniDaTesto,
     testoDaDotazioni,
+    luogoValido,
+    luogoDaTesto,
+    luogoDaRicerca,
     ordinaCampi,
     linkInvito,
     leggiInvito,
@@ -750,6 +826,7 @@
           regole: Array.isArray(dati.regole) ? dati.regole : [],
           dotazioni: Array.isArray(dati.dotazioni) ? dati.dotazioni : [],
           voci: dati.voci && typeof dati.voci === 'object' ? dati.voci : null,
+          luogo: dati.luogo || null,
           // L'uid dell'aiutante lo vede solo chi lo ha nominato: agli altri
           // basta sapere se l'aiutante sono loro.
           vice: dati.proprietario === utente.uid ? (dati.vice || '') : '',

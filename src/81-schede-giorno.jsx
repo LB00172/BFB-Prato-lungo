@@ -7,6 +7,7 @@
 
 const schedaCalendario = ({
   admin,
+  capogruppo,
   fetchWeather,
   getDayData,
   getMeal,
@@ -118,11 +119,27 @@ const schedaCalendario = ({
       {(() => {
         const loc = window.CAMP_LOCATION;
         const locOk = loc && typeof loc.lat === 'number' && typeof loc.lon === 'number';
-        const wx = weather.byDate[selectedDateStr];
-        // Senza luogo il meteo non c'e' e basta: nell'app pubblica il luogo
-        // non si puo' ancora impostare, e una riga che dice «da impostare» a
-        // chi non puo' farlo e' solo un rimprovero.
-        if (!locOk) return null;
+        // La previsione di un altro posto non si mostra: e' quella del luogo
+        // di prima, finche' non arriva la nuova.
+        const wx = stessoLuogo(weather, loc) ? weather.byDate[selectedDateStr] : null;
+        // Senza luogo il meteo non c'e' e basta. Solo a chi lo puo'
+        // scegliere — il capogruppo — si dice dove: agli altri una riga
+        // «da impostare» sarebbe solo un rimprovero per una cosa non loro.
+        if (!locOk) {
+          if (!capogruppo) return null;
+          return (
+            <button
+              data-luogo-manca
+              onClick={() => goTo('impostazioni')}
+              className={bottoneRiga('rounded border border-salvia/20 bg-carta/60')}
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-bosco shrink-0">{icona('luogo', 'w-5 h-5')}</span>
+                <span className="text-piccolo text-gray-600 leading-snug">{L.t('luogo.scegliPerIlMeteo')}</span>
+              </span>
+            </button>
+          );
+        }
         return (
           <div className="bg-carta/60 px-3 py-2 rounded border border-salvia/20 space-y-1">
             <div className="flex items-center gap-2">
