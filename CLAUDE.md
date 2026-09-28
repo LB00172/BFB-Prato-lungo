@@ -34,8 +34,8 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 82 prove, **due minuti e
-   mezzo**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
+4. **Prima di dire "fatto" gira `npm test`.** 86 prove, **tre minuti
+   scarsi**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -100,7 +100,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `lingue.js` | **le lingue**: dizionario (it/es/fr), plurali come funzioni, le dodici forme di data, e la regola che si prova — ogni chiave italiana esiste altrove e viceversa. Fuori da `src/` |
 | `allarmi.js` | **quando svegliare qualcuno**: orologio di un altro telefono avanti di giorni, e perdite che meritano un allarme invece di essere il recupero di un ritardo. Pure, fuori da `src/` |
 | `auth.js` | **chi sei, e cosa ti lascia fare l'app**: `Auth` sono le regole (stati, permessi, validazione, codici d'errore tradotti), `AuthCloud` è il trasporto verso Firebase Authentication. Fuori da `src/`. Dietro `FEATURES.auth` |
-| `stanza.js` | **la stanza**, in due metà come `auth.js`: `Stanza` sono le regole (alfabeto e generatore del codice, lettura di un codice digitato a mano, validazione del modulo, ruoli, **cosa si scrive entrando**), `StanzaCloud` il trasporto verso Firestore. La crittografia non c'è: è `improntaPassword` in `src/20-blocco-password.jsx`. Dietro `FEATURES.rooms` |
+| `stanza.js` | **la stanza**, in due metà come `auth.js`: `Stanza` sono le regole (alfabeto e generatore del codice, lettura di un codice digitato a mano, validazione del modulo, ruoli, **cosa si scrive entrando**, il luogo del meteo, **cosa sblocca il Pro** in `FUNZIONI_PRO`), `StanzaCloud` il trasporto verso Firestore (e `attivaPro` verso il server). La crittografia non c'è: è `improntaPassword` in `src/20-blocco-password.jsx`. Dietro `FEATURES.rooms` |
 | `cassetti.js` | **un cassetto per campo**: le chiavi di sempre tengono i dati del campo in gioco, gli altri campi stanno da parte sotto il loro codice. Lo scambio si fa all'avvio e a ogni cambio di campo, con `App` smontata (`src/90-avvio.jsx`); le foto si scambiano a parte, in modo asincrono. Ogni chiave `cambusa_*` dei sorgenti deve stare in `DEL_CAMPO` o in `DEL_TELEFONO`: una prova lo pretende |
 | `firebase-sync.js` | trasporto verso Firestore, transazione e regola `sovrascrivibile`. **Dove** stanno i dati lo decide `percorso()`: `camps/<codice>` nella versione privata, `rooms/<codice>/dati/stato` in quella pubblica (`APP_CONFIG.dati`) |
 | `firebase-config.js` | chiavi Firebase e impronte delle password. Il progetto è **`camp-ops`**, non quello della Brigata: separarli è la decisione del 22 settembre |
@@ -110,7 +110,8 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `build.js` | compilazione + versione della cache |
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
-| `test/` | 16 prove unitarie + 66 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo |
+| `functions/` | **il server del Pro**, su Firebase (non su Vercel: `.vercelignore`). `pro.js` sono le decisioni (chi paga, fino a quando, un gettone vale una volta), provate da `unita/server-pro` con Google e Firestore finti; `index.js` collega e basta. Niente chiavi: usa l'identità del suo account di servizio. Si pubblica con `npx firebase deploy --only functions` |
+| `test/` | 17 prove unitarie + 69 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo; `apri({ prima })` per quello che deve esistere prima dell'apertura (le strade di rete finte) |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -444,6 +445,21 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   `40-configurazione.jsx` sono solo il ripiego. Le prove che hanno bisogno
   di un blocco, di un luogo o di un campo se li danno da sole (`apri({
   blocco })`, `luogoDiProva()`, `campoDiProva()`).
+- **Cosa sblocca il Pro, e come si paga** (28 settembre). Meteo live, «Chi
+  fa cosa», regole, dotazioni, archivio, foto degli scontrini nel cloud, e
+  più di un campo gratuito attivo alla volta. **Mai i conti**: una prova
+  vieta che presenze, spese, quote e saldi entrino in `FUNZIONI_PRO`. Senza
+  Pro quello che c'è si legge (le regole scritte restano), non si scrive.
+  Si paga una tantum per un campo (fino a tre mesi dopo la fine) o con
+  l'abbonamento annuale del capogruppo, **solo dall'app Android** (Google
+  Play Billing): fuori si dice dove, senza tasti finti. Il Pro lo accende
+  solo il server (`functions/`), e prima di consumare un acquisto l'app
+  aspetta che il server abbia detto sì.
+- **Il meteo è del capogruppo** (28 settembre). Il luogo sta nella stanza
+  (`rooms/<codice>.luogo`), si sceglie per nome (geocoding di Open-Meteo) o
+  incollando un link di Google Maps, e la quota si corregge a mano: il
+  meteo del paese a valle non è quello del prato. `window.CAMP_LOCATION` la
+  riscrive il disegno, come `L` e le date.
 - **Importazione, ripristino di emergenza e chiusura del campo stanno in
   modalità tecnica.** Non modificano i dati: li RIMPIAZZANO, e si portano
   via i blocchi insieme al resto. Erano le ultime tre strade aperte a

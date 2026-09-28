@@ -2012,6 +2012,12 @@ const usaStanza = () => {
   const [trovatiLuogo, setTrovatiLuogo] = useState([]);
   const [candidatoLuogo, setCandidatoLuogo] = useState(null);
   const [erroreLuogo, setErroreLuogo] = useState('');
+  // Il negozio di Google Play: null finche' non si sa, 'assente' fuori
+  // dall'app Android, altrimenti il servizio con i prezzi nella valuta di chi
+  // compra (li dice Google, non si scrivono qui).
+  const [negozio, setNegozio] = useState(null);
+  const [acquistando, setAcquistando] = useState('');
+  const [esitoPro, setEsitoPro] = useState(null); // { fatto } | { errore }
   const [cercandoLuogo, setCercandoLuogo] = useState(false);
   // Chi aveva gia' una stanza prima che la home esistesse la ritrova in
   // elenco: la stanza salvata entra da sola.
@@ -2416,6 +2422,158 @@ const usaStanza = () => {
     chiudiLuogo();
     return true;
   };
+
+  // ---------- Comprare il Pro (Google Play Billing) ----------
+  // Dentro l'app Android (una TWA) la pagina ha la Digital Goods API, che
+  // parla con Google Play. Fuori — il browser, l'iPhone — non c'e': il Pro si
+  // compra dall'app Android, e poi vale per tutti, ovunque.
+  //
+  // L'ordine e' quello che fa perdere meno soldi a chi paga:
+  //   1. Google Play fa pagare e da' un gettone;
+  //   2. il server verifica il gettone con Google e accende il Pro;
+  //   3. SOLO ALLORA si «consuma» l'acquisto una tantum (cosi' si puo'
+  //      ricomprare per un altro campo) e si dice a Play che e' andata.
+  // Se il 2 cade (la linea, soprattutto), l'acquisto resta pagato e non
+  // consumato: al prossimo giro lo si ritrova (riprendiAcquisti) e si
+  // riprova. Il server risponde di si' anche la seconda volta.
+  const utenteOra = () => window.AuthCloud && window.AuthCloud.utente && window.AuthCloud.utente() || null;
+  const concludi = async (servizio, prodotto, token, ripresa) => {
+    const P = window.Stanza.PRODOTTI_PRO;
+    // L'abbonamento e' della persona, non di un campo: il codice non serve.
+    const richiesta = {
+      token,
+      prodotto
+    };
+    if (prodotto === P.campo) richiesta.codice = stanza.codice;
+    const r = await SC().attivaPro(richiesta);
+    // Un gettone gia' registrato, ritrovato fra gli acquisti di questo
+    // telefono, e' nostro e gia' concesso: si consuma e basta.
+    const giaNostro = !!ripresa && r && r.motivo === 'gettone-gia-usato';
+    if (r && (r.ok || giaNostro) && prodotto === P.campo) {
+      try {
+        await servizio.consume(token);
+      } catch (e) {/* si riprova al prossimo giro */}
+    }
+    return r || {
+      ok: false,
+      motivo: 'non-riuscito'
+    };
+  };
+  const compraPro = async prodotto => {
+    if (!stanza || !negozio || negozio === 'assente' || acquistando) return;
+    setEsitoPro(null);
+    setAcquistando(prodotto);
+    let risposta = null;
+    try {
+      // Il totale lo decide Google, non questa richiesta: si passa zero,
+      // come dice la documentazione di Chrome per Play Billing.
+      const richiesta = new PaymentRequest([{
+        supportedMethods: window.Stanza.PLAY_BILLING,
+        data: {
+          sku: prodotto
+        }
+      }], {
+        total: {
+          label: 'Total',
+          amount: {
+            currency: 'EUR',
+            value: '0'
+          }
+        }
+      });
+      risposta = await richiesta.show();
+      const token = risposta.details && risposta.details.purchaseToken;
+      const r = await concludi(negozio.servizio, prodotto, token);
+      await risposta.complete(r.ok ? 'success' : 'fail');
+      if (r.ok) {
+        setEsitoPro({
+          fatto: 'pro.attivato'
+        });
+        await aggiornaCampi(utenteOra());
+      } else {
+        setEsitoPro({
+          errore: window.Stanza.erroreDelPro(r.motivo)
+        });
+      }
+    } catch (e) {
+      // Chi chiude la finestra di Google senza pagare non ha sbagliato
+      // niente: nessun messaggio. Il resto si dice.
+      if (risposta) {
+        try {
+          await risposta.complete('fail');
+        } catch (e2) {/* niente */}
+      }
+      if (!(e && e.name === 'AbortError')) setEsitoPro({
+        errore: 'pro.errore.nonRiuscito'
+      });
+    } finally {
+      setAcquistando('');
+    }
+  };
+  // Acquisti pagati ma non conclusi (il server non aveva risposto): Google li
+  // tiene in elenco finche' non si consumano. Si ritrovano aprendo il campo.
+  const riprendiAcquisti = async servizio => {
+    let rimasti = [];
+    try {
+      rimasti = await servizio.listPurchases();
+    } catch (e) {
+      return;
+    }
+    const P = window.Stanza.PRODOTTI_PRO;
+    let qualcosa = false;
+    for (const a of rimasti || []) {
+      if (a.itemId !== P.campo && a.itemId !== P.anno) continue;
+      const r = await concludi(servizio, a.itemId, a.purchaseToken, true);
+      if (r.ok) qualcosa = true;
+    }
+    if (qualcosa) {
+      setEsitoPro({
+        fatto: 'pro.attivato'
+      });
+      await aggiornaCampi(utenteOra());
+    }
+  };
+  // Il negozio si apre per il capogruppo di un campo, una volta per campo.
+  const codiceNegozio = stanza ? stanza.codice : '';
+  useEffect(() => {
+    if (!codiceNegozio || !capogruppo || !window.Stanza) return undefined;
+    let vivo = true;
+    (async () => {
+      if (typeof window.getDigitalGoodsService !== 'function') {
+        setNegozio('assente');
+        return;
+      }
+      try {
+        const servizio = await window.getDigitalGoodsService(window.Stanza.PLAY_BILLING);
+        if (!servizio) {
+          if (vivo) setNegozio('assente');
+          return;
+        }
+        const P = window.Stanza.PRODOTTI_PRO;
+        const prezzi = {};
+        try {
+          (await servizio.getDetails([P.campo, P.anno])).forEach(d => {
+            prezzi[d.itemId] = new Intl.NumberFormat(L.locale, {
+              style: 'currency',
+              currency: d.price.currency
+            }).format(Number(d.price.value));
+          });
+        } catch (e) {/* senza prezzi i tasti ci sono lo stesso: Google li dira' pagando */}
+        if (!vivo) return;
+        setNegozio({
+          servizio,
+          prezzi
+        });
+        await riprendiAcquisti(servizio);
+      } catch (e) {
+        if (vivo) setNegozio('assente');
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codiceNegozio, capogruppo]);
   const nominaAiutante = async uid => {
     if (!stanza || !uid) return;
     const fatto = await prova(c => c.impostaStanza(stanza.codice, {
@@ -2451,6 +2609,10 @@ const usaStanza = () => {
     puoCreare,
     regole,
     capogruppo,
+    negozio,
+    acquistando,
+    esitoPro,
+    compraPro,
     aiutante,
     vice,
     salvaRegole,
@@ -8615,7 +8777,27 @@ const schedaImpostazioni = ({
   key: f
 }, "\xB7 ", L.t(NOME_PRO[f])))), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-500 leading-snug"
-}, L.t('pro.maiIConti')))), stanzaStato.capogruppo && (() => {
+}, L.t('pro.maiIConti')), stanzaStato.capogruppo && stanzaStato.negozio === 'assente' && /*#__PURE__*/React.createElement("p", {
+  "data-pro-solo-android": true,
+  className: "text-minuto text-bosco leading-snug"
+}, L.t('pro.soloAndroid')), stanzaStato.capogruppo && stanzaStato.negozio && stanzaStato.negozio !== 'assente' && /*#__PURE__*/React.createElement("div", {
+  className: "space-y-2 pt-1"
+}, [[window.Stanza.PRODOTTI_PRO.campo, 'pro.compraCampo', 'pro.compraCampoSpiega'], [window.Stanza.PRODOTTI_PRO.anno, 'pro.compraAnno', 'pro.compraAnnoSpiega']].map(([sku, etichetta, spiega]) => /*#__PURE__*/React.createElement("div", {
+  key: sku
+}, /*#__PURE__*/React.createElement("button", {
+  "data-compra": sku,
+  onClick: () => stanzaStato.compraPro(sku),
+  disabled: !!stanzaStato.acquistando,
+  className: bottone(sku === window.Stanza.PRODOTTI_PRO.campo ? 'avviso' : 'secondario', 'normale', 'w-full')
+}, stanzaStato.acquistando === sku ? '…' : L.t(etichetta, stanzaStato.negozio.prezzi[sku] || '')), /*#__PURE__*/React.createElement("p", {
+  className: "text-minuto text-gray-500 leading-snug mt-1"
+}, L.t(spiega)))))), stanzaStato.esitoPro && stanzaStato.esitoPro.fatto && /*#__PURE__*/React.createElement("p", {
+  "data-pro-esito": true,
+  className: "text-piccolo font-bold text-bosco leading-snug"
+}, L.t(stanzaStato.esitoPro.fatto)), stanzaStato.esitoPro && stanzaStato.esitoPro.errore && /*#__PURE__*/React.createElement("p", {
+  "data-pro-esito": true,
+  className: "text-piccolo font-bold text-red-700 leading-snug"
+}, L.t(stanzaStato.esitoPro.errore))), stanzaStato.capogruppo && (() => {
   const io = account.utente && account.utente.uid;
   const altri = stanzaStato.membri.filter(m => m.uid !== io);
   const nomeDi = uid => {

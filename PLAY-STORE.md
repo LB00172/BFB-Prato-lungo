@@ -16,7 +16,8 @@ sistemati, con le prove viste rosse sabotando:
 | 1 | Blocco con password | **Spento** nell'app pubblica (`APP_LOCK = null`). Protegge il codice d'ingresso del campo, e le regole Firestore custodiscono i dati |
 | 2 | Modalità tecnica | **Del capogruppo** del campo aperto, senza password. Un membro non la accende, nemmeno se sul suo telefono era accesa (`e2e/capogruppo`). È una protezione dell'interfaccia, non delle regole: i dati li scrive qualunque redattore |
 | 3 | Date del campo | **Dalla stanza**: il calendario si apre sul primo giorno del campo aperto (`e2e/periodo`) |
-| 4 | Meteo | **Spento** finché il capogruppo non potrà scegliere il luogo del campo: il riquadro non compare |
+| 4 | Meteo | **Del Pro.** Il luogo lo sceglie il capogruppo — per nome, o incollando un link di Google Maps — e corregge la quota (`e2e/luogo`). Senza Pro il meteo non si scarica |
+| — | Il Pro | **Si compra**, dall'app Android: una tantum per un campo o abbonamento annuale (§ 6). Cosa sblocca è in una tabella sola, `Stanza.FUNZIONI_PRO` (`e2e/pro`, `e2e/acquisto`, `unita/server-pro`) |
 | — | Tracce della Brigata | Tolte «A Prato Lungo non c'è linea», il meteo «di Pereto» nella guida, l'esempio «Prato Lungo 2026», i file `bandone-…`. Una guardia vieta che rientrino |
 | — | Spia «app scaricata sul telefono» | Era **sempre rossa** nell'app pubblica: cercava la cache col nome della Brigata. Ora la riconosce dalla forma del nome |
 | — | Manifest | Aggiunti `id`, `scope`, descrizione, lingua e categoria |
@@ -231,8 +232,8 @@ sullo store: il revisore ci rientra a ogni aggiornamento.
 - «Gli utenti possono interagire o scambiarsi contenuti?» **Sì**: dentro un
   campo i membri vedono nomi, spese, foto e testi degli altri membri.
 - «L'app condivide la posizione dell'utente con altri?» **No**.
-- «L'app consente acquisti di beni digitali?» **No** (il Pro non c'è ancora:
-  quando ci sarà, questa risposta cambia).
+- «L'app consente acquisti di beni digitali?» **Sì**: il Pro, venduto con
+  Google Play Billing (§ 6).
 
 ### Pubblico di destinazione
 - Fasce d'età: **18 anni e oltre**.
@@ -255,7 +256,7 @@ ma non muove denaro e non si collega a banche.
 | Tutti i dati sono criptati in transito? | **Sì** (HTTPS e Firebase) |
 | Gli utenti possono chiedere la cancellazione dei dati? | **Sì** |
 | URL per la cancellazione dell'account | `https://<indirizzo-dell-app>/cancella-account.html` |
-| Dati condivisi con terze parti | **Nessuno.** Firebase (Google) e Vercel trattano i dati per conto dell'app: per Google sono «fornitori di servizi», non condivisione. Open-Meteo riceve solo le coordinate del campo, non dati degli utenti. WhatsApp riceve solo quello che l'utente sceglie di condividere. |
+| Dati condivisi con terze parti | **Nessuno.** Firebase (Google) e Vercel trattano i dati per conto dell'app: per Google sono «fornitori di servizi», non condivisione. Open-Meteo riceve solo le coordinate del campo e, se il capogruppo cerca il luogo per nome, quel nome: non dati degli utenti. Google Play fa pagare il Pro: è Google, e per Google è un fornitore di servizi. WhatsApp riceve solo quello che l'utente sceglie di condividere. |
 
 **Tipi di dati raccolti** — per tutti: *raccolti*, *non condivisi*, trattamento **non facoltativo** salvo dove scritto, finalità **Funzionalità dell'app** (e **Gestione dell'account** dove indicato).
 
@@ -267,6 +268,7 @@ ma non muove denaro e non si collega a banche.
 | Informazioni finanziarie | **Altre informazioni finanziarie** | IBAN o PayPal, se l'utente li inserisce per farsi rimborsare. **Facoltativo** |
 | Foto e video | **Foto** | foto degli scontrini e della galleria del campo. **Facoltativo** |
 | Attività nelle app | **Altri contenuti generati dagli utenti** | spese, presenze, menù, liste, compiti, regole |
+| Informazioni finanziarie | **Cronologia acquisti** | chi ha comprato il Pro, per quale campo, e il numero d'ordine di Google (mai la carta: la vede solo Google). Solo per chi compra. Funzionalità dell'app |
 
 **Non** raccolti: posizione, contatti, messaggi, cronologia di navigazione,
 dati di salute, audio, file, calendario, identificativi del dispositivo per
@@ -308,3 +310,67 @@ Poi, in Play Console → Configurazione → Integrità dell'app, copi
 l'**impronta SHA-256 del certificato di firma dell'app** e me la passi: la
 metto in `/.well-known/assetlinks.json`, così l'app si apre senza la barra
 del browser. È l'ultimo passo prima di caricare il pacchetto definitivo.
+
+
+---
+
+## 6. Il Pro: i prodotti e il server
+
+Il codice c'è (`functions/`, `stanza.js`, `firestore.rules`). Queste sono le
+cose che si fanno a mano, una volta, **in quest'ordine**. Nessuna chiede una
+chiave di servizio: il server usa l'identità che Google gli dà, e quella si
+autorizza in Play Console (passo 4).
+
+1. **Firebase → piano Blaze** (progetto `camp-ops`). Le funzioni lo
+   richiedono. Metti subito un **avviso di budget** (es. 5 €/mese) in Google
+   Cloud → Fatturazione: con questi numeri non si esce dalla soglia gratuita,
+   ma un avviso costa niente.
+2. **Google Cloud → API e servizi → abilita «Google Play Android Developer
+   API»** nel progetto `camp-ops`.
+3. **Pubblica il server**, dalla cartella del repository:
+   `npx firebase deploy --only functions --project camp-ops`.
+   Al primo giro chiede `PACCHETTO_ANDROID`: il nome del pacchetto del § 5
+   (lo stesso, lettera per lettera). Crea tre funzioni a Torino
+   (`europe-west12`): `attivaPro`, `proAlCampoNuovo`, `notifichePlay`.
+4. **Play Console → Utenti e autorizzazioni → Invita** l'account di servizio
+   delle funzioni: `<numero-del-progetto>-compute@developer.gserviceaccount.com`
+   (il numero è in Firebase → Impostazioni progetto). Autorizzazioni a livello
+   di app: **Visualizza dati finanziari** e **Gestisci ordini e abbonamenti**.
+   Può volerci fino a un giorno prima che valga.
+5. **Play Console → Monetizza → Prodotti**:
+   - *Prodotti in-app* → `pro_campo` — «Pro per un campo». Prezzo tuo
+     (ROADMAP § 7 suggerisce 4–8 €).
+   - *Abbonamenti* → `pro_anno` — «Camp Ops Pro, un anno», con un piano base
+     **annuale a rinnovo automatico** (ROADMAP § 7: 10–15 €).
+   Gli identificativi vanno scritti **esattamente così**: sono quelli che
+   l'app vende e che il server verifica, e una prova controlla che i due
+   combacino.
+6. **Notifiche in tempo reale** (rinnovi, disdette, rimborsi): Play Console →
+   Monetizza → Configurazione della monetizzazione → argomento
+   `projects/camp-ops/topics/play-billing` (lo crea il passo 3). In Google
+   Cloud → Pub/Sub → quell'argomento → Autorizzazioni, dai **Publisher** a
+   `google-play-developer-notifications@system.gserviceaccount.com`. Poi
+   «Invia notifica di prova».
+7. **Regole Firestore**: incolla `firestore.rules` in console (le foto degli
+   scontrini nel cloud sono del Pro, e le regole lo sanno). Provate con
+   `npm run regole`: 101 verifiche.
+8. **Il pacchetto Android con Play Billing**: in PWABuilder spunta *Google
+   Play Billing*; con Bubblewrap, in `twa-manifest.json`,
+   `"features": { "playBilling": { "enabled": true } }` e
+   `"alphaDependencies": { "enabled": true }`.
+9. **Provalo senza pagare**: Play Console → Configurazione → Test delle
+   licenze → aggiungi il tuo indirizzo. Dal test chiuso compri davvero, con
+   la carta di prova, e il Pro arriva come arriverà a tutti.
+
+**Cosa succede quando qualcuno paga.** Google fa pagare e dà all'app un
+gettone. L'app lo manda al server (`attivaPro`), che chiede a Google se è
+pagato, controlla che chi chiede sia il capogruppo di quel campo, scrive il
+Pro nella stanza e conferma l'acquisto a Google. Solo dopo, l'app «consuma»
+l'acquisto una tantum: così si può ricomprare per un altro campo. Se in
+mezzo cade la linea, l'acquisto resta pagato e in sospeso: riaprendo il
+campo l'app lo ritrova e finisce il lavoro, senza far pagare due volte.
+
+**Quanto dura.** Una tantum: fino a **tre mesi dopo la fine del campo**
+(se il campo è già finito, tre mesi da oggi). Abbonamento: tutti i campi di
+cui si è capogruppo, anche quelli creati dopo, finché è pagato. Passando il
+campo all'aiutante il Pro si spegne: l'ha pagato chi se ne va.

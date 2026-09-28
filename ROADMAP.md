@@ -350,15 +350,21 @@ Quello che viene dopo, deciso con Lorenzo il 28 settembre:
       funzioni Pro fanno una domanda sola, `stanzaStato.pro`
       (`Stanza.campoPro`), che riceve la stanza e non guarda mai la persona.
       Nella home un segno «Pro» sta accanto ai campi Pro.
-- [ ] **Quello che manca al Pro**: il pagamento (Google Play Billing) e il
-      server che, verificato l'acquisto, scrive `pro` nella stanza con la
-      chiave di servizio — una Cloud Function, quindi il piano Blaze. E un
-      limite da sapere: `stanzaStato.pro` si legge dall'elenco sul telefono,
-      quindi chi smonta l'app può falsarlo **per sé**. Per quello che il
-      telefono fa da solo (un export) è il prezzo di ogni app web; quello che
-      costa davvero (foto nel cloud, spazio) deve deciderlo una regola
-      Firestore che legge la stanza vera, e va scritto insieme alla funzione
-      Pro che lo usa.
+- [x] **Il pagamento e cosa sblocca** — fatto il 28 settembre, deciso da
+      Lorenzo. Si paga **una tantum per un campo** (vale fino a tre mesi dopo
+      la fine) oppure con l'**abbonamento annuale** del capogruppo (tutti i
+      suoi campi, anche quelli di dopo, finché paga), **solo dall'app
+      Android** con Google Play Billing. Il Pro sblocca meteo live, «Chi fa
+      cosa», regole, dotazioni, archivio, foto degli scontrini nel cloud e
+      un secondo campo gratuito attivo: una tabella sola,
+      `Stanza.FUNZIONI_PRO`, e **mai i conti**. Il server è in
+      `functions/` (verifica con Google, un gettone vale una volta, segue
+      rinnovi e rimborsi), senza chiavi di servizio. Quello che costa davvero
+      — le foto nel cloud — lo decide una regola Firestore che legge la stanza
+      vera (`proAttivo`, con `scade` scritto dal server). Il resto si può
+      falsare **per sé** smontando l'app: è il prezzo di ogni app web, e non
+      tocca gli altri. I passi da fare a mano (Blaze, prodotti, account di
+      servizio in Play Console) sono in `PLAY-STORE.md` § 6.
 
 **Cosa manca al § 2 e al § 9:** il QR, l'invito monouso, e la migrazione dei
 dati del 2026. E, prima di tutto, incollare le regole nuove in console — cosa

@@ -14,6 +14,7 @@
 // sembri sbagliata.
 const path = require('path');
 const { ok, fine } = require('../lib/app');
+const RADICE = path.resolve(__dirname, '..', '..');
 require(path.resolve(__dirname, '..', '..', 'stanza.js'));
 const S = (typeof globalThis !== 'undefined' && globalThis.Stanza) || null;
 
@@ -561,6 +562,23 @@ if (!S) { fine(); }
       ok('ma se il suo Pro è scaduto sì', S.puoCreareCampo([scaduto], oggi) === false);
       ok('i campi degli altri non contano: partecipare è illimitato',
         S.puoCreareCampo([Object.assign({}, gratis, { ruolo: 'redattore' }), Object.assign({}, gratis, { ruolo: 'lettore' })], oggi) === true);
+    }
+
+    // ---------- Comprare il Pro: l'app e il server parlano della stessa cosa ----------
+    {
+      const fs = require('fs');
+      const server = require(path.join(RADICE, 'functions', 'pro.js'));
+      ok(`i prodotti che l'app vende sono quelli che il server verifica (${JSON.stringify(S.PRODOTTI_PRO)})`,
+        JSON.stringify(S.PRODOTTI_PRO) === JSON.stringify(server.PRODOTTI));
+      // Ogni motivo che il server puo' dare ha una frase: letti dal sorgente,
+      // non da un elenco ricopiato qui — un motivo nuovo senza frase diventa
+      // rosso da solo.
+      const sorgente = fs.readFileSync(path.join(RADICE, 'functions', 'pro.js'), 'utf8');
+      const motivi = new Set([...sorgente.matchAll(/(?:errore\(|motivo: )'([a-z-]+)'/g)].map((m) => m[1]));
+      const senza = [...motivi].filter((m) => !(m in S.ERRORI_PRO));
+      ok(`ogni motivo del server ha la sua frase (${motivi.size} motivi${senza.length ? ' — SENZA: ' + senza.join(', ') : ''})`,
+        motivi.size >= 10 && senza.length === 0);
+      ok('un motivo mai visto ha comunque una frase', S.erroreDelPro('boh') === 'pro.errore.nonRiuscito');
     }
 
     // ---------- Il luogo del campo, per il meteo ----------

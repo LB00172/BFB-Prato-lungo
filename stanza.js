@@ -604,6 +604,37 @@
     return campoPro(stanza, oggi);
   }
 
+  // ---------- Comprare il Pro ----------
+  // I prodotti di Play Console. Sono gli stessi di functions/pro.js, e una
+  // prova lo pretende: un nome diverso vorrebbe dire che l'app vende una
+  // cosa e il server ne verifica un'altra — pagato, e Pro mai arrivato.
+  const PRODOTTI_PRO = { campo: 'pro_campo', anno: 'pro_anno' };
+  // Il servizio di pagamento di Google Play, per la Digital Goods API.
+  const PLAY_BILLING = 'https://play.google.com/billing';
+
+  // Il server dice perche' no con un codice (functions/pro.js); la frase la
+  // sceglie il disegno. Codici diversi con la stessa cosa da dire a chi
+  // guarda finiscono sulla stessa frase: a lui interessa cosa fare, non
+  // quale controllo e' caduto.
+  const ERRORI_PRO = {
+    'pagamento-in-attesa': 'pro.errore.inAttesa',
+    'acquisto-annullato': 'pro.errore.annullato',
+    'acquisto-sconosciuto': 'pro.errore.nonTrovato',
+    'abbonamento-scaduto': 'pro.errore.abbonamento',
+    'abbonamento-non-attivo': 'pro.errore.abbonamento',
+    'prodotto-sbagliato': 'pro.errore.nonTrovato',
+    'prodotto-sconosciuto': 'pro.errore.nonTrovato',
+    'gettone-gia-usato': 'pro.errore.giaUsato',
+    'non-capogruppo': 'pro.errore.nonCapogruppo',
+    'stanza-inesistente': 'pro.errore.nonRiuscito',
+    'richiesta-incompleta': 'pro.errore.nonRiuscito',
+    'non-autenticato': 'pro.errore.account',
+    'senza-linea': 'pro.errore.senzaLinea',
+  };
+  function erroreDelPro(motivo) {
+    return ERRORI_PRO[motivo] || 'pro.errore.nonRiuscito';
+  }
+
   // Un campo gratuito attivo alla volta, per chi lo crea. Attivo vuol dire
   // non ancora finito (senza date, si conta: non si sa quando finisce).
   // I campi Pro non contano, e nemmeno quelli di cui si e' solo membri:
@@ -649,6 +680,10 @@
     aggiornaCampi,
     campoPro,
     FUNZIONI_PRO,
+    PRODOTTI_PRO,
+    PLAY_BILLING,
+    ERRORI_PRO,
+    erroreDelPro,
     sbloccata,
     campiGratisAttivi,
     puoCreareCampo,
@@ -938,5 +973,25 @@
     return vice;
   }
 
-  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, statoDi, togliMe, impostaStanza, lasciaAllAiutante, motivo };
+  // Il Pro dopo un acquisto su Google Play: il gettone va al server, che lo
+  // verifica con Google e accende il Pro nella stanza (functions/index.js,
+  // attivaPro). Da qui non si scrive niente: le regole lo vietano. Il
+  // risultato e' { ok, fino } oppure { ok: false, motivo }, mai un'eccezione:
+  // chi chiama deve poter dire a Play «non e' andata» (complete('fail')).
+  async function attivaPro(richiesta) {
+    try {
+      await init();
+      const f = await sdk();
+      const fn = await import(SDK + 'firebase-functions.js');
+      const chiama = fn.httpsCallable(fn.getFunctions(f.getApp(), 'europe-west12'), 'attivaPro');
+      return (await chiama(richiesta)).data;
+    } catch (e) {
+      const dettaglio = e && e.details && e.details.motivo;
+      if (dettaglio) return { ok: false, motivo: dettaglio };
+      const codice = String((e && (e.code || e.message)) || '');
+      return { ok: false, motivo: /unavailable|network|deadline/.test(codice) ? 'senza-linea' : 'non-riuscito' };
+    }
+  }
+
+  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, statoDi, togliMe, impostaStanza, lasciaAllAiutante, motivo, attivaPro };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

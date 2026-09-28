@@ -217,7 +217,36 @@ const schedaImpostazioni = ({
                   {window.Stanza.FUNZIONI_PRO.map((f) => <li key={f}>· {L.t(NOME_PRO[f])}</li>)}
                 </ul>
                 <p className="text-minuto text-gray-500 leading-snug">{L.t('pro.maiIConti')}</p>
+                {/* Comprarlo: solo il capogruppo, e solo dall'app Android —
+                    Google Play Billing. Fuori si dice dove, senza tasti finti. */}
+                {stanzaStato.capogruppo && stanzaStato.negozio === 'assente' && (
+                  <p data-pro-solo-android className="text-minuto text-bosco leading-snug">{L.t('pro.soloAndroid')}</p>
+                )}
+                {stanzaStato.capogruppo && stanzaStato.negozio && stanzaStato.negozio !== 'assente' && (
+                  <div className="space-y-2 pt-1">
+                    {[
+                      [window.Stanza.PRODOTTI_PRO.campo, 'pro.compraCampo', 'pro.compraCampoSpiega'],
+                      [window.Stanza.PRODOTTI_PRO.anno, 'pro.compraAnno', 'pro.compraAnnoSpiega'],
+                    ].map(([sku, etichetta, spiega]) => (
+                      <div key={sku}>
+                        <button
+                          data-compra={sku}
+                          onClick={() => stanzaStato.compraPro(sku)}
+                          disabled={!!stanzaStato.acquistando}
+                          className={bottone(sku === window.Stanza.PRODOTTI_PRO.campo ? 'avviso' : 'secondario', 'normale', 'w-full')}
+                        >{stanzaStato.acquistando === sku ? '…' : L.t(etichetta, stanzaStato.negozio.prezzi[sku] || '')}</button>
+                        <p className="text-minuto text-gray-500 leading-snug mt-1">{L.t(spiega)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
+            )}
+            {stanzaStato.esitoPro && stanzaStato.esitoPro.fatto && (
+              <p data-pro-esito className="text-piccolo font-bold text-bosco leading-snug">{L.t(stanzaStato.esitoPro.fatto)}</p>
+            )}
+            {stanzaStato.esitoPro && stanzaStato.esitoPro.errore && (
+              <p data-pro-esito className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.esitoPro.errore)}</p>
             )}
           </div>
           {/* L'aiutante: il capogruppo lo nomina fra chi c'e', e se deve
