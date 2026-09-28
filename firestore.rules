@@ -67,6 +67,16 @@ service cloud.firestore {
       return membro(stanza) && stanzaDoc(stanza).proprietario == request.auth.uid;
     }
 
+    // Il Pro del campo, acceso e non scaduto. `scade` e' un timestamp che
+    // scrive il server insieme a `fino` (la data 'AAAA-MM-GG' che legge
+    // l'app): le regole con una data scritta come testo non sanno fare
+    // confronti, con un timestamp si'. Senza `scade` il Pro non scade.
+    function proAttivo(stanza) {
+      let p = stanzaDoc(stanza).get('pro', null);
+      return p != null && p.get('attivo', false) == true
+        && (!('scade' in p) || request.time < p.scade);
+    }
+
     function membroDi(stanza, uid) {
       return exists(/databases/$(database)/documents/rooms/$(stanza)/members/$(uid));
     }
@@ -178,9 +188,26 @@ service cloud.firestore {
       // ---------- I dati del campo ----------
       // Presenze, spese, menu', scontrini, foto: tutto quello che un campo
       // mette insieme. Il lettore guarda, il redattore scrive.
+      //
+      // Si legge tutto, a qualunque profondita'. Si scrive per forma, perche'
+      // le forme sono due e basta (firebase-sync.js, percorso()): lo stato
+      // del campo, `dati/stato`, e i documenti delle sue raccolte,
+      // `dati/stato/<raccolta>/<id>`. Una forma diversa non si scrive: non
+      // la usa nessuno, e una strada non prevista non nasce aperta.
       match /dati/{resto=**} {
         allow read: if membro(stanza);
+      }
+      match /dati/{documento} {
         allow write: if modifica(stanza);
+      }
+      // Le foto degli scontrini nel cloud sono del Pro (Stanza.FUNZIONI_PRO,
+      // 'fotoCloud'): sono quello che costa davvero. Metterne una nuova o
+      // riscriverla vuole il campo Pro; toglierla no — togliere una spesa
+      // toglie anche il suo scontrino, e un campo non ha pagato per non poter
+      // fare ordine. Tutte le altre raccolte si scrivono come prima.
+      match /dati/{documento}/{raccolta}/{id} {
+        allow create, update: if modifica(stanza) && (raccolta != 'receipts' || proAttivo(stanza));
+        allow delete: if modifica(stanza);
       }
     }
 

@@ -16,7 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, collection, getDocs } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, collection, getDocs, Timestamp } = require('firebase/firestore');
 
 const RADICE = path.join(__dirname, '..', '..');
 const CONDIVISO = 'campo@brigatabandone.it';
@@ -342,6 +342,50 @@ const permesso = async (msg, azione) => {
     () => setDoc(stanzaP(carla), { dotazioni: [] }, { merge: true }));
   await permesso('e un membro le legge', () => getDoc(stanzaP(carla)));
   await negato('un estraneo non le legge', () => getDoc(stanzaP(nonVerificato)));
+
+  console.log('\n11) Le foto degli scontrini nel cloud sono del Pro');
+  // Sono quello che costa davvero: spazio, e letture per ogni telefono del
+  // campo. Nell'app il tasto non c'e' (Stanza.sbloccata('fotoCloud')), ma
+  // l'app si smonta: qui sta la serratura. Il resto del campo — lo stato, il
+  // meteo condiviso, gli archivi — si scrive come prima, Pro o no: si limita
+  // la quantita', mai la correttezza.
+  const giorno = 24 * 60 * 60 * 1000;
+  await env.withSecurityRulesDisabled(async (c) => {
+    const db = c.firestore();
+    await setDoc(doc(db, 'rooms/FOTOGRAT'), { nome: 'Gratis', proprietario: 'anna' });
+    await setDoc(doc(db, 'rooms/FOTOGRAT/members/anna'), { ruolo: 'proprietario', nome: 'Anna' });
+    await setDoc(doc(db, 'rooms/FOTOGRAT/members/bruno'), { ruolo: 'redattore', nome: 'Bruno' });
+    await setDoc(doc(db, 'rooms/FOTOGRAT/members/carla'), { ruolo: 'lettore', nome: 'Carla' });
+    await setDoc(doc(db, 'rooms/FOTOGRAT/dati/stato/receipts/vecchia'), { data: 'x' });
+  });
+  const scontrino = (db, id) => doc(db, 'rooms/FOTOGRAT/dati/stato/receipts/' + (id || 'p1'));
+  // updateDoc e non setDoc con merge: il merge fonde anche DENTRO la mappa,
+  // e la scadenza del passo prima resterebbe li' senza che nessuno l'abbia
+  // scritta.
+  const pro = (p) => env.withSecurityRulesDisabled((c) => updateDoc(doc(c.firestore(), 'rooms/FOTOGRAT'), { pro: p }));
+  await negato('in un campo gratuito la foto di uno scontrino non va nel cloud', () => setDoc(scontrino(bruno), { data: 'x' }));
+  await negato('nemmeno quella del capogruppo', () => setDoc(scontrino(anna), { data: 'x' }));
+  await permesso('ma lo stato del campo si scrive come sempre', () => setDoc(doc(bruno, 'rooms/FOTOGRAT/dati/stato'), { roba: 1 }));
+  await permesso('e anche il meteo condiviso', () => setDoc(doc(bruno, 'rooms/FOTOGRAT/dati/stato/meta/weather'), { roba: 1 }));
+  await permesso('e una foto che c\'era si toglie: togliere una spesa toglie il suo scontrino',
+    () => deleteDoc(scontrino(bruno, 'vecchia')));
+  await permesso('e le foto degli altri si guardano', () => getDocs(collection(bruno, 'rooms/FOTOGRAT/dati/stato/receipts')));
+
+  await pro({ attivo: true, fino: '2999-12-31', scade: Timestamp.fromMillis(Date.now() + 30 * giorno) });
+  await permesso('nel campo Pro la foto va nel cloud', () => setDoc(scontrino(bruno), { data: 'x' }));
+  await negato('ma non la scrive chi il campo lo può solo guardare', () => setDoc(scontrino(carla, 'p2'), { data: 'x' }));
+
+  await pro({ attivo: true, fino: '2000-01-01', scade: Timestamp.fromMillis(Date.now() - giorno) });
+  await negato('scaduto il Pro, le foto nuove non vanno più nel cloud', () => setDoc(scontrino(bruno, 'p3'), { data: 'x' }));
+  await negato('e quelle che ci sono non si riscrivono', () => setDoc(scontrino(bruno), { data: 'y' }));
+  await permesso('ma si tolgono', () => deleteDoc(scontrino(bruno)));
+
+  await pro({ attivo: false });
+  await negato('un Pro spento non vale', () => setDoc(scontrino(bruno, 'p4'), { data: 'x' }));
+  // Senza scadenza vale per sempre: e' il Pro che i campi avevano prima che
+  // la scadenza esistesse (e quello delle prove qui sopra).
+  await pro({ attivo: true });
+  await permesso('un Pro acceso senza scadenza vale', () => setDoc(scontrino(bruno, 'p5'), { data: 'x' }));
 
   console.log('\n7) Quello che non e\' previsto e\' chiuso');
   // Una collezione nuova non deve nascere aperta per distrazione.
