@@ -83,7 +83,7 @@ const { scontriniSalvati, fotoSalvate } = require('../lib/app');
   console.log('bottone di chiusura presente:', (await bottone.count()) > 0);
   await bottone.first().click();
   await p.waitForTimeout(300);
-  await p.fill('input[placeholder="Es. Prato Lungo 2026"]', 'Prato Lungo 2026');
+  await p.fill('input[placeholder="Es. Campo estivo 2027"]', 'Prato Lungo 2026');
 
   const [download] = await Promise.all([
     p.waitForEvent('download', { timeout: 10000 }).catch(() => null),

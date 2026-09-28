@@ -1,5 +1,14 @@
 // `eredita` e `cambiaCampo` arrivano da Radice (90-avvio): servono a cambiare
 // campo senza mescolare i dati di due campi (cassetti.js).
+// La cache dell'app, riconosciuta dalla forma del nome che le da' build.js
+// (marchio-impronta di dieci cifre), non dal marchio: si cercava
+// «brigata-bandone-», e nell'app pubblica — dove la cache si chiama
+// «camp-ops-…» — la spia «app scaricata sul telefono» restava rossa per sempre.
+const CACHE_APP = /^[a-z-]+-([0-9a-f]{10})$/;
+// Il nome dei file scaricati (backup, archivio), dal marchio: erano tutti
+// «bandone-…», anche nell'app pubblica.
+const NOME_FILE = String(BRAND.appTitle || 'campo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'campo';
+
 function App({ eredita, cambiaCampo } = {}) {
   // ---------- La lingua ----------
   // Dietro FEATURES.lingue finche' i dizionari non sono completi: mostrare
@@ -11,6 +20,10 @@ function App({ eredita, cambiaCampo } = {}) {
   // Si riassegna QUI, prima di qualunque disegno: e' cio' che fa vedere la
   // lingua nuova senza ricaricare (vedi il commento su "L" in 10-fondamenta).
   L = window.Lingue.crea(FEATURES.lingue ? lingua : window.Lingue.PREDEFINITA);
+  // Le date del campo aperto, per la stessa ragione di L: sono globali, ma le
+  // scrive il disegno — cosi' il calendario, i giorni del campo e il controllo
+  // «pronto per il campo» parlano del campo in cui si e' adesso.
+  aggiornaPeriodoCampo();
 
   const [locked, setLocked] = useState(() => !isUnlocked());
   const [lockReason, setLockReason] = useState('');
@@ -168,9 +181,16 @@ function App({ eredita, cambiaCampo } = {}) {
   const [datiOpen, setDatiOpen] = useState(false);
   // Modalità tecnica: attiva o no su QUESTO telefono. La scelta resta salvata,
   // così chi tiene i conti la accende una volta sola.
-  const [admin, setAdmin] = useState(() => {
+  const [adminScelto, setAdmin] = useState(() => {
     try { return localStorage.getItem(ADMIN_KEY) === '1'; } catch (e) { return false; }
   });
+  // Nell'app pubblica la modalita' tecnica e' del capogruppo del campo aperto
+  // (APP_ADMIN.capogruppo, firebase-config.js). Accesa su questo telefono ma
+  // entrati in un campo di cui non si e' capogruppo, semplicemente non vale:
+  // le azioni che rimpiazzano i dati di tutti non si vedono.
+  const adminDelCapogruppo = !!(window.APP_ADMIN && window.APP_ADMIN.capogruppo);
+  const adminPermesso = !adminDelCapogruppo || !stanzaStato.stanza || stanzaStato.capogruppo;
+  const admin = adminScelto && adminPermesso;
   const [tecnicaOpen, setTecnicaOpen] = useState(false);
   const [adminPwd, setAdminPwd] = useState('');
   const [adminErr, setAdminErr] = useState('');
@@ -191,6 +211,11 @@ function App({ eredita, cambiaCampo } = {}) {
     // dice a schermo: una serratura tolta di nascosto è peggio di una
     // serratura che non c'è.
     if (cfg && cfg.aperta) { accendiAdmin(); return; }
+    if (cfg && cfg.capogruppo) {
+      if (!adminPermesso) { setAdminErr(L.t('tecnica.soloCapogruppo')); return; }
+      accendiAdmin();
+      return;
+    }
     if (!cfg || !cfg.hash) { setAdminErr(L.t('tecnica.nonConfigurata')); return; }
     const im = await improntaPassword(adminPwd, cfg);
     if (im && im === cfg.hash) {
@@ -2252,7 +2277,7 @@ function App({ eredita, cambiaCampo } = {}) {
   };
 
   const exportData = () => {
-    downloadJson(`bandone-backup-${toDateStr(new Date())}.json`, {
+    downloadJson(`${NOME_FILE}-backup-${toDateStr(new Date())}.json`, {
       version: 6, exportedAt: new Date().toISOString(),
       members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi, compiti, receipts,
     });
@@ -2377,7 +2402,7 @@ function App({ eredita, cambiaCampo } = {}) {
     if (online && CS.archivePhotos) meta.photos = await CS.archivePhotos(id);
 
     // 2) Copia su file (l'unica che contiene anche le foto degli scontrini).
-    downloadJson(`bandone-archivio-${toDateStr(new Date())}.json`, { version: 6, archive: meta, ...state, receipts });
+    downloadJson(`${NOME_FILE}-archivio-${toDateStr(new Date())}.json`, { version: 6, archive: meta, ...state, receipts });
 
     // 3) Copia nel cloud, visibile anche dagli altri dispositivi.
     let cloudOk = false;
@@ -2417,7 +2442,7 @@ function App({ eredita, cambiaCampo } = {}) {
       if (CS && CS.isConnected && CS.isConnected()) state = await CS.getArchive(a.id);
       if (!state) { window.alert(L.t('archivio.serveLinea')); return; }
     }
-    downloadJson(`bandone-archivio-${a.id}.json`, { version: 6, archive: a, ...state });
+    downloadJson(`${NOME_FILE}-archivio-${a.id}.json`, { version: 6, archive: a, ...state });
   };
 
   const removeArchive = (a) => {
@@ -2450,7 +2475,7 @@ function App({ eredita, cambiaCampo } = {}) {
       try {
         if (window.caches) {
           const keys = await window.caches.keys();
-          cache = keys.some((k) => k.indexOf('brigata-bandone-') === 0);
+          cache = keys.some((k) => CACHE_APP.test(k));
         }
       } catch (e) { /* niente cache: resta false */ }
       if (vivo) setReadiness({ sw, cache });
@@ -2487,8 +2512,8 @@ function App({ eredita, cambiaCampo } = {}) {
     if (!window.caches) return;
     window.caches.keys()
       .then((keys) => {
-        const k = keys.find((x) => x.indexOf('brigata-bandone-') === 0);
-        if (k) setSwVersion(k.replace('brigata-bandone-', ''));
+        const k = keys.find((x) => CACHE_APP.test(x));
+        if (k) setSwVersion(k.replace(CACHE_APP, '$1'));
       })
       .catch(() => {});
   }, []);
@@ -3066,7 +3091,7 @@ function App({ eredita, cambiaCampo } = {}) {
         {/* ---------- IMPOSTAZIONI ---------- */}
         {scheda === 'impostazioni' && schedaImpostazioni({
           account, stanzaStato, admin, adminErr, adminPwd, annullaSync, askAlways, bloccoOpen, campData, campoInCorso, cloud, datiOpen, diagTick, entraAdmin, esciAdmin, esportaRegistro, exportData, fotoDove, goTo, isDark, isOnline, lingua, lockNow, logOpen, members, metaRef, photoCap, purchases, readyChecks, readyOk, receipts, setAdminErr, setAdminPwd, setBloccoOpen, setDatiOpen, setDiagTick, setLingua, setLogOpen, setLostSync, setPhotoCap, setTecnicaOpen, setTheme, swVersion, syncStateRef, tecnicaOpen, theme, toggleAskAlways, wipeLocal,
-          contiBloccati: !!bloccoConti(),
+          contiBloccati: !!bloccoConti(), adminPermesso,
         })}
       </main>
 

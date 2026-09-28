@@ -61,6 +61,7 @@ const schedaImpostazioni = ({
   toggleAskAlways,
   wipeLocal,
   contiBloccati,
+  adminPermesso,
 }) => (
   <div className="space-y-4">
     {/* Pronto per il campo.
@@ -706,10 +707,12 @@ const schedaImpostazioni = ({
                 casella vuota accanto a un tasto che entra comunque fa
                 pensare di aver dimenticato qualcosa. Al suo posto si dice
                 che la serratura non c'è, e cosa apre la porta. */}
-            {window.APP_ADMIN && window.APP_ADMIN.aperta ? (
+            {window.APP_ADMIN && window.APP_ADMIN.capogruppo && !adminPermesso ? (
+              <p data-tecnica="solo-capogruppo" className="text-piccolo text-gray-500 leading-snug">{L.t('tecnica.soloCapogruppo')}</p>
+            ) : window.APP_ADMIN && (window.APP_ADMIN.aperta || window.APP_ADMIN.capogruppo) ? (
               <>
                 <p className="text-piccolo font-bold text-[#8A5A2B] leading-snug">
-                  {L.t('tecnica.apertaNota')}
+                  {L.t(window.APP_ADMIN.capogruppo ? 'tecnica.capogruppoNota' : 'tecnica.apertaNota')}
                 </p>
                 <button
                   onClick={entraAdmin}

@@ -1,5 +1,5 @@
 // Cronologia acquisti su due livelli, Menù a righe, meteo condiviso.
-const { campoDiProva } = require('../lib/app');
+const { campoDiProva, luogoDiProva } = require('../lib/app');
 const { chromium } = require('playwright-core');
 // L'impronta del blocco si LEGGE da firebase-config.js (test/lib/app.js).
 // Ricopiata qui, il giorno in cui cambia la password del campo questa prova
@@ -39,6 +39,7 @@ const H = require('../lib/app').SBLOCCO;
   };
 
   await p.addInitScript(...campoDiProva());
+  await p.addInitScript(...luogoDiProva());
   await p.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
   await p.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
 

@@ -6,41 +6,32 @@ codice si incolla così com'è.
 
 ---
 
-## 0. Prima di tutto: cosa manca lato codice
+## 0. Lato codice: fatto il 28 settembre
 
-La verifica del codice ha trovato **quattro cose che bloccano la
-pubblicazione**, più due da decidere. Nessuna è un testo: vanno sistemate
-prima di caricare il primo pacchetto.
+La verifica del codice aveva trovato quattro blocchi e due decisioni. Sono
+sistemati, con le prove viste rosse sabotando:
 
-| # | Cosa | Perché blocca | Chi |
-| --- | --- | --- | --- |
-| 1 | **Il blocco con password è acceso** (`APP_LOCK` in `firebase-config.js`) | Chi scarica l'app trova una schermata «Password di prova di Camp Ops — chiedila a chi organizza» e non entra. Il revisore di Google nemmeno. | Claude, su tua conferma |
-| 2 | **La modalità tecnica è aperta a tutti** (`APP_ADMIN.aperta`) | Dietro ci sono importazione, ripristino e chiusura del campo: chiunque apra Impostazioni può svuotare il campo di tutti. Lo dice già il commento nel file: «non è una scelta da portarsi al Play Store». | **Da decidere** (vedi sotto) |
-| 3 | **Le date del campo sono fisse** (`CAMP_START`/`CAMP_END` = 11–16 agosto 2026, in `src/40-configurazione.jsx`) | Sono quelle della Brigata. Un gruppo che crea un campo per luglio 2027 apre il calendario sull'agosto 2026. Le date vere ci sono già: le mette chi crea la stanza. | Claude |
-| 4 | **Il meteo è sempre quello di Prato Lungo** (`CAMP_LOCATION` in `firebase-config.js`) | Ogni utente, ovunque campeggi, vede il meteo di Pereto. | **Da decidere** (vedi sotto) |
-| 5 | **Il contatto dell'informativa è vuoto** (`APP_CONFIG.privacy.contatto`) | Google lo chiede, e la pagina per cancellare l'account manda le richieste lì. | **Tu**: l'indirizzo con dominio |
-| 6 | **Il file che lega l'app al sito** (`/.well-known/assetlinks.json`) | Senza, l'app Android mostra la barra dell'indirizzo del browser in cima. Serve l'impronta della chiave che Google ti dà in Play Console, quindi si fa **dopo** aver creato l'app lì. | Claude, quando mi passi l'impronta |
+| # | Cosa | Com'è adesso |
+| --- | --- | --- |
+| 1 | Blocco con password | **Spento** nell'app pubblica (`APP_LOCK = null`). Protegge il codice d'ingresso del campo, e le regole Firestore custodiscono i dati |
+| 2 | Modalità tecnica | **Del capogruppo** del campo aperto, senza password. Un membro non la accende, nemmeno se sul suo telefono era accesa (`e2e/capogruppo`). È una protezione dell'interfaccia, non delle regole: i dati li scrive qualunque redattore |
+| 3 | Date del campo | **Dalla stanza**: il calendario si apre sul primo giorno del campo aperto (`e2e/periodo`) |
+| 4 | Meteo | **Spento** finché il capogruppo non potrà scegliere il luogo del campo: il riquadro non compare |
+| — | Tracce della Brigata | Tolte «A Prato Lungo non c'è linea», il meteo «di Pereto» nella guida, l'esempio «Prato Lungo 2026», i file `bandone-…`. Una guardia vieta che rientrino |
+| — | Spia «app scaricata sul telefono» | Era **sempre rossa** nell'app pubblica: cercava la cache col nome della Brigata. Ora la riconosce dalla forma del nome |
+| — | Manifest | Aggiunti `id`, `scope`, descrizione, lingua e categoria |
 
-**Le due decisioni:**
+**Resta da fare, e non è codice:**
 
-- **Modalità tecnica (2).** La proposta: nell'app pubblica la modalità
-  tecnica la vede **solo il capogruppo** del campo aperto, senza password. Così
-  le azioni che rimpiazzano i dati le trova solo chi amministra. Da sapere:
-  è una protezione dell'interfaccia, non delle regole Firestore — i dati del
-  campo li scrive qualunque redattore, e un redattore che smontasse l'app
-  potrebbe rimpiazzarli lo stesso. Per un gruppo di persone che si conoscono
-  è il livello giusto; blindarlo davvero vorrebbe dire un server.
-  L'alternativa è rimettere una password tua, ma allora nessun capogruppo
-  potrebbe chiudere il suo campo.
-- **Meteo (4).** Due strade: **spegnerlo** nell'app pubblica finché non c'è di
-  meglio, oppure fare scegliere al capogruppo **il luogo del campo** (una
-  ricerca per nome, con il servizio di Open-Meteo che l'app usa già). La
-  seconda è più bella ma aggiunge un servizio esterno da dichiarare. Il
-  consiglio: spegnerlo adesso, luogo del campo dopo il lancio.
+| Cosa | Chi |
+| --- | --- |
+| Il contatto dell'informativa (`APP_CONFIG.privacy.contatto`) | **Tu**: l'indirizzo con dominio |
+| Il campo di prova per il revisore, con dati finti | **Tu**, dall'app; il codice va nelle istruzioni del § 3 |
+| `/.well-known/assetlinks.json` | Claude, quando mi passi l'impronta SHA-256 da Play Console |
+| Gli screenshot | Claude, adesso che date e meteo sono giusti |
 
-Già a posto, verificato: il manifest dell'app (nome, icone 192 e 512,
-schermo intero), l'informativa (`privacy.html`, aggiornata oggi con IBAN e
-PayPal), la cancellazione dell'account dentro l'app e dal web
+Già a posto, verificato: l'informativa (`privacy.html`, con IBAN e PayPal),
+la cancellazione dell'account dentro l'app e dal web
 (`cancella-account.html`), nessuna pubblicità, **nessuno strumento di
 analisi caricato** (in `firebase-config.js` c'è un `measurementId`, ma
 Analytics non viene mai avviato), nessun uso della posizione del telefono.
@@ -206,7 +197,7 @@ En italien, espagnol et français.
 | --- | --- | --- |
 | Icona | 512 × 512 PNG | c'è già: `icon-512.png` |
 | Grafica in evidenza | 1024 × 500 PNG/JPG | da fare: logo su fondo crema, con la frase «Le spese del campo, divise bene» |
-| Screenshot telefono | da 2 a 8, lato corto almeno 320 px | da fare **dopo** i punti 3 e 4 del § 0, altrimenti fotografano le date e il meteo della Brigata. Li posso generare io con il browser delle prove: home, calendario, spese, saldi, regole |
+| Screenshot telefono | da 2 a 8, lato corto almeno 320 px | da fare: li genero io con il browser delle prove (home, calendario, spese, saldi, regole) |
 
 ---
 

@@ -20,6 +20,9 @@ const scena = (o) => [(s) => {
   });
   window.APP_CONFIG = {};
   localStorage.setItem('cambusa_stanza', o.codice);
+  // La modalita' tecnica accesa su questo telefono da prima: per un membro
+  // non deve valere dentro un campo che non e' suo.
+  if (o.adminAcceso) localStorage.setItem('cambusa_admin', '1');
   window.__dialoghi = [];
   Object.defineProperty(window, 'AuthCloud', { configurable: true, get() { return window.__ac; }, set() {} });
   window.__ac = {
@@ -127,6 +130,15 @@ const testo = (a) => a.page.locator('main').innerText();
       && !!document.querySelector('[data-riquadro="aiutante"] button.w-full'));
     ok('e il riquadro dice chi è', /il tuo aiutante è bruno/i.test(await riquadro.innerText()));
 
+    // La modalita' tecnica: il capogruppo la accende senza password.
+    const tecnica = a.page.locator('main button', { hasText: /modalit. tecnica/i }).first();
+    if (await tecnica.count()) await tecnica.click();
+    const attiva = a.page.locator('main button', { hasText: /^attiva$/i });
+    ok('il capogruppo trova il tasto per la modalità tecnica', (await attiva.count()) === 1);
+    await attiva.click();
+    await attendi(a.page, () => localStorage.getItem('cambusa_admin') === '1');
+    ok('e la accende senza password', true);
+
     await riquadro.locator('button', { hasText: /lascia il campo a bruno/i }).click();
     await attendi(a.page, () => window.__scritture.some((x) => x.che === 'lascia'));
     ok(`prima di lasciarlo si chiede, e si dice che il Pro non passa (${(dialoghi[0] || '').slice(0, 60)}…)`,
@@ -148,6 +160,7 @@ const testo = (a) => a.page.locator('main').innerText();
       initScript: scena({
         utente: { uid: 'bruno', email: 'bruno@example.com', nome: 'Bruno', isAnonimo: false, emailVerificata: true },
         stanza: { proprietario: 'anna', vice: 'bruno', regole: ['Si lava a turno.'], dotazioni: [{ testo: 'Borraccia' }] },
+        adminAcceso: true,
       }),
     });
     await a.menu('Regole');
@@ -163,6 +176,12 @@ const testo = (a) => a.page.locator('main').innerText();
     await attendi(a.page, () => /sei l'aiutante/i.test(document.querySelector('main').innerText));
     ok('l\'aiutante sa di esserlo', true);
     ok('e il riquadro del capogruppo non c\'è', (await a.page.locator('[data-riquadro="aiutante"]').count()) === 0);
+    const tecnica = a.page.locator('main button', { hasText: /modalit. tecnica/i }).first();
+    if (await tecnica.count()) await tecnica.click();
+    ok('la modalità tecnica gli dice che è del capogruppo',
+      (await a.page.locator('[data-tecnica="solo-capogruppo"]').count()) === 1);
+    ok('e, anche se sul suo telefono era accesa, in questo campo non vale',
+      (await a.page.locator('main button', { hasText: /spegni/i }).count()) === 0);
     ok('nessun errore JavaScript' + (a.errori.length ? ': ' + a.errori.join(' | ') : ''), a.errori.length === 0);
     await a.browser.close();
   }

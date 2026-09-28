@@ -47,7 +47,7 @@ const presenti = (page) => page.evaluate(() => {
 });
 
 (async () => {
-  const { browser, page: p, menu, errori } = await apri({ initScript: cloudFinto });
+  const { browser, page: p, menu, errori } = await apri({ initScript: cloudFinto, blocco: true });
 
   // --- Dati di partenza: tre membri, presenze su due giorni, una spesa ---
   await menu('Membri');

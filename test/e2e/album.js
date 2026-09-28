@@ -308,7 +308,7 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
   await p.waitForTimeout(250);
   await p.locator('button', { hasText: 'Chiudi il campo e archivia' }).first().click();
   await p.waitForTimeout(300);
-  await p.fill('input[placeholder="Es. Prato Lungo 2026"]', 'Prova 2026');
+  await p.fill('input[placeholder="Es. Campo estivo 2027"]', 'Prova 2026');
   await Promise.all([
     p.waitForEvent('download', { timeout: 15000 }).catch(() => null),
     p.locator('button', { hasText: 'Archivia e azzera' }).first().click(),

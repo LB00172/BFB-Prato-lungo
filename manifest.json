@@ -1,19 +1,27 @@
 {
+  "id": "./",
   "short_name": "Camp Ops",
   "name": "Camp Ops — spese e presenze di un campo",
+  "description": "Presenze, spese e conti del campo, divisi bene. Funziona anche senza linea.",
+  "lang": "it",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "icon-192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
       "src": "icon-512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
     }
   ],
   "start_url": "./index.html",
+  "scope": "./",
   "background_color": "#2D392C",
   "theme_color": "#2D392C",
   "display": "standalone",

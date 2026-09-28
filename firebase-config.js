@@ -64,18 +64,12 @@ window.CAMP_CODE_DEFAULT = "";
 // non solo della schermata. Finche' l'utente non esiste in Firebase
 // (Authentication -> Email/Password), l'app ricade sull'accesso anonimo di
 // prima: si puo' quindi attivare senza fretta. Vedi README, "Sicurezza".
-window.APP_LOCK = {
-  salt: "585d27f76cbf10a88166855e1721ffc1",
-  hash: "75b95d8f8b0d9645683337cb62b05f72980e806052ea5a2b7ca92b82e58d1663",
-  iter: 200000,
-  hint: "Password di prova di Camp Ops — chiedila a chi organizza.",
-  // Su questo ramo NON c'e' utente condiviso, e non e' una dimenticanza:
-  // campo@brigatabandone.it e' l'utente della Brigata, roba della versione
-  // privata. Senza dbEmail l'app entra nel database in anonimo, che e' quello
-  // che deve fare la versione pubblica finche' i dati non si spostano sotto
-  // rooms/<id>/dati/ (ROADMAP § 2).
-  dbEmail: null,
-};
+// NELL'APP PUBBLICA NON C'E' BLOCCO (28 settembre). Chi la scarica dal Play
+// Store non conosce nessuna password, e non deve: a proteggere un campo e' il
+// suo codice d'ingresso, e i dati li custodiscono le regole Firestore. Il
+// blocco con password resta nella versione privata, dove l'utente condiviso
+// del campo ne ha bisogno.
+window.APP_LOCK = null;
 
 // ============================================================================
 //  MODALITÀ TECNICA
@@ -102,7 +96,14 @@ window.APP_LOCK = {
 // schermo, e una prova controlla che sul ramo privato la password ci sia
 // ancora. Per rimetterla qui, si toglie `aperta` e si rimettono salt/hash/iter.
 window.APP_ADMIN = {
-  aperta: true,
+  // Nell'app pubblica la modalita' tecnica e' del CAPOGRUPPO del campo aperto,
+  // senza password (28 settembre): dietro ci sono importazione, ripristino e
+  // chiusura del campo, che rimpiazzano i dati di tutti, e le deve trovare
+  // solo chi amministra. E' una protezione dell'interfaccia, non delle regole
+  // Firestore (i dati del campo li scrive qualunque redattore): per un gruppo
+  // che si conosce e' il livello giusto. Fuori da una stanza — nessun campo
+  // da amministrare — resta accendibile come prima.
+  capogruppo: true,
 };
 
 // Località del campo per il meteo (Open-Meteo, gratuito, senza chiave).
@@ -113,7 +114,11 @@ window.APP_ADMIN = {
 // modalità tecnica attiva, sotto il meteo del Calendario si legge la quota che
 // il modello ha usato davvero: se non somiglia a quella del campo, le
 // coordinate qui sotto sono da correggere.
-window.CAMP_LOCATION = { lat: 42.0486, lon: 13.14855, alt: 1337, label: "Prato Lungo (Pereto, AQ)" };
+// NELL'APP PUBBLICA IL METEO E' SPENTO (28 settembre): la localita' qui sopra
+// era Prato Lungo, e la vedeva chiunque, ovunque campeggiasse. Tornera' quando
+// il capogruppo potra' scegliere il luogo del suo campo. Con null l'app non
+// chiama Open-Meteo e la scheda del meteo non compare.
+window.CAMP_LOCATION = null;
 
 // ============================================================================
 //  CONFIGURAZIONE APP  (branding + funzionalità)

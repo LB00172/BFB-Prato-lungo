@@ -32,6 +32,12 @@ const CAMPO_DI_PROVA = 'CampoDiProva';
 //   await pagina.addInitScript(...campoDiProva());
 // va messo prima della prima navigazione. Ridefinisce la proprieta' invece
 // di scriverla perche' firebase-config.js assegna "" dopo di noi.
+// Il luogo del campo per il meteo: nell'app pubblica firebase-config.js non
+// ne ha (il meteo e' spento). Le prove che guardano il meteo se lo danno.
+const luogoDiProva = () => [(l) => {
+  Object.defineProperty(window, 'CAMP_LOCATION', { configurable: true, get() { return l; }, set() {} });
+}, { lat: 42.0486, lon: 13.14855, alt: 1337, label: 'Luogo di prova' }];
+
 const campoDiProva = () => [(c) => {
   Object.defineProperty(window, 'CAMP_CODE_DEFAULT', { configurable: true, get() { return c; }, set() {} });
 }, CAMPO_DI_PROVA];
@@ -49,8 +55,10 @@ const SBLOCCO = (() => {
   const testo = fs.readFileSync(path.join(__dirname, '..', '..', 'firebase-config.js'), 'utf8');
   const soloBlocco = testo.slice(0, testo.indexOf('window.APP_ADMIN'));
   const m = soloBlocco.match(/hash:\s*"([0-9a-f]{64})"/);
-  if (!m) throw new Error('impronta del blocco non trovata in firebase-config.js');
-  return m[1];
+  // Nell'app pubblica il blocco non c'e' (APP_LOCK = null): niente da
+  // sbloccare. Le prove che attraversano il blocco se ne installano uno loro
+  // (bloccoDiProva, qui sotto).
+  return m ? m[1] : '';
 })();
 
 // ---- Il blocco, per le prove che ci passano davvero --------------------
@@ -239,7 +247,10 @@ async function apri(opzioni) {
       get() { return o.campo; },
       set() { /* firebase-config.js assegna "" dopo di noi: vale il nostro */ },
     });
-  }, { h: SBLOCCO, admin: o.admin !== false, campo: CAMPO_DI_PROVA });
+  }, { h: o.blocco ? BLOCCO_PROVA.hash : SBLOCCO, admin: o.admin !== false, campo: CAMPO_DI_PROVA });
+  // `blocco`: il blocco con password, per le prove che lo attraversano.
+  // Nell'app pubblica non c'e' (APP_LOCK = null): se lo installano loro.
+  if (o.blocco) await page.addInitScript(...bloccoDiProva());
   // initScript: una funzione, oppure [funzione, argomento] se le serve un dato.
   if (o.initScript) await page.addInitScript(...[].concat(o.initScript));
 
@@ -322,4 +333,4 @@ async function scontriniSalvati(page, n, ms) {
   }
 }
 
-module.exports = { chromium, apri, campoDiProva, CAMPO_DI_PROVA, ingressoFinto, ok, fine, attendi, scontriniSalvati, fotoSalvate, URL_APP, SBLOCCO, bloccoDiProva, PASSWORD_PROVA, BLOCCO_PROVA };
+module.exports = { chromium, apri, campoDiProva, luogoDiProva, CAMPO_DI_PROVA, ingressoFinto, ok, fine, attendi, scontriniSalvati, fotoSalvate, URL_APP, SBLOCCO, bloccoDiProva, PASSWORD_PROVA, BLOCCO_PROVA };

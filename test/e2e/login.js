@@ -152,6 +152,7 @@ const { bloccoDiProva, PASSWORD_PROVA } = require('../lib/app');
   // con "chiedi ogni volta" il ricarico (nuova sessione) deve richiedere la password
   await ctx.newPage();  // non tocca la sessione della prima pagina
   const p2 = await ctx.newPage();
+  await p2.addInitScript(...bloccoDiProva());
   await p2.addInitScript(...campoDiProva());
   await p2.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
   await p2.waitForTimeout(900);

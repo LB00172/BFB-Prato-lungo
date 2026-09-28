@@ -26,8 +26,9 @@ const dataDi = (nome) => {
   const [a, me, g] = m[1].split('-').map(Number);
   return new Date(a, me - 1, g).getTime();
 };
-const INIZIO = dataDi('CAMP_START');
-const FINE = dataDi('CAMP_END');
+// Le date di ripiego: il campo di prova non e' una stanza, e usa quelle.
+const INIZIO = dataDi('CAMP_START_PREDEFINITO');
+const FINE = dataDi('CAMP_END_PREDEFINITO');
 const oggi = Date.now();
 // Dal piu' indietro fra "un mese fa" e "il giorno prima del campo", al piu'
 // avanti fra "fra un mese" e "il giorno dopo il campo".
@@ -87,6 +88,14 @@ function inCache(quando) {
 // Semina la cache e sostituisce la chiamata a Open-Meteo: le prove non devono
 // dipendere dalla rete vera, ne' per esserci ne' per mancare.
 const seme = (o) => {
+  // Il luogo del campo: nell'app pubblica firebase-config.js non ne ha piu'
+  // uno (il meteo e' spento finche' non lo sceglie il capogruppo). Qui se ne
+  // da' uno di prova, come il campo di prova di test/lib/app.js.
+  Object.defineProperty(window, 'CAMP_LOCATION', {
+    configurable: true,
+    get() { return { lat: 42.0486, lon: 13.14855, alt: 1337, label: 'Luogo di prova' }; },
+    set() { /* firebase-config.js assegna null dopo di noi: vale il nostro */ },
+  });
   localStorage.setItem('cambusa_weather', JSON.stringify(o.wx));
   const vero = window.fetch;
   window.fetch = function (u) {

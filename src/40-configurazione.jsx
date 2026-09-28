@@ -23,8 +23,45 @@ const FEATURES = { auth: false, rooms: false, equipExemption: false, compiti: tr
 const LINGUA_KEY = 'cambusa_lingua';
 
 // Periodo del campo. Durante il campo l'app si apre sul giorno corrente.
-const CAMP_START = '2026-08-11';
-const CAMP_END = '2026-08-16';
+//
+// Queste due date erano scritte qui e basta: quelle della Brigata, 11–16
+// agosto 2026. Nell'app pubblica ogni campo ha le sue, e le mette chi crea la
+// stanza. Quindi sono VARIABILI, come L: le riscrive App() a ogni disegno
+// (periodoDelCampo, qui sotto), prima di qualunque useState — il calendario
+// si apre sul primo giorno del campo gia' al primo disegno. Le date di qui
+// restano il ripiego quando una stanza non c'e' (la versione privata, e le
+// prove che aprono un campo di prova).
+const CAMP_START_PREDEFINITO = '2026-08-11';
+const CAMP_END_PREDEFINITO = '2026-08-16';
+let CAMP_START = CAMP_START_PREDEFINITO;
+let CAMP_END = CAMP_END_PREDEFINITO;
+
+// Le date del campo aperto, lette da dove l'app le tiene sul telefono: la
+// stanza scelta e l'elenco dei campi (src/79-usa-stanza.jsx). Si legge il
+// telefono e non lo stato di React perche' serve PRIMA che lo stato esista.
+// Una data che manca o e' storta non vale: si resta sul ripiego invece di
+// mostrare un calendario vuoto.
+const periodoDelCampo = () => {
+  const giorno = /^\d{4}-\d{2}-\d{2}$/;
+  try {
+    const codice = localStorage.getItem('cambusa_stanza');
+    if (codice && window.Stanza) {
+      const campi = JSON.parse(localStorage.getItem('cambusa_campi') || '[]');
+      const c = window.Stanza.normalizza(codice);
+      const v = (Array.isArray(campi) ? campi : []).find((x) => x && window.Stanza.normalizza(x.codice) === c);
+      if (v && giorno.test(v.inizio || '')) {
+        const fine = giorno.test(v.fine || '') && v.fine >= v.inizio ? v.fine : v.inizio;
+        return { da: v.inizio, a: fine };
+      }
+    }
+  } catch (e) { /* memoria illeggibile: si resta sul ripiego */ }
+  return { da: CAMP_START_PREDEFINITO, a: CAMP_END_PREDEFINITO };
+};
+const aggiornaPeriodoCampo = () => {
+  const p = periodoDelCampo();
+  CAMP_START = p.da;
+  CAMP_END = p.a;
+};
 const defaultDateStr = () => {
   const today = toDateStr(new Date());
   return today >= CAMP_START && today <= CAMP_END ? today : CAMP_START;

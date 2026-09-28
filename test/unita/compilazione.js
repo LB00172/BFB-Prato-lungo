@@ -639,6 +639,31 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
       ok(`l'app pubblica non ha «Aiuta Bandy» (${tracce.join(', ') || 'nessuna traccia'})`, tracce.length === 0);
     }
 
+    // E nemmeno i luoghi e i nomi della Brigata nei testi che l'utente legge.
+    // Sono usciti in tre posti senza che niente diventasse rosso: la spia
+    // «A Prato Lungo non c'è linea», il meteo «di Pereto» nella guida, il
+    // nome d'esempio «Prato Lungo 2026». Si guardano le frasi del dizionario
+    // (le righe di commento no: li' la storia si racconta) e i nomi dei file
+    // che l'app scarica.
+    {
+      const MARCHIO = /prato lungo|pereto|brigata|bandone|bandy|presidente/i;
+      const frasi = fs.readFileSync(path.join(RADICE, 'lingue.js'), 'utf8').split('\n')
+        .map((r, n) => ({ r, n: n + 1 }))
+        .filter(({ r }) => /^\s*'[a-zA-Z.]+':/.test(r) && MARCHIO.test(r));
+      const app = fs.readFileSync(path.join(RADICE, 'src', '80-app.jsx'), 'utf8');
+      const file = (app.match(/downloadJson\(`[^`]*`/g) || []).filter((x) => MARCHIO.test(x));
+      // La spia «app scaricata sul telefono» riconosce la cache dalla forma
+      // del nome: se build.js cambiasse forma, o qualcuno rimettesse il
+      // marchio nel controllo, la spia tornerebbe rossa per sempre.
+      const forma = (app.match(/const CACHE_APP = (\/.*\/);/) || [])[1];
+      const nomeCache = (fs.readFileSync(path.join(RADICE, 'sw.js'), 'utf8').match(/CACHE_NAME = '([^']+)'/) || [])[1];
+      let riconosciuta = false;
+      try { riconosciuta = !!forma && !!nomeCache && eval(forma).test(nomeCache); } catch (e) { riconosciuta = false; }
+      ok(`la spia dell'app scaricata riconosce la cache vera (${nomeCache})`, riconosciuta);
+      ok(`nessun nome della Brigata nei testi e nei file dell'app pubblica (${frasi.map((x) => 'lingue.js:' + x.n).concat(file).join(', ') || 'nessuno'})`,
+        frasi.length === 0 && file.length === 0);
+    }
+
     ok(`i ${UGUALI.length} file che devono restare identici lo sono`
       + (!potuto ? ' — NON HO POTUTO CONFRONTARE: manca il ramo main o git' : '')
       + (divergono.length ? ' — DIVERGONO: ' + divergono.join(', ') : ''),

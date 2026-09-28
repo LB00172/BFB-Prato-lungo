@@ -34,7 +34,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 81 prove, **due minuti e
+4. **Prima di dire "fatto" gira `npm test`.** 82 prove, **due minuti e
    mezzo**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
@@ -110,7 +110,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `build.js` | compilazione + versione della cache |
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
-| `test/` | 16 prove unitarie + 65 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo |
+| `test/` | 16 prove unitarie + 66 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -434,6 +434,16 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   `.dotazioni`) e le scrive solo il capogruppo; quelle della Brigata restano
   su `main`. Nell'app pubblica le dotazioni sono una lista sola: il riquadro
   «aggiunte», scrivibile da tutti, non c'è.
+- **L'app pubblica, pronta per il Play Store** (28 settembre; `PLAY-STORE.md`).
+  Niente blocco con password (`APP_LOCK = null`): a proteggere un campo è il
+  suo codice. La modalità tecnica è **del capogruppo** del campo aperto
+  (`APP_ADMIN.capogruppo`). Il meteo è spento (`CAMP_LOCATION = null`)
+  finché il luogo non lo sceglie il capogruppo. Le date del campo vengono
+  **dalla stanza**: `CAMP_START`/`CAMP_END` sono variabili che `App()`
+  riscrive a ogni disegno, come `L` — quelle scritte in
+  `40-configurazione.jsx` sono solo il ripiego. Le prove che hanno bisogno
+  di un blocco, di un luogo o di un campo se li danno da sole (`apri({
+  blocco })`, `luogoDiProva()`, `campoDiProva()`).
 - **Importazione, ripristino di emergenza e chiusura del campo stanno in
   modalità tecnica.** Non modificano i dati: li RIMPIAZZANO, e si portano
   via i blocchi insieme al resto. Erano le ultime tre strade aperte a

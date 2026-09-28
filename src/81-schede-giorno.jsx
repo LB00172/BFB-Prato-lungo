@@ -119,6 +119,10 @@ const schedaCalendario = ({
         const loc = window.CAMP_LOCATION;
         const locOk = loc && typeof loc.lat === 'number' && typeof loc.lon === 'number';
         const wx = weather.byDate[selectedDateStr];
+        // Senza luogo il meteo non c'e' e basta: nell'app pubblica il luogo
+        // non si puo' ancora impostare, e una riga che dice «da impostare» a
+        // chi non puo' farlo e' solo un rimprovero.
+        if (!locOk) return null;
         return (
           <div className="bg-carta/60 px-3 py-2 rounded border border-salvia/20 space-y-1">
             <div className="flex items-center gap-2">

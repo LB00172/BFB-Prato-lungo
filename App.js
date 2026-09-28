@@ -525,8 +525,51 @@ const FEATURES = {
 const LINGUA_KEY = 'cambusa_lingua';
 
 // Periodo del campo. Durante il campo l'app si apre sul giorno corrente.
-const CAMP_START = '2026-08-11';
-const CAMP_END = '2026-08-16';
+//
+// Queste due date erano scritte qui e basta: quelle della Brigata, 11–16
+// agosto 2026. Nell'app pubblica ogni campo ha le sue, e le mette chi crea la
+// stanza. Quindi sono VARIABILI, come L: le riscrive App() a ogni disegno
+// (periodoDelCampo, qui sotto), prima di qualunque useState — il calendario
+// si apre sul primo giorno del campo gia' al primo disegno. Le date di qui
+// restano il ripiego quando una stanza non c'e' (la versione privata, e le
+// prove che aprono un campo di prova).
+const CAMP_START_PREDEFINITO = '2026-08-11';
+const CAMP_END_PREDEFINITO = '2026-08-16';
+let CAMP_START = CAMP_START_PREDEFINITO;
+let CAMP_END = CAMP_END_PREDEFINITO;
+
+// Le date del campo aperto, lette da dove l'app le tiene sul telefono: la
+// stanza scelta e l'elenco dei campi (src/79-usa-stanza.jsx). Si legge il
+// telefono e non lo stato di React perche' serve PRIMA che lo stato esista.
+// Una data che manca o e' storta non vale: si resta sul ripiego invece di
+// mostrare un calendario vuoto.
+const periodoDelCampo = () => {
+  const giorno = /^\d{4}-\d{2}-\d{2}$/;
+  try {
+    const codice = localStorage.getItem('cambusa_stanza');
+    if (codice && window.Stanza) {
+      const campi = JSON.parse(localStorage.getItem('cambusa_campi') || '[]');
+      const c = window.Stanza.normalizza(codice);
+      const v = (Array.isArray(campi) ? campi : []).find(x => x && window.Stanza.normalizza(x.codice) === c);
+      if (v && giorno.test(v.inizio || '')) {
+        const fine = giorno.test(v.fine || '') && v.fine >= v.inizio ? v.fine : v.inizio;
+        return {
+          da: v.inizio,
+          a: fine
+        };
+      }
+    }
+  } catch (e) {/* memoria illeggibile: si resta sul ripiego */}
+  return {
+    da: CAMP_START_PREDEFINITO,
+    a: CAMP_END_PREDEFINITO
+  };
+};
+const aggiornaPeriodoCampo = () => {
+  const p = periodoDelCampo();
+  CAMP_START = p.da;
+  CAMP_END = p.a;
+};
 const defaultDateStr = () => {
   const today = toDateStr(new Date());
   return today >= CAMP_START && today <= CAMP_END ? today : CAMP_START;
@@ -2293,6 +2336,14 @@ const usaStanza = () => {
 };
 // `eredita` e `cambiaCampo` arrivano da Radice (90-avvio): servono a cambiare
 // campo senza mescolare i dati di due campi (cassetti.js).
+// La cache dell'app, riconosciuta dalla forma del nome che le da' build.js
+// (marchio-impronta di dieci cifre), non dal marchio: si cercava
+// «brigata-bandone-», e nell'app pubblica — dove la cache si chiama
+// «camp-ops-…» — la spia «app scaricata sul telefono» restava rossa per sempre.
+const CACHE_APP = /^[a-z-]+-([0-9a-f]{10})$/;
+// Il nome dei file scaricati (backup, archivio), dal marchio: erano tutti
+// «bandone-…», anche nell'app pubblica.
+const NOME_FILE = String(BRAND.appTitle || 'campo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'campo';
 function App({
   eredita,
   cambiaCampo
@@ -2307,6 +2358,10 @@ function App({
   // Si riassegna QUI, prima di qualunque disegno: e' cio' che fa vedere la
   // lingua nuova senza ricaricare (vedi il commento su "L" in 10-fondamenta).
   L = window.Lingue.crea(FEATURES.lingue ? lingua : window.Lingue.PREDEFINITA);
+  // Le date del campo aperto, per la stessa ragione di L: sono globali, ma le
+  // scrive il disegno — cosi' il calendario, i giorni del campo e il controllo
+  // «pronto per il campo» parlano del campo in cui si e' adesso.
+  aggiornaPeriodoCampo();
   const [locked, setLocked] = useState(() => !isUnlocked());
   const [lockReason, setLockReason] = useState('');
   const [showSplash, setShowSplash] = useState(true);
@@ -2480,13 +2535,20 @@ function App({
   const [datiOpen, setDatiOpen] = useState(false);
   // Modalità tecnica: attiva o no su QUESTO telefono. La scelta resta salvata,
   // così chi tiene i conti la accende una volta sola.
-  const [admin, setAdmin] = useState(() => {
+  const [adminScelto, setAdmin] = useState(() => {
     try {
       return localStorage.getItem(ADMIN_KEY) === '1';
     } catch (e) {
       return false;
     }
   });
+  // Nell'app pubblica la modalita' tecnica e' del capogruppo del campo aperto
+  // (APP_ADMIN.capogruppo, firebase-config.js). Accesa su questo telefono ma
+  // entrati in un campo di cui non si e' capogruppo, semplicemente non vale:
+  // le azioni che rimpiazzano i dati di tutti non si vedono.
+  const adminDelCapogruppo = !!(window.APP_ADMIN && window.APP_ADMIN.capogruppo);
+  const adminPermesso = !adminDelCapogruppo || !stanzaStato.stanza || stanzaStato.capogruppo;
+  const admin = adminScelto && adminPermesso;
   const [tecnicaOpen, setTecnicaOpen] = useState(false);
   const [adminPwd, setAdminPwd] = useState('');
   const [adminErr, setAdminErr] = useState('');
@@ -2508,6 +2570,14 @@ function App({
     // dice a schermo: una serratura tolta di nascosto è peggio di una
     // serratura che non c'è.
     if (cfg && cfg.aperta) {
+      accendiAdmin();
+      return;
+    }
+    if (cfg && cfg.capogruppo) {
+      if (!adminPermesso) {
+        setAdminErr(L.t('tecnica.soloCapogruppo'));
+        return;
+      }
       accendiAdmin();
       return;
     }
@@ -4946,7 +5016,7 @@ function App({
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   };
   const exportData = () => {
-    downloadJson(`bandone-backup-${toDateStr(new Date())}.json`, {
+    downloadJson(`${NOME_FILE}-backup-${toDateStr(new Date())}.json`, {
       version: 6,
       exportedAt: new Date().toISOString(),
       members,
@@ -5087,7 +5157,7 @@ function App({
     if (online && CS.archivePhotos) meta.photos = await CS.archivePhotos(id);
 
     // 2) Copia su file (l'unica che contiene anche le foto degli scontrini).
-    downloadJson(`bandone-archivio-${toDateStr(new Date())}.json`, {
+    downloadJson(`${NOME_FILE}-archivio-${toDateStr(new Date())}.json`, {
       version: 6,
       archive: meta,
       ...state,
@@ -5138,7 +5208,7 @@ function App({
         return;
       }
     }
-    downloadJson(`bandone-archivio-${a.id}.json`, {
+    downloadJson(`${NOME_FILE}-archivio-${a.id}.json`, {
       version: 6,
       archive: a,
       ...state
@@ -5186,7 +5256,7 @@ function App({
       try {
         if (window.caches) {
           const keys = await window.caches.keys();
-          cache = keys.some(k => k.indexOf('brigata-bandone-') === 0);
+          cache = keys.some(k => CACHE_APP.test(k));
         }
       } catch (e) {/* niente cache: resta false */}
       if (vivo) setReadiness({
@@ -5231,8 +5301,8 @@ function App({
   useEffect(() => {
     if (!window.caches) return;
     window.caches.keys().then(keys => {
-      const k = keys.find(x => x.indexOf('brigata-bandone-') === 0);
-      if (k) setSwVersion(k.replace('brigata-bandone-', ''));
+      const k = keys.find(x => CACHE_APP.test(x));
+      if (k) setSwVersion(k.replace(CACHE_APP, '$1'));
     }).catch(() => {});
   }, []);
 
@@ -6020,7 +6090,8 @@ function App({
     theme,
     toggleAskAlways,
     wipeLocal,
-    contiBloccati: !!bloccoConti()
+    contiBloccati: !!bloccoConti(),
+    adminPermesso
   })), buying && /*#__PURE__*/React.createElement("div", {
     onClick: () => setBuying(null),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5"
@@ -6401,6 +6472,10 @@ const schedaCalendario = ({
   const loc = window.CAMP_LOCATION;
   const locOk = loc && typeof loc.lat === 'number' && typeof loc.lon === 'number';
   const wx = weather.byDate[selectedDateStr];
+  // Senza luogo il meteo non c'e' e basta: nell'app pubblica il luogo
+  // non si puo' ancora impostare, e una riga che dice «da impostare» a
+  // chi non puo' farlo e' solo un rimprovero.
+  if (!locOk) return null;
   return /*#__PURE__*/React.createElement("div", {
     className: "bg-carta/60 px-3 py-2 rounded border border-salvia/20 space-y-1"
   }, /*#__PURE__*/React.createElement("div", {
@@ -8155,7 +8230,8 @@ const schedaImpostazioni = ({
   theme,
   toggleAskAlways,
   wipeLocal,
-  contiBloccati
+  contiBloccati,
+  adminPermesso
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
@@ -8663,9 +8739,12 @@ const schedaImpostazioni = ({
   className: bottone('secondario', 'normale', 'w-full')
 }, L.t('tecnica.spegni'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500 leading-snug"
-}, L.t('tecnica.spentaNota')), window.APP_ADMIN && window.APP_ADMIN.aperta ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+}, L.t('tecnica.spentaNota')), window.APP_ADMIN && window.APP_ADMIN.capogruppo && !adminPermesso ? /*#__PURE__*/React.createElement("p", {
+  "data-tecnica": "solo-capogruppo",
+  className: "text-piccolo text-gray-500 leading-snug"
+}, L.t('tecnica.soloCapogruppo')) : window.APP_ADMIN && (window.APP_ADMIN.aperta || window.APP_ADMIN.capogruppo) ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo font-bold text-[#8A5A2B] leading-snug"
-}, L.t('tecnica.apertaNota')), /*#__PURE__*/React.createElement("button", {
+}, L.t(window.APP_ADMIN.capogruppo ? 'tecnica.capogruppoNota' : 'tecnica.apertaNota')), /*#__PURE__*/React.createElement("button", {
   onClick: entraAdmin,
   className: bottone('primario', 'normale', 'w-full')
 }, L.t('tecnica.attivaTasto'))) : /*#__PURE__*/React.createElement("div", {
