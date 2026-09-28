@@ -27,7 +27,8 @@ function App({ eredita, cambiaCampo } = {}) {
 
   const [locked, setLocked] = useState(() => !isUnlocked());
   const [lockReason, setLockReason] = useState('');
-  const [showSplash, setShowSplash] = useState(true);
+  // Il saluto col logo solo all'apertura: dopo un cambio di campo si va diretti.
+  const [showSplash, setShowSplash] = useState(() => !(eredita && eredita.rimontata));
   // "Ho un codice" dalla schermata d'apertura: si passa oltre per questa
   // volta, verso la scheda della stanza. Non si ricorda: se chi l'ha premuto
   // poi entra davvero in un campo, la schermata non torna comunque (c'e' un
@@ -2626,6 +2627,7 @@ function App({ eredita, cambiaCampo } = {}) {
   if (showSplash) {
     return (
       <div
+        data-splash
         onClick={() => setShowSplash(false)}
         className="fixed inset-0 bg-bosco flex flex-col items-center justify-center text-carta z-50 cursor-pointer"
       >

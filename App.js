@@ -2364,7 +2364,8 @@ function App({
   aggiornaPeriodoCampo();
   const [locked, setLocked] = useState(() => !isUnlocked());
   const [lockReason, setLockReason] = useState('');
-  const [showSplash, setShowSplash] = useState(true);
+  // Il saluto col logo solo all'apertura: dopo un cambio di campo si va diretti.
+  const [showSplash, setShowSplash] = useState(() => !(eredita && eredita.rimontata));
   // "Ho un codice" dalla schermata d'apertura: si passa oltre per questa
   // volta, verso la scheda della stanza. Non si ricorda: se chi l'ha premuto
   // poi entra davvero in un campo, la schermata non torna comunque (c'e' un
@@ -5413,6 +5414,7 @@ function App({
   });
   if (showSplash) {
     return /*#__PURE__*/React.createElement("div", {
+      "data-splash": true,
       onClick: () => setShowSplash(false),
       className: "fixed inset-0 bg-bosco flex flex-col items-center justify-center text-carta z-50 cursor-pointer"
     }, /*#__PURE__*/React.createElement("div", {
@@ -9226,7 +9228,8 @@ const primoCassetto = window.Cassetti ? window.Cassetti.allinea(localStorage, wi
 // password del database, che sta in memoria.
 //
 // `eredita` porta di la' le due cose che chi ha cambiato campo si aspetta di
-// ritrovare: la scheda su cui era, e com'e' andato lo scambio.
+// ritrovare: la scheda su cui era, e com'e' andato lo scambio. E `rimontata`,
+// perche' il saluto col logo e' dell'apertura dell'app, non di ogni campo.
 const Radice = () => {
   const [giro, setGiro] = useState({
     n: 0,
@@ -9242,7 +9245,8 @@ const Radice = () => {
       n: g.n + 1,
       verso: null,
       eredita: Object.assign({}, g.eredita, {
-        cassetto: esito
+        cassetto: esito,
+        rimontata: true
       })
     }));
   }, [giro.verso]);

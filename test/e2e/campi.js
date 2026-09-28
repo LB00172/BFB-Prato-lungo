@@ -116,6 +116,14 @@ const vociMenu = async (a) => {
     await a.menu('I miei campi');
     await attendi(a.page, () => !!document.querySelector('[data-scheda="campi"]'));
     ok('dalla home si vede dove si è', /sei qui/i.test(await home(a).innerText()));
+    // Il saluto col logo e' dell'apertura dell'app. Cambiare campo rimonta
+    // App (il cambio di cassetto), e il saluto ricompariva per due secondi a
+    // ogni campo toccato. Lo si spia dal DOM: basta che compaia un istante.
+    await a.page.evaluate(() => {
+      window.__splash = false;
+      new MutationObserver(() => { if (document.querySelector('[data-splash]')) window.__splash = true; })
+        .observe(document.body, { childList: true, subtree: true });
+    });
     await a.page.locator('[data-campo="BCDFGHJK"]').click();
     await attendi(a.page, () => localStorage.getItem('cambusa_stanza') === 'BCDFGHJK'
       && localStorage.getItem('cambusa_cassetto_di') === 'BCDFGHJK');
@@ -123,6 +131,8 @@ const vociMenu = async (a) => {
     await attendi(a.page, () => !!document.querySelector('button[aria-label="Menu"]'));
     ok('sul calendario anche dopo il cambio di cassetto',
       /calendario/i.test(await a.page.locator('header').innerText()));
+    ok('e ci si arriva diretti, senza ripassare dal logo d\'apertura',
+      (await a.page.evaluate(() => window.__splash)) === false);
     ok('nessun errore JavaScript' + (a.errori.length ? ': ' + a.errori.join(' | ') : ''), a.errori.length === 0);
     await a.browser.close();
   }

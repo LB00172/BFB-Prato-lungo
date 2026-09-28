@@ -18,13 +18,14 @@ const primoCassetto = window.Cassetti
 // password del database, che sta in memoria.
 //
 // `eredita` porta di la' le due cose che chi ha cambiato campo si aspetta di
-// ritrovare: la scheda su cui era, e com'e' andato lo scambio.
+// ritrovare: la scheda su cui era, e com'e' andato lo scambio. E `rimontata`,
+// perche' il saluto col logo e' dell'apertura dell'app, non di ogni campo.
 const Radice = () => {
   const [giro, setGiro] = useState({ n: 0, verso: null, eredita: { cassetto: primoCassetto } });
   useEffect(() => {
     if (giro.verso === null) return;
     const esito = window.Cassetti.allinea(localStorage, giro.verso);
-    setGiro((g) => ({ n: g.n + 1, verso: null, eredita: Object.assign({}, g.eredita, { cassetto: esito }) }));
+    setGiro((g) => ({ n: g.n + 1, verso: null, eredita: Object.assign({}, g.eredita, { cassetto: esito, rimontata: true }) }));
   }, [giro.verso]);
   if (giro.verso !== null) return null;
   return (
