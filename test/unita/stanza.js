@@ -428,6 +428,11 @@ if (!S) { fine(); }
       l = S.ricordaCampo(l, { codice: 'K7RX2MQP', nome: '' });
       ok('un nome vuoto non cancella quello che si sapeva', l[0].nome === 'Campo di Anna');
       ok('un codice che non è un codice non entra', S.ricordaCampo(l, { codice: '' }).length === 1);
+      // Un elenco scritto da una versione vecchia, o arrivato dal profilo,
+      // puo' avere il codice come l'ha digitato la persona: lo si riconosce
+      // lo stesso.
+      ok('un codice già in elenco scritto a mano si riconosce lo stesso',
+        S.ricordaCampo([{ codice: 'k7rx-2mqp', nome: 'Campo di Anna' }], { codice: 'K7RX2MQP' }).length === 1);
 
       const locali = [
         { codice: 'K7RX2MQP', nome: 'Campo di Anna', ruolo: 'redattore' },

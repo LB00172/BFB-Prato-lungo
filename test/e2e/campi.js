@@ -38,7 +38,7 @@ const scena = (o) => [(s) => {
     utente: () => o.utente,
     osserva: (cb) => { cb(o.utente); return () => {}; },
     conGoogle: async () => o.utente, esci: async () => {},
-    stanzeDelProfilo: async () => { if (o.senzaLinea) throw giu(); return (o.profilo || []).slice(); },
+    stanzeDelProfilo: async () => { window.__letture++; if (o.senzaLinea) throw giu(); return (o.profilo || []).slice(); },
   };
   Object.defineProperty(window, 'StanzaCloud', { configurable: true, get() { return window.__sc; }, set() {} });
   window.__sc = {
