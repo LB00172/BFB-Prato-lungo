@@ -34,7 +34,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 83 prove, **due minuti e
+4. **Prima di dire "fatto" gira `npm test`.** 81 prove, **due minuti e
    mezzo**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
@@ -89,7 +89,8 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `src/89-scheda-campi.jsx` | **la home, «I miei campi»**: l'elenco dei campi della persona e il modulo Crea / Partecipa (uno solo, usato anche da Impostazioni). Compare da sola quando non c'è un campo aperto, e dal menu quando c'è. L'elenco sta sul telefono (`cambusa_campi`) e si corregge dal cloud: la home si apre senza linea. Le regole (ricordare, aggiornare, ordinare) sono in `stanza.js` |
 | `src/78-usa-account.jsx` | lo stato del login: maschera, occupato, problema. Le regole no — quelle stanno in `auth.js` |
 | `src/79-usa-stanza.jsx` | lo stato della stanza: crea, entra, chi c'è dentro. Dietro `FEATURES.rooms` |
-| `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
+| ~~`src/60-gioco.jsx`~~ | **non c'è su questo ramo.** «Aiuta Bandy» è della Brigata e vive solo su `main`: tolto dall'app pubblica il 28 settembre (sorgenti, scheda, `bandy.png`, testi, prove). `unita/compilazione` diventa rossa se rientra |
+| `voci.js` | **le voci di spesa spente** (§ 8): toglie dai conti le categorie che il gruppo gestisce fuori e ne dichiara la cifra. `conti.js` non si tocca — si sceglie cosa dargli da dividere |
 | `App.js` | **generato**, non modificare |
 | `sync-merge.js` | fusione voce per voce fra dispositivi (`rev`, `del`, orologio `hi`) |
 | `menu-spesa.js` | dal menù del giorno alle voci della spesa. Sta fuori da `src/` perché così è provabile con una prova unitaria invece di duplicare la logica nel test |
@@ -109,7 +110,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `build.js` | compilazione + versione della cache |
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
-| `test/` | 15 prove unitarie + 68 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo |
+| `test/` | 16 prove unitarie + 65 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -335,7 +336,8 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
 
 ## Decisioni già prese, da non rimettere in discussione
 
-- **La velocità del gioco non si tocca.** `BASE_STEP`, `LEVEL_SPEEDUP` e
+- **La velocità del gioco non si tocca** (su `main`: nell'app pubblica il
+  gioco non c'è). `BASE_STEP`, `LEVEL_SPEEDUP` e
   `MIN_STEP` sono fermi dal 27 luglio, quando l'accelerazione è passata da
   x2 a x1.5. In classifica ci sono già dei punteggi fatti con questa curva:
   cambiarla renderebbe incomparabili i vecchi e i nuovi. Il muro in

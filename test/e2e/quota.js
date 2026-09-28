@@ -61,16 +61,16 @@ const vivo = async (p) => (await p.locator('main').count()) > 0 && (await p.loca
   if (await chiedi.count()) { await chiedi.click(); await p.waitForTimeout(400); }
   ok('toccare le impostazioni non fa sparire l\'app', await vivo(p));
 
-  // ---- 3. Il gioco: nome del giocatore e record ---------------------------
-  await menu('Aiuta Bandy');
+  // ---- 3. La lingua: una preferenza scritta da un gestore di eventi -------
+  // Qui c'era il gioco (nome del giocatore e record): nell'app pubblica non
+  // c'e' piu', e la lingua fa la stessa strada — scrive da un tocco.
+  await menu('Impostazioni');
   await p.waitForTimeout(300);
-  await p.fill('input[placeholder="Come ti chiami?"]', 'Lorenzo');
-  await p.locator('button', { hasText: 'Gioca' }).first().click();
-  await p.waitForTimeout(700);
-  ok('il gioco parte anche con la memoria piena', (await p.locator('canvas').count()) === 1);
-  await p.locator('button', { hasText: 'Esci dal gioco' }).first().click();
-  await p.waitForTimeout(500);
-  ok('e si esce senza che l\'app sparisca', await vivo(p));
+  const spagnolo = p.locator('main button', { hasText: /español/i }).first();
+  if (await spagnolo.count()) { await spagnolo.click(); await p.waitForTimeout(400); }
+  ok('cambiare lingua con la memoria piena non fa sparire l\'app', await vivo(p));
+  const italiano = p.locator('main button', { hasText: /italiano/i }).first();
+  if (await italiano.count()) { await italiano.click(); await p.waitForTimeout(400); }
 
   // ---- 4. Le presenze: il percorso che scrive di piu' ---------------------
   await menu('Presenze');

@@ -1,4 +1,4 @@
-// ---------- Archivio, gioco e guida ----------
+// ---------- Archivio e guida ----------
 // La Galleria sta a parte in 85-scheda-galleria.jsx: e' la piu' grossa delle
 // quattro ed e' stata la prima a uscire.
 
@@ -91,83 +91,6 @@ const schedaArchivio = ({
     <p className="text-minuto text-gray-400 italic text-center px-4">
       {L.t('archivio.conservalo')}
     </p>
-  </div>
-);
-
-const schedaGioco = ({
-  endGame,
-  gameBest,
-  gamePlayer,
-  gameRunning,
-  leaderboard,
-  refreshLeaderboard,
-  setGamePlayer,
-  setGameRunning,
-  startGame,
-}) => (
-  <div className="space-y-4">
-    {!gameRunning ? (
-      <>
-        <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
-          <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('area.gioco')}</h3>
-          <div className="flex items-center gap-3">
-            <img src="./bandy.png" alt="Bandy" className="w-14 h-14 rounded border-2 border-salvia/40 bg-carta" style={{ imageRendering: 'pixelated' }} />
-            <p className="text-piccolo text-gray-600 leading-snug">
-              {L.t('gioco.spiegazione')}
-            </p>
-          </div>
-          <div>
-            <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('gioco.nomeGiocatore')}</label>
-            <input
-              type="text"
-              value={gamePlayer}
-              onChange={(e) => setGamePlayer(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && startGame()}
-              placeholder={L.t('gioco.comeTiChiami')}
-              maxLength={24}
-              className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-            />
-          </div>
-          <button onClick={startGame} className={bottone('primario', 'grande', 'w-full')}>
-            {L.t('gioco.gioca')}
-          </button>
-          <p className="text-minuto text-gray-400 italic">{L.t('gioco.comandi')}</p>
-        </div>
-
-        <div className="bg-bosco text-carta p-4 rounded-lg border-b-4 border-legno shadow-md">
-          <div className="flex items-center justify-between border-b border-salvia/40 pb-2 mb-3">
-            <h3 className="font-rustic text-grande">{L.t('gioco.classifica')}</h3>
-            <button onClick={refreshLeaderboard} className="text-minuto uppercase font-bold text-salvia hover:text-white">{L.t('gioco.aggiorna')}</button>
-          </div>
-          <div className="flex justify-between text-piccolo mb-3 pb-2 border-b border-salvia/20">
-            <span className="text-salvia">{L.t('gioco.tuoRecord')}</span>
-            <span className="font-rustic text-fuoco text-grande leading-none">{gameBest}</span>
-          </div>
-          {leaderboard.length === 0 ? (
-            <p className="text-piccolo text-gray-400 italic">{L.t('gioco.senzaPunteggi')}</p>
-          ) : (
-            <ul className="space-y-1">
-              {leaderboard.map((r, i) => (
-                <li key={r.name + i} className="flex items-center justify-between py-1">
-                  <span className="text-normale truncate">
-                    <span className="text-salvia mr-2">{i + 1}.</span>
-                    {i === 0 ? '🏆 ' : ''}{r.name}
-                  </span>
-                  <span className="font-rustic font-bold text-fuoco">{r.score}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </>
-    ) : (
-      <BandyGame
-        playerName={gamePlayer.trim()}
-        bestLocal={gameBest}
-        onGameOver={endGame}
-        onExit={() => { setGameRunning(false); refreshLeaderboard(); }}
-      />
-    )}
   </div>
 );
 

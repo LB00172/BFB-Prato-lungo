@@ -64,20 +64,17 @@ ok(`il dizionario italiano ha ${CHIAVI.length} voci`, CHIAVI.length > 20);
 {
   const UGUALI_SUL_SERIO = [
     'es:campi.pro', 'fr:campi.pro',                // "Pro" e' il nome del piano, uguale ovunque
-    'es:area.gioco', 'fr:area.gioco',              // nome proprio del gioco
     'es:area.calendario',                          // "Calendario" e' anche spagnolo
     'es:membri.adulto',                            // "Adulto" e' anche spagnolo
     'es:presenze.cena',                            // "Cena" e' anche spagnolo
     'es:presenze.gratisEtichetta',                 // "gratis" e' anche spagnolo
     'fr:archivio.album', 'fr:galleria.vistaAlbum', // "Album" e' anche francese
     'es:sezione.calendario',                       // "Calendario" e' anche spagnolo
-    'es:gioco.pausa',                              // "Pausa" e' anche spagnolo
     'es:info.titolo',                              // "Info" e' anche spagnolo
     'es:auth.email',                               // "Email" e' anche spagnolo
     'es:registro.sync', 'fr:registro.sync',        // "sync" e' una sigla, non una parola
     'es:quote.gratis',                             // "Gratis" e' anche spagnolo
     'es:guida.calendario.titolo',                  // "Calendario" e' anche spagnolo
-    'es:guida.gioco.titolo', 'fr:guida.gioco.titolo', // nome proprio del gioco
   ];
   const copiate = [];
   CODICI.filter((c) => c !== 'it').forEach((c) => {

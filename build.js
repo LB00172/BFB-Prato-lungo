@@ -28,11 +28,9 @@ const SORGENTI = [
   '40-configurazione.jsx',   // marchio, funzioni attive, date del campo, meteo, regole
   '45-icone.jsx',
   '50-interfaccia.jsx',      // vocabolario dei bottoni: sei ruoli, tre altezze
-  '60-gioco.jsx',            // "Aiuta Bandy": tavolozze, disegno, BandyGame
   '70-schermata-blocco.jsx', // LockScreen
   // Gli hook: stato ed effetti usciti da App(), un file per area. Stanno
   // PRIMA di 80-app.jsx perche' App() li chiama mentre si disegna, non dopo.
-  '75-usa-gioco.jsx',        // "Aiuta Bandy": stato, classifica, partite
   '76-usa-galleria.jsx',     // foto del campo: ascolto, caricamento, album, PDF ricordo
   '77-usa-scontrini.jsx',    // foto degli scontrini: magazzino, migrazione, potatura
   '78-usa-account.jsx',      // chi sei: login, registrazione, verifica (FEATURES.auth)

@@ -172,7 +172,7 @@ const schedaCalendario = ({
                   disabled={!isOnline || wxBusy}
                   className={bottone('secondario', 'minuscolo', 'shrink-0')}
                 >
-                  {wxBusy ? '…' : L.t('gioco.aggiorna')}
+                  {wxBusy ? '…' : L.t('meteo.aggiorna')}
                 </button>
               </div>
             )}

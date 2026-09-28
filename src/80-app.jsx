@@ -1840,13 +1840,6 @@ function App({ eredita, cambiaCampo } = {}) {
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
   };
 
-  // ---------- Mini gioco "Aiuta Bandy" ----------
-  // Stato, classifica e partite stanno in src/75-usa-gioco.jsx.
-  const {
-    gamePlayer, setGamePlayer, gameRunning, setGameRunning, gameBest,
-    leaderboard, refreshLeaderboard, startGame, endGame,
-  } = usaGioco({ activeTab, cloudConnesso: cloud.connected });
-
   // ---------- Galleria del campo ----------
   // Stato, ascolto delle miniature, caricamento, album e PDF ricordo stanno
   // in src/76-usa-galleria.jsx. Qui resta solo cosa le si passa: la scheda
@@ -2626,7 +2619,6 @@ function App({ eredita, cambiaCampo } = {}) {
     dotazioni: L.t('area.dotazioni'),
     galleria: L.t('area.galleria'),
     archivio: L.t('area.archivio'),
-    gioco: L.t('area.gioco'),
     guida: L.t('area.guida'),
     impostazioni: L.t('area.impostazioni'),
     campi: L.t('area.campi'),
@@ -2645,7 +2637,7 @@ function App({ eredita, cambiaCampo } = {}) {
     // divide i compiti, poi si compra, poi si registra la spesa.
     { title: L.t('menu.spese'), items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa'] },
     { title: L.t('menu.gruppo'), items: ['membri', 'regole', 'dotazioni', 'galleria'] },
-    { title: L.t('menu.altro'), items: ['gioco', 'archivio', 'guida', 'impostazioni'] },
+    { title: L.t('menu.altro'), items: ['archivio', 'guida', 'impostazioni'] },
   ];
 
   const GRUPPI_VISIBILI = window.Stanza
@@ -2698,7 +2690,6 @@ function App({ eredita, cambiaCampo } = {}) {
     { k: 'sync', title: L.t('guida.sync.titolo'), body: L.t('guida.sync.corpo') },
     { k: 'chiusura', title: L.t('guida.chiusura.titolo'), body: L.t('guida.chiusura.corpo') },
     { k: 'galleria', title: L.t('guida.galleria.titolo'), body: L.t('guida.galleria.corpo') },
-    { k: 'gioco', title: L.t('guida.gioco.titolo'), body: L.t('guida.gioco.corpo', LEVEL_EVERY) },
     { k: 'impostazioni', title: L.t('guida.impostazioni.titolo'), body: L.t('guida.impostazioni.corpo') },
     { k: 'pronto', title: L.t('guida.pronto.titolo'), body: L.t('guida.pronto.corpo') },
     { k: 'correggi', title: L.t('guida.correggi.titolo'), body: L.t('guida.correggi.corpo') },
@@ -3035,11 +3026,6 @@ function App({ eredita, cambiaCampo } = {}) {
         {/* ---------- ARCHIVIO (campi chiusi) ---------- */}
         {scheda === 'archivio' && schedaArchivio({
           album, archives, cloud, downloadArchive, members, openAlbum, openPhoto, photos, purchases, removeArchive, setAlbum, setViewArchive, totals,
-        })}
-
-        {/* ---------- AIUTA BANDY (mini gioco) ---------- */}
-        {scheda === 'gioco' && schedaGioco({
-          endGame, gameBest, gamePlayer, gameRunning, leaderboard, refreshLeaderboard, setGamePlayer, setGameRunning, startGame,
         })}
 
         {/* ---------- COME FUNZIONA (guida) ---------- */}

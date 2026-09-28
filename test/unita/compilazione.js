@@ -174,7 +174,7 @@ const A_MANO_ATTESI = {
   '81-schede-giorno.jsx': 3,
   '82-schede-conti.jsx': 2,
   '83-schede-gruppo.jsx': 2,
-  '84-schede-album.jsx': 3,
+  '84-schede-album.jsx': 2,
   '85-scheda-galleria.jsx': 4,
   // "Chi fa cosa" non ne ha nessuno: e' nata dopo il vocabolario, e la sua
   // casella di spunta ha fatto entrare nel vocabolario la forma "casella" —
@@ -329,9 +329,7 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     '88-scheda-ingresso.jsx': 0,
     '89-scheda-campi.jsx': 0,
     '50-interfaccia.jsx': 0,
-    '60-gioco.jsx': 3,               // i nomi dei livelli: sono luoghi veri
     '70-schermata-blocco.jsx': 0,
-    '75-usa-gioco.jsx': 1,           // una scheggia di codice
     '76-usa-galleria.jsx': 1,        // una scheggia di codice
     '77-usa-scontrini.jsx': 2,       // 'memoria del telefono': e' un valore, non un testo
     '78-usa-account.jsx': 1,         // una scheggia di codice
@@ -625,6 +623,22 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
       if (la === null) { potuto = false; return; }
       if (!la.equals(leggiQui(f) || Buffer.alloc(0))) divergono.push(f);
     });
+    // «Aiuta Bandy» e' della Brigata: il gioco, la mascotte, la classifica.
+    // Dal 28 settembre l'app pubblica non ce l'ha. Puo' rientrare per
+    // sbaglio portando un pezzo da main — un sorgente in build.js, la voce del
+    // menu, l'immagine nel precache — e nessun'altra prova lo direbbe: il
+    // gioco funziona benissimo anche dove non deve stare.
+    {
+      const buildTesto = fs.readFileSync(path.join(RADICE, 'build.js'), 'utf8');
+      const appTesto = fs.readFileSync(path.join(RADICE, 'src', '80-app.jsx'), 'utf8');
+      const swTesto = fs.readFileSync(path.join(RADICE, 'sw.js'), 'utf8');
+      const tracce = [];
+      if (/gioco\.jsx/.test(buildTesto)) tracce.push('un sorgente del gioco in build.js');
+      if (/'gioco'/.test(appTesto)) tracce.push("la scheda 'gioco' in 80-app.jsx");
+      if (/bandy\.png/i.test(swTesto)) tracce.push('bandy.png nel precache');
+      ok(`l'app pubblica non ha «Aiuta Bandy» (${tracce.join(', ') || 'nessuna traccia'})`, tracce.length === 0);
+    }
+
     ok(`i ${UGUALI.length} file che devono restare identici lo sono`
       + (!potuto ? ' — NON HO POTUTO CONFRONTARE: manca il ramo main o git' : '')
       + (divergono.length ? ' — DIVERGONO: ' + divergono.join(', ') : ''),
