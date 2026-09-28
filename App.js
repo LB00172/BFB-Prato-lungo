@@ -766,6 +766,8 @@ const compressImage = (file, maxDim = 1200, quality = 0.6) => new Promise((resol
 // `misura` e' in pixel e vale anche per il tratto: un'icona grande con il
 // tratto di una piccola sembra sbiadita, quindi il tratto cresce con lei.
 const ICONE = {
+  // I miei campi: la tenda, col palo in mezzo e l'ingresso aperto.
+  campi: 'M3 20L12 4l9 16z M12 4v16 M9 20l3-5 3 5',
   // Calendario: il riquadro con i due chiodi e la riga del mese.
   calendario: 'M4 6h16v14H4z M4 10h16 M8 3v4 M16 3v4',
   // Il menu' del giorno: la pentola sul fuoco, con il vapore.
@@ -3229,11 +3231,39 @@ const leggiStanzaSalvata = () => {
     return null; /* niente: si resta senza stanza */
   }
 };
+
+// I miei campi, come li ricorda questo telefono (Stanza.ricordaCampo). E'
+// una chiave del TELEFONO, non del campo (cassetti.js): e' proprio l'elenco
+// che serve a scegliere quale cassetto aprire.
+const CAMPI_KEY = 'cambusa_campi';
+const leggiCampi = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(CAMPI_KEY) || '[]');
+    return Array.isArray(v) ? v : [];
+  } catch (e) {
+    return [];
+  }
+};
 const usaStanza = () => {
   // La stanza di adesso: null vuol dire "nessuna", che e' il caso normale
   // finche' la versione pubblica non esiste davvero.
   const [stanza, setStanza] = useState(leggiStanzaSalvata);
   const [membri, setMembri] = useState([]);
+  // Chi aveva gia' una stanza prima che la home esistesse la ritrova in
+  // elenco: la stanza salvata entra da sola.
+  const [campi, setCampi] = useState(() => {
+    const s = leggiStanzaSalvata();
+    const l = leggiCampi();
+    return s && window.Stanza ? window.Stanza.ricordaCampo(l, {
+      codice: s.codice
+    }) : l;
+  });
+  useEffect(() => {
+    scriviLocale(CAMPI_KEY, JSON.stringify(campi));
+  }, [campi]);
+  const segnaCampo = voce => {
+    if (window.Stanza) setCampi(l => window.Stanza.ricordaCampo(l, voce));
+  };
   // Quale maschera e' aperta: '' | 'crea' | 'entra'.
   const [modo, setModo] = useState('');
   const [nome, setNome] = useState('');
@@ -3304,11 +3334,45 @@ const usaStanza = () => {
       setOccupato(false);
     }
   };
-  const ricorda = cod => {
+
+  // `voce`: quello che si sa del campo in questo momento (il nome e le date
+  // se lo si e' appena creato, il ruolo con cui si e' entrati).
+  const ricorda = (cod, voce) => {
     setStanza({
       codice: cod
     });
     scriviLocale('cambusa_stanza', cod);
+    segnaCampo(Object.assign({
+      codice: cod
+    }, voce || {}));
+  };
+
+  // Aprire un campo dell'elenco: e' gia' tuo, quindi non si chiede niente
+  // alla rete — in montagna deve funzionare senza linea. Se la scheda nella
+  // stanza non ci fosse piu', lo diranno le regole alla sincronizzazione.
+  const apriCampo = cod => {
+    pulisci();
+    setModo('');
+    ricorda(cod);
+  };
+
+  // L'elenco dal cloud: il profilo (solo per chi e' registrato: lo segue su
+  // ogni telefono) e la lettura di ogni stanza, per nome, date e se si e'
+  // ancora dentro. Senza linea non si tocca niente e non si dice niente: la
+  // home resta quella di ieri, che e' la cosa giusta da mostrare al campo.
+  const aggiornaCampi = async (utente, conProfilo) => {
+    const c = SC();
+    const regole = S();
+    if (!c || !c.disponibile() || !regole || !utente || !utente.uid) return;
+    try {
+      let profilo = [];
+      if (conProfilo && window.AuthCloud && window.AuthCloud.stanzeDelProfilo) {
+        profilo = await window.AuthCloud.stanzeDelProfilo();
+      }
+      const codici = leggiCampi().map(v => v.codice).concat(profilo || []);
+      const stati = await c.statoDi(codici, utente);
+      setCampi(l => regole.aggiornaCampi(l, profilo, stati));
+    } catch (e) {/* senza linea: l'elenco resta quello che era */}
   };
   const crea = async utente => {
     const regole = S();
@@ -3346,7 +3410,12 @@ const usaStanza = () => {
       codice: nuovo
     }, utente));
     if (cod) {
-      ricorda(cod);
+      ricorda(cod, {
+        nome,
+        inizio,
+        fine,
+        ruolo: 'proprietario'
+      });
       setModo('');
       setFatto('stanza.creata');
     }
@@ -3362,7 +3431,9 @@ const usaStanza = () => {
     }
     const cod = await prova(c => c.entra(codice, utente));
     if (cod) {
-      ricorda(cod);
+      ricorda(cod, {
+        ruolo: 'redattore'
+      });
       setModo('');
       setCodice('');
       setFatto('stanza.entrato');
@@ -3373,7 +3444,9 @@ const usaStanza = () => {
   const accettaInvito = async utente => {
     const cod = await prova(c => c.entra(invito, utente));
     if (cod) {
-      ricorda(cod);
+      ricorda(cod, {
+        ruolo: 'redattore'
+      });
       setInvito(null);
       setFatto('stanza.entrato');
     }
@@ -3446,7 +3519,10 @@ const usaStanza = () => {
     accettaInvito,
     rifiutaInvito,
     linkDaMandare,
-    riagganciaStanza
+    riagganciaStanza,
+    campi,
+    apriCampo,
+    aggiornaCampi
   };
 };
 // `eredita` e `cambiaCampo` arrivano da Radice (90-avvio): servono a cambiare
@@ -6444,6 +6520,29 @@ function App({
   const codiceInGioco = stanzaStato.stanza && stanzaStato.stanza.codice || window.CloudSync && window.CloudSync.savedCode() || window.CAMP_CODE_DEFAULT || '';
   const dentroUnCampo = !FEATURES.rooms || !!codiceInGioco;
 
+  // La scheda che si disegna. Senza un campo, le aree del campo non hanno
+  // niente da mostrare: si sta nella home («I miei campi»), da cui se ne
+  // crea uno o si entra in quello di un altro. Impostazioni resta
+  // raggiungibile, perche' parla di te e non del campo.
+  const scheda = FEATURES.rooms && !dentroUnCampo && activeTab !== 'impostazioni' ? 'campi' : activeTab;
+
+  // Aprendo la home si chiede al cloud come stanno i campi: nomi, date, se si
+  // e' ancora dentro. Senza linea non succede niente e resta l'elenco di ieri.
+  useEffect(() => {
+    if (!FEATURES.rooms || scheda !== 'campi') return;
+    stanzaStato.aggiornaCampi(account.utente, account.stato === 'registrato' || account.stato === 'daVerificare');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheda, account.utente && account.utente.uid]);
+
+  // Toccare un campo nella home: si apre, e si parte dal Calendario. Se e'
+  // un altro campo, il cambio di cassetto lo fa l'effetto della
+  // sincronizzazione (cassettoGiusto), che porta di la' la scheda.
+  const apriCampo = codice => {
+    stanzaStato.apriCampo(codice);
+    setActiveTab('calendario');
+    setMenuOpen(false);
+  };
+
   // ---------- Render ----------
   // Il blocco viene prima di tutto: senza password non si vede nulla.
   if (locked) return /*#__PURE__*/React.createElement(LockScreen, {
@@ -6479,13 +6578,16 @@ function App({
   // perche'. Anonimo conta come "senza account": e' l'accesso che la
   // sincronizzazione fa da sola aprendo l'app, non una scelta della persona.
   const senzaAccount = account.stato === 'ospite' || account.stato === 'anonimo';
-  if (FEATURES.rooms && FEATURES.auth && senzaAccount && !dentroUnCampo && !saltaIngresso) {
+  // Chi ha gia' dei campi su questo telefono (anche entrato solo col codice)
+  // non ha bisogno della porta d'ingresso: va nella home, a sceglierne uno.
+  const conCampi = FEATURES.rooms && stanzaStato.campi.length > 0;
+  if (FEATURES.rooms && FEATURES.auth && senzaAccount && !dentroUnCampo && !saltaIngresso && !conCampi) {
     return schermataIngresso({
       account,
       onCodice: () => {
         setSaltaIngresso(true);
         stanzaStato.setModo('entra');
-        setActiveTab('impostazioni');
+        setActiveTab('campi');
       }
     });
   }
@@ -6507,7 +6609,8 @@ function App({
     archivio: L.t('area.archivio'),
     gioco: L.t('area.gioco'),
     guida: L.t('area.guida'),
-    impostazioni: L.t('area.impostazioni')
+    impostazioni: L.t('area.impostazioni'),
+    campi: L.t('area.campi')
   };
 
   // Le icone delle aree stanno in src/45-icone.jsx e si chiamano per nome,
@@ -6664,7 +6767,7 @@ function App({
     className: "font-rustic text-titolo tracking-wide"
   }, BRAND.appTitle), /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo uppercase tracking-wider text-salvia"
-  }, tabs[activeTab]), (() => {
+  }, tabs[scheda]), (() => {
     const foto = cloud.foto || 0;
     const sospeso = !!cloud.pending || foto > 0;
     const testo = sospeso ? foto > 0 ? L.t('spia.fotoDaInviare', foto) : L.t('spia.daInviare') : L.t(isOnline ? 'spia.online' : 'spia.offline');
@@ -6695,7 +6798,7 @@ function App({
     className: "font-rustic text-bosco leading-tight"
   }, BRAND.appTitle), /*#__PURE__*/React.createElement("div", {
     className: "text-minuto uppercase tracking-wider text-salvia"
-  }, BRAND.groupName))), !dentroUnCampo && FEATURES.rooms && /*#__PURE__*/React.createElement("div", {
+  }, BRAND.groupName))), FEATURES.rooms && /*#__PURE__*/React.createElement("div", {
     className: "pt-2 first:pt-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 px-1 pb-1"
@@ -6703,11 +6806,21 @@ function App({
     className: "text-minuto uppercase tracking-widest font-bold text-salvia shrink-0"
   }, L.t('menu.ilCampo')), /*#__PURE__*/React.createElement("span", {
     className: "flex-grow h-px bg-salvia/30"
-  })), [['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => /*#__PURE__*/React.createElement("button", {
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      stanzaStato.setModo('');
+      goTo('campi');
+    },
+    className: bottoneMenu(scheda === 'campi')
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-5 shrink-0 flex items-center justify-center"
+  }, icona('campi')), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, L.t('area.campi'))), !dentroUnCampo && [['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => /*#__PURE__*/React.createElement("button", {
     key: modo,
     onClick: () => {
       stanzaStato.setModo(modo);
-      goTo('impostazioni');
+      goTo('campi');
     },
     className: bottoneMenu(false)
   }, /*#__PURE__*/React.createElement("span", {
@@ -6842,7 +6955,12 @@ function App({
     className: bottone('secondario', 'minuscolo')
   }, L.t('perdita.vaBene')))))), /*#__PURE__*/React.createElement("main", {
     className: "flex-grow p-4"
-  }, activeTab === 'calendario' && schedaCalendario({
+  }, scheda === 'campi' && schedaCampi({
+    stanzaStato,
+    account,
+    codiceInGioco,
+    onApri: apriCampo
+  }), scheda === 'calendario' && schedaCalendario({
     admin,
     campoInCorso,
     fetchWeather,
@@ -6863,7 +6981,7 @@ function App({
     weather,
     weekDays,
     wxBusy
-  }), activeTab === 'menu' && schedaMenu({
+  }), scheda === 'menu' && schedaMenu({
     confermaPropostaSpesa,
     getDayData,
     getMeal,
@@ -6877,7 +6995,7 @@ function App({
     setSelectedDateStr,
     toBuy,
     updateDayData
-  }), activeTab === 'compiti' && FEATURES.compiti && schedaCompiti({
+  }), scheda === 'compiti' && FEATURES.compiti && schedaCompiti({
     addCompito,
     compiti,
     daCompitoASpesa,
@@ -6890,7 +7008,7 @@ function App({
     setNuovoCompito,
     setNuovoCompitoChi,
     toggleCompito
-  }), activeTab === 'membri' && schedaMembri({
+  }), scheda === 'membri' && schedaMembri({
     addMember,
     infoMember,
     members,
@@ -6905,7 +7023,7 @@ function App({
     toggleChild,
     toggleEquipExempt,
     unisciDoppi
-  }), activeTab === 'presenze' && schedaPresenze({
+  }), scheda === 'presenze' && schedaPresenze({
     admin,
     azioniOpen,
     bloccaGiorno,
@@ -6930,7 +7048,7 @@ function App({
     setSelectedDateStr,
     toggleMeal,
     updateDayData
-  }), activeTab === 'spesa' && schedaSpesa({
+  }), scheda === 'spesa' && schedaSpesa({
     admin,
     archives,
     bloccoConti,
@@ -6959,7 +7077,7 @@ function App({
     shareReport,
     spesaSection,
     totals
-  }), activeTab === 'lista' && schedaLista({
+  }), scheda === 'lista' && schedaLista({
     addPurchase,
     addToBuy,
     attachReceiptTo,
@@ -7000,7 +7118,7 @@ function App({
     toBuy,
     toBuyQuery,
     totals
-  }), activeTab === 'attrezzatura' && schedaAttrezzatura({
+  }), scheda === 'attrezzatura' && schedaAttrezzatura({
     addEquip,
     attachReceiptTo,
     equipment,
@@ -7016,13 +7134,13 @@ function App({
     setNewEquipText,
     setViewReceipt,
     toggleEquipBought
-  }), activeTab === 'regole' && schedaRegole(), activeTab === 'dotazioni' && schedaDotazioni({
+  }), scheda === 'regole' && schedaRegole(), scheda === 'dotazioni' && schedaDotazioni({
     addGear,
     gear,
     newGearText,
     removeGear,
     setNewGearText
-  }), activeTab === 'galleria' && schedaGalleria({
+  }), scheda === 'galleria' && schedaGalleria({
     PER_PAGINA_ALBUM,
     addPhotos,
     album,
@@ -7052,7 +7170,7 @@ function App({
     soloNome,
     togglePicked,
     uscitaScelta
-  }), activeTab === 'archivio' && schedaArchivio({
+  }), scheda === 'archivio' && schedaArchivio({
     album,
     archives,
     cloud,
@@ -7066,7 +7184,7 @@ function App({
     setAlbum,
     setViewArchive,
     totals
-  }), activeTab === 'gioco' && schedaGioco({
+  }), scheda === 'gioco' && schedaGioco({
     endGame,
     gameBest,
     gamePlayer,
@@ -7076,11 +7194,11 @@ function App({
     setGamePlayer,
     setGameRunning,
     startGame
-  }), activeTab === 'guida' && schedaGuida({
+  }), scheda === 'guida' && schedaGuida({
     GUIDE,
     guideOpen,
     setGuideOpen
-  }), activeTab === 'impostazioni' && schedaImpostazioni({
+  }), scheda === 'impostazioni' && schedaImpostazioni({
     account,
     stanzaStato,
     admin,
@@ -9390,71 +9508,16 @@ const schedaImpostazioni = ({
 }, L.t('stanza.copiaLink'))), stanzaStato.membri.length > 0 && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500"
 }, L.t('stanza.dentro')(stanzaStato.membri.length)), /*#__PURE__*/React.createElement("button", {
-  onClick: stanzaStato.esci,
+  onClick: () => {
+    stanzaStato.esci();
+    goTo('campi');
+  },
   disabled: stanzaStato.occupato,
   className: bottone('testuale', 'minuscolo', 'w-full')
-}, L.t('stanza.esci'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-gray-500 leading-snug"
-}, L.t('stanza.aCosaServe')), !stanzaStato.modo && /*#__PURE__*/React.createElement("div", {
-  className: "flex gap-2"
-}, /*#__PURE__*/React.createElement("button", {
-  onClick: () => stanzaStato.setModo('crea'),
-  className: bottone('primario', 'normale', 'flex-1')
-}, L.t('stanza.creaTitolo')), /*#__PURE__*/React.createElement("button", {
-  onClick: () => stanzaStato.setModo('entra'),
-  className: bottone('secondario', 'normale', 'flex-1')
-}, L.t('stanza.entraTitolo'))), stanzaStato.modo === 'crea' && /*#__PURE__*/React.createElement("div", {
-  className: "space-y-2 pt-1"
-}, /*#__PURE__*/React.createElement("input", {
-  type: "text",
-  value: stanzaStato.nome,
-  onChange: e => stanzaStato.setNome(e.target.value),
-  placeholder: L.t('stanza.nome'),
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-}), /*#__PURE__*/React.createElement("div", {
-  className: "grid grid-cols-2 gap-2"
-}, /*#__PURE__*/React.createElement("input", {
-  type: "date",
-  value: stanzaStato.inizio,
-  onChange: e => stanzaStato.setInizio(e.target.value),
-  "aria-label": L.t('stanza.inizio'),
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-}), /*#__PURE__*/React.createElement("input", {
-  type: "date",
-  value: stanzaStato.fine,
-  onChange: e => stanzaStato.setFine(e.target.value),
-  "aria-label": L.t('stanza.fine'),
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-})), /*#__PURE__*/React.createElement("div", {
-  className: "flex gap-2"
-}, /*#__PURE__*/React.createElement("button", {
-  onClick: stanzaStato.chiudi,
-  className: bottone('testuale', 'normale', 'flex-1')
-}, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
-  onClick: () => stanzaStato.crea(account.utente),
-  disabled: stanzaStato.occupato,
-  className: bottone('primario', 'normale', 'flex-1')
-}, L.t('stanza.crea')))), stanzaStato.modo === 'entra' && /*#__PURE__*/React.createElement("div", {
-  className: "space-y-2 pt-1"
-}, /*#__PURE__*/React.createElement("input", {
-  type: "text",
-  value: stanzaStato.codice,
-  onChange: e => stanzaStato.setCodice(e.target.value),
-  placeholder: L.t('stanza.codice'),
-  autoCapitalize: "characters",
-  autoComplete: "off",
-  spellCheck: "false",
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-medio font-mono tracking-widest uppercase focus:outline-none focus:border-bosco"
-}), /*#__PURE__*/React.createElement("div", {
-  className: "flex gap-2"
-}, /*#__PURE__*/React.createElement("button", {
-  onClick: stanzaStato.chiudi,
-  className: bottone('testuale', 'normale', 'flex-1')
-}, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
-  onClick: () => stanzaStato.entra(account.utente),
-  disabled: stanzaStato.occupato,
-  className: bottone('primario', 'normale', 'flex-1')
-}, L.t('stanza.entra'))))), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
+}, L.t('stanza.esci'))) : moduloStanza({
+  stanzaStato,
+  account
+}), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo font-bold text-red-700 leading-snug"
 }, L.t(stanzaStato.problema)), stanzaStato.fatto === 'stanza.creata' && stanzaStato.stanza && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-bosco leading-snug"
@@ -10104,6 +10167,143 @@ React.createElement("div", {
 }, L.t('ingresso.hoUnCodice')), /*#__PURE__*/React.createElement("p", {
   className: "mt-2 text-piccolo text-salvia leading-snug"
 }, L.t('ingresso.hoUnCodiceNota'))));
+// ---------- I miei campi ----------
+// La home: i campi di questa persona, e le due strade per averne uno nuovo.
+// Toccando un campo si apre l'app di sempre, con il menu intero; da dentro,
+// «I miei campi» nel menu riporta qui.
+//
+// Due cose da sapere leggendo questo file.
+//
+// **Si apre senza linea.** L'elenco sta sul telefono (Stanza.ricordaCampo) e
+// si corregge quando il cloud risponde: in montagna la home mostra i nomi di
+// ieri, e aprire un campo non chiede niente alla rete.
+//
+// **Scegliere un campo cambia cassetto** (cassetti.js): i dati sul telefono
+// sono quelli del campo aperto, e passare a un altro smonta e rimonta l'app.
+// E' per questo che la home e' venuta DOPO i cassetti: prima, un elenco di
+// campi a portata di dito avrebbe reso facilissimo mescolarli.
+
+// Crea / Partecipa. Stava dentro Impostazioni; ne e' uscito quando e' nata la
+// home, che deve mostrare lo STESSO modulo — due copie divergono alla prima
+// correzione. Impostazioni e' identica al carattere a com'era (confronto del
+// DOM).
+const moduloStanza = ({
+  stanzaStato,
+  account
+}) => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-gray-500 leading-snug"
+}, L.t('stanza.aCosaServe')), !stanzaStato.modo && /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: () => stanzaStato.setModo('crea'),
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t('stanza.creaTitolo')), /*#__PURE__*/React.createElement("button", {
+  onClick: () => stanzaStato.setModo('entra'),
+  className: bottone('secondario', 'normale', 'flex-1')
+}, L.t('stanza.entraTitolo'))), stanzaStato.modo === 'crea' && /*#__PURE__*/React.createElement("div", {
+  className: "space-y-2 pt-1"
+}, /*#__PURE__*/React.createElement("input", {
+  type: "text",
+  value: stanzaStato.nome,
+  onChange: e => stanzaStato.setNome(e.target.value),
+  placeholder: L.t('stanza.nome'),
+  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+}), /*#__PURE__*/React.createElement("div", {
+  className: "grid grid-cols-2 gap-2"
+}, /*#__PURE__*/React.createElement("input", {
+  type: "date",
+  value: stanzaStato.inizio,
+  onChange: e => stanzaStato.setInizio(e.target.value),
+  "aria-label": L.t('stanza.inizio'),
+  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+}), /*#__PURE__*/React.createElement("input", {
+  type: "date",
+  value: stanzaStato.fine,
+  onChange: e => stanzaStato.setFine(e.target.value),
+  "aria-label": L.t('stanza.fine'),
+  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+})), /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: stanzaStato.chiudi,
+  className: bottone('testuale', 'normale', 'flex-1')
+}, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
+  onClick: () => stanzaStato.crea(account.utente),
+  disabled: stanzaStato.occupato,
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t('stanza.crea')))), stanzaStato.modo === 'entra' && /*#__PURE__*/React.createElement("div", {
+  className: "space-y-2 pt-1"
+}, /*#__PURE__*/React.createElement("input", {
+  type: "text",
+  value: stanzaStato.codice,
+  onChange: e => stanzaStato.setCodice(e.target.value),
+  placeholder: L.t('stanza.codice'),
+  autoCapitalize: "characters",
+  autoComplete: "off",
+  spellCheck: "false",
+  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-medio font-mono tracking-widest uppercase focus:outline-none focus:border-bosco"
+}), /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  onClick: stanzaStato.chiudi,
+  className: bottone('testuale', 'normale', 'flex-1')
+}, L.t('galleria.annulla')), /*#__PURE__*/React.createElement("button", {
+  onClick: () => stanzaStato.entra(account.utente),
+  disabled: stanzaStato.occupato,
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t('stanza.entra')))));
+
+// `codiceInGioco`: il campo aperto adesso, per segnarlo. `onApri`: cosa fare
+// toccando un campo (App lo apre e torna al Calendario).
+const schedaCampi = ({
+  stanzaStato,
+  account,
+  codiceInGioco,
+  onApri
+}) => {
+  const oggi = toDateStr(new Date());
+  const elenco = window.Stanza.ordinaCampi(stanzaStato.campi, oggi);
+  const qui = window.Stanza.normalizza(codiceInGioco);
+  const registrato = account.stato === 'registrato' || account.stato === 'daVerificare';
+  const date = v => v.inizio ? L.t('campi.date', L.data(parseDate(v.inizio), 'numerica'), v.fine ? L.data(parseDate(v.fine), 'numerica') : '') : '';
+  return /*#__PURE__*/React.createElement("div", {
+    "data-scheda": "campi",
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
+  }, L.t('area.campi')), elenco.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500 leading-snug"
+  }, L.t('campi.vuoto')) : /*#__PURE__*/React.createElement("ul", {
+    className: "rounded border border-salvia/30 divide-y divide-salvia/20 overflow-hidden"
+  }, elenco.map(v => /*#__PURE__*/React.createElement("li", {
+    key: v.codice
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-campo": v.codice,
+    onClick: () => onApri(v.codice),
+    className: bottoneRiga('bg-carta/40')
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block font-bold text-bosco truncate"
+  }, v.nome || Stanza.bello(v.codice)), /*#__PURE__*/React.createElement("span", {
+    className: "block text-minuto text-gray-500 truncate"
+  }, [date(v), L.t(v.ruolo === 'proprietario' ? 'campi.organizzi' : 'campi.partecipi')].filter(Boolean).join(' · '))), v.codice === qui && /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-minuto uppercase font-bold px-2 py-1 rounded bg-bosco text-carta"
+  }, L.t('campi.seiQui')))))), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-400 leading-snug"
+  }, L.t(registrato ? 'campi.notaProfilo' : 'campi.notaTelefono'))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
+  }, L.t('campi.nuovo')), moduloStanza({
+    stanzaStato,
+    account
+  }), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo font-bold text-red-700 leading-snug"
+  }, L.t(stanzaStato.problema))));
+};
 
 // ---------- Un cassetto per campo (cassetti.js) ----------
 // Le chiavi di sempre contengono i dati del campo in gioco; quelli degli

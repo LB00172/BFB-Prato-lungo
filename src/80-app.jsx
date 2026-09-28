@@ -2546,6 +2546,29 @@ function App({ eredita, cambiaCampo } = {}) {
     || window.CAMP_CODE_DEFAULT || '';
   const dentroUnCampo = !FEATURES.rooms || !!codiceInGioco;
 
+  // La scheda che si disegna. Senza un campo, le aree del campo non hanno
+  // niente da mostrare: si sta nella home («I miei campi»), da cui se ne
+  // crea uno o si entra in quello di un altro. Impostazioni resta
+  // raggiungibile, perche' parla di te e non del campo.
+  const scheda = FEATURES.rooms && !dentroUnCampo && activeTab !== 'impostazioni' ? 'campi' : activeTab;
+
+  // Aprendo la home si chiede al cloud come stanno i campi: nomi, date, se si
+  // e' ancora dentro. Senza linea non succede niente e resta l'elenco di ieri.
+  useEffect(() => {
+    if (!FEATURES.rooms || scheda !== 'campi') return;
+    stanzaStato.aggiornaCampi(account.utente, account.stato === 'registrato' || account.stato === 'daVerificare');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheda, account.utente && account.utente.uid]);
+
+  // Toccare un campo nella home: si apre, e si parte dal Calendario. Se e'
+  // un altro campo, il cambio di cassetto lo fa l'effetto della
+  // sincronizzazione (cassettoGiusto), che porta di la' la scheda.
+  const apriCampo = (codice) => {
+    stanzaStato.apriCampo(codice);
+    setActiveTab('calendario');
+    setMenuOpen(false);
+  };
+
   // ---------- Render ----------
   // Il blocco viene prima di tutto: senza password non si vede nulla.
   if (locked) return <LockScreen reason={lockReason} onUnlock={() => { setLockReason(''); setLocked(false); }} />;
@@ -2574,13 +2597,16 @@ function App({ eredita, cambiaCampo } = {}) {
   // perche'. Anonimo conta come "senza account": e' l'accesso che la
   // sincronizzazione fa da sola aprendo l'app, non una scelta della persona.
   const senzaAccount = account.stato === 'ospite' || account.stato === 'anonimo';
-  if (FEATURES.rooms && FEATURES.auth && senzaAccount && !dentroUnCampo && !saltaIngresso) {
+  // Chi ha gia' dei campi su questo telefono (anche entrato solo col codice)
+  // non ha bisogno della porta d'ingresso: va nella home, a sceglierne uno.
+  const conCampi = FEATURES.rooms && stanzaStato.campi.length > 0;
+  if (FEATURES.rooms && FEATURES.auth && senzaAccount && !dentroUnCampo && !saltaIngresso && !conCampi) {
     return schermataIngresso({
       account,
       onCodice: () => {
         setSaltaIngresso(true);
         stanzaStato.setModo('entra');
-        setActiveTab('impostazioni');
+        setActiveTab('campi');
       },
     });
   }
@@ -2603,6 +2629,7 @@ function App({ eredita, cambiaCampo } = {}) {
     gioco: L.t('area.gioco'),
     guida: L.t('area.guida'),
     impostazioni: L.t('area.impostazioni'),
+    campi: L.t('area.campi'),
   };
 
   // Le icone delle aree stanno in src/45-icone.jsx e si chiamano per nome,
@@ -2692,7 +2719,7 @@ function App({ eredita, cambiaCampo } = {}) {
           <span className="block w-5 h-0.5 bg-carta"></span>
         </button>
         <h1 className="font-rustic text-titolo tracking-wide">{BRAND.appTitle}</h1>
-        <p className="text-piccolo uppercase tracking-wider text-salvia">{tabs[activeTab]}</p>
+        <p className="text-piccolo uppercase tracking-wider text-salvia">{tabs[scheda]}</p>
         {/* Spia in alto a destra. "Da inviare" è il caso importante: sei
             online ma qualcosa non è ancora arrivato agli altri, e prima non
             lo diceva nessuno. */}
@@ -2735,19 +2762,24 @@ function App({ eredita, cambiaCampo } = {}) {
               <div className="text-minuto uppercase tracking-wider text-salvia">{BRAND.groupName}</div>
             </div>
           </div>
-          {/* Le due strade per avere un campo. Stanno FUORI dai gruppi perche'
-              non sono aree da visitare, sono azioni: portano alla scheda
-              della stanza, dove si crea o si entra con un codice. */}
-          {!dentroUnCampo && FEATURES.rooms && (
+          {/* I miei campi, e — finche' un campo non c'e' — le due strade per
+              averne uno. Stanno FUORI dai gruppi perche' non sono aree del
+              campo: la home viene prima di qualunque campo, e Crea /
+              Partecipa sono azioni, portano al modulo della home. */}
+          {FEATURES.rooms && (
             <div className="pt-2 first:pt-0">
               <div className="flex items-center gap-2 px-1 pb-1">
                 <span className="text-minuto uppercase tracking-widest font-bold text-salvia shrink-0">{L.t('menu.ilCampo')}</span>
                 <span className="flex-grow h-px bg-salvia/30"></span>
               </div>
-              {[['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => (
+              <button onClick={() => { stanzaStato.setModo(''); goTo('campi'); }} className={bottoneMenu(scheda === 'campi')}>
+                <span className="w-5 shrink-0 flex items-center justify-center">{icona('campi')}</span>
+                <span className="min-w-0 truncate">{L.t('area.campi')}</span>
+              </button>
+              {!dentroUnCampo && [['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => (
                 <button
                   key={modo}
-                  onClick={() => { stanzaStato.setModo(modo); goTo('impostazioni'); }}
+                  onClick={() => { stanzaStato.setModo(modo); goTo('campi'); }}
                   className={bottoneMenu(false)}
                 >
                   <span className="w-5 shrink-0 flex items-center justify-center">{icona(modo === 'crea' ? 'compiti' : 'membri')}</span>
@@ -2946,76 +2978,77 @@ function App({ eredita, cambiaCampo } = {}) {
 
       <main className="flex-grow p-4">
         {/* ---------- CALENDARIO ---------- */}
-        {activeTab === 'calendario' && schedaCalendario({
+        {scheda === 'campi' && schedaCampi({ stanzaStato, account, codiceInGioco, onApri: apriCampo })}
+        {scheda === 'calendario' && schedaCalendario({
           admin, campoInCorso, fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
         })}
 
         {/* ---------- MENÙ ---------- */}
-        {activeTab === 'menu' && schedaMenu({
+        {scheda === 'menu' && schedaMenu({
           confermaPropostaSpesa, getDayData, getMeal, members, proponiDalMenu, propostaSpesa, renderWeekStrip, selectedDateStr, setCurrentDate, setPropostaSpesa, setSelectedDateStr, toBuy, updateDayData,
         })}
 
         {/* ---------- CHI FA COSA ---------- */}
-        {activeTab === 'compiti' && FEATURES.compiti && schedaCompiti({
+        {scheda === 'compiti' && FEATURES.compiti && schedaCompiti({
           addCompito, compiti, daCompitoASpesa, members, nuovoCompito, nuovoCompitoChi,
           removeCompito, renderBuyerSelect, setCompitoCampo, setNuovoCompito, setNuovoCompitoChi, toggleCompito,
         })}
 
         {/* ---------- MEMBRI ---------- */}
-        {activeTab === 'membri' && schedaMembri({
+        {scheda === 'membri' && schedaMembri({
           addMember, infoMember, members, membriDoppi, newMemberChild, newMemberName, removeMember, setInfoMember, setMemberField, setNewMemberChild, setNewMemberName, toggleChild, toggleEquipExempt, unisciDoppi,
         })}
 
         {/* ---------- PRESENZE ---------- */}
-        {activeTab === 'presenze' && schedaPresenze({
+        {scheda === 'presenze' && schedaPresenze({
           admin, azioniOpen, bloccaGiorno, chiediCopiaDaIeri, chiediGiornoGratis, chiediSetAll, getDayData, getMeal, giornoBloccato, giornoGratis, members, navigateDate, orfanoScelte, presenzeOrfane, riassegnaOrfane, sbloccaGiorno, scartaOrfane, selectedDateStr, setAzioniOpen, setCurrentDate, setOrfanoScelte, setSelectedDateStr, toggleMeal, updateDayData,
         })}
 
         {/* ---------- SPESA ---------- */}
-        {activeTab === 'spesa' && schedaSpesa({
+        {scheda === 'spesa' && schedaSpesa({
           admin, archives, bloccoConti, campCodeInput, cassaSepAttiva, cassaUnica, chiudiConti, cloud, connectCloud, disconnectCloud, exportData, goTo, importData, isOnline, openClose, openRestore, pastiDi, riapriConti, risparmio, saldiOttimizzati, schedaQuote, schedaSaldi, setCampCodeInput, setSaldiOttimizzati, setSpesaSection, shareReport, spesaSection, totals,
         })}
 
         {/* ---------- TACCUINO DELLE SPESE ---------- */}
-        {activeTab === 'lista' && schedaLista({
+        {scheda === 'lista' && schedaLista({
           addPurchase, addToBuy, attachReceiptTo, listaSection, manualOpen, newBuyName, newBuyQty, onReceiptFile, openEditPurchase, pAccount, pBuyer, pName, pPrice, pReceipt, pType, purchaseQuery, purchases, receipts, removePurchase, removeToBuy, renderBuyerSelect, sepDays, setBuying, setListaSection, setManualOpen, setNewBuyName, setNewBuyQty, setPAccount, setPBuyer, setPName, setPPrice, setPReceipt, setPType, setPurchaseQuery, setToBuyQuery, setViewReceipt, spesePotenzialmenteDoppie, toBuy, toBuyQuery, totals,
         })}
 
         {/* ---------- AGGIUNTA ATTREZZATURA ---------- */}
-        {activeTab === 'attrezzatura' && schedaAttrezzatura({
+        {scheda === 'attrezzatura' && schedaAttrezzatura({
           addEquip, attachReceiptTo, equipment, newEquipBuyer, newEquipPrice, newEquipText, openEditEquip, receipts, removeEquip, renderBuyerSelect, setNewEquipBuyer, setNewEquipPrice, setNewEquipText, setViewReceipt, toggleEquipBought,
         })}
 
         {/* ---------- REGOLE ---------- */}
-        {activeTab === 'regole' && schedaRegole()}
+        {scheda === 'regole' && schedaRegole()}
 
         {/* ---------- DOTAZIONI PERSONALI ---------- */}
-        {activeTab === 'dotazioni' && schedaDotazioni({
+        {scheda === 'dotazioni' && schedaDotazioni({
           addGear, gear, newGearText, removeGear, setNewGearText,
         })}
 
         {/* ---------- GALLERIA ---------- */}
-        {activeTab === 'galleria' && schedaGalleria({
+        {scheda === 'galleria' && schedaGalleria({
           PER_PAGINA_ALBUM, addPhotos, album, albumPage, albumRef, cloud, galleryView, generaRicordo, members, onScrollAlbum, openPhoto, paginaAlbum, pdfBusy, photoBusy, photoCap, photoWho, photos, photosBy, photosReady, picked, picking, setGalleryView, setPhotoWho, setPicked, setPicking, sfoglia, soloNome, togglePicked, uscitaScelta,
         })}
 
         {/* ---------- ARCHIVIO (campi chiusi) ---------- */}
-        {activeTab === 'archivio' && schedaArchivio({
+        {scheda === 'archivio' && schedaArchivio({
           album, archives, cloud, downloadArchive, members, openAlbum, openPhoto, photos, purchases, removeArchive, setAlbum, setViewArchive, totals,
         })}
 
         {/* ---------- AIUTA BANDY (mini gioco) ---------- */}
-        {activeTab === 'gioco' && schedaGioco({
+        {scheda === 'gioco' && schedaGioco({
           endGame, gameBest, gamePlayer, gameRunning, leaderboard, refreshLeaderboard, setGamePlayer, setGameRunning, startGame,
         })}
 
         {/* ---------- COME FUNZIONA (guida) ---------- */}
-        {activeTab === 'guida' && schedaGuida({
+        {scheda === 'guida' && schedaGuida({
           GUIDE, guideOpen, setGuideOpen,
         })}
 
         {/* ---------- IMPOSTAZIONI ---------- */}
-        {activeTab === 'impostazioni' && schedaImpostazioni({
+        {scheda === 'impostazioni' && schedaImpostazioni({
           account, stanzaStato, admin, adminErr, adminPwd, annullaSync, askAlways, bloccoOpen, campData, campoInCorso, cloud, datiOpen, diagTick, entraAdmin, esciAdmin, esportaRegistro, exportData, fotoDove, goTo, isDark, isOnline, lingua, lockNow, logOpen, members, metaRef, photoCap, purchases, readyChecks, readyOk, receipts, setAdminErr, setAdminPwd, setBloccoOpen, setDatiOpen, setDiagTick, setLingua, setLogOpen, setLostSync, setPhotoCap, setTecnicaOpen, setTheme, swVersion, syncStateRef, tecnicaOpen, theme, toggleAskAlways, wipeLocal,
         })}
       </main>

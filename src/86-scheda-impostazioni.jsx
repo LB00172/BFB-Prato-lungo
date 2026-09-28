@@ -190,55 +190,9 @@ const schedaImpostazioni = ({
           {stanzaStato.membri.length > 0 && (
             <p className="text-piccolo text-gray-500">{L.t('stanza.dentro')(stanzaStato.membri.length)}</p>
           )}
-          <button onClick={stanzaStato.esci} disabled={stanzaStato.occupato} className={bottone('testuale', 'minuscolo', 'w-full')}>{L.t('stanza.esci')}</button>
+          <button onClick={() => { stanzaStato.esci(); goTo('campi'); }} disabled={stanzaStato.occupato} className={bottone('testuale', 'minuscolo', 'w-full')}>{L.t('stanza.esci')}</button>
         </>
-      ) : (
-        <>
-          <p className="text-piccolo text-gray-500 leading-snug">{L.t('stanza.aCosaServe')}</p>
-
-          {!stanzaStato.modo && (
-            <div className="flex gap-2">
-              <button onClick={() => stanzaStato.setModo('crea')} className={bottone('primario', 'normale', 'flex-1')}>{L.t('stanza.creaTitolo')}</button>
-              <button onClick={() => stanzaStato.setModo('entra')} className={bottone('secondario', 'normale', 'flex-1')}>{L.t('stanza.entraTitolo')}</button>
-            </div>
-          )}
-
-          {stanzaStato.modo === 'crea' && (
-            <div className="space-y-2 pt-1">
-              <input type="text" value={stanzaStato.nome} onChange={(e) => stanzaStato.setNome(e.target.value)}
-                placeholder={L.t('stanza.nome')}
-                className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
-              <div className="grid grid-cols-2 gap-2">
-                <input type="date" value={stanzaStato.inizio} onChange={(e) => stanzaStato.setInizio(e.target.value)}
-                  aria-label={L.t('stanza.inizio')}
-                  className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
-                <input type="date" value={stanzaStato.fine} onChange={(e) => stanzaStato.setFine(e.target.value)}
-                  aria-label={L.t('stanza.fine')}
-                  className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
-              </div>
-              <div className="flex gap-2">
-                <button onClick={stanzaStato.chiudi} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
-                <button onClick={() => stanzaStato.crea(account.utente)} disabled={stanzaStato.occupato} className={bottone('primario', 'normale', 'flex-1')}>{L.t('stanza.crea')}</button>
-              </div>
-            </div>
-          )}
-
-          {stanzaStato.modo === 'entra' && (
-            <div className="space-y-2 pt-1">
-              {/* Il codice si mostra sempre in forma leggibile mentre si
-                  digita: chi lo ricopia da un foglio deve poter confrontare
-                  quello che vede con quello che ha in mano. */}
-              <input type="text" value={stanzaStato.codice} onChange={(e) => stanzaStato.setCodice(e.target.value)}
-                placeholder={L.t('stanza.codice')} autoCapitalize="characters" autoComplete="off" spellCheck="false"
-                className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-medio font-mono tracking-widest uppercase focus:outline-none focus:border-bosco" />
-              <div className="flex gap-2">
-                <button onClick={stanzaStato.chiudi} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
-                <button onClick={() => stanzaStato.entra(account.utente)} disabled={stanzaStato.occupato} className={bottone('primario', 'normale', 'flex-1')}>{L.t('stanza.entra')}</button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      ) : moduloStanza({ stanzaStato, account })}
 
       {stanzaStato.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.problema)}</p>}
       {stanzaStato.fatto === 'stanza.creata' && stanzaStato.stanza && (

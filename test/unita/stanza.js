@@ -414,6 +414,55 @@ if (!S) { fine(); }
         && JSON.stringify(S.gruppiMenu(undefined, true)) === '[]');
     }
 
+    // ---------- I miei campi: ricordare, aggiornare, ordinare ----------
+    // L'elenco della home. Si apre offline con quello che si sapeva ieri, e
+    // si corregge quando il cloud risponde: le tre regole stanno qui perche'
+    // sbagliarne una non da' errore — da' un campo doppio, un campo sparito,
+    // o un nome cancellato da una risposta vuota.
+    {
+      let l = S.ricordaCampo([], { codice: 'k7rx 2mqp', ruolo: 'redattore' });
+      l = S.ricordaCampo(l, { codice: 'K7RX-2MQP', nome: 'Campo di Anna' });
+      ok(`lo stesso campo scritto in due modi è una voce sola (${l.length})`, l.length === 1);
+      ok('e tiene sia il ruolo di prima sia il nome saputo dopo',
+        l[0].codice === 'K7RX2MQP' && l[0].ruolo === 'redattore' && l[0].nome === 'Campo di Anna');
+      l = S.ricordaCampo(l, { codice: 'K7RX2MQP', nome: '' });
+      ok('un nome vuoto non cancella quello che si sapeva', l[0].nome === 'Campo di Anna');
+      ok('un codice che non è un codice non entra', S.ricordaCampo(l, { codice: '' }).length === 1);
+
+      const locali = [
+        { codice: 'K7RX2MQP', nome: 'Campo di Anna', ruolo: 'redattore' },
+        { codice: 'BCDFGHJK', nome: 'Campo tolto', ruolo: 'redattore' },
+        { codice: 'MNPQRSTV', nome: 'Senza linea', ruolo: 'redattore' },
+      ];
+      const dopo = S.aggiornaCampi(locali, ['23456789'], [
+        { codice: 'K7RX2MQP', membro: true, proprietario: true, nome: 'Campo di Anna', inizio: '2027-08-11', fine: '2027-08-16' },
+        { codice: 'BCDFGHJK', membro: false, proprietario: false },
+        { codice: '23456789', membro: true, proprietario: false, nome: 'Dal profilo' },
+      ]);
+      const cod = (x) => x.map((v) => v.codice).sort().join(',');
+      ok(`chi non è più membro sparisce, e il profilo porta i campi degli altri telefoni (${cod(dopo)})`,
+        cod(dopo) === '23456789,K7RX2MQP,MNPQRSTV');
+      ok('una stanza senza risposta resta com\'era: nessuna risposta non è un «no»',
+        dopo.find((v) => v.codice === 'MNPQRSTV').nome === 'Senza linea');
+      const anna = dopo.find((v) => v.codice === 'K7RX2MQP');
+      ok('il proprietario lo dice la stanza, e le date arrivano con lei',
+        anna.ruolo === 'proprietario' && anna.inizio === '2027-08-11' && anna.fine === '2027-08-16');
+
+      const oggi = '2027-08-13';
+      const ordinati = S.ordinaCampi([
+        { codice: 'A', nome: 'Senza date' },
+        { codice: 'B', inizio: '2026-08-11', fine: '2026-08-16' },
+        { codice: 'C', inizio: '2027-12-01', fine: '2027-12-03' },
+        { codice: 'D', inizio: '2027-08-11', fine: '2027-08-16' },
+        { codice: 'E', inizio: '2027-09-01', fine: '2027-09-02' },
+        { codice: 'F', inizio: '2025-08-11', fine: '2025-08-16' },
+      ], oggi).map((v) => v.codice).join('');
+      ok(`in testa quello in corso, poi i prossimi, poi i finiti, in fondo i senza date (${ordinati})`,
+        ordinati === 'DECBFA');
+      ok('senza elenco non esplode', S.ordinaCampi(null, oggi).length === 0
+        && S.aggiornaCampi(null, null, null).length === 0);
+    }
+
     fine();
   })();
 }

@@ -327,6 +327,7 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     // La schermata d'apertura e la tessera dell'account: tutto dal
     // dizionario, e il marchio dalla configurazione (BRAND).
     '88-scheda-ingresso.jsx': 0,
+    '89-scheda-campi.jsx': 0,
     '50-interfaccia.jsx': 0,
     '60-gioco.jsx': 3,               // i nomi dei livelli: sono luoghi veri
     '70-schermata-blocco.jsx': 0,

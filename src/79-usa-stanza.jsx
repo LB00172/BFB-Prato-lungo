@@ -30,11 +30,33 @@ const leggiStanzaSalvata = () => {
   } catch (e) { return null; /* niente: si resta senza stanza */ }
 };
 
+// I miei campi, come li ricorda questo telefono (Stanza.ricordaCampo). E'
+// una chiave del TELEFONO, non del campo (cassetti.js): e' proprio l'elenco
+// che serve a scegliere quale cassetto aprire.
+const CAMPI_KEY = 'cambusa_campi';
+const leggiCampi = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(CAMPI_KEY) || '[]');
+    return Array.isArray(v) ? v : [];
+  } catch (e) { return []; }
+};
+
 const usaStanza = () => {
   // La stanza di adesso: null vuol dire "nessuna", che e' il caso normale
   // finche' la versione pubblica non esiste davvero.
   const [stanza, setStanza] = useState(leggiStanzaSalvata);
   const [membri, setMembri] = useState([]);
+  // Chi aveva gia' una stanza prima che la home esistesse la ritrova in
+  // elenco: la stanza salvata entra da sola.
+  const [campi, setCampi] = useState(() => {
+    const s = leggiStanzaSalvata();
+    const l = leggiCampi();
+    return s && window.Stanza ? window.Stanza.ricordaCampo(l, { codice: s.codice }) : l;
+  });
+  useEffect(() => { scriviLocale(CAMPI_KEY, JSON.stringify(campi)); }, [campi]);
+  const segnaCampo = (voce) => {
+    if (window.Stanza) setCampi((l) => window.Stanza.ricordaCampo(l, voce));
+  };
   // Quale maschera e' aperta: '' | 'crea' | 'entra'.
   const [modo, setModo] = useState('');
   const [nome, setNome] = useState('');
@@ -100,9 +122,40 @@ const usaStanza = () => {
     }
   };
 
-  const ricorda = (cod) => {
+  // `voce`: quello che si sa del campo in questo momento (il nome e le date
+  // se lo si e' appena creato, il ruolo con cui si e' entrati).
+  const ricorda = (cod, voce) => {
     setStanza({ codice: cod });
     scriviLocale('cambusa_stanza', cod);
+    segnaCampo(Object.assign({ codice: cod }, voce || {}));
+  };
+
+  // Aprire un campo dell'elenco: e' gia' tuo, quindi non si chiede niente
+  // alla rete — in montagna deve funzionare senza linea. Se la scheda nella
+  // stanza non ci fosse piu', lo diranno le regole alla sincronizzazione.
+  const apriCampo = (cod) => {
+    pulisci();
+    setModo('');
+    ricorda(cod);
+  };
+
+  // L'elenco dal cloud: il profilo (solo per chi e' registrato: lo segue su
+  // ogni telefono) e la lettura di ogni stanza, per nome, date e se si e'
+  // ancora dentro. Senza linea non si tocca niente e non si dice niente: la
+  // home resta quella di ieri, che e' la cosa giusta da mostrare al campo.
+  const aggiornaCampi = async (utente, conProfilo) => {
+    const c = SC();
+    const regole = S();
+    if (!c || !c.disponibile() || !regole || !utente || !utente.uid) return;
+    try {
+      let profilo = [];
+      if (conProfilo && window.AuthCloud && window.AuthCloud.stanzeDelProfilo) {
+        profilo = await window.AuthCloud.stanzeDelProfilo();
+      }
+      const codici = leggiCampi().map((v) => v.codice).concat(profilo || []);
+      const stati = await c.statoDi(codici, utente);
+      setCampi((l) => regole.aggiornaCampi(l, profilo, stati));
+    } catch (e) { /* senza linea: l'elenco resta quello che era */ }
   };
 
   const crea = async (utente) => {
@@ -127,7 +180,7 @@ const usaStanza = () => {
 
     const cod = await prova((c) => c.crea({ nome, inizio, fine, codice: nuovo }, utente));
     if (cod) {
-      ricorda(cod);
+      ricorda(cod, { nome, inizio, fine, ruolo: 'proprietario' });
       setModo('');
       setFatto('stanza.creata');
     }
@@ -141,7 +194,7 @@ const usaStanza = () => {
     if (!regole.codiceValido(codice)) { setProblema('stanza.codiceNonValido'); return; }
     const cod = await prova((c) => c.entra(codice, utente));
     if (cod) {
-      ricorda(cod);
+      ricorda(cod, { ruolo: 'redattore' });
       setModo('');
       setCodice('');
       setFatto('stanza.entrato');
@@ -152,7 +205,7 @@ const usaStanza = () => {
   const accettaInvito = async (utente) => {
     const cod = await prova((c) => c.entra(invito, utente));
     if (cod) {
-      ricorda(cod);
+      ricorda(cod, { ruolo: 'redattore' });
       setInvito(null);
       setFatto('stanza.entrato');
     }
@@ -205,5 +258,6 @@ const usaStanza = () => {
     problema, fatto, occupato, chiudi,
     crea, entra, esci, aggiornaMembri,
     invito, accettaInvito, rifiutaInvito, linkDaMandare, riagganciaStanza,
+    campi, apriCampo, aggiornaCampi,
   };
 };

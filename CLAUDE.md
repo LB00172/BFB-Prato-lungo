@@ -86,6 +86,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneMenu`, `bottoneScelta` (i chip accesi/spenti). La guardia chiede l'elenco a questo file, non lo tiene scritto |
 | `src/87-scheda-compiti.jsx` | «Chi fa cosa»: i compiti assegnati, dietro `FEATURES.compiti`. Un compito **non** è una spesa |
 | `src/88-scheda-ingresso.jsx` | **l'ingresso**: la tessera dell'account (una sola, usata da Impostazioni e dalla schermata d'apertura) e la schermata d'apertura, che compare solo a chi non ha **né** un account **né** un campo |
+| `src/89-scheda-campi.jsx` | **la home, «I miei campi»**: l'elenco dei campi della persona e il modulo Crea / Partecipa (uno solo, usato anche da Impostazioni). Compare da sola quando non c'è un campo aperto, e dal menu quando c'è. L'elenco sta sul telefono (`cambusa_campi`) e si corregge dal cloud: la home si apre senza linea. Le regole (ricordare, aggiornare, ordinare) sono in `stanza.js` |
 | `src/78-usa-account.jsx` | lo stato del login: maschera, occupato, problema. Le regole no — quelle stanno in `auth.js` |
 | `src/79-usa-stanza.jsx` | lo stato della stanza: crea, entra, chi c'è dentro. Dietro `FEATURES.rooms` |
 | `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |

@@ -17,7 +17,7 @@
 // anche con un menu sempre vuoto.
 const { apri, ingressoFinto, ok, fine } = require('../lib/app');
 
-// Chi vede il menu a tre voci e' chi E' ENTRATO ma un campo non ce l'ha
+// Chi vede il menu corto e' chi E' ENTRATO ma un campo non ce l'ha
 // ancora. Senza account e senza campo, dal 26 settembre, non si arriva al
 // menu: c'e' prima la schermata d'apertura (e2e/ingresso).
 const REGISTRATO = { uid: 'u-1', email: 'anna@example.com', nome: 'Anna Rossi', isAnonimo: false, emailVerificata: true };
@@ -41,11 +41,13 @@ const vociDelMenu = async (page) => {
     viewport: { width: 390, height: 900 },
   });
   const senza = await vociDelMenu(fuori.page);
-  ok(`senza campo il menu ha tre voci (${senza.length}: ${senza.join(', ')})`, senza.length === 3);
+  // Quattro dal 28 settembre: in testa la home, «I miei campi».
+  ok(`senza campo il menu ha quattro voci (${senza.length}: ${senza.join(', ')})`, senza.length === 4);
   // Il confronto sul testo a schermo va sempre con /i: i bottoni sono in
   // maiuscolo per CSS e innerText restituisce il disegnato, non il DOM.
-  ok('e sono creare, partecipare, impostazioni',
-    /crea un campo/i.test(senza[0]) && /partecipa/i.test(senza[1]) && /impostazioni/i.test(senza[2]));
+  ok('e sono i miei campi, creare, partecipare, impostazioni',
+    /i miei campi/i.test(senza[0]) && /crea un campo/i.test(senza[1])
+    && /partecipa/i.test(senza[2]) && /impostazioni/i.test(senza[3]));
   ok('nessuna area che parlerebbe di dati inesistenti',
     !senza.some((v) => /calendario|presenze|spese totali|galleria/i.test(v)));
   ok('nessun errore JavaScript' + (fuori.errori.length ? ': ' + fuori.errori.join(' | ') : ''),

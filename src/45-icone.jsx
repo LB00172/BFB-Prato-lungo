@@ -26,6 +26,8 @@
 // `misura` e' in pixel e vale anche per il tratto: un'icona grande con il
 // tratto di una piccola sembra sbiadita, quindi il tratto cresce con lei.
 const ICONE = {
+  // I miei campi: la tenda, col palo in mezzo e l'ingresso aperto.
+  campi: 'M3 20L12 4l9 16z M12 4v16 M9 20l3-5 3 5',
   // Calendario: il riquadro con i due chiodi e la riga del mese.
   calendario: 'M4 6h16v14H4z M4 10h16 M8 3v4 M16 3v4',
   // Il menu' del giorno: la pentola sul fuoco, con il vapore.

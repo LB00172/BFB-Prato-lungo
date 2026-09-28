@@ -321,12 +321,22 @@ in cui era (si **adottano**, non si spostano).
 
 Quello che viene dopo, deciso con Lorenzo il 28 settembre:
 
-- [ ] **La home «I miei campi»**: prima schermata dopo l'accesso, con i campi
-      dell'utente e i due tasti Crea / Partecipa; toccando un campo si apre
-      l'app di oggi. Per chi è registrato l'elenco sta nel profilo
-      (`users/<uid>.stanze`, che c'è già) e lo segue su ogni telefono; per chi
-      è entrato col codice sta sul telefono. Senza i cassetti, una home
-      avrebbe reso più facile proprio il mescolamento.
+- [x] **La home «I miei campi»** — fatta il 28 settembre
+      (`src/89-scheda-campi.jsx`, `e2e/campi`). I campi dell'utente e i due
+      tasti Crea / Partecipa; toccando un campo si apre l'app di oggi, e dal
+      menu si torna alla home. Per chi è registrato l'elenco viene anche dal
+      profilo (`users/<uid>.stanze`) e lo segue su ogni telefono; per chi è
+      entrato col codice sta sul telefono. **Si apre senza linea**: l'elenco
+      sta sul telefono con i nomi dell'ultima volta, e aprire un campo non
+      chiede niente alla rete. Chi è stato tolto da un campo non lo trova più
+      alla prima lettura riuscita. Senza i cassetti, una home avrebbe reso più
+      facile proprio il mescolamento.
+      **Una scelta da sapere:** aprendo l'app si entra nell'ultimo campo
+      aperto, non nella home — al campo ogni tocco in più è un tocco di
+      troppo. La home compare da sola quando un campo aperto non c'è (dopo
+      l'accesso, dopo «Esci dalla stanza»). Con `CAMP_CODE_DEFAULT` pieno un
+      campo c'è sempre: per vederla come la vedrà chi scarica l'app, va
+      svuotato — è la decisione ancora aperta sul campo di prova.
 - [ ] **Il Pro è del campo, non della persona.** Un attributo della stanza,
       acceso perché ha pagato chi l'ha creata: chi entra non porta niente con
       sé, e chi è Pro in un altro gruppo non lo trascina nel tuo. **Nessun

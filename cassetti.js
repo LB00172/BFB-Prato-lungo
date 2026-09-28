@@ -49,6 +49,8 @@
   var DEL_TELEFONO = [
     // Dove si e': sono le chiavi che DECIDONO il cassetto, non ci stanno dentro.
     'cambusa_stanza', 'cambusa_camp_code', 'cambusa_sync_optout',
+    // Quali campi ha questa persona: serve a scegliere il cassetto.
+    'cambusa_campi',
     'cambusa_device_id', 'cambusa_theme', 'cambusa_lingua', 'cambusa_photo_cap',
     'cambusa_unlock', 'cambusa_admin', 'cambusa_lock_always', 'cambusa_lock_fail',
     'cambusa_lock_until', 'cambusa_install_hint_off',

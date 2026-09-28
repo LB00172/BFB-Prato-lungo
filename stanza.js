@@ -348,6 +348,91 @@
       .filter((g) => g.items.length);
   }
 
+  // ---------- I miei campi ----------
+  // L'elenco dei campi di una persona, che la home mostra. Una voce e'
+  // { codice, nome, inizio, fine, ruolo }: il codice e' l'unica cosa sempre
+  // vera, il resto e' quello che si sapeva l'ultima volta — il nome di un campo
+  // in cui si e' entrati col codice si scopre solo leggendo la stanza, e al
+  // campo in montagna la linea non c'e'. Per questo l'elenco sta anche sul
+  // telefono: la home deve aprirsi offline, con i nomi di ieri.
+  //
+  // Tre regole, tutte pure.
+
+  // Ricordare un campo: se c'e' gia', si aggiorna con quello che di nuovo si
+  // sa; un valore vuoto non cancella uno pieno. Il codice si normalizza: lo
+  // stesso campo scritto in due modi non deve comparire due volte.
+  function ricordaCampo(lista, voce) {
+    const c = normalizza(voce && voce.codice);
+    if (!c) return lista || [];
+    const pulita = { codice: c };
+    ['nome', 'inizio', 'fine', 'ruolo'].forEach((k) => {
+      if (voce[k]) pulita[k] = String(voce[k]);
+    });
+    const fuori = [];
+    let trovata = false;
+    (lista || []).forEach((v) => {
+      if (normalizza(v.codice) === c) {
+        trovata = true;
+        fuori.push(Object.assign({}, v, pulita));
+      } else {
+        fuori.push(v);
+      }
+    });
+    if (!trovata) fuori.push(pulita);
+    return fuori;
+  }
+
+  // Quello che dice il cloud. `codiciProfilo` sono le stanze che il profilo
+  // di chi e' registrato si e' segnato (lo seguono su ogni telefono);
+  // `stati` e' la lettura di ogni stanza (StanzaCloud.statoDi). Chi non e'
+  // piu' membro — tolto dal proprietario, o stanza cancellata — sparisce
+  // dall'elenco: lasciarlo vorrebbe dire una voce che, toccata, non apre
+  // niente. Una stanza che non si e' potuta leggere (niente linea) resta
+  // com'era: l'assenza di una risposta non e' un "no".
+  function aggiornaCampi(lista, codiciProfilo, stati) {
+    let fuori = (lista || []).slice();
+    (codiciProfilo || []).forEach((c) => { fuori = ricordaCampo(fuori, { codice: c }); });
+    (stati || []).forEach((st) => {
+      const c = normalizza(st && st.codice);
+      if (!c) return;
+      if (st.membro === false) {
+        fuori = fuori.filter((v) => normalizza(v.codice) !== c);
+        return;
+      }
+      fuori = ricordaCampo(fuori, {
+        codice: c, nome: st.nome, inizio: st.inizio, fine: st.fine,
+        // Il ruolo si sa per certo solo dal proprietario: gli altri restano
+        // come li si era segnati entrando.
+        ruolo: st.proprietario ? 'proprietario' : undefined,
+      });
+    });
+    return fuori;
+  }
+
+  // In che ordine mostrarli: prima quelli in corso, poi quelli che devono
+  // ancora cominciare (il piu' vicino in testa), poi quelli finiti (il piu'
+  // recente in testa), in fondo quelli di cui non si sanno le date. Le date
+  // sono stringhe 'AAAA-MM-GG', che si confrontano bene come testo; `oggi`
+  // si passa da fuori perche' una regola che guarda l'orologio da se' non
+  // si puo' provare.
+  function ordinaCampi(lista, oggi) {
+    const fase = (v) => {
+      if (!v.inizio) return 3;
+      const fine = v.fine || v.inizio;
+      if (v.inizio <= oggi && oggi <= fine) return 0;
+      return v.inizio > oggi ? 1 : 2;
+    };
+    const confronta = (x, y) => (x < y ? -1 : x > y ? 1 : 0);
+    return (lista || []).slice().sort((a, b) => {
+      const fa = fase(a);
+      const fb = fase(b);
+      if (fa !== fb) return fa - fb;
+      if (fa === 1) return confronta(a.inizio, b.inizio);
+      if (fa === 2) return confronta(b.fine || b.inizio, a.fine || a.inizio);
+      return String(a.nome || a.codice).localeCompare(String(b.nome || b.codice));
+    });
+  }
+
   // Il proprietario non si puo' togliere da solo: una stanza senza
   // proprietario non la amministra piu' nessuno e non si puo' nemmeno
   // cancellare. Per andarsene, prima passa il testimone.
@@ -376,6 +461,9 @@
     gruppiMenu,
     esitoRilettura,
     pianoCancellazione,
+    ricordaCampo,
+    aggiornaCampi,
+    ordinaCampi,
     linkInvito,
     leggiInvito,
     CHIAVE_INVITO,
@@ -569,7 +657,12 @@
         const dati = x.exists() ? x.data() : {};
         // Se la lettura e' riuscita, per le regole sei membro — anche se la
         // stanza nel frattempo non c'e' piu' e la tua scheda si'.
-        out.push({ codice: c, membro: true, proprietario: dati.proprietario === utente.uid });
+        // Nome e date servono alla home («I miei campi»): sono gia' nel
+        // documento che si sta leggendo, e non costano una lettura in piu'.
+        out.push({
+          codice: c, membro: true, proprietario: dati.proprietario === utente.uid,
+          nome: dati.nome || '', inizio: dati.inizio || '', fine: dati.fine || '',
+        });
       } catch (e) {
         if (/permission-denied/.test(String((e && (e.code || e.message)) || ''))) {
           out.push({ codice: c, membro: false, proprietario: false });
