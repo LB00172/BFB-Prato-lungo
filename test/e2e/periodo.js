@@ -32,6 +32,11 @@ const campo = (voce) => [(o) => {
   const periodo = await b.page.evaluate(() => [CAMP_START, CAMP_END]);
   ok(`le date del campo sono quelle della stanza (${periodo.join(' → ')})`,
     periodo[0] === '2027-07-12' && periodo[1] === '2027-07-14');
+  // Il motto in fondo e' della Brigata: nell'app pubblica e' vuoto, e la
+  // fascia che lo portava restava li', vuota, sotto ogni schermata.
+  ok('senza motto non resta una fascia vuota in fondo allo schermo',
+    (await b.page.evaluate(() => BRAND.footerMotto)) === ''
+    && (await b.page.locator('footer').count()) === 0);
   ok('nessun errore JavaScript' + (b.errori.length ? ': ' + b.errori.join(' | ') : ''), b.errori.length === 0);
   await b.browser.close();
 

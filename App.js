@@ -6377,7 +6377,7 @@ function App({
     className: "max-w-full max-h-full rounded shadow-2xl"
   }), /*#__PURE__*/React.createElement("span", {
     className: "absolute bottom-6 left-0 right-0 text-center text-piccolo uppercase tracking-widest text-white/60"
-  }, L.t('galleria.toccaPerChiudere'))), /*#__PURE__*/React.createElement("footer", {
+  }, L.t('galleria.toccaPerChiudere'))), BRAND.footerMotto && /*#__PURE__*/React.createElement("footer", {
     className: "fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-carta border-t-2 border-legno py-3 px-4 text-center z-10"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-rustic text-bosco tracking-widest text-normale uppercase font-bold"

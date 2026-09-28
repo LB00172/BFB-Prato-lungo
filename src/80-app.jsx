@@ -3389,9 +3389,12 @@ function App({ eredita, cambiaCampo } = {}) {
         </div>
       )}
 
-      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-carta border-t-2 border-legno py-3 px-4 text-center z-10">
-        <div className="font-rustic text-bosco tracking-widest text-normale uppercase font-bold">{BRAND.footerMotto}</div>
-      </footer>
+      {/* Il motto e' della Brigata: senza, la fascia resterebbe vuota in fondo a ogni schermata. */}
+      {BRAND.footerMotto && (
+        <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-carta border-t-2 border-legno py-3 px-4 text-center z-10">
+          <div className="font-rustic text-bosco tracking-widest text-normale uppercase font-bold">{BRAND.footerMotto}</div>
+        </footer>
+      )}
     </div>
   );
 }
