@@ -19,6 +19,7 @@ const H = require('../lib/app').SBLOCCO;
       { id: 'v1', name: 'Spesa di ieri', price: 20, type: 'alimentare', buyer: 'Alice', at: Date.now() },
     ]));
   }, H);
+  await p.addInitScript(...require('../lib/app').campoDiProva());
   await p.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
   await p.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
   await p.click('button[aria-label="Menu"]'); await p.waitForTimeout(300);

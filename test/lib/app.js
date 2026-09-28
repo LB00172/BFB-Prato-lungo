@@ -25,6 +25,17 @@ function chromium() {
 
 const URL_APP = process.env.APP_URL || 'http://localhost:8091';
 
+// Il campo in cui si aprono le prove: firebase-config.js non ne ha piu' uno.
+const CAMPO_DI_PROVA = 'CampoDiProva';
+
+// Lo stesso campo per le prove che aprono il browser da sole, senza apri():
+//   await pagina.addInitScript(...campoDiProva());
+// va messo prima della prima navigazione. Ridefinisce la proprieta' invece
+// di scriverla perche' firebase-config.js assegna "" dopo di noi.
+const campoDiProva = () => [(c) => {
+  Object.defineProperty(window, 'CAMP_CODE_DEFAULT', { configurable: true, get() { return c; }, set() {} });
+}, CAMPO_DI_PROVA];
+
 // Impronta della password del campo: la scrivo in localStorage così i test
 // entrano già sbloccati, senza passare dalla schermata di blocco.
 //
@@ -219,7 +230,16 @@ async function apri(opzioni) {
   await page.addInitScript((o) => {
     localStorage.setItem('cambusa_unlock', o.h);
     if (o.admin) localStorage.setItem('cambusa_admin', '1');
-  }, { h: SBLOCCO, admin: o.admin !== false });
+    // Quasi tutte le prove guardano un campo, e dal 28 settembre l'app
+    // pubblica non ne ha uno predefinito: glielo si da' qui. Chi vuole l'app
+    // senza campo lo toglie con ingressoFinto({ senzaCampo }), che gira dopo
+    // e ridefinisce la stessa proprieta'.
+    Object.defineProperty(window, 'CAMP_CODE_DEFAULT', {
+      configurable: true,
+      get() { return o.campo; },
+      set() { /* firebase-config.js assegna "" dopo di noi: vale il nostro */ },
+    });
+  }, { h: SBLOCCO, admin: o.admin !== false, campo: CAMPO_DI_PROVA });
   // initScript: una funzione, oppure [funzione, argomento] se le serve un dato.
   if (o.initScript) await page.addInitScript(...[].concat(o.initScript));
 
@@ -302,4 +322,4 @@ async function scontriniSalvati(page, n, ms) {
   }
 }
 
-module.exports = { chromium, apri, ingressoFinto, ok, fine, attendi, scontriniSalvati, fotoSalvate, URL_APP, SBLOCCO, bloccoDiProva, PASSWORD_PROVA, BLOCCO_PROVA };
+module.exports = { chromium, apri, campoDiProva, CAMPO_DI_PROVA, ingressoFinto, ok, fine, attendi, scontriniSalvati, fotoSalvate, URL_APP, SBLOCCO, bloccoDiProva, PASSWORD_PROVA, BLOCCO_PROVA };

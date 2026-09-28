@@ -22,6 +22,7 @@ const { bloccoDiProva, PASSWORD_PROVA } = require('../lib/app');
     await p.waitForTimeout(700);
   };
 
+  await p.addInitScript(...require('../lib/app').campoDiProva());
   await p.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
   await p.waitForTimeout(600);
 
@@ -150,6 +151,7 @@ const { bloccoDiProva, PASSWORD_PROVA } = require('../lib/app');
   // con "chiedi ogni volta" il ricarico (nuova sessione) deve richiedere la password
   await ctx.newPage();  // non tocca la sessione della prima pagina
   const p2 = await ctx.newPage();
+  await p2.addInitScript(...require('../lib/app').campoDiProva());
   await p2.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
   await p2.waitForTimeout(900);
   console.log('in una nuova finestra chiede di nuovo la password:', (await p2.locator('input[placeholder="••••••••"]').count()) > 0 ? 'OK' : 'PROBLEMA');

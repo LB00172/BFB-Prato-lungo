@@ -5,6 +5,7 @@ const { chromium } = require('playwright-core');
   await p.addInitScript((h) => localStorage.setItem('cambusa_unlock', h), require('../lib/app').SBLOCCO);
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
   await p.addInitScript(() => localStorage.setItem('cambusa_install_hint_off', '1'));
+  await p.addInitScript(...require('../lib/app').campoDiProva());
   await p.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
   await p.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
   await p.click('button[aria-label="Menu"]');

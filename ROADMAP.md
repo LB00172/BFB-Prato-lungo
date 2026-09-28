@@ -334,9 +334,11 @@ Quello che viene dopo, deciso con Lorenzo il 28 settembre:
       **Una scelta da sapere:** aprendo l'app si entra nell'ultimo campo
       aperto, non nella home — al campo ogni tocco in più è un tocco di
       troppo. La home compare da sola quando un campo aperto non c'è (dopo
-      l'accesso, dopo «Esci dalla stanza»). Con `CAMP_CODE_DEFAULT` pieno un
-      campo c'è sempre: per vederla come la vedrà chi scarica l'app, va
-      svuotato — è la decisione ancora aperta sul campo di prova.
+      l'accesso, dopo «Esci dalla stanza»). Confermata da Lorenzo il 28
+      settembre, insieme allo svuotamento di `CAMP_CODE_DEFAULT`: la versione
+      pubblica non ha più un campo predefinito, e si apre come la vedrà chi
+      la scarica. Le prove il campo se lo danno da sole
+      (`CAMPO_DI_PROVA` in `test/lib/app.js`).
 - [ ] **Il Pro è del campo, non della persona.** Un attributo della stanza,
       acceso perché ha pagato chi l'ha creata: chi entra non porta niente con
       sé, e chi è Pro in un altro gruppo non lo trascina nel tuo. **Nessun

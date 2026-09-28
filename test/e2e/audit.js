@@ -288,6 +288,7 @@ const close = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.051 : tol
       localStorage.setItem('cambusa_equipment', JSON.stringify(s.attrezzatura));
       localStorage.setItem('cambusa_sepdays', JSON.stringify(s.giorniSeparati || []));
     }, sc);
+    await p.addInitScript(...require('../lib/app').campoDiProva());
     await p.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
     await p.evaluate(() => { try { localStorage.setItem('cambusa_unlock', window.APP_LOCK.hash); } catch(e){} });
     await p.reload({ waitUntil: 'load' });

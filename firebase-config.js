@@ -31,12 +31,13 @@ window.FIREBASE_CONFIG = {
   measurementId: "G-SQ0C5J8796"
 };
 
-// La stanza su cui apre questa versione quando non ne hai ancora scelta una.
-// Da quando i progetti Firebase sono due non puo' piu' pestare i dati della
-// Brigata nemmeno volendo: stanno in un altro progetto, non in un'altra
-// cartella dello stesso. Resta diverso lo stesso — un valore che ricorda da
-// dove si viene costa niente e si legge in un attimo.
-window.CAMP_CODE_DEFAULT = "CampOpsProva";
+// Nessun campo predefinito: nella versione pubblica un campo lo crei tu, o
+// entri in quello di un altro col suo codice. Fino al 28 settembre qui c'era
+// "CampOpsProva", un campo che c'era sempre — e con lui la schermata
+// d'apertura e la home («I miei campi») non comparivano mai, cioe' l'app non
+// era quella che vede chi la scarica. Le prove che hanno bisogno di un campo
+// se lo danno da sole (test/lib/app.js, CAMPO_DI_PROVA).
+window.CAMP_CODE_DEFAULT = "";
 
 // ============================================================================
 //  BLOCCO CON PASSWORD
