@@ -6012,6 +6012,7 @@ function App({
   }, L.t('menu.ilCampo')), /*#__PURE__*/React.createElement("span", {
     className: "flex-grow h-px bg-salvia/30"
   })), /*#__PURE__*/React.createElement("button", {
+    "data-voce": "campi",
     onClick: () => {
       stanzaStato.setModo('');
       goTo('campi');
@@ -6043,6 +6044,7 @@ function App({
     className: "flex-grow h-px bg-salvia/30"
   })), group.items.map(tab => /*#__PURE__*/React.createElement("button", {
     key: tab,
+    "data-voce": tab,
     onClick: () => goTo(tab),
     className: bottoneMenu(activeTab === tab)
   }, /*#__PURE__*/React.createElement("span", {

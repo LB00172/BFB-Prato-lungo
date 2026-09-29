@@ -2835,7 +2835,7 @@ function App({ eredita, cambiaCampo } = {}) {
                 <span className="text-minuto uppercase tracking-widest font-bold text-salvia shrink-0">{L.t('menu.ilCampo')}</span>
                 <span className="flex-grow h-px bg-salvia/30"></span>
               </div>
-              <button onClick={() => { stanzaStato.setModo(''); goTo('campi'); }} className={bottoneMenu(scheda === 'campi')}>
+              <button data-voce="campi" onClick={() => { stanzaStato.setModo(''); goTo('campi'); }} className={bottoneMenu(scheda === 'campi')}>
                 <span className="w-5 shrink-0 flex items-center justify-center">{icona('campi')}</span>
                 <span className="min-w-0 truncate">{L.t('area.campi')}</span>
               </button>
@@ -2860,6 +2860,7 @@ function App({ eredita, cambiaCampo } = {}) {
               {group.items.map((tab) => (
                 <button
                   key={tab}
+                  data-voce={tab}
                   onClick={() => goTo(tab)}
                   className={bottoneMenu(activeTab === tab)}
                 >
