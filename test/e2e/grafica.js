@@ -47,11 +47,6 @@ const H = require('../lib/app').SBLOCCO;
   await menu('Lista della Spesa');
   await p.locator('button', { hasText: 'Acquistato' }).first().click();
   await p.waitForTimeout(300);
-  // la maschera manuale ora parte chiusa: la apro
-  {
-    const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
-    if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); }
-  }
   const riga = p.locator('ul li', { hasText: 'Doppio malto' }).first();
   const info = await riga.evaluate((el) => {
     const nome = Array.from(el.querySelectorAll('span')).find((s) => s.innerText.indexOf('Doppio malto') === 0);

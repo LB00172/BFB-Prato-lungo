@@ -415,40 +415,23 @@ const schedaSpesa = ({
 );
 
 const schedaLista = ({
-  addPurchase,
   addToBuy,
-  attachReceiptTo,
-  fotoCloud,
-  listaSection,
+  apriFoglioSpesa,
   manualOpen,
+  attachReceiptTo,
+  listaSection,
   newBuyName,
   newBuyQty,
-  onReceiptFile,
   openEditPurchase,
-  pAccount,
-  pBuyer,
-  pName,
-  pPrice,
-  pReceipt,
-  pType,
   purchaseQuery,
   purchases,
   receipts,
   removePurchase,
   removeToBuy,
-  renderBuyerSelect,
-  sepDays,
   setBuying,
   setListaSection,
-  setManualOpen,
   setNewBuyName,
   setNewBuyQty,
-  setPAccount,
-  setPBuyer,
-  setPName,
-  setPPrice,
-  setPReceipt,
-  setPType,
   setPurchaseQuery,
   setToBuyQuery,
   setViewReceipt,
@@ -572,122 +555,16 @@ const schedaLista = ({
 
     {/* ===== ACQUISTATO: inserimento manuale + cronologia ===== */}
     {listaSection === 'acquistato' && (<>
-    {/* Inserimento manuale: chiuso, si apre a richiesta */}
-    {!manualOpen ? (
-      <button
-        onClick={() => setManualOpen(true)}
-        className="w-full bg-scheda p-3 rounded-lg border-2 border-dashed border-salvia/60 text-bosco hover:bg-orlo flex items-center justify-center gap-2"
-      >
-        <span className="text-grande leading-none">＋</span>
-        <span className="font-bold uppercase text-piccolo tracking-wide">{L.t('lista.aggiungiAMano')}</span>
-      </button>
-    ) : (
-    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
-      <div className="flex items-center justify-between border-b border-salvia/40 pb-2">
-        <h3 className="font-rustic text-grande text-bosco">{L.t('lista.prodottoAcquistato')}</h3>
-        <div className="flex items-center gap-2 shrink-0">
-          <label
-            title={L.t('lista.scontrinoTitolo')}
-            aria-label={L.t('lista.allegaScontrino')}
-            className={`cursor-pointer px-3 py-2 rounded border-2 text-grande leading-none ${pReceipt ? 'bg-bosco border-bosco' : 'bg-scheda border-salvia/50 hover:bg-orlo'}`}
-          >
-            📷
-            <input type="file" accept="image/*" onChange={onReceiptFile} className="hidden" />
-          </label>
-          <button
-            onClick={() => setManualOpen(false)}
-            aria-label={L.t('lista.chiudiMaschera')}
-            className={bottoneIcona('neutro')}
-          >
-            &times;
-          </button>
-        </div>
-      </div>
-      <p className="text-piccolo text-gray-500 -mt-1">{L.t('lista.nonEraInLista')}</p>
-
-      {pReceipt && (
-        <div className="flex items-center gap-3 bg-carta/60 p-2 rounded border border-salvia/30">
-          <img src={pReceipt} alt={L.t('lista.scontrino')} className="w-12 h-12 object-cover rounded" />
-          <span className="flex-grow text-piccolo text-bosco font-bold leading-snug">
-            {L.t('lista.scontrinoAllegato')}
-            {/* In un campo gratuito la foto non va nel cloud: lo si dice qui,
-                altrimenti chi l'ha scattata non capisce perche' gli altri non
-                la vedono. */}
-            {fotoCloud === false && <span data-foto-solo-qui className="block font-normal text-minuto text-gray-500">{L.t('pro.fotoSoloQui')}</span>}
-          </span>
-          <button onClick={() => setPReceipt(null)} aria-label={L.t('lista.rimuoviFoto')} className={bottoneIcona('distruttivo')}>&times;</button>
-        </div>
-      )}
-
-      <div>
-        <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.nome')}</label>
-        <input
-          type="text"
-          value={pName}
-          onChange={(e) => setPName(e.target.value)}
-          placeholder={L.t('lista.esempioNome')}
-          className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-        />
-      </div>
-
-      <div>
-        <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.acquirente')}</label>
-        {renderBuyerSelect(pBuyer, setPBuyer)}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.prezzo')}</label>
-          <input
-            type="number" min="0" step="0.01" inputMode="decimal" data-cifra
-            value={pPrice}
-            onChange={(e) => setPPrice(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addPurchase()}
-            placeholder={money(0)}
-            className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded font-bold"
-          />
-        </div>
-        <div>
-          <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.tipologia')}</label>
-          <select
-            value={pType}
-            onChange={(e) => setPType(e.target.value)}
-            className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale font-bold focus:outline-none focus:border-bosco"
-          >
-            {Object.keys(PURCHASE_TYPES).map((k) => (
-              <option key={k} value={k}>{tipoSpesa(k)}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Conto su cui addebitare cibo e bevande. La logistica è sempre
-          comune, quindi per quella il menu non serve. */}
-      {pType !== 'logistica' && (
-        <div>
-          <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.conto')}</label>
-          <select
-            value={pAccount}
-            onChange={(e) => setPAccount(e.target.value)}
-            className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale font-bold focus:outline-none focus:border-bosco"
-          >
-            <option value="comune">{L.t('lista.contoComune')}</option>
-            <option value="sep">{L.t('giorno.contoSeparato')}</option>
-          </select>
-          {pAccount === 'sep' && (
-            <p className="text-minuto mt-1 leading-snug text-legno">
-              {sepDays.length === 0
-                ? L.t('lista.senzaGiorniSpuntati')
-                : L.t('lista.siDivide', sepDays.length)}
-            </p>
-          )}
-        </div>
-      )}
-
-      <button onClick={addPurchase} className={bottone('primario', 'grande', 'w-full')}>
-        {L.t('lista.salva')}
-      </button>
-    </div>
+    {/* Registrare una spesa che non era in lista: il foglio dal basso, lo
+        stesso del tasto «+ Spesa» (foglioSpesa, qui sotto). */}
+    {!manualOpen && (
+    <button
+      onClick={apriFoglioSpesa}
+      className="w-full min-h-11 bg-scheda p-3 rounded-lg border-2 border-dashed border-salvia/60 text-bosco hover:bg-orlo flex items-center justify-center gap-2"
+    >
+      {icona('piu', 'w-5 h-5')}
+      <span className="font-bold uppercase text-piccolo tracking-wide">{L.t('lista.aggiungiAMano')}</span>
+    </button>
     )}
 
     {/* Cronologia acquisti */}
@@ -911,5 +788,151 @@ const schedaAttrezzatura = ({
       )}
     </div>
   </div>
+  );
+};
+
+// ---------- Il foglio della spesa ----------
+// Registrare una spesa, da qualunque scheda del campo: sale dal basso sopra
+// quello che si stava guardando, e si chiude toccando fuori. L'ordine e'
+// quello del gesto vero, alla cassa: prima QUANTO (l'unica cosa sempre da
+// scrivere), poi chi ha pagato — che parte gia' da qualcuno, vedi
+// acquirentePredefinito in App —, poi cosa e di che tipo. Il conto separato
+// compare solo se il campo ha dei giorni separati: altrimenti e' una domanda
+// senza senso. La foto dello scontrino e' a un tocco, e facoltativa.
+//
+// La logica e' quella di sempre, addPurchase: qui cambia solo il disegno.
+const foglioSpesa = ({
+  addPurchase,
+  chiudi,
+  fotoCloud,
+  members,
+  onReceiptFile,
+  pAccount,
+  pBuyer,
+  pName,
+  pPrice,
+  pReceipt,
+  pType,
+  purchases,
+  renderBuyerSelect,
+  sepDays,
+  setPAccount,
+  setPBuyer,
+  setPName,
+  setPPrice,
+  setPReceipt,
+  setPType,
+}) => {
+  // I chip veloci: chi e' gia' scelto, poi chi ha pagato di recente, poi gli
+  // altri membri. Quattro al massimo; per tutti gli altri c'e' la tendina.
+  const veloci = [];
+  const prendi = (n) => { if (n && veloci.length < 4 && !veloci.includes(n) && members.some((m) => m.name === n)) veloci.push(n); };
+  prendi(pBuyer);
+  purchases.slice().sort((a, b) => (b.at || 0) - (a.at || 0)).forEach((p) => prendi(p.buyer));
+  members.forEach((m) => prendi(m.name));
+  const conConto = pType !== 'logistica' && (sepDays.length > 0 || pAccount === 'sep');
+  const etichetta = 'block text-minuto uppercase font-bold tracking-wide text-gray-500 mb-1.5';
+  return (
+    <div data-foglio-spesa role="dialog" aria-modal="true" aria-label={L.t('foglio.titolo')} className="fixed inset-0 z-40 flex flex-col justify-end">
+      <div onClick={chiudi} className="absolute inset-0 bg-notte/55"></div>
+      <div
+        className="relative w-full max-w-md mx-auto bg-scheda rounded-t-2xl shadow-2xl px-5 pt-3 space-y-4 max-h-[92vh] overflow-y-auto"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}
+      >
+        <div className="flex justify-center"><span className="w-10 h-1 rounded-full bg-salvia/40"></span></div>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-rustic text-grande text-bosco">{L.t('foglio.titolo')}</h3>
+          <button onClick={chiudi} aria-label={L.t('lista.chiudiMaschera')} className={bottoneIcona('neutro')}>&times;</button>
+        </div>
+
+        <label className="flex items-center gap-2 px-4 py-1 bg-carta border-2 border-bosco rounded-md">
+          <input
+            type="number" min="0" step="0.01" inputMode="decimal" data-cifra
+            autoFocus
+            value={pPrice}
+            onChange={(e) => setPPrice(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addPurchase()}
+            placeholder={money(0)}
+            aria-label={L.t('foglio.quanto')}
+            className="flex-1 min-w-0 bg-transparent font-bold text-titolo text-bosco focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          <span className="font-bold text-grande text-gray-500">€</span>
+        </label>
+
+        <div>
+          <span className={etichetta}>{L.t('foglio.chiHaPagato')}</span>
+          {veloci.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {veloci.map((n) => (
+                <button key={n} data-acquirente={n} aria-pressed={pBuyer === n} onClick={() => setPBuyer(n)} className={bottoneScelta('pillola', 'tenue', pBuyer === n, 'minuscolo')}>{n}</button>
+              ))}
+            </div>
+          )}
+          {renderBuyerSelect(pBuyer, setPBuyer)}
+        </div>
+
+        <div>
+          <span className={etichetta}>{L.t('foglio.cosa')}</span>
+          <input
+            type="text"
+            value={pName}
+            onChange={(e) => setPName(e.target.value)}
+            placeholder={L.t('lista.esempioNome')}
+            className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+          />
+        </div>
+
+        <div>
+          <span className={etichetta}>{L.t('foglio.tipo')}</span>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.keys(PURCHASE_TYPES).map((k) => (
+              <button key={k} data-tipo={k} aria-pressed={pType === k} onClick={() => setPType(k)} className={bottoneScelta('pillola', 'tenue', pType === k, 'minuscolo')}>{tipoSpesa(k)}</button>
+            ))}
+          </div>
+        </div>
+
+        {conConto && (
+          <div>
+            <span className={etichetta}>{L.t('lista.conto')}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {[['comune', 'lista.contoComune'], ['sep', 'giorno.contoSeparato']].map(([k, chiave]) => (
+                <button key={k} data-conto={k} aria-pressed={pAccount === k} onClick={() => setPAccount(k)} className={bottoneScelta('pillola', 'tenue', pAccount === k, 'minuscolo')}>{L.t(chiave)}</button>
+              ))}
+            </div>
+            {pAccount === 'sep' && (
+              <p className="text-minuto mt-1 leading-snug text-legno">
+                {sepDays.length === 0 ? L.t('lista.senzaGiorniSpuntati') : L.t('lista.siDivide', sepDays.length)}
+              </p>
+            )}
+          </div>
+        )}
+
+        {pReceipt && (
+          <div className="flex items-center gap-3 bg-carta/60 p-2 rounded border border-salvia/30">
+            <img src={pReceipt} alt={L.t('lista.scontrino')} className="w-12 h-12 object-cover rounded" />
+            <span className="flex-grow text-piccolo text-bosco font-bold leading-snug">
+              {L.t('lista.scontrinoAllegato')}
+              {/* In un campo gratuito la foto non va nel cloud: lo si dice qui,
+                  altrimenti chi l'ha scattata non capisce perche' gli altri non
+                  la vedono. */}
+              {fotoCloud === false && <span data-foto-solo-qui className="block font-normal text-minuto text-gray-500">{L.t('pro.fotoSoloQui')}</span>}
+            </span>
+            <button onClick={() => setPReceipt(null)} aria-label={L.t('lista.rimuoviFoto')} className={bottoneIcona('distruttivo')}>&times;</button>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <label
+            aria-label={L.t('lista.allegaScontrino')}
+            className={`${bottone('secondario', 'normale', 'shrink-0 cursor-pointer inline-flex items-center gap-1.5')}`}
+          >
+            {icona('galleria', 'w-5 h-5')}
+            <span>{L.t('foglio.scontrino')}</span>
+            <input type="file" accept="image/*" onChange={onReceiptFile} className="hidden" />
+          </label>
+          <button onClick={addPurchase} className={bottone('primario', 'normale', 'flex-1')}>{L.t('lista.salva')}</button>
+        </div>
+      </div>
+    </div>
   );
 };

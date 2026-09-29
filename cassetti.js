@@ -43,6 +43,9 @@
     'cambusa_syncmeta', 'cambusa_rescue', 'cambusa_orologio',
     'cambusa_snap_locali', 'cambusa_snap_date', 'cambusa_backup_data',
     'cambusa_registro', 'cambusa_exmembri',
+    // Chi ha pagato l'ultima spesa registrata da questo telefono: nel foglio
+    // della spesa si parte da lui. I nomi sono del campo.
+    'cambusa_acquirente',
     // Le foto della vecchia strada (e del ripiego, quando IndexedDB manca).
     'cambusa_receipts',
   ];

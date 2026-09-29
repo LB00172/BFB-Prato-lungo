@@ -14,7 +14,7 @@ const { chromium } = require('playwright-core');
   await go('Lista della Spesa');
   // All'apertura: "Da acquistare" attivo -> form manuale e cronologia NON visibili
   const daAcqVisible = await p.locator('h3:has-text("Da Acquistare")').count();
-  const formHiddenAtStart = await p.locator('h3:has-text("Prodotto acquistato")').count();
+  const formHiddenAtStart = await p.locator('[data-foglio-spesa]').count();
   const cronoHiddenAtStart = await p.locator('h3:has-text("Cronologia acquisti")').count();
 
   // aggiungo una voce da acquistare (resta in lista, non la compro)
@@ -25,14 +25,14 @@ const { chromium } = require('playwright-core');
   await p.locator('main button:has-text("Acquistato")').click(); await p.waitForTimeout(200);
   // la maschera manuale ora parte chiusa: la apro
   {
-    const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
+    const b = p.locator('main button', { hasText: 'Registra una spesa' });
     if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); }
   }
-  const formVisible = await p.locator('h3:has-text("Prodotto acquistato")').count();
+  const formVisible = await p.locator('[data-foglio-spesa]').count();
   const cronoVisible = await p.locator('h3:has-text("Cronologia acquisti")').count();
   const daAcqHidden = await p.locator('h3:has-text("Da Acquistare")').count();
   // 📷 nella maschera manuale
-  const camInForm = await p.locator('h3:has-text("Prodotto acquistato")').locator('..').locator('label[aria-label="Allega scontrino"]').count();
+  const camInForm = await p.locator('[data-foglio-spesa]').locator('label[aria-label="Allega scontrino"]').count();
 
   // registro un acquisto manuale SENZA foto
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Sale');

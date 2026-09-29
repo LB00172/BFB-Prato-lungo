@@ -18,13 +18,24 @@ const aggiungi = async (p, nome) => {
 
 // Registra una spesa a mano scegliendo il conto (comune o separato).
 const spesa = async (p, nome, prezzo, conto) => {
-  const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
+  const b = p.locator('main button', { hasText: 'Registra una spesa' });
   if (await b.count()) { await b.first().click(); await p.waitForTimeout(300); }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', nome);
   await p.locator('input[data-cifra]').first().fill(String(prezzo));
-  if (conto) await p.locator('select').filter({ hasText: 'Conto comune' }).first().selectOption(conto);
   await p.locator('button', { hasText: /Salva/ }).first().click();
   await p.waitForTimeout(500);
+  // Il foglio chiede il conto solo quando ci sono giorni separati: qui non
+  // ce ne sono ancora, ed e' proprio il buco che si vuole provocare. Ci si
+  // arriva lo stesso correggendo la spesa — come al campo, quando i giorni
+  // si tolgono dopo.
+  if (conto) {
+    await p.locator('ul li', { hasText: nome }).first().locator('button[aria-label="Correggi"]').click();
+    await p.waitForTimeout(350);
+    const modale = p.locator('div.fixed', { hasText: 'Correggi la spesa' }).last();
+    await modale.locator('select').filter({ hasText: 'Conto comune' }).first().selectOption(conto);
+    await modale.locator('button', { hasText: /^Salva$/ }).click();
+    await p.waitForTimeout(400);
+  }
 };
 
 const quote = (p) => p.evaluate(() => {

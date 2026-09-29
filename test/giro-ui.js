@@ -205,7 +205,7 @@ const GIRO = [
   ['11-presenze', 'Le presenze', { account: true, campo: true, dati: true }, G(passi.menu('presenze'))],
   ['12-menu-giorno', 'Il menù del giorno', { account: true, campo: true, dati: true }, G(passi.menu('menu'))],
   ['13-lista', 'La lista della spesa', { account: true, campo: true, dati: true }, G(passi.menu('lista'))],
-  ['14-spesa-nuova', 'Registrare una spesa a mano', { account: true, campo: true, dati: true }, G(passi.menu('lista'), passi.tocca('main button >> nth=1'), passi.testo(/aggiungi un prodotto a mano/i))],
+  ['14-spesa-nuova', 'Registrare una spesa a mano', { account: true, campo: true, dati: true }, G(passi.menu('lista'), passi.tocca('main button >> nth=1'), passi.testo(/registra una spesa/i))],
   ['15-totali', 'Spese totali', { account: true, campo: true, dati: true }, G(passi.menu('spesa'))],
   ['16-quote', 'Le quote', { account: true, campo: true, dati: true }, G(passi.menu('spesa'), passi.tocca('main button >> nth=1'))],
   ['17-saldi', 'I saldi: chi paga chi', { account: true, campo: true, dati: true }, G(passi.menu('spesa'), passi.tocca('main button >> nth=2'))],

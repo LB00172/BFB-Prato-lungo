@@ -75,6 +75,7 @@ ok(`il dizionario italiano ha ${CHIAVI.length} voci`, CHIAVI.length > 20);
     'es:registro.sync', 'fr:registro.sync',        // "sync" e' una sigla, non una parola
     'es:quote.gratis',                             // "Gratis" e' anche spagnolo
     'es:guida.calendario.titolo',                  // "Calendario" e' anche spagnolo
+    'es:foglio.tipo',                              // "Tipo" e' anche spagnolo
   ];
   const copiate = [];
   CODICI.filter((c) => c !== 'it').forEach((c) => {

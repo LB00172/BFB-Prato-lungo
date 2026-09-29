@@ -16,6 +16,7 @@ const schedaCalendario = ({
   isOnline,
   members,
   presenzeOrfane,
+  purchases,
   campoInCorso,
   readyOk,
   renderWeekStrip,
@@ -226,6 +227,30 @@ const schedaCalendario = ({
               <span className="text-gray-300"> · </span>
               {dinner} <span className="text-piccolo font-normal text-gray-500">{L.t('giorno.aCena')}</span>
             </span>
+          </div>
+        );
+      })()}
+
+      {/* Le spese del giorno: quelle registrate in questa data. Il tasto
+          «+ Spesa» sta su ogni scheda, e questo e' il posto dove si vede
+          subito che la spesa appena registrata c'e'. Solo quando ce n'e'. */}
+      {(() => {
+        const delGiorno = purchases.filter((p) => p.at && toDateStr(new Date(p.at)) === selectedDateStr);
+        if (delGiorno.length === 0) return null;
+        const totale = delGiorno.reduce((s, p) => s + (Number(p.price) || 0), 0);
+        return (
+          <div data-spese-del-giorno className="bg-carta/60 rounded border border-salvia/30 px-3 py-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-piccolo uppercase font-bold text-gray-500 tracking-wide">{L.t('giorno.speseDelGiorno')}</span>
+              <span className="text-normale font-bold text-bosco">{money(totale)} €</span>
+            </div>
+            {delGiorno.map((p) => (
+              <div key={p.id} className="flex items-baseline gap-2 py-1 border-t border-salvia/20 first:border-t-0">
+                <span className="flex-1 min-w-0 truncate text-normale text-bosco">{p.name}</span>
+                <span className="text-minuto text-gray-500 shrink-0">{p.buyer ? L.t('giorno.haPagato', p.buyer) : ''}</span>
+                <span className="text-normale font-bold text-bosco shrink-0">{money(p.price)} €</span>
+              </div>
+            ))}
           </div>
         );
       })()}

@@ -891,6 +891,8 @@ const ICONE = {
   // disegno diverso, o l'utente pensa che parlino di due cose.
   separato: 'M12 8a5 5 0 1 1 0 10 5 5 0 0 1 0-10z M4 3v8 M4 11v10 M2 3v5a2 2 0 0 0 4 0V3 M20 3v18 M20 3c-1.5 1-2 3-2 5s.5 3 2 3',
   pronto: 'M7 8h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3z M9 8V6a3 3 0 0 1 6 0v2 M9 14h6 M10 21v-4h4v4',
+  // Aggiungere: il tasto «+ Spesa».
+  piu: 'M12 5v14 M5 12h14',
   // Il luogo del campo: il segnaposto, il gesto che tutti conoscono dalle mappe.
   luogo: 'M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z M12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6z'
 };
@@ -989,6 +991,13 @@ const BOTTONE_ICONA = {
 // Almeno 44×44 anche loro: la × per togliere era di 30×32, e sbagliarla
 // vuol dire togliere la riga accanto.
 const bottoneIcona = (tono, extra) => ['min-w-11 min-h-11 inline-flex items-center justify-center px-2.5 py-2 rounded font-bold leading-none disabled:opacity-40', BOTTONE_ICONA[tono] || BOTTONE_ICONA.neutro, extra || ''].filter(Boolean).join(' ');
+
+// Il tasto che galleggia: «+ Spesa», sopra ogni scheda del campo, in basso a
+// destra dove arriva il pollice. E' uno solo e resta uno solo — due tasti
+// galleggianti non dicono piu' quale sia la cosa principale. Pillola piena,
+// alta 48 perche' e' il tasto piu' usato dell'app, con l'ombra perche' sta
+// SOPRA il contenuto e deve sembrarlo.
+const bottoneFlottante = extra => ['min-h-12 inline-flex items-center gap-2 pl-4 pr-5 rounded-full bg-bosco text-white shadow-xl font-bold uppercase tracking-wide text-normale hover:bg-notte', extra || ''].filter(Boolean).join(' ');
 
 // La riga richiudibile non e' un bottone con un altro colore: e' una forma
 // diversa — larga, allineata a sinistra, senza maiuscolo, con il contenuto ai
@@ -4602,9 +4611,10 @@ function App({
     setPPrice('');
     setPType('alimentare');
     setPAccount('comune');
-    setManualOpen(true);
     setListaSection('acquistato');
     goTo('lista');
+    // Dopo goTo, che chiude il foglio: cambiare scheda vuol dire lasciarlo.
+    setManualOpen(true);
   };
 
   // ---------- Dal menù alla lista della spesa ----------
@@ -4701,6 +4711,27 @@ function App({
   };
 
   // ---------- Taccuino delle spese ----------
+  // ---------- Il foglio della spesa ----------
+  // Chi ha pagato parte gia' da qualcuno: dall'ultimo che questo telefono ha
+  // segnato (quasi sempre chi lo tiene in mano), altrimenti dal membro che si
+  // chiama come l'account. Prima partiva da «non indicato», e una spesa senza
+  // acquirente non rimborsa nessuno.
+  const ACQUIRENTE_KEY = 'cambusa_acquirente';
+  const acquirentePredefinito = () => {
+    const nomi = members.map(m => m.name);
+    let ultimo = '';
+    try {
+      ultimo = localStorage.getItem(ACQUIRENTE_KEY) || '';
+    } catch (e) {/* niente */}
+    if (ultimo && nomi.includes(ultimo)) return ultimo;
+    const io = String(account.utente && account.utente.nome || '').trim().toLowerCase();
+    return io && nomi.find(n => n.trim().toLowerCase() === io) || '';
+  };
+  const apriFoglioSpesa = () => {
+    if (contiChiusi(L.t('azione.aggiungereSpesa'))) return;
+    if (!pBuyer) setPBuyer(acquirentePredefinito());
+    setManualOpen(true);
+  };
   const addPurchase = () => {
     if (contiChiusi(L.t('azione.aggiungereSpesa'))) return;
     const name = pName.trim();
@@ -4728,6 +4759,11 @@ function App({
         [id]: pReceipt
       }));
       if (window.CloudSync) window.CloudSync.putReceipt(id, pReceipt);
+    }
+    if (pBuyer.trim()) {
+      try {
+        localStorage.setItem(ACQUIRENTE_KEY, pBuyer.trim());
+      } catch (e) {/* niente */}
     }
     setPName('');
     setPPrice('');
@@ -5900,6 +5936,7 @@ function App({
   const goTo = tab => {
     setActiveTab(tab);
     setMenuOpen(false);
+    setManualOpen(false);
   };
 
   // Guida: una "pill" per ogni area di lavoro.
@@ -6195,7 +6232,7 @@ function App({
     onClick: () => setLostSync(null),
     className: bottone('secondario', 'minuscolo')
   }, L.t('perdita.vaBene')))))), /*#__PURE__*/React.createElement("main", {
-    className: "flex-grow p-4"
+    className: `flex-grow p-4 ${dentroUnCampo && scheda !== 'campi' ? 'pb-24' : ''}`
   }, scheda === 'campi' && schedaCampi({
     stanzaStato,
     account,
@@ -6213,6 +6250,7 @@ function App({
     isOnline,
     members,
     presenzeOrfane,
+    purchases,
     readyOk,
     renderWeekStrip,
     selectedDateStr,
@@ -6328,40 +6366,24 @@ function App({
     totals,
     fuoriConto
   }), scheda === 'lista' && schedaLista({
-    addPurchase,
     addToBuy,
+    apriFoglioSpesa,
     attachReceiptTo,
+    manualOpen,
     fotoCloud,
     listaSection,
-    manualOpen,
     newBuyName,
     newBuyQty,
-    onReceiptFile,
     openEditPurchase,
-    pAccount,
-    pBuyer,
-    pName,
-    pPrice,
-    pReceipt,
-    pType,
     purchaseQuery,
     purchases,
     receipts,
     removePurchase,
     removeToBuy,
-    renderBuyerSelect,
-    sepDays,
     setBuying,
     setListaSection,
-    setManualOpen,
     setNewBuyName,
     setNewBuyQty,
-    setPAccount,
-    setPBuyer,
-    setPName,
-    setPPrice,
-    setPReceipt,
-    setPType,
     setPurchaseQuery,
     setToBuyQuery,
     setViewReceipt,
@@ -6496,7 +6518,38 @@ function App({
     wipeLocal,
     contiBloccati: !!bloccoConti(),
     adminPermesso
-  })), buying && /*#__PURE__*/React.createElement("div", {
+  })), dentroUnCampo && scheda !== 'campi' && !manualOpen && /*#__PURE__*/React.createElement("div", {
+    className: "fixed bottom-0 left-0 right-0 max-w-md mx-auto pointer-events-none z-30"
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-tasto-spesa": true,
+    onClick: apriFoglioSpesa,
+    "aria-label": L.t('foglio.titolo'),
+    style: {
+      bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)'
+    },
+    className: bottoneFlottante('pointer-events-auto absolute right-4')
+  }, icona('piu', 'w-5 h-5'), /*#__PURE__*/React.createElement("span", null, L.t('foglio.tasto')))), manualOpen && foglioSpesa({
+    addPurchase,
+    chiudi: () => setManualOpen(false),
+    fotoCloud,
+    members,
+    onReceiptFile,
+    pAccount,
+    pBuyer,
+    pName,
+    pPrice,
+    pReceipt,
+    pType,
+    purchases,
+    renderBuyerSelect,
+    sepDays,
+    setPAccount,
+    setPBuyer,
+    setPName,
+    setPPrice,
+    setPReceipt,
+    setPType
+  }), buying && /*#__PURE__*/React.createElement("div", {
     onClick: () => setBuying(null),
     className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5"
   }, /*#__PURE__*/React.createElement("div", {
@@ -6810,6 +6863,7 @@ const schedaCalendario = ({
   isOnline,
   members,
   presenzeOrfane,
+  purchases,
   campoInCorso,
   readyOk,
   renderWeekStrip,
@@ -6971,6 +7025,29 @@ const schedaCalendario = ({
   }, " \xB7 "), dinner, " ", /*#__PURE__*/React.createElement("span", {
     className: "text-piccolo font-normal text-gray-500"
   }, L.t('giorno.aCena'))));
+})(), (() => {
+  const delGiorno = purchases.filter(p => p.at && toDateStr(new Date(p.at)) === selectedDateStr);
+  if (delGiorno.length === 0) return null;
+  const totale = delGiorno.reduce((s, p) => s + (Number(p.price) || 0), 0);
+  return /*#__PURE__*/React.createElement("div", {
+    "data-spese-del-giorno": true,
+    className: "bg-carta/60 rounded border border-salvia/30 px-3 py-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-piccolo uppercase font-bold text-gray-500 tracking-wide"
+  }, L.t('giorno.speseDelGiorno')), /*#__PURE__*/React.createElement("span", {
+    className: "text-normale font-bold text-bosco"
+  }, money(totale), " \u20AC")), delGiorno.map(p => /*#__PURE__*/React.createElement("div", {
+    key: p.id,
+    className: "flex items-baseline gap-2 py-1 border-t border-salvia/20 first:border-t-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex-1 min-w-0 truncate text-normale text-bosco"
+  }, p.name), /*#__PURE__*/React.createElement("span", {
+    className: "text-minuto text-gray-500 shrink-0"
+  }, p.buyer ? L.t('giorno.haPagato', p.buyer) : ''), /*#__PURE__*/React.createElement("span", {
+    className: "text-normale font-bold text-bosco shrink-0"
+  }, money(p.price), " \u20AC"))));
 })(), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "flex items-center justify-between mb-1"
 }, /*#__PURE__*/React.createElement("span", {
@@ -7597,40 +7674,23 @@ const schedaSpesa = ({
   className: "text-fuoco font-bold shrink-0"
 }, L.t('cloud.offline')))))));
 const schedaLista = ({
-  addPurchase,
   addToBuy,
-  attachReceiptTo,
-  fotoCloud,
-  listaSection,
+  apriFoglioSpesa,
   manualOpen,
+  attachReceiptTo,
+  listaSection,
   newBuyName,
   newBuyQty,
-  onReceiptFile,
   openEditPurchase,
-  pAccount,
-  pBuyer,
-  pName,
-  pPrice,
-  pReceipt,
-  pType,
   purchaseQuery,
   purchases,
   receipts,
   removePurchase,
   removeToBuy,
-  renderBuyerSelect,
-  sepDays,
   setBuying,
   setListaSection,
-  setManualOpen,
   setNewBuyName,
   setNewBuyQty,
-  setPAccount,
-  setPBuyer,
-  setPName,
-  setPPrice,
-  setPReceipt,
-  setPType,
   setPurchaseQuery,
   setToBuyQuery,
   setViewReceipt,
@@ -7732,101 +7792,12 @@ const schedaLista = ({
   }, L.t('lista.segnaAcquistata'))))));
 })(), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic"
-}, L.t('lista.notaPassaggio'))), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, !manualOpen ? /*#__PURE__*/React.createElement("button", {
-  onClick: () => setManualOpen(true),
-  className: "w-full bg-scheda p-3 rounded-lg border-2 border-dashed border-salvia/60 text-bosco hover:bg-orlo flex items-center justify-center gap-2"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "text-grande leading-none"
-}, "\uFF0B"), /*#__PURE__*/React.createElement("span", {
+}, L.t('lista.notaPassaggio'))), listaSection === 'acquistato' && /*#__PURE__*/React.createElement(React.Fragment, null, !manualOpen && /*#__PURE__*/React.createElement("button", {
+  onClick: apriFoglioSpesa,
+  className: "w-full min-h-11 bg-scheda p-3 rounded-lg border-2 border-dashed border-salvia/60 text-bosco hover:bg-orlo flex items-center justify-center gap-2"
+}, icona('piu', 'w-5 h-5'), /*#__PURE__*/React.createElement("span", {
   className: "font-bold uppercase text-piccolo tracking-wide"
-}, L.t('lista.aggiungiAMano'))) : /*#__PURE__*/React.createElement("div", {
-  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
-}, /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center justify-between border-b border-salvia/40 pb-2"
-}, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-grande text-bosco"
-}, L.t('lista.prodottoAcquistato')), /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center gap-2 shrink-0"
-}, /*#__PURE__*/React.createElement("label", {
-  title: L.t('lista.scontrinoTitolo'),
-  "aria-label": L.t('lista.allegaScontrino'),
-  className: `cursor-pointer px-3 py-2 rounded border-2 text-grande leading-none ${pReceipt ? 'bg-bosco border-bosco' : 'bg-scheda border-salvia/50 hover:bg-orlo'}`
-}, "\uD83D\uDCF7", /*#__PURE__*/React.createElement("input", {
-  type: "file",
-  accept: "image/*",
-  onChange: onReceiptFile,
-  className: "hidden"
-})), /*#__PURE__*/React.createElement("button", {
-  onClick: () => setManualOpen(false),
-  "aria-label": L.t('lista.chiudiMaschera'),
-  className: bottoneIcona('neutro')
-}, "\xD7"))), /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-gray-500 -mt-1"
-}, L.t('lista.nonEraInLista')), pReceipt && /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center gap-3 bg-carta/60 p-2 rounded border border-salvia/30"
-}, /*#__PURE__*/React.createElement("img", {
-  src: pReceipt,
-  alt: L.t('lista.scontrino'),
-  className: "w-12 h-12 object-cover rounded"
-}), /*#__PURE__*/React.createElement("span", {
-  className: "flex-grow text-piccolo text-bosco font-bold leading-snug"
-}, L.t('lista.scontrinoAllegato'), fotoCloud === false && /*#__PURE__*/React.createElement("span", {
-  "data-foto-solo-qui": true,
-  className: "block font-normal text-minuto text-gray-500"
-}, L.t('pro.fotoSoloQui'))), /*#__PURE__*/React.createElement("button", {
-  onClick: () => setPReceipt(null),
-  "aria-label": L.t('lista.rimuoviFoto'),
-  className: bottoneIcona('distruttivo')
-}, "\xD7")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
-}, L.t('lista.nome')), /*#__PURE__*/React.createElement("input", {
-  type: "text",
-  value: pName,
-  onChange: e => setPName(e.target.value),
-  placeholder: L.t('lista.esempioNome'),
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-})), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
-}, L.t('lista.acquirente')), renderBuyerSelect(pBuyer, setPBuyer)), /*#__PURE__*/React.createElement("div", {
-  className: "grid grid-cols-2 gap-3"
-}, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
-}, L.t('lista.prezzo')), /*#__PURE__*/React.createElement("input", {
-  type: "number",
-  min: "0",
-  step: "0.01",
-  inputMode: "decimal",
-  "data-cifra": true,
-  value: pPrice,
-  onChange: e => setPPrice(e.target.value),
-  onKeyDown: e => e.key === 'Enter' && addPurchase(),
-  placeholder: money(0),
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded font-bold"
-})), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
-}, L.t('lista.tipologia')), /*#__PURE__*/React.createElement("select", {
-  value: pType,
-  onChange: e => setPType(e.target.value),
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale font-bold focus:outline-none focus:border-bosco"
-}, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
-  key: k,
-  value: k
-}, tipoSpesa(k)))))), pType !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
-}, L.t('lista.conto')), /*#__PURE__*/React.createElement("select", {
-  value: pAccount,
-  onChange: e => setPAccount(e.target.value),
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale font-bold focus:outline-none focus:border-bosco"
-}, /*#__PURE__*/React.createElement("option", {
-  value: "comune"
-}, L.t('lista.contoComune')), /*#__PURE__*/React.createElement("option", {
-  value: "sep"
-}, L.t('giorno.contoSeparato'))), pAccount === 'sep' && /*#__PURE__*/React.createElement("p", {
-  className: "text-minuto mt-1 leading-snug text-legno"
-}, sepDays.length === 0 ? L.t('lista.senzaGiorniSpuntati') : L.t('lista.siDivide', sepDays.length))), /*#__PURE__*/React.createElement("button", {
-  onClick: addPurchase,
-  className: bottone('primario', 'grande', 'w-full')
-}, L.t('lista.salva'))), /*#__PURE__*/React.createElement("div", {
+}, L.t('lista.aggiungiAMano'))), /*#__PURE__*/React.createElement("div", {
   className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between border-b border-salvia/40 pb-2 mb-3"
@@ -8047,6 +8018,163 @@ const schedaAttrezzatura = ({
   }, L.t('attrezzatura.acquistatoNelleSpese')), /*#__PURE__*/React.createElement("span", {
     className: "font-rustic font-bold text-bosco"
   }, money(equipBoughtTotal), " \u20AC"))))));
+};
+
+// ---------- Il foglio della spesa ----------
+// Registrare una spesa, da qualunque scheda del campo: sale dal basso sopra
+// quello che si stava guardando, e si chiude toccando fuori. L'ordine e'
+// quello del gesto vero, alla cassa: prima QUANTO (l'unica cosa sempre da
+// scrivere), poi chi ha pagato — che parte gia' da qualcuno, vedi
+// acquirentePredefinito in App —, poi cosa e di che tipo. Il conto separato
+// compare solo se il campo ha dei giorni separati: altrimenti e' una domanda
+// senza senso. La foto dello scontrino e' a un tocco, e facoltativa.
+//
+// La logica e' quella di sempre, addPurchase: qui cambia solo il disegno.
+const foglioSpesa = ({
+  addPurchase,
+  chiudi,
+  fotoCloud,
+  members,
+  onReceiptFile,
+  pAccount,
+  pBuyer,
+  pName,
+  pPrice,
+  pReceipt,
+  pType,
+  purchases,
+  renderBuyerSelect,
+  sepDays,
+  setPAccount,
+  setPBuyer,
+  setPName,
+  setPPrice,
+  setPReceipt,
+  setPType
+}) => {
+  // I chip veloci: chi e' gia' scelto, poi chi ha pagato di recente, poi gli
+  // altri membri. Quattro al massimo; per tutti gli altri c'e' la tendina.
+  const veloci = [];
+  const prendi = n => {
+    if (n && veloci.length < 4 && !veloci.includes(n) && members.some(m => m.name === n)) veloci.push(n);
+  };
+  prendi(pBuyer);
+  purchases.slice().sort((a, b) => (b.at || 0) - (a.at || 0)).forEach(p => prendi(p.buyer));
+  members.forEach(m => prendi(m.name));
+  const conConto = pType !== 'logistica' && (sepDays.length > 0 || pAccount === 'sep');
+  const etichetta = 'block text-minuto uppercase font-bold tracking-wide text-gray-500 mb-1.5';
+  return /*#__PURE__*/React.createElement("div", {
+    "data-foglio-spesa": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": L.t('foglio.titolo'),
+    className: "fixed inset-0 z-40 flex flex-col justify-end"
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: chiudi,
+    className: "absolute inset-0 bg-notte/55"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "relative w-full max-w-md mx-auto bg-scheda rounded-t-2xl shadow-2xl px-5 pt-3 space-y-4 max-h-[92vh] overflow-y-auto",
+    style: {
+      paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-center"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-10 h-1 rounded-full bg-salvia/40"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande text-bosco"
+  }, L.t('foglio.titolo')), /*#__PURE__*/React.createElement("button", {
+    onClick: chiudi,
+    "aria-label": L.t('lista.chiudiMaschera'),
+    className: bottoneIcona('neutro')
+  }, "\xD7")), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 px-4 py-1 bg-carta border-2 border-bosco rounded-md"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "0",
+    step: "0.01",
+    inputMode: "decimal",
+    "data-cifra": true,
+    autoFocus: true,
+    value: pPrice,
+    onChange: e => setPPrice(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && addPurchase(),
+    placeholder: money(0),
+    "aria-label": L.t('foglio.quanto'),
+    className: "flex-1 min-w-0 bg-transparent font-bold text-titolo text-bosco focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-grande text-gray-500"
+  }, "\u20AC")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: etichetta
+  }, L.t('foglio.chiHaPagato')), veloci.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5 mb-2"
+  }, veloci.map(n => /*#__PURE__*/React.createElement("button", {
+    key: n,
+    "data-acquirente": n,
+    "aria-pressed": pBuyer === n,
+    onClick: () => setPBuyer(n),
+    className: bottoneScelta('pillola', 'tenue', pBuyer === n, 'minuscolo')
+  }, n))), renderBuyerSelect(pBuyer, setPBuyer)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: etichetta
+  }, L.t('foglio.cosa')), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: pName,
+    onChange: e => setPName(e.target.value),
+    placeholder: L.t('lista.esempioNome'),
+    className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: etichetta
+  }, L.t('foglio.tipo')), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("button", {
+    key: k,
+    "data-tipo": k,
+    "aria-pressed": pType === k,
+    onClick: () => setPType(k),
+    className: bottoneScelta('pillola', 'tenue', pType === k, 'minuscolo')
+  }, tipoSpesa(k))))), conConto && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: etichetta
+  }, L.t('lista.conto')), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, [['comune', 'lista.contoComune'], ['sep', 'giorno.contoSeparato']].map(([k, chiave]) => /*#__PURE__*/React.createElement("button", {
+    key: k,
+    "data-conto": k,
+    "aria-pressed": pAccount === k,
+    onClick: () => setPAccount(k),
+    className: bottoneScelta('pillola', 'tenue', pAccount === k, 'minuscolo')
+  }, L.t(chiave)))), pAccount === 'sep' && /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto mt-1 leading-snug text-legno"
+  }, sepDays.length === 0 ? L.t('lista.senzaGiorniSpuntati') : L.t('lista.siDivide', sepDays.length))), pReceipt && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 bg-carta/60 p-2 rounded border border-salvia/30"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: pReceipt,
+    alt: L.t('lista.scontrino'),
+    className: "w-12 h-12 object-cover rounded"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "flex-grow text-piccolo text-bosco font-bold leading-snug"
+  }, L.t('lista.scontrinoAllegato'), fotoCloud === false && /*#__PURE__*/React.createElement("span", {
+    "data-foto-solo-qui": true,
+    className: "block font-normal text-minuto text-gray-500"
+  }, L.t('pro.fotoSoloQui'))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setPReceipt(null),
+    "aria-label": L.t('lista.rimuoviFoto'),
+    className: bottoneIcona('distruttivo')
+  }, "\xD7")), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("label", {
+    "aria-label": L.t('lista.allegaScontrino'),
+    className: `${bottone('secondario', 'normale', 'shrink-0 cursor-pointer inline-flex items-center gap-1.5')}`
+  }, icona('galleria', 'w-5 h-5'), /*#__PURE__*/React.createElement("span", null, L.t('foglio.scontrino')), /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: "image/*",
+    onChange: onReceiptFile,
+    className: "hidden"
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: addPurchase,
+    className: bottone('primario', 'normale', 'flex-1')
+  }, L.t('lista.salva')))));
 };
 // ---------- Schede del gruppo: Membri, Regole, Dotazioni personali ----------
 // Vedi 81-schede-giorno.jsx per il perche' sono funzioni e non componenti.

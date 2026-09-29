@@ -75,6 +75,16 @@ const bottoneIcona = (tono, extra) => [
   extra || '',
 ].filter(Boolean).join(' ');
 
+// Il tasto che galleggia: «+ Spesa», sopra ogni scheda del campo, in basso a
+// destra dove arriva il pollice. E' uno solo e resta uno solo — due tasti
+// galleggianti non dicono piu' quale sia la cosa principale. Pillola piena,
+// alta 48 perche' e' il tasto piu' usato dell'app, con l'ombra perche' sta
+// SOPRA il contenuto e deve sembrarlo.
+const bottoneFlottante = (extra) => [
+  'min-h-12 inline-flex items-center gap-2 pl-4 pr-5 rounded-full bg-bosco text-white shadow-xl font-bold uppercase tracking-wide text-normale hover:bg-notte',
+  extra || '',
+].filter(Boolean).join(' ');
+
 // La riga richiudibile non e' un bottone con un altro colore: e' una forma
 // diversa — larga, allineata a sinistra, senza maiuscolo, con il contenuto ai
 // due estremi. Passa da qui perche' e' un ruolo, non un caso particolare.

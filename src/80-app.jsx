@@ -1594,9 +1594,10 @@ function App({ eredita, cambiaCampo } = {}) {
     setPPrice('');
     setPType('alimentare');
     setPAccount('comune');
-    setManualOpen(true);
     setListaSection('acquistato');
     goTo('lista');
+    // Dopo goTo, che chiude il foglio: cambiare scheda vuol dire lasciarlo.
+    setManualOpen(true);
   };
 
   // ---------- Dal menù alla lista della spesa ----------
@@ -1665,6 +1666,26 @@ function App({ eredita, cambiaCampo } = {}) {
   };
 
   // ---------- Taccuino delle spese ----------
+  // ---------- Il foglio della spesa ----------
+  // Chi ha pagato parte gia' da qualcuno: dall'ultimo che questo telefono ha
+  // segnato (quasi sempre chi lo tiene in mano), altrimenti dal membro che si
+  // chiama come l'account. Prima partiva da «non indicato», e una spesa senza
+  // acquirente non rimborsa nessuno.
+  const ACQUIRENTE_KEY = 'cambusa_acquirente';
+  const acquirentePredefinito = () => {
+    const nomi = members.map((m) => m.name);
+    let ultimo = '';
+    try { ultimo = localStorage.getItem(ACQUIRENTE_KEY) || ''; } catch (e) { /* niente */ }
+    if (ultimo && nomi.includes(ultimo)) return ultimo;
+    const io = String((account.utente && account.utente.nome) || '').trim().toLowerCase();
+    return (io && nomi.find((n) => n.trim().toLowerCase() === io)) || '';
+  };
+  const apriFoglioSpesa = () => {
+    if (contiChiusi(L.t('azione.aggiungereSpesa'))) return;
+    if (!pBuyer) setPBuyer(acquirentePredefinito());
+    setManualOpen(true);
+  };
+
   const addPurchase = () => {
     if (contiChiusi(L.t('azione.aggiungereSpesa'))) return;
     const name = pName.trim();
@@ -1683,6 +1704,7 @@ function App({ eredita, cambiaCampo } = {}) {
       setReceipts((prev) => ({ ...prev, [id]: pReceipt }));
       if (window.CloudSync) window.CloudSync.putReceipt(id, pReceipt);
     }
+    if (pBuyer.trim()) { try { localStorage.setItem(ACQUIRENTE_KEY, pBuyer.trim()); } catch (e) { /* niente */ } }
     setPName('');
     setPPrice('');
     setPType('alimentare');
@@ -2743,7 +2765,7 @@ function App({ eredita, cambiaCampo } = {}) {
     </>
   );
 
-  const goTo = (tab) => { setActiveTab(tab); setMenuOpen(false); };
+  const goTo = (tab) => { setActiveTab(tab); setMenuOpen(false); setManualOpen(false); };
 
   // Guida: una "pill" per ogni area di lavoro.
   // I testi stanno in lingue.js: qui restano la chiave e l'icona. GUIDE e'
@@ -3047,11 +3069,13 @@ function App({ eredita, cambiaCampo } = {}) {
         </div>
       )}
 
-      <main className="flex-grow p-4">
+      {/* In fondo, lo spazio del tasto «+ Spesa»: senza, l'ultima riga di ogni
+          scheda resterebbe sotto il tasto e non si potrebbe toccare. */}
+      <main className={`flex-grow p-4 ${dentroUnCampo && scheda !== 'campi' ? 'pb-24' : ''}`}>
         {/* ---------- CALENDARIO ---------- */}
         {scheda === 'campi' && schedaCampi({ stanzaStato, account, codiceInGioco, onApri: apriCampo })}
         {scheda === 'calendario' && schedaCalendario({
-          admin, campoInCorso, capogruppo: stanzaStato.capogruppo, meteoAperto: stanzaStato.sbloccata('meteo'), fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
+          admin, campoInCorso, capogruppo: stanzaStato.capogruppo, meteoAperto: stanzaStato.sbloccata('meteo'), fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, purchases, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
         })}
 
         {/* ---------- MENÙ ---------- */}
@@ -3087,7 +3111,7 @@ function App({ eredita, cambiaCampo } = {}) {
 
         {/* ---------- TACCUINO DELLE SPESE ---------- */}
         {scheda === 'lista' && schedaLista({
-          addPurchase, addToBuy, attachReceiptTo, fotoCloud, listaSection, manualOpen, newBuyName, newBuyQty, onReceiptFile, openEditPurchase, pAccount, pBuyer, pName, pPrice, pReceipt, pType, purchaseQuery, purchases, receipts, removePurchase, removeToBuy, renderBuyerSelect, sepDays, setBuying, setListaSection, setManualOpen, setNewBuyName, setNewBuyQty, setPAccount, setPBuyer, setPName, setPPrice, setPReceipt, setPType, setPurchaseQuery, setToBuyQuery, setViewReceipt, spesePotenzialmenteDoppie, toBuy, toBuyQuery, totals,
+          addToBuy, apriFoglioSpesa, attachReceiptTo, manualOpen, fotoCloud, listaSection, newBuyName, newBuyQty, openEditPurchase, purchaseQuery, purchases, receipts, removePurchase, removeToBuy, setBuying, setListaSection, setNewBuyName, setNewBuyQty, setPurchaseQuery, setToBuyQuery, setViewReceipt, spesePotenzialmenteDoppie, toBuy, toBuyQuery, totals,
         })}
 
         {/* ---------- AGGIUNTA ATTREZZATURA ---------- */}
@@ -3126,6 +3150,28 @@ function App({ eredita, cambiaCampo } = {}) {
       </main>
 
       {/* Registrazione acquisto di una voce "Da Acquistare" */}
+      {/* Il tasto «+ Spesa»: in ogni scheda del campo, dove arriva il
+          pollice. Registrare una spesa e' la cosa che si fa piu' spesso, e
+          prima stava dietro Lista → Acquistato → «Aggiungi un prodotto a mano». */}
+      {dentroUnCampo && scheda !== 'campi' && !manualOpen && (
+        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto pointer-events-none z-30">
+          <button
+            data-tasto-spesa
+            onClick={apriFoglioSpesa}
+            aria-label={L.t('foglio.titolo')}
+            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}
+            className={bottoneFlottante('pointer-events-auto absolute right-4')}
+          >
+            {icona('piu', 'w-5 h-5')}
+            <span>{L.t('foglio.tasto')}</span>
+          </button>
+        </div>
+      )}
+      {manualOpen && foglioSpesa({
+        addPurchase, chiudi: () => setManualOpen(false), fotoCloud, members, onReceiptFile, pAccount, pBuyer, pName, pPrice, pReceipt, pType,
+        purchases, renderBuyerSelect, sepDays, setPAccount, setPBuyer, setPName, setPPrice, setPReceipt, setPType,
+      })}
+
       {buying && (
         <div onClick={() => setBuying(null)} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5">
           <div onClick={(e) => e.stopPropagation()} className="bg-scheda rounded-lg p-4 w-full max-w-xs space-y-3 shadow-2xl">

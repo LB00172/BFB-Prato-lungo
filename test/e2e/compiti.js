@@ -111,10 +111,12 @@ const totale = (p) => p.evaluate(() => (window.__totali ? window.__totali.overal
   const intestazione = await p.locator('header').innerText();
   ok(`si finisce nella Lista della Spesa (${intestazione.replace(/\s+/g, ' ').slice(0, 60)})`,
     /Lista della Spesa/i.test(intestazione));
+  // La spesa si registra nel foglio che sale dal basso, sopra la Lista.
   const campi = await p.evaluate(() => {
-    const nome = document.querySelector('main input[placeholder="Es. Pasta, Acqua, Piatti…"]');
-    const prezzo = document.querySelector('main input[data-cifra]');
-    const chi = [...document.querySelectorAll('main select')].map((s) => s.value);
+    const f = document.querySelector('[data-foglio-spesa]');
+    const nome = f && f.querySelector('input[placeholder="Es. Pasta, Acqua, Piatti…"]');
+    const prezzo = f && f.querySelector('input[data-cifra]');
+    const chi = f ? [...f.querySelectorAll('select')].map((s) => s.value) : [];
     return { nome: nome && nome.value, prezzo: prezzo && prezzo.value, chi };
   });
   ok(`col nome del compito già scritto (${campi.nome})`, /arrosticini/i.test(campi.nome || ''));
@@ -122,6 +124,7 @@ const totale = (p) => p.evaluate(() => (window.__totali ? window.__totali.overal
   ok(`ma il prezzo vuoto, perché alla cassa non si sapeva ("${campi.prezzo}")`, !campi.prezzo);
 
   // --- Il compito resta fatto anche se la spesa non la si registra ---
+  await p.locator('[data-foglio-spesa] button[aria-label="Chiudi la maschera"]').click();
   await menu('Chi fa cosa');
   await p.waitForTimeout(400);
   const ancora = await compitiSalvati(p);

@@ -131,11 +131,12 @@ function piccoli() {
     await scheda(v);
     await guarda(v);
   }
-  // Le sotto-schede: la lista acquistata con la maschera a mano, e i conti.
+  // Le sotto-schede: il foglio della spesa aperto dalla lista, e i conti.
   await scheda('lista');
   await p.locator('main button').nth(1).click();
-  await p.locator('main button', { hasText: /aggiungi un prodotto a mano/i }).click();
+  await p.locator('main button', { hasText: /registra una spesa/i }).click();
   await guarda('lista, spesa a mano');
+  await p.locator('[data-foglio-spesa] button[aria-label="Chiudi la maschera"]').click();
   await scheda('spesa');
   for (const [i, nome] of [[1, 'quote'], [2, 'saldi'], [3, 'dati']]) {
     await p.locator('main button').nth(i).click();

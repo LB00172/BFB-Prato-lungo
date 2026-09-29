@@ -782,7 +782,7 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
 
   // 2. Il metro. Le emoji rimaste possono solo SCENDERE: chi aggiunge una
   //    schermata nuova non ci mette un'altra faccina, disegna l'icona.
-  const TETTO = 59;
+  const TETTO = 49;
   const re = /\p{Extended_Pictographic}/gu;
   const quante = sorgenti.reduce((n, f) => n + (testo(f).match(re) || []).length, 0);
   ok(`le emoji rimaste nei sorgenti sono ${quante}, non piu' di ${TETTO}`

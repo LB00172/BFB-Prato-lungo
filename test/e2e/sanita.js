@@ -49,7 +49,7 @@ const aggiungi = async (p, nome) => {
 };
 
 const spesa = async (p, nome, prezzo) => {
-  const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
+  const b = p.locator('main button', { hasText: 'Registra una spesa' });
   if (await b.count()) { await b.first().click(); await p.waitForTimeout(280); }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', nome);
   await p.locator('input[data-cifra]').first().fill(String(prezzo));

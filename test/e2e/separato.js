@@ -61,31 +61,33 @@ const L = { lunch: true, dinner: false };
   // --- 2. Spesa sul conto separato ---
   await menu('Lista della Spesa');
   await p.locator('button', { hasText: 'Acquistato' }).first().click();
-  { const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); } }
+  { const b = p.locator('main button', { hasText: 'Registra una spesa' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); } }
   await p.waitForTimeout(200);
   // la maschera manuale ora parte chiusa: la apro
   {
-    const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
+    const b = p.locator('main button', { hasText: 'Registra una spesa' });
     if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); }
   }
-  const tendina = p.locator('select').filter({ hasText: 'Conto comune' });
-  console.log('menu a tendina "Conto" presente:', (await tendina.count()) > 0);
-  console.log('valore di partenza:', await tendina.first().inputValue(), '->', (await tendina.first().inputValue()) === 'comune' ? 'OK (conto comune)' : 'PROBLEMA');
+  // Il conto e' una scelta a due chip, e c'e' perche' un giorno e' spuntato.
+  const conto = (k) => p.locator(`[data-foglio-spesa] [data-conto="${k}"]`);
+  console.log('scelta del conto presente:', (await conto('sep').count()) > 0);
+  const partenza = await conto('comune').getAttribute('aria-pressed');
+  console.log('valore di partenza:', partenza, '->', partenza === 'true' ? 'OK (conto comune)' : 'PROBLEMA');
 
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Spesa dell 11');
-  await p.locator('h3:has-text("Prodotto acquistato")').locator('xpath=../..').locator('select').first().selectOption({ label: 'Alice' });
+  await p.locator('[data-foglio-spesa]').locator('select').first().selectOption({ label: 'Alice' });
   await p.locator('input[data-cifra]').first().fill('60');
-  await tendina.first().selectOption('sep');
+  await conto('sep').click();
   await p.waitForTimeout(200);
   await p.locator('button', { hasText: /^Salva$/ }).first().click();
   await p.waitForTimeout(350);
 
   // seconda spesa, comune (dopo il salvataggio la maschera si richiude)
-  { const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); } }
+  { const b = p.locator('main button', { hasText: 'Registra una spesa' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); } }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Spesa comune');
-  await p.locator('h3:has-text("Prodotto acquistato")').locator('xpath=../..').locator('select').first().selectOption({ label: 'Carlo' });
+  await p.locator('[data-foglio-spesa]').locator('select').first().selectOption({ label: 'Carlo' });
   await p.locator('input[data-cifra]').first().fill('30');
-  await tendina.first().selectOption('comune');
+  await conto('comune').click();
   await p.locator('button', { hasText: /^Salva$/ }).first().click();
   await p.waitForTimeout(350);
 

@@ -41,13 +41,13 @@ const { chromium } = require('playwright-core');
   await p.locator('main button:has-text("Acquistato")').click(); await p.waitForTimeout(250);
   // la maschera manuale ora parte chiusa: la apro
   {
-    const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
+    const b = p.locator('main button', { hasText: 'Registra una spesa' });
     if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); }
   }
   const histRow = await p.locator('li:has-text("Pomodori")').first().innerText();
   const receiptCarried = await p.locator('li:has-text("Pomodori") button[aria-label="Vedi scontrino"]').count();
   // il form diretto NON deve piu' avere il bottone scontrino
-  const formHasCamera = await p.locator('h3:has-text("Prodotto acquistato")').locator('..').locator('input[type="file"]').count();
+  const formHasCamera = await p.locator('[data-foglio-spesa]').locator('input[type="file"]').count();
 
   console.log('[A] voce in lista:', inList > 0, '| quantità mostrata:', qtyShown > 0, '| 📷 sulla scheda:', receiptOnCard > 0);
   console.log('[A] uscita dalla lista:', goneFromList, '| riga cronologia:', histRow.replace(/\s+/g, ' '));

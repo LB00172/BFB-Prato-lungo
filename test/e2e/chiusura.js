@@ -49,7 +49,7 @@ const { scontriniSalvati, fotoSalvate } = require('../lib/app');
   await menu('Lista della Spesa');
   await p.locator('button', { hasText: 'Acquistato' }).first().click();
   await p.waitForTimeout(300);
-  { const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); } }
+  { const b = p.locator('main button', { hasText: 'Registra una spesa' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); } }
   await p.waitForTimeout(200);
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Pasta');
   await p.locator('input[data-cifra]').first().fill('30');

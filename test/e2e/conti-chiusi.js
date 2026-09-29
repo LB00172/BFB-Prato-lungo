@@ -45,8 +45,11 @@ const aggiungi = async (p, nome) => {
 };
 
 const spesa = async (p, nome, prezzo, chi) => {
-  const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
+  const b = p.locator('main button', { hasText: 'Registra una spesa' });
   if (await b.count()) { await b.first().click(); await p.waitForTimeout(300); }
+  // A conti chiusi il foglio non si apre nemmeno: il rifiuto arriva prima di
+  // far scrivere una spesa che non entrera'.
+  if (!(await p.locator('[data-foglio-spesa]').count())) return;
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', nome);
   await p.locator('input[data-cifra]').first().fill(String(prezzo));
   if (chi) await p.locator('select').filter({ hasText: /Chi ha pagato|acquirente|—/i }).first().selectOption({ label: chi }).catch(() => {});

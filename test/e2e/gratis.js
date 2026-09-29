@@ -66,11 +66,11 @@ const apriQuote = async (p, menu) => {
   await p.locator('button', { hasText: 'Acquistato' }).first().click();
   await p.waitForTimeout(300);
   const spesa = async (nome, prezzo, tipo) => {
-    const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
+    const b = p.locator('main button', { hasText: 'Registra una spesa' });
     if (await b.count()) { await b.first().click(); await p.waitForTimeout(300); }
     await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', nome);
     await p.locator('input[data-cifra]').first().fill(String(prezzo));
-    if (tipo) await p.locator('select').filter({ hasText: /Alimentare/i }).first().selectOption(tipo);
+    if (tipo) await p.locator(`[data-foglio-spesa] [data-tipo="${tipo}"]`).click();
     await p.locator('button', { hasText: /Salva/ }).first().click();
     await p.waitForTimeout(500);
   };

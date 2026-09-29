@@ -20,11 +20,11 @@ const { chromium } = require('playwright-core');
   await p.locator('main button:has-text("Acquistato")').click(); await p.waitForTimeout(200);
   // la maschera manuale ora parte chiusa: la apro
   {
-    const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
+    const b = p.locator('main button', { hasText: 'Registra una spesa' });
     if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); }
   }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Cambusa');
-  await p.locator('h3:has-text("Prodotto acquistato")').locator('xpath=../..').locator('select').first().selectOption({ label: 'Alice' });
+  await p.locator('[data-foglio-spesa]').locator('select').first().selectOption({ label: 'Alice' });
   await p.fill('input[data-cifra]', '90');
   await p.click('button:has-text("Salva")'); await p.waitForTimeout(150);
 

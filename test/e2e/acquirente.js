@@ -33,8 +33,8 @@ const H = require('../lib/app').SBLOCCO;
   // 1) maschera manuale
   await menu('Lista della Spesa');
   await p.locator('button', { hasText: 'Acquistato' }).first().click(); await p.waitForTimeout(300);
-  { const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); } }
-  const form = p.locator('h3:has-text("Prodotto acquistato")').locator('xpath=../..');
+  { const b = p.locator('main button', { hasText: 'Registra una spesa' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); } }
+  const form = p.locator('[data-foglio-spesa]');
   const selForm = form.locator('select').first();
   console.log('maschera manuale: è una tendina:', await selForm.evaluate(e => e.tagName) === 'SELECT' ? 'OK' : 'PROBLEMA');
   console.log('  opzioni:', JSON.stringify(await opzioni(selForm)));
@@ -72,7 +72,6 @@ const H = require('../lib/app').SBLOCCO;
   // 4) un acquirente registrato prima e non più fra i membri resta selezionabile
   await menu('Lista della Spesa');
   await p.locator('button', { hasText: 'Acquistato' }).first().click(); await p.waitForTimeout(300);
-  { const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); } }
   await menu('Spese Totali');
   await p.getByRole('button', { name: 'Saldi', exact: true }).click(); await p.waitForTimeout(400);
   const saldi = await p.locator('h3:has-text("Saldo finale")').locator('xpath=../..').innerText();

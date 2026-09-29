@@ -107,7 +107,7 @@ const spese = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('cam
 
   await p.locator('button', { hasText: 'Acquistato' }).first().click();
   await p.waitForTimeout(300);
-  { const m = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await m.count()) { await m.first().click(); await p.waitForTimeout(350); } }
+  { const m = p.locator('main button', { hasText: 'Registra una spesa' }); if (await m.count()) { await m.first().click(); await p.waitForTimeout(350); } }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Carbone');
   await p.locator('input[data-cifra]').first().fill('7');
   await p.locator('button', { hasText: /Salva/ }).first().click();

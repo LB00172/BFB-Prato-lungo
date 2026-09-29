@@ -29,7 +29,7 @@ const H = require('../lib/app').SBLOCCO;
 
   // 1) chiusa all'apertura
   console.log('maschera chiusa all\'apertura:', (await p.locator('input[placeholder="Es. Pasta, Acqua, Piatti…"]').count()) === 0 ? 'OK' : 'PROBLEMA');
-  const bottone = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
+  const bottone = p.locator('main button', { hasText: 'Registra una spesa' });
   console.log('bottone per aprirla:', (await bottone.count()) > 0 ? 'OK' : 'PROBLEMA');
   const yCrono = (await p.locator('h3:has-text("Cronologia acquisti")').boundingBox()).y;
   console.log('cronologia subito visibile a', Math.round(yCrono) + 'px ->', yCrono < 400 ? 'OK' : 'PROBLEMA');
@@ -38,7 +38,7 @@ const H = require('../lib/app').SBLOCCO;
   // 2) si apre
   await bottone.click(); await p.waitForTimeout(400);
   console.log('dopo il tocco la maschera si apre:', (await p.locator('input[placeholder="Es. Pasta, Acqua, Piatti…"]').count()) > 0 ? 'OK' : 'PROBLEMA');
-  const campi = await p.locator('h3:has-text("Prodotto acquistato")').locator('xpath=../..').evaluate((el) => ({
+  const campi = await p.locator('[data-foglio-spesa]').evaluate((el) => ({
     nome: !!el.querySelector('input[placeholder*="Pasta"]'),
     acquirente: el.querySelectorAll('select').length >= 1,
     prezzo: !!el.querySelector('input[data-cifra]'),
@@ -57,7 +57,7 @@ const H = require('../lib/app').SBLOCCO;
   await bottone.click(); await p.waitForTimeout(350);
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Ghiaccio');
   await p.locator('input[data-cifra]').first().fill('3.5');
-  await p.locator('h3:has-text("Prodotto acquistato")').locator('xpath=../..').locator('select').first().selectOption({ label: 'Alice' });
+  await p.locator('[data-foglio-spesa]').locator('select').first().selectOption({ label: 'Alice' });
   await p.locator('button', { hasText: /^Salva$/ }).first().click();
   await p.waitForTimeout(500);
   console.log('dopo Salva si richiude:', (await p.locator('input[placeholder="Es. Pasta, Acqua, Piatti…"]').count()) === 0 ? 'OK' : 'PROBLEMA');
