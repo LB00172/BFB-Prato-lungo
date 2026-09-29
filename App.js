@@ -9492,6 +9492,8 @@ const schedaImpostazioni = ({
 //
 // Come le altre schede disegna e non tiene stato: quale riga e' aperta sta in
 // usaStanza (rigaCampo).
+// Dentro una riga aperta il riquadro non ripete il titolo: lo dice gia' la
+// riga, un rigo sopra.
 const schedaCampo = ({
   account,
   contiBloccati,
@@ -9633,8 +9635,6 @@ const schedaCampo = ({
       "data-riquadro": "luogo",
       className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
     }, /*#__PURE__*/React.createElement("p", {
-      className: "text-piccolo font-bold text-bosco flex items-center gap-1.5"
-    }, icona('luogo', 'w-4 h-4'), L.t('luogo.titolo')), /*#__PURE__*/React.createElement("p", {
       className: "text-minuto text-gray-500 leading-snug"
     }, L.t('luogo.spiega')), stanzaStato.cercaLuogo === null ? /*#__PURE__*/React.createElement(React.Fragment, null, l ? /*#__PURE__*/React.createElement("p", {
       "data-luogo-scelto": true,
@@ -9731,8 +9731,6 @@ const schedaCampo = ({
     "data-riquadro": "voci",
     className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-piccolo font-bold text-bosco"
-  }, L.t('voci.titolo')), /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-gray-500 leading-snug"
   }, L.t('voci.spiega')), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
@@ -9761,8 +9759,6 @@ const schedaCampo = ({
       "data-riquadro": "aiutante",
       className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
     }, /*#__PURE__*/React.createElement("p", {
-      className: "text-piccolo font-bold text-bosco"
-    }, L.t('stanza.aiutanteTitolo')), /*#__PURE__*/React.createElement("p", {
       className: "text-minuto text-gray-500 leading-snug"
     }, L.t('stanza.aiutanteSpiega')), stanzaStato.vice && /*#__PURE__*/React.createElement("p", {
       className: "text-piccolo text-bosco leading-snug"

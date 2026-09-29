@@ -13,6 +13,8 @@
 //
 // Come le altre schede disegna e non tiene stato: quale riga e' aperta sta in
 // usaStanza (rigaCampo).
+// Dentro una riga aperta il riquadro non ripete il titolo: lo dice gia' la
+// riga, un rigo sopra.
 const schedaCampo = ({ account, contiBloccati, goTo, stanzaStato }) => {
   if (!stanzaStato.stanza) return null;
   const capo = stanzaStato.capogruppo;
@@ -114,7 +116,6 @@ const schedaCampo = ({ account, contiBloccati, goTo, stanzaStato }) => {
                     const c = stanzaStato.candidatoLuogo;
                     return (
                       <div data-riquadro="luogo" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
-                        <p className="text-piccolo font-bold text-bosco flex items-center gap-1.5">{icona('luogo', 'w-4 h-4')}{L.t('luogo.titolo')}</p>
                         <p className="text-minuto text-gray-500 leading-snug">{L.t('luogo.spiega')}</p>
                         {stanzaStato.cercaLuogo === null ? (
                           <>
@@ -222,7 +223,6 @@ const schedaCampo = ({ account, contiBloccati, goTo, stanzaStato }) => {
                       quindi a conti chiusi non si muove, e prima di cambiare chiede. */}
                   {stanzaStato.capogruppo && window.Voci && (
                     <div data-riquadro="voci" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
-                      <p className="text-piccolo font-bold text-bosco">{L.t('voci.titolo')}</p>
                       <p className="text-minuto text-gray-500 leading-snug">{L.t('voci.spiega')}</p>
                       <div className="grid grid-cols-2 gap-2">
                         {window.Voci.CATEGORIE.map((cat) => {
@@ -260,7 +260,6 @@ const schedaCampo = ({ account, contiBloccati, goTo, stanzaStato }) => {
                     };
                     return (
                       <div data-riquadro="aiutante" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
-                        <p className="text-piccolo font-bold text-bosco">{L.t('stanza.aiutanteTitolo')}</p>
                         <p className="text-minuto text-gray-500 leading-snug">{L.t('stanza.aiutanteSpiega')}</p>
                         {stanzaStato.vice && <p className="text-piccolo text-bosco leading-snug">{frase('stanza.aiutanteE', nomeDi(stanzaStato.vice))}</p>}
                         {altri.length > 0 && (
