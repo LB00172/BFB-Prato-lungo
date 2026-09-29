@@ -46,6 +46,8 @@
     // Chi ha pagato l'ultima spesa registrata da questo telefono: nel foglio
     // della spesa si parte da lui. I nomi sono del campo.
     'cambusa_acquirente',
+    // L'invito e' partito da qui (i primi passi di un campo nuovo).
+    'cambusa_invito_mandato',
     // Le foto della vecchia strada (e del ripiego, quando IndexedDB manca).
     'cambusa_receipts',
   ];

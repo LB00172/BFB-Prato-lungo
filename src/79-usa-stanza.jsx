@@ -34,6 +34,10 @@ const leggiStanzaSalvata = () => {
 // una chiave del TELEFONO, non del campo (cassetti.js): e' proprio l'elenco
 // che serve a scegliere quale cassetto aprire.
 const CAMPI_KEY = 'cambusa_campi';
+
+// L'invito e' partito da questo telefono. E' una chiave del CAMPO: in un
+// campo nuovo l'invito va rimandato.
+const INVITO_KEY = 'cambusa_invito_mandato';
 const leggiCampi = () => {
   try {
     const v = JSON.parse(localStorage.getItem(CAMPI_KEY) || '[]');
@@ -255,6 +259,25 @@ const usaStanza = () => {
     const regole = S();
     if (!regole || !stanza || typeof window === 'undefined') return '';
     return regole.linkInvito(window.location.origin + window.location.pathname, stanza.codice);
+  };
+
+  // Mandare l'invito: e' la stessa cosa da Impostazioni e dai primi passi,
+  // quindi sta qui una volta. "Condividi" sul telefono apre WhatsApp,
+  // Telegram, SMS e mail con un gesto solo; al computer, dove navigator.share
+  // spesso non c'e', si apre WhatsApp nel browser. E si ricorda che e'
+  // partito: e' il primo dei primi passi, e un invito mandato da qui non si
+  // vede altrimenti finche' qualcuno non entra davvero.
+  const [invitoMandato, setInvitoMandato] = useState(() => {
+    try { return localStorage.getItem(INVITO_KEY) === '1'; } catch (e) { return false; }
+  });
+  const mandaInvito = () => {
+    if (!stanza) return;
+    const link = linkDaMandare();
+    const testo = L.t('stanza.invitoTesto', stanza.nome || S().bello(stanza.codice), link);
+    if (navigator.share) { navigator.share({ text: testo }).catch(() => { /* annullato: non e' un guasto */ }); }
+    else { window.open('https://wa.me/?text=' + encodeURIComponent(testo), '_blank'); }
+    setInvitoMandato(true);
+    try { localStorage.setItem(INVITO_KEY, '1'); } catch (e) { /* niente: resta per questo giro */ }
   };
 
   const aggiornaMembri = async () => {
@@ -530,7 +553,7 @@ const usaStanza = () => {
     nome, setNome, inizio, setInizio, fine, setFine, codice, setCodice,
     problema, fatto, occupato, chiudi,
     crea, entra, esci, aggiornaMembri,
-    invito, accettaInvito, rifiutaInvito, linkDaMandare, riagganciaStanza,
+    invito, accettaInvito, rifiutaInvito, linkDaMandare, riagganciaStanza, mandaInvito, invitoMandato,
     campi, apriCampo, aggiornaCampi,
   };
 };

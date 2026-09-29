@@ -80,6 +80,8 @@ const ICONE = {
   pronto: 'M7 8h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3z M9 8V6a3 3 0 0 1 6 0v2 M9 14h6 M10 21v-4h4v4',
   // Aggiungere: il tasto «+ Spesa».
   piu: 'M12 5v14 M5 12h14',
+  // La spunta di un passo fatto.
+  fatto: 'M5 12l5 5L20 7',
   // Il luogo del campo: il segnaposto, il gesto che tutti conoscono dalle mappe.
   luogo: 'M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z M12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6z',
 };

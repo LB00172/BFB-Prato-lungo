@@ -260,3 +260,15 @@ const avvisoPro = ({ funzione, capogruppo, goTo }) => (
     )}
   </div>
 );
+
+// Lo stesso Pro, in una riga sola: dove il riquadro intero pesava piu' della
+// cosa che mancava. Nel Calendario il meteo e' una riga del giorno, e il suo
+// posto vuoto non deve spingere in basso i pasti. Una riga che si tocca e
+// porta dove il Pro si attiva — la sa solo il capogruppo, gli altri non la
+// vedono.
+const rigaPro = ({ funzione, goTo }) => (
+  <button data-pro-bloccata={funzione} onClick={() => goTo('impostazioni')} className={bottoneRiga('rounded border border-fuoco/40 bg-fuoco/10')}>
+    <span className="flex items-center gap-2 min-w-0 text-piccolo font-bold text-bosco">{segnoPro()}<span className="truncate">{L.t(NOME_PRO[funzione])}</span></span>
+    <span className="shrink-0 text-minuto font-bold uppercase tracking-wide text-legno">{L.t('pro.scopri')}</span>
+  </button>
+);

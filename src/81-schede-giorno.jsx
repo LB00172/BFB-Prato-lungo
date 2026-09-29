@@ -7,6 +7,7 @@
 
 const schedaCalendario = ({
   admin,
+  apriFoglioSpesa,
   capogruppo,
   meteoAperto,
   fetchWeather,
@@ -16,6 +17,7 @@ const schedaCalendario = ({
   isOnline,
   members,
   presenzeOrfane,
+  primiPassi,
   purchases,
   campoInCorso,
   readyOk,
@@ -65,6 +67,8 @@ const schedaCalendario = ({
         </button>
       );
     })()}
+
+    {primiPassi && riquadroPrimiPassi({ ...primiPassi, apriFoglioSpesa, goTo })}
 
     {renderWeekStrip()}
 
@@ -128,7 +132,7 @@ const schedaCalendario = ({
         // scegliere — il capogruppo — si dice dove: agli altri una riga
         // «da impostare» sarebbe solo un rimprovero per una cosa non loro.
         // Il meteo live e' del Pro: al capogruppo si dice, agli altri niente.
-        if (!meteoAperto) return capogruppo ? avvisoPro({ funzione: 'meteo', capogruppo: true, goTo }) : null;
+        if (!meteoAperto) return capogruppo ? rigaPro({ funzione: 'meteo', goTo }) : null;
         if (!locOk) {
           if (!capogruppo) return null;
           return (
@@ -660,3 +664,51 @@ const schedaPresenze = ({
     </div>
   </div>
 );
+
+// ---------- I primi passi di un campo nuovo ----------
+// Chi ha appena creato un campo si trova davanti un Calendario vuoto e non
+// sa da dove cominciare. Le cose da fare sono tre, e sono sempre quelle:
+// far entrare gli altri, dire chi c'e', registrare una spesa. Ognuna si
+// spunta da sola guardando i dati — non c'e' un «fatto» da premere, che
+// prima o poi qualcuno premerebbe senza aver fatto — e quando sono tutte e
+// tre il riquadro sparisce. Lo vede solo il capogruppo: chi entra col
+// codice il campo lo trova gia' avviato.
+const riquadroPrimiPassi = ({ apriFoglioSpesa, chi, codice, goTo, invito, mandaInvito, spesa }) => {
+  const fatti = [invito, chi, spesa].filter(Boolean).length;
+  if (fatti === 3) return null;
+  const passo = (k, fatto, titolo, nota, azione) => (
+    <li data-passo={k} data-fatto={fatto ? '1' : '0'} className="flex items-start gap-3 py-2.5 border-t border-salvia/20 first:border-t-0">
+      <span className={`mt-0.5 w-6 h-6 shrink-0 rounded-full flex items-center justify-center ${fatto ? 'bg-bosco text-white' : 'border-2 border-salvia/60'}`}>
+        {fatto && icona('fatto', 'w-4 h-4')}
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className={`block text-normale font-bold ${fatto ? 'text-gray-400 line-through' : 'text-bosco'}`}>{titolo}</span>
+        {!fatto && <span className="block text-minuto text-gray-500 leading-snug mt-0.5">{nota}</span>}
+        {!fatto && azione}
+      </span>
+    </li>
+  );
+  return (
+    <div data-primi-passi className="bg-scheda rounded-lg border-2 border-bosco/25 shadow-sm px-4 pt-3 pb-1">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="font-rustic text-grande text-bosco">{L.t('passi.titolo')}</h3>
+        <span className="text-minuto font-bold text-gray-500 uppercase tracking-wide">{L.t('passi.fatti', fatti)}</span>
+      </div>
+      <p className="text-piccolo text-gray-500 mb-1">{L.t('passi.sottotitolo')}</p>
+      <ol>
+        {passo('invito', invito, L.t('passi.invita'), L.t('passi.invitaNota'), (
+          <span className="flex items-center gap-2 mt-2">
+            <span className="font-mono text-normale tracking-widest text-bosco bg-carta/60 rounded px-2 py-2 min-w-0 break-words">{Stanza.bello(codice)}</span>
+            <button onClick={mandaInvito} className={bottone('primario', 'minuscolo', 'shrink-0')}>{L.t('stanza.condividi')}</button>
+          </span>
+        ))}
+        {passo('chi', chi, L.t('passi.chi'), L.t('passi.chiNota'), (
+          <button onClick={() => goTo('membri')} className={bottone('secondario', 'minuscolo', 'mt-2')}>{L.t('passi.aggiungi')}</button>
+        ))}
+        {passo('spesa', spesa, L.t('passi.spesa'), L.t('passi.spesaNota'), (
+          <button onClick={apriFoglioSpesa} className={bottone('secondario', 'minuscolo', 'mt-2 inline-flex items-center gap-1.5')}>{icona('piu', 'w-4 h-4')}<span>{L.t('foglio.tasto')}</span></button>
+        ))}
+      </ol>
+    </div>
+  );
+};

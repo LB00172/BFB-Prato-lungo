@@ -893,6 +893,8 @@ const ICONE = {
   pronto: 'M7 8h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3z M9 8V6a3 3 0 0 1 6 0v2 M9 14h6 M10 21v-4h4v4',
   // Aggiungere: il tasto «+ Spesa».
   piu: 'M12 5v14 M5 12h14',
+  // La spunta di un passo fatto.
+  fatto: 'M5 12l5 5L20 7',
   // Il luogo del campo: il segnaposto, il gesto che tutti conoscono dalle mappe.
   luogo: 'M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z M12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6z'
 };
@@ -1166,6 +1168,26 @@ const avvisoPro = ({
 }, L.t(capogruppo ? 'pro.perCapogruppo' : 'pro.perMembro')), capogruppo && goTo && /*#__PURE__*/React.createElement("button", {
   onClick: () => goTo('impostazioni'),
   className: bottone('avviso', 'minuscolo', 'w-full')
+}, L.t('pro.scopri')));
+
+// Lo stesso Pro, in una riga sola: dove il riquadro intero pesava piu' della
+// cosa che mancava. Nel Calendario il meteo e' una riga del giorno, e il suo
+// posto vuoto non deve spingere in basso i pasti. Una riga che si tocca e
+// porta dove il Pro si attiva — la sa solo il capogruppo, gli altri non la
+// vedono.
+const rigaPro = ({
+  funzione,
+  goTo
+}) => /*#__PURE__*/React.createElement("button", {
+  "data-pro-bloccata": funzione,
+  onClick: () => goTo('impostazioni'),
+  className: bottoneRiga('rounded border border-fuoco/40 bg-fuoco/10')
+}, /*#__PURE__*/React.createElement("span", {
+  className: "flex items-center gap-2 min-w-0 text-piccolo font-bold text-bosco"
+}, segnoPro(), /*#__PURE__*/React.createElement("span", {
+  className: "truncate"
+}, L.t(NOME_PRO[funzione]))), /*#__PURE__*/React.createElement("span", {
+  className: "shrink-0 text-minuto font-bold uppercase tracking-wide text-legno"
 }, L.t('pro.scopri')));
 // ============================================================================
 //  SCHERMATA DI BLOCCO
@@ -2027,6 +2049,10 @@ const leggiStanzaSalvata = () => {
 // una chiave del TELEFONO, non del campo (cassetti.js): e' proprio l'elenco
 // che serve a scegliere quale cassetto aprire.
 const CAMPI_KEY = 'cambusa_campi';
+
+// L'invito e' partito da questo telefono. E' una chiave del CAMPO: in un
+// campo nuovo l'invito va rimandato.
+const INVITO_KEY = 'cambusa_invito_mandato';
 const leggiCampi = () => {
   try {
     const v = JSON.parse(localStorage.getItem(CAMPI_KEY) || '[]');
@@ -2293,6 +2319,36 @@ const usaStanza = () => {
     const regole = S();
     if (!regole || !stanza || typeof window === 'undefined') return '';
     return regole.linkInvito(window.location.origin + window.location.pathname, stanza.codice);
+  };
+
+  // Mandare l'invito: e' la stessa cosa da Impostazioni e dai primi passi,
+  // quindi sta qui una volta. "Condividi" sul telefono apre WhatsApp,
+  // Telegram, SMS e mail con un gesto solo; al computer, dove navigator.share
+  // spesso non c'e', si apre WhatsApp nel browser. E si ricorda che e'
+  // partito: e' il primo dei primi passi, e un invito mandato da qui non si
+  // vede altrimenti finche' qualcuno non entra davvero.
+  const [invitoMandato, setInvitoMandato] = useState(() => {
+    try {
+      return localStorage.getItem(INVITO_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  });
+  const mandaInvito = () => {
+    if (!stanza) return;
+    const link = linkDaMandare();
+    const testo = L.t('stanza.invitoTesto', stanza.nome || S().bello(stanza.codice), link);
+    if (navigator.share) {
+      navigator.share({
+        text: testo
+      }).catch(() => {/* annullato: non e' un guasto */});
+    } else {
+      window.open('https://wa.me/?text=' + encodeURIComponent(testo), '_blank');
+    }
+    setInvitoMandato(true);
+    try {
+      localStorage.setItem(INVITO_KEY, '1');
+    } catch (e) {/* niente: resta per questo giro */}
   };
   const aggiornaMembri = async () => {
     if (!stanza) return;
@@ -2704,6 +2760,8 @@ const usaStanza = () => {
     rifiutaInvito,
     linkDaMandare,
     riagganciaStanza,
+    mandaInvito,
+    invitoMandato,
     campi,
     apriCampo,
     aggiornaCampi
@@ -5782,6 +5840,15 @@ function App({
   // campo c'e' per costruzione e non c'e' niente da nascondere.
   const codiceInGioco = stanzaStato.stanza && stanzaStato.stanza.codice || window.CloudSync && window.CloudSync.savedCode() || window.CAMP_CODE_DEFAULT || '';
   const dentroUnCampo = !FEATURES.rooms || !!codiceInGioco;
+  // I primi passi di un campo nuovo (riquadroPrimiPassi): solo per chi l'ha
+  // creato, e solo nella versione con le stanze. Ognuno si spunta dai dati.
+  const primiPassi = FEATURES.rooms && stanzaStato.stanza && stanzaStato.capogruppo ? {
+    codice: stanzaStato.stanza.codice,
+    invito: stanzaStato.invitoMandato || stanzaStato.membri.length > 1,
+    chi: members.length >= 2,
+    spesa: purchases.length > 0,
+    mandaInvito: stanzaStato.mandaInvito
+  } : null;
 
   // La scheda che si disegna. Senza un campo, le aree del campo non hanno
   // niente da mostrare: si sta nella home («I miei campi»), da cui se ne
@@ -5809,7 +5876,9 @@ function App({
   // Il capogruppo, aprendo Impostazioni, deve poter scegliere l'aiutante fra
   // chi c'e': l'elenco dei membri si chiede li', e solo a lui.
   useEffect(() => {
-    if (FEATURES.rooms && scheda === 'impostazioni' && stanzaStato.capogruppo) stanzaStato.aggiornaMembri();
+    // E nel Calendario, finche' l'invito dei primi passi non e' partito da
+    // qui: se qualcuno e' gia' entrato, quel passo e' fatto lo stesso.
+    if (FEATURES.rooms && stanzaStato.capogruppo && (scheda === 'impostazioni' || scheda === 'calendario' && !stanzaStato.invitoMandato)) stanzaStato.aggiornaMembri();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheda, stanzaStato.capogruppo]);
 
@@ -6240,6 +6309,8 @@ function App({
     onApri: apriCampo
   }), scheda === 'calendario' && schedaCalendario({
     admin,
+    apriFoglioSpesa,
+    primiPassi,
     campoInCorso,
     capogruppo: stanzaStato.capogruppo,
     meteoAperto: stanzaStato.sbloccata('meteo'),
@@ -6854,6 +6925,7 @@ function App({
 
 const schedaCalendario = ({
   admin,
+  apriFoglioSpesa,
   capogruppo,
   meteoAperto,
   fetchWeather,
@@ -6863,6 +6935,7 @@ const schedaCalendario = ({
   isOnline,
   members,
   presenzeOrfane,
+  primiPassi,
   purchases,
   campoInCorso,
   readyOk,
@@ -6897,7 +6970,11 @@ const schedaCalendario = ({
   }, "\uD83C\uDF7D\uFE0F"), /*#__PURE__*/React.createElement("span", {
     className: "text-piccolo text-legno leading-snug"
   }, frase('giorno.orfaneAvviso', totale, orfane.length)));
-})(), renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
+})(), primiPassi && riquadroPrimiPassi({
+  ...primiPassi,
+  apriFoglioSpesa,
+  goTo
+}), renderWeekStrip(), /*#__PURE__*/React.createElement("div", {
   className: "bg-scheda rounded-lg border border-salvia/30 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setSepOpen(v => !v),
@@ -6943,9 +7020,8 @@ const schedaCalendario = ({
   // scegliere — il capogruppo — si dice dove: agli altri una riga
   // «da impostare» sarebbe solo un rimprovero per una cosa non loro.
   // Il meteo live e' del Pro: al capogruppo si dice, agli altri niente.
-  if (!meteoAperto) return capogruppo ? avvisoPro({
+  if (!meteoAperto) return capogruppo ? rigaPro({
     funzione: 'meteo',
-    capogruppo: true,
     goTo
   }) : null;
   if (!locOk) {
@@ -7366,6 +7442,65 @@ const schedaPresenze = ({
   placeholder: L.t('presenze.ospitiSegno'),
   className: "w-full h-20 p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco resize-none"
 })));
+
+// ---------- I primi passi di un campo nuovo ----------
+// Chi ha appena creato un campo si trova davanti un Calendario vuoto e non
+// sa da dove cominciare. Le cose da fare sono tre, e sono sempre quelle:
+// far entrare gli altri, dire chi c'e', registrare una spesa. Ognuna si
+// spunta da sola guardando i dati — non c'e' un «fatto» da premere, che
+// prima o poi qualcuno premerebbe senza aver fatto — e quando sono tutte e
+// tre il riquadro sparisce. Lo vede solo il capogruppo: chi entra col
+// codice il campo lo trova gia' avviato.
+const riquadroPrimiPassi = ({
+  apriFoglioSpesa,
+  chi,
+  codice,
+  goTo,
+  invito,
+  mandaInvito,
+  spesa
+}) => {
+  const fatti = [invito, chi, spesa].filter(Boolean).length;
+  if (fatti === 3) return null;
+  const passo = (k, fatto, titolo, nota, azione) => /*#__PURE__*/React.createElement("li", {
+    "data-passo": k,
+    "data-fatto": fatto ? '1' : '0',
+    className: "flex items-start gap-3 py-2.5 border-t border-salvia/20 first:border-t-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `mt-0.5 w-6 h-6 shrink-0 rounded-full flex items-center justify-center ${fatto ? 'bg-bosco text-white' : 'border-2 border-salvia/60'}`
+  }, fatto && icona('fatto', 'w-4 h-4')), /*#__PURE__*/React.createElement("span", {
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `block text-normale font-bold ${fatto ? 'text-gray-400 line-through' : 'text-bosco'}`
+  }, titolo), !fatto && /*#__PURE__*/React.createElement("span", {
+    className: "block text-minuto text-gray-500 leading-snug mt-0.5"
+  }, nota), !fatto && azione));
+  return /*#__PURE__*/React.createElement("div", {
+    "data-primi-passi": true,
+    className: "bg-scheda rounded-lg border-2 border-bosco/25 shadow-sm px-4 pt-3 pb-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande text-bosco"
+  }, L.t('passi.titolo')), /*#__PURE__*/React.createElement("span", {
+    className: "text-minuto font-bold text-gray-500 uppercase tracking-wide"
+  }, L.t('passi.fatti', fatti))), /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500 mb-1"
+  }, L.t('passi.sottotitolo')), /*#__PURE__*/React.createElement("ol", null, passo('invito', invito, L.t('passi.invita'), L.t('passi.invitaNota'), /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-2 mt-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-normale tracking-widest text-bosco bg-carta/60 rounded px-2 py-2 min-w-0 break-words"
+  }, Stanza.bello(codice)), /*#__PURE__*/React.createElement("button", {
+    onClick: mandaInvito,
+    className: bottone('primario', 'minuscolo', 'shrink-0')
+  }, L.t('stanza.condividi')))), passo('chi', chi, L.t('passi.chi'), L.t('passi.chiNota'), /*#__PURE__*/React.createElement("button", {
+    onClick: () => goTo('membri'),
+    className: bottone('secondario', 'minuscolo', 'mt-2')
+  }, L.t('passi.aggiungi'))), passo('spesa', spesa, L.t('passi.spesa'), L.t('passi.spesaNota'), /*#__PURE__*/React.createElement("button", {
+    onClick: apriFoglioSpesa,
+    className: bottone('secondario', 'minuscolo', 'mt-2 inline-flex items-center gap-1.5')
+  }, icona('piu', 'w-4 h-4'), /*#__PURE__*/React.createElement("span", null, L.t('foglio.tasto'))))));
+};
 // ---------- Schede dei conti: Spese Totali, Lista della Spesa, Attrezzatura ----------
 // Vedi 81-schede-giorno.jsx per il perche' sono funzioni e non componenti.
 
@@ -8914,17 +9049,7 @@ const schedaImpostazioni = ({
 }, L.t('stanza.copiaCodice'))), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("button", {
-  onClick: () => {
-    const link = stanzaStato.linkDaMandare();
-    const testo = L.t('stanza.invitoTesto', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice), link);
-    if (navigator.share) {
-      navigator.share({
-        text: testo
-      }).catch(() => {/* annullato: non e' un guasto */});
-    } else {
-      window.open('https://wa.me/?text=' + encodeURIComponent(testo), '_blank');
-    }
-  },
+  onClick: stanzaStato.mandaInvito,
   className: bottone('primario', 'normale', 'flex-1')
 }, L.t('stanza.condividi')), /*#__PURE__*/React.createElement("button", {
   onClick: () => {

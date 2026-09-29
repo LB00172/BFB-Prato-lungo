@@ -2619,6 +2619,15 @@ function App({ eredita, cambiaCampo } = {}) {
     || (window.CloudSync && window.CloudSync.savedCode())
     || window.CAMP_CODE_DEFAULT || '';
   const dentroUnCampo = !FEATURES.rooms || !!codiceInGioco;
+  // I primi passi di un campo nuovo (riquadroPrimiPassi): solo per chi l'ha
+  // creato, e solo nella versione con le stanze. Ognuno si spunta dai dati.
+  const primiPassi = FEATURES.rooms && stanzaStato.stanza && stanzaStato.capogruppo ? {
+    codice: stanzaStato.stanza.codice,
+    invito: stanzaStato.invitoMandato || stanzaStato.membri.length > 1,
+    chi: members.length >= 2,
+    spesa: purchases.length > 0,
+    mandaInvito: stanzaStato.mandaInvito,
+  } : null;
 
   // La scheda che si disegna. Senza un campo, le aree del campo non hanno
   // niente da mostrare: si sta nella home («I miei campi»), da cui se ne
@@ -2646,7 +2655,9 @@ function App({ eredita, cambiaCampo } = {}) {
   // Il capogruppo, aprendo Impostazioni, deve poter scegliere l'aiutante fra
   // chi c'e': l'elenco dei membri si chiede li', e solo a lui.
   useEffect(() => {
-    if (FEATURES.rooms && scheda === 'impostazioni' && stanzaStato.capogruppo) stanzaStato.aggiornaMembri();
+    // E nel Calendario, finche' l'invito dei primi passi non e' partito da
+    // qui: se qualcuno e' gia' entrato, quel passo e' fatto lo stesso.
+    if (FEATURES.rooms && stanzaStato.capogruppo && (scheda === 'impostazioni' || (scheda === 'calendario' && !stanzaStato.invitoMandato))) stanzaStato.aggiornaMembri();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheda, stanzaStato.capogruppo]);
 
@@ -3075,7 +3086,7 @@ function App({ eredita, cambiaCampo } = {}) {
         {/* ---------- CALENDARIO ---------- */}
         {scheda === 'campi' && schedaCampi({ stanzaStato, account, codiceInGioco, onApri: apriCampo })}
         {scheda === 'calendario' && schedaCalendario({
-          admin, campoInCorso, capogruppo: stanzaStato.capogruppo, meteoAperto: stanzaStato.sbloccata('meteo'), fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, purchases, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
+          admin, apriFoglioSpesa, primiPassi, campoInCorso, capogruppo: stanzaStato.capogruppo, meteoAperto: stanzaStato.sbloccata('meteo'), fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, purchases, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
         })}
 
         {/* ---------- MENÙ ---------- */}

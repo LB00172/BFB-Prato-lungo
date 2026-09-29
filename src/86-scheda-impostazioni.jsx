@@ -185,12 +185,7 @@ const schedaImpostazioni = ({
               gia' usato per il PDF ricordo e il resoconto delle spese. */}
           <div className="flex gap-2">
             <button
-              onClick={() => {
-                const link = stanzaStato.linkDaMandare();
-                const testo = L.t('stanza.invitoTesto', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice), link);
-                if (navigator.share) { navigator.share({ text: testo }).catch(() => { /* annullato: non e' un guasto */ }); }
-                else { window.open('https://wa.me/?text=' + encodeURIComponent(testo), '_blank'); }
-              }}
+              onClick={stanzaStato.mandaInvito}
               className={bottone('primario', 'normale', 'flex-1')}
             >{L.t('stanza.condividi')}</button>
             <button
