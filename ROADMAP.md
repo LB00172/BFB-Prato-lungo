@@ -68,6 +68,30 @@ campo invernale di tre giorni al chiuso e con la linea non prova nessuna delle
 condizioni che possono affondare questa app. Se il calendario e il collaudo
 entrano in conflitto, vince il collaudo.
 
+### Dicembre 2026, e il lancio di gennaio — deciso da Lorenzo il 29 settembre
+
+Il lancio si anticipa a **gennaio 2027**. Fino a dicembre si lavora
+sull'interfaccia, la grafica e le prove; **a dicembre** si fanno le cose che
+costano soldi o che hanno senso solo a ridosso del lancio. Il codice per tutte
+è già scritto e provato: restano i passi a mano.
+
+| Cosa | Dove sono i passi |
+| --- | --- |
+| Il Pro: piano Blaze, API di Google Play, `firebase deploy --only functions`, account di servizio in Play Console, prodotti `pro_campo` e `pro_anno` con i prezzi, notifiche in tempo reale, tester di licenza | `PLAY-STORE.md` § 6 |
+| Le regole Firestore nuove in console (foto nel cloud solo col Pro) | `PLAY-STORE.md` § 6, passo 7 |
+| Il pacchetto Android con Play Billing, `assetlinks.json`, il test chiuso di 14 giorni con 12 tester | `PLAY-STORE.md` §§ 4–6 |
+| Il canale social (Instagram), con i primi post pronti | da preparare a novembre: nome utente, biografia, immagine, 9 post |
+| Il contatto dell'informativa e il campo di prova per il revisore | `PLAY-STORE.md` § 0 |
+
+Il test chiuso dura **almeno 14 giorni** e va chiuso prima di aprire la
+produzione: per lanciare a gennaio deve partire nella **prima metà di
+dicembre**. È la voce che decide tutte le altre date.
+
+Resta vero quello che c'è scritto sopra: il collaudo su un campo vero vince
+sul calendario, e gennaio è bassa stagione. Il lancio di gennaio è quindi
+quello *sullo store*; la spinta vera (ASO, social) cade comunque a
+febbraio-marzo, quando i capi gruppo organizzano l'estate.
+
 **In mezzo, e non è una voce di questo elenco:** raccogliere il *feedback dei
 venti utenti veri* del campo 2026 — cosa hanno usato, cosa non hanno capito. È
 ricerca di mercato gratuita, la più affidabile che esista, e va fatta finché se
