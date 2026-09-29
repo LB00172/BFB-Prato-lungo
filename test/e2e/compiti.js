@@ -113,7 +113,7 @@ const totale = (p) => p.evaluate(() => (window.__totali ? window.__totali.overal
     /Lista della Spesa/i.test(intestazione));
   const campi = await p.evaluate(() => {
     const nome = document.querySelector('main input[placeholder="Es. Pasta, Acqua, Piatti…"]');
-    const prezzo = document.querySelector('main input[placeholder="0.00"]');
+    const prezzo = document.querySelector('main input[data-cifra]');
     const chi = [...document.querySelectorAll('main select')].map((s) => s.value);
     return { nome: nome && nome.value, prezzo: prezzo && prezzo.value, chi };
   });

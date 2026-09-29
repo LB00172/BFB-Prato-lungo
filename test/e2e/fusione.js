@@ -58,7 +58,7 @@ const { chromium } = require('playwright-core');
   await p.waitForTimeout(200);
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Pasta');
   // l'acquirente ora è una tendina alimentata dai membri (qui non ce ne sono ancora)
-  await p.locator('input[placeholder="0.00"]').first().fill('30');
+  await p.locator('input[data-cifra]').first().fill('30');
   await p.locator('button', { hasText: /Salva/ }).first().click();
   await p.waitForTimeout(400);
 

@@ -77,7 +77,7 @@ const idDi = (p, nome) => p.evaluate((n) => (JSON.parse(localStorage.getItem('ca
   const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
   if (await b.count()) { await b.first().click(); await p.waitForTimeout(300); }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Pasta');
-  await p.locator('input[placeholder="0.00"]').first().fill('120');
+  await p.locator('input[data-cifra]').first().fill('120');
   await p.locator('button', { hasText: /Salva/ }).first().click();
   await p.waitForTimeout(500);
 

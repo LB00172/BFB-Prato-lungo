@@ -34,7 +34,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 86 prove, **tre minuti
+4. **Prima di dire "fatto" gira `npm test`.** 88 prove, **tre minuti
    scarsi**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
@@ -111,7 +111,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
 | `functions/` | **il server del Pro**, su Firebase (non su Vercel: `.vercelignore`). `pro.js` sono le decisioni (chi paga, fino a quando, un gettone vale una volta), provate da `unita/server-pro` con Google e Firestore finti; `index.js` collega e basta. Niente chiavi: usa l'identità del suo account di servizio. Si pubblica con `npx firebase deploy --only functions` |
-| `test/` | 17 prove unitarie + 69 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo; `apri({ prima })` per quello che deve esistere prima dell'apertura (le strade di rete finte) |
+| `test/` | 17 prove unitarie + 71 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo; `apri({ prima })` per quello che deve esistere prima dell'apertura (le strade di rete finte) |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -505,3 +505,13 @@ censiti) e le misure di testo sono **sei**, dichiarate in `index.html` come
 token di Tailwind v4 e chiamate per nome — `text-minuto`, `text-piccolo`,
 `text-normale`, `text-medio`, `text-grande`, `text-titolo`. **Mai una misura
 scritta a numero**: due prove lo vietano.
+
+**Tutto quello che si tocca è almeno 44×44** (29 settembre): sta nel
+vocabolario (`min-h-11` nelle misure dei bottoni, nelle forme dei chip, nelle
+icone) e in una regola sola per le caselle in `index.html`. PRANZO e CENA 48.
+`e2e/tocco` misura ogni tasto su una ventina di schermate; l'unica eccezione
+è dichiarata nel codice (`data-tocco-stretto`, i sette giorni della
+settimana). **Le cifre si scrivono nella lingua dell'app** (281,10 €, non
+281.10): `money()` in `src/30-tema-e-formati.jsx` formatta, `conti.js`
+arrotonda e resta com'è. `node test/giro-ui.js` rifà il giro fotografico
+dell'interfaccia, con le misure di contrasto e di tocco.

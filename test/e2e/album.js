@@ -299,7 +299,7 @@ const FOTO = require('path').join(__dirname, '..', 'fixture', 'foto.png');
   await p.waitForTimeout(300);
   { const m = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await m.count()) { await m.first().click(); await p.waitForTimeout(350); } }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Pasta');
-  await p.locator('input[placeholder="0.00"]').first().fill('20');
+  await p.locator('input[data-cifra]').first().fill('20');
   await p.locator('button', { hasText: /Salva/ }).first().click();
   await p.waitForTimeout(400);
 

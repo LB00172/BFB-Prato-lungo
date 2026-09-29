@@ -440,7 +440,25 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 // li usa di piu'. Qui si riprendono da li' invece di riscriverli, perche' due
 // copie della stessa regola sui soldi prima o poi divergono — e l'app e i
 // conti mostrerebbero due cifre diverse per la stessa spesa.
-const money = window.Conti.money;
+//
+// Le cifre si LEGGONO nella lingua dell'app: 281,10 € e non 281.10 €. Il
+// punto era l'inglese di toFixed, e in italiano, spagnolo e francese i
+// decimali vanno con la virgola. L'arrotondamento resta quello di conti.js
+// (una regola sola sui soldi, uguale a quella della versione privata): qui
+// cambia soltanto come la cifra arrotondata si scrive. Tutti gli usi di
+// money finiscono a schermo o nel resoconto da mandare nel gruppo — nessuno
+// la rimette in un calcolo, dove una virgola farebbe danni.
+const money = n => {
+  const s = window.Conti.money(n);
+  try {
+    return new Intl.NumberFormat(L.locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(Number(s));
+  } catch (e) {
+    return s;
+  }
+};
 const posNum = window.Conti.posNum;
 
 // "note" tiene il MENÙ del giorno (la scheda Menù scrive lì da sempre);
@@ -681,7 +699,9 @@ const raccontaMeteo = wx => {
   const testaCode = wx.giorno != null ? wx.giorno : wx.code;
   const testa = wmoInfo(testaCode);
   const nominaBrutto = wx.peggio != null && gravitaWmo(wx.peggio) > gravitaWmo(testaCode);
-  const mm = typeof wx.mm === 'number' && wx.mm >= 0.2 ? (wx.mm < 10 ? wx.mm.toFixed(1) : String(Math.round(wx.mm))) + ' mm' : null;
+  const mm = typeof wx.mm === 'number' && wx.mm >= 0.2 ? new Intl.NumberFormat(L.locale, {
+    maximumFractionDigits: wx.mm < 10 ? 1 : 0
+  }).format(wx.mm) + ' mm' : null;
   return {
     icon: testa.icon,
     label: testa.label,
@@ -926,10 +946,15 @@ const icona = (nome, classe) => {
 //
 // Quello che resta le distingue davvero, ed e' il corpo: px-3 py-1.5,
 // px-4 py-2.5, px-4 py-3.
+//
+// E sotto tutte e tre, un'altezza minima di 44 px (min-h-11): e' la misura
+// sotto la quale un pollice sbaglia — Android ne chiede 48, Apple 44. Il
+// minuscolo era alto 31, il normale 41. Resta minuscolo il TESTO, non il
+// posto da toccare (e2e/tocco misura ogni tasto dell'app).
 const BOTTONE_MISURA = {
-  minuscolo: 'px-3 py-1.5 text-piccolo border',
-  normale: 'px-4 py-2.5 text-piccolo border-2',
-  grande: 'px-4 py-3 text-normale border-2'
+  minuscolo: 'px-3 py-1.5 min-h-11 text-piccolo border',
+  normale: 'px-4 py-2.5 min-h-11 text-piccolo border-2',
+  grande: 'px-4 py-3 min-h-11 text-normale border-2'
 };
 
 // I ruoli veri, guardando cosa fanno i bottoni e non come sono scritti.
@@ -960,12 +985,15 @@ const BOTTONE_ICONA = {
   pieno: 'bg-bosco text-white hover:bg-notte',
   tenue: 'bg-salvia/20 text-bosco hover:bg-salvia/40'
 };
-const bottoneIcona = (tono, extra) => ['px-2.5 py-2 rounded font-bold leading-none disabled:opacity-40', BOTTONE_ICONA[tono] || BOTTONE_ICONA.neutro, extra || ''].filter(Boolean).join(' ');
+
+// Almeno 44×44 anche loro: la × per togliere era di 30×32, e sbagliarla
+// vuol dire togliere la riga accanto.
+const bottoneIcona = (tono, extra) => ['min-w-11 min-h-11 inline-flex items-center justify-center px-2.5 py-2 rounded font-bold leading-none disabled:opacity-40', BOTTONE_ICONA[tono] || BOTTONE_ICONA.neutro, extra || ''].filter(Boolean).join(' ');
 
 // La riga richiudibile non e' un bottone con un altro colore: e' una forma
 // diversa — larga, allineata a sinistra, senza maiuscolo, con il contenuto ai
 // due estremi. Passa da qui perche' e' un ruolo, non un caso particolare.
-const bottoneRiga = extra => ['w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-orlo/60', extra || ''].filter(Boolean).join(' ');
+const bottoneRiga = extra => ['w-full min-h-11 flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-orlo/60', extra || ''].filter(Boolean).join(' ');
 
 // ---------- La voce del menu ----------
 // La riga del cassetto: icona a sinistra, etichetta che si accorcia invece di
@@ -974,7 +1002,7 @@ const bottoneRiga = extra => ['w-full flex items-center justify-between gap-2 px
 // da quando il menu ha anche le due AZIONI (crea un campo, partecipa) sono
 // diventate due copie della stessa riga — ed e' il momento in cui una forma
 // va nel vocabolario, non il momento in cui si aggiunge una riga al censimento.
-const bottoneMenu = (accesa, extra) => ['w-full text-left px-3 py-2.5 rounded font-bold uppercase text-normale', 'tracking-wide transition-colors flex items-center gap-2.5', accesa ? 'bg-bosco text-carta' : 'text-bosco hover:bg-orlo', extra || ''].filter(Boolean).join(' ');
+const bottoneMenu = (accesa, extra) => ['w-full min-h-11 text-left px-3 py-2.5 rounded font-bold uppercase text-normale', 'tracking-wide transition-colors flex items-center gap-2.5', accesa ? 'bg-bosco text-carta' : 'text-bosco hover:bg-orlo', extra || ''].filter(Boolean).join(' ');
 
 // Uso: className={bottone('primario', 'grande', 'w-full mt-3')}
 const bottone = (ruolo, misura, extra) => ['rounded font-bold uppercase tracking-wide disabled:opacity-40', BOTTONE_MISURA[misura] || BOTTONE_MISURA.normale, BOTTONE_RUOLO[ruolo] || BOTTONE_RUOLO.primario, extra || ''].filter(Boolean).join(' ');
@@ -992,25 +1020,27 @@ const bottone = (ruolo, misura, extra) => ['rounded font-bold uppercase tracking
 // Servono tutte e due perche' la stessa forma cambia colore secondo il
 // significato: il chip del pranzo e' verde, quello della cena bruno, e non
 // e' un vezzo — sono i due colori con cui l'app distingue i pasti ovunque.
+// Tutte alte almeno 44 px, per la stessa ragione dei bottoni. La casella
+// della spunta e' quadrata, quindi cresce in tutte e due le direzioni.
 const SCELTA_FORMA = {
   // Linguetta: in quale sezione sto. Il filo spesso sotto dice dove sei.
-  linguetta: 'py-2.5 rounded font-bold uppercase tracking-wide border-b-4 transition-all',
+  linguetta: 'min-h-11 py-2.5 rounded font-bold uppercase tracking-wide border-b-4 transition-all',
   // Interruttore: una cosa sola, accesa o spenta, a piena larghezza.
-  interruttore: 'py-2.5 rounded font-bold uppercase tracking-wide border-2',
+  interruttore: 'min-h-11 py-2.5 rounded font-bold uppercase tracking-wide border-2',
   // Spunta: chip minuto in riga, quello dei pasti.
-  spunta: 'px-2.5 py-1.5 rounded font-bold uppercase border',
+  spunta: 'min-h-11 px-2.5 py-1.5 rounded font-bold uppercase border',
   // Pillola: scelta leggera in un gruppo che va a capo.
-  pillola: 'px-3 py-1.5 rounded-full font-bold transition-colors',
+  pillola: 'min-h-11 px-3 py-1.5 rounded-full font-bold transition-colors',
   // Giunta: due chip attaccati dentro una cornice sola. Niente angoli
   // propri: glieli da' il contenitore, altrimenti si vedono due bordi.
-  giunta: 'px-2.5 py-1.5 font-bold uppercase',
+  giunta: 'min-h-11 px-2.5 py-1.5 font-bold uppercase',
   // Etichetta: dice cos'e' una cosa (adulto/bambino), non cosa succede.
-  etichetta: 'px-2 py-1 rounded font-bold uppercase',
+  etichetta: 'min-h-11 px-2 py-1 rounded font-bold uppercase',
   // Casella: la spunta quadrata di una lista di cose da fare. Non e' un chip
   // con dentro una parola — e' un quadrato con dentro un segno — ma il
   // meccanismo e' lo stesso: acceso o spento, e si tocca per cambiare.
   // E' entrata nel vocabolario quando e' comparsa la seconda volta.
-  casella: 'w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold'
+  casella: 'w-11 h-11 shrink-0 rounded border-2 flex items-center justify-center font-bold'
 };
 const SCELTA_TONO = {
   // Da acceso il bordo sotto e' bruno, non verde: e' quello che fa sembrare
@@ -5108,7 +5138,11 @@ function App({
     const isSelected = dateStr === selectedDateStr;
     const isCampPeriod = dateStr >= CAMP_START && dateStr <= CAMP_END;
     const label = L.data(d, 'settimanaSola');
+    // I sette giorni devono stare in una riga anche a 320 px, dove
+    // sono larghi 37: si compensa in altezza (71). E' l'unica
+    // eccezione ai 44×44, dichiarata qui e ammessa da e2e/tocco.
     return /*#__PURE__*/React.createElement("button", {
+      "data-tocco-stretto": "1",
       key: dateStr,
       onClick: () => {
         setSelectedDateStr(dateStr);
@@ -5961,13 +5995,13 @@ function App({
     onClick: () => setMenuOpen(o => !o),
     "aria-label": "Menu",
     "aria-expanded": menuOpen,
-    className: "absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-scheda/10"
+    className: "absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-scheda/10"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "block w-5 h-0.5 bg-carta"
+    className: "block w-5 h-0.5 bg-current"
   }), /*#__PURE__*/React.createElement("span", {
-    className: "block w-5 h-0.5 bg-carta"
+    className: "block w-5 h-0.5 bg-current"
   }), /*#__PURE__*/React.createElement("span", {
-    className: "block w-5 h-0.5 bg-carta"
+    className: "block w-5 h-0.5 bg-current"
   })), /*#__PURE__*/React.createElement("h1", {
     className: "font-rustic text-titolo tracking-wide"
   }, BRAND.appTitle), /*#__PURE__*/React.createElement("p", {
@@ -6497,6 +6531,7 @@ function App({
     min: "0",
     step: "0.01",
     inputMode: "decimal",
+    "data-cifra": true,
     autoFocus: true,
     value: buying.price,
     onChange: e => setBuying(b => ({
@@ -6504,7 +6539,7 @@ function App({
       price: e.target.value
     })),
     onKeyDown: e => e.key === 'Enter' && confirmBuy(),
-    placeholder: "0.00",
+    placeholder: money(0),
     className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded font-bold"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
@@ -6595,6 +6630,7 @@ function App({
     min: "0",
     step: "0.01",
     inputMode: "decimal",
+    "data-cifra": true,
     value: editing.price,
     onChange: e => setEditing(x => ({
       ...x,
@@ -7067,7 +7103,7 @@ const schedaMenu = ({
         setSelectedDateStr(ds);
         setCurrentDate(parseDate(ds));
       },
-      className: `w-full text-left flex items-center gap-2 px-3 py-2 rounded border transition-colors ${ds === selectedDateStr ? 'bg-legno/15 border-legno/50' : 'bg-carta/60 border-salvia/20 hover:bg-orlo'}`
+      className: `w-full min-h-11 text-left flex items-center gap-2 px-3 py-2 rounded border transition-colors ${ds === selectedDateStr ? 'bg-legno/15 border-legno/50' : 'bg-carta/60 border-salvia/20 hover:bg-orlo'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-piccolo font-bold text-bosco shrink-0 w-16"
     }, L.data(parseDate(ds), 'settimanaGiorno')), /*#__PURE__*/React.createElement("span", {
@@ -7231,11 +7267,11 @@ const schedaPresenze = ({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleMeal(selectedDateStr, m.id, 'lunch'),
     disabled: chiuso,
-    className: bottoneScelta('spunta', 'pranzo', meal.lunch, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')
+    className: bottoneScelta('spunta', 'pranzo', meal.lunch, 'minuscolo', `min-h-12 ${chiuso ? 'opacity-60 cursor-not-allowed' : ''}`)
   }, L.t('presenze.pranzo')), /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleMeal(selectedDateStr, m.id, 'dinner'),
     disabled: chiuso,
-    className: bottoneScelta('spunta', 'cena', meal.dinner, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')
+    className: bottoneScelta('spunta', 'cena', meal.dinner, 'minuscolo', `min-h-12 ${chiuso ? 'opacity-60 cursor-not-allowed' : ''}`)
   }, L.t('presenze.cena'))));
 }))), admin && members.length > 0 && (giornoBloccato(selectedDateStr) ? /*#__PURE__*/React.createElement("button", {
   onClick: () => sbloccaGiorno(selectedDateStr),
@@ -7760,10 +7796,11 @@ const schedaLista = ({
   min: "0",
   step: "0.01",
   inputMode: "decimal",
+  "data-cifra": true,
   value: pPrice,
   onChange: e => setPPrice(e.target.value),
   onKeyDown: e => e.key === 'Enter' && addPurchase(),
-  placeholder: "0.00",
+  placeholder: money(0),
   className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded font-bold"
 })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
@@ -7926,6 +7963,7 @@ const schedaAttrezzatura = ({
     min: "0",
     step: "0.01",
     inputMode: "decimal",
+    "data-cifra": true,
     value: newEquipPrice,
     onChange: e => setNewEquipPrice(e.target.value),
     onKeyDown: e => e.key === 'Enter' && addEquip(),
@@ -8057,9 +8095,10 @@ const schedaMembri = ({
   onClick: addMember,
   className: bottoneIcona('pieno')
 }, "+")), /*#__PURE__*/React.createElement("label", {
-  className: "flex items-center gap-2 text-piccolo text-gray-600"
+  className: "flex items-center gap-2 min-h-11 text-piccolo text-gray-600"
 }, /*#__PURE__*/React.createElement("input", {
   type: "checkbox",
+  className: "w-5 h-5",
   checked: newMemberChild,
   onChange: e => setNewMemberChild(e.target.checked)
 }), L.t('membri.bambinoGratis'))), /*#__PURE__*/React.createElement("div", {
@@ -8086,8 +8125,10 @@ const schedaMembri = ({
   onClick: () => setInfoMember(v => v === m.id ? null : m.id),
   "aria-label": L.t('membri.datiDi', m.name),
   title: L.t('membri.datiRimborso'),
+  className: "w-11 h-11 -mx-2 flex items-center justify-center"
+}, /*#__PURE__*/React.createElement("span", {
   className: `w-6 h-6 rounded-full border-2 font-serif italic font-bold text-piccolo leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-bosco border-bosco text-white' : 'bg-scheda border-salvia text-legno'}`
-}, "i"), /*#__PURE__*/React.createElement("button", {
+}, "i")), /*#__PURE__*/React.createElement("button", {
   onClick: () => toggleChild(m.id),
   className: bottoneScelta('etichetta', 'ambra', m.isChild, 'minimo')
 }, L.t(m.isChild ? 'membri.bambino' : 'membri.adulto')), /*#__PURE__*/React.createElement("button", {
@@ -9031,7 +9072,7 @@ const schedaImpostazioni = ({
     setPhotoCap(n);
     scriviLocale(PHOTO_CAP_KEY, String(n));
   },
-  className: bottoneScelta('linguetta', 'sezione', photoCap === n, 'minuscolo', 'w-9')
+  className: bottoneScelta('linguetta', 'sezione', photoCap === n, 'minuscolo', 'w-11')
 }, n)))), /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500 leading-snug"
 }, L.t('impostazioni.fotoNota'))), admin && /*#__PURE__*/React.createElement("div", {
@@ -9346,7 +9387,7 @@ const schedaImpostazioni = ({
   href: "./privacy.html",
   target: "_blank",
   rel: "noopener",
-  className: "block text-piccolo text-carta underline"
+  className: "inline-flex items-center min-h-11 text-piccolo text-carta underline"
 }, L.t('info.privacy')), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-salvia/80 pt-1"
 }, BRAND.credits)));

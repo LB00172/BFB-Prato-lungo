@@ -81,7 +81,7 @@ const H = require('../lib/app').SBLOCCO;
   let visibili = await p.locator('h3:has-text("Cronologia acquisti")').locator('xpath=../..').locator('ul li').count();
   console.log('cercando "carbon":', visibili, 'risultato ->', visibili === 1 ? 'OK' : 'PROBLEMA');
   const riepilogo = await p.locator('h3:has-text("Cronologia acquisti")').locator('xpath=../..').innerText();
-  console.log('mostra conteggio e totale dei trovati:', /1 voce trovata su 9/i.test(riepilogo) && /125\.00/.test(riepilogo) ? 'OK' : 'PROBLEMA');
+  console.log('mostra conteggio e totale dei trovati:', /1 voce trovata su 9/i.test(riepilogo) && /125,00/.test(riepilogo) ? 'OK' : 'PROBLEMA');
   await cerca.fill('bruno'); await p.waitForTimeout(350);
   console.log('ricerca per acquirente (Bruno, corretto ad Alice):', (await p.locator('h3:has-text("Cronologia acquisti")').locator('xpath=../..').innerText()).includes('Nessuna spesa corrisponde') ? 'OK' : 'PROBLEMA');
   await cerca.fill('alimentare'); await p.waitForTimeout(350);

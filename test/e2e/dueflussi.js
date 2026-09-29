@@ -33,7 +33,7 @@ const { chromium } = require('playwright-core');
   await p.locator('li:has-text("Pomodori") button:has-text("Segna come acquistata")').click();
   await p.waitForTimeout(250);
   const modal = p.locator('div.fixed.z-50').filter({ hasText: 'Acquistata:' });
-  await modal.locator('input[placeholder="0.00"]').fill('12.50');
+  await modal.locator('input[data-cifra]').fill('12.50');
   await modal.locator('select').first().selectOption({ label: 'Alice' });
   await modal.locator('button:has-text("Conferma")').click();
   await p.waitForTimeout(300);

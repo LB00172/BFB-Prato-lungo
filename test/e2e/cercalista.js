@@ -50,7 +50,7 @@ const H = require('../lib/app').SBLOCCO;
   await p.waitForTimeout(400);
   const modale = p.locator('div.fixed', { hasText: 'Acquistata:' }).last();
   console.log('acquisto da lista filtrata:', /Carbonella/.test(await modale.innerText()) ? 'OK' : 'PROBLEMA');
-  await modale.locator('input[placeholder="0.00"]').fill('9');
+  await modale.locator('input[data-cifra]').fill('9');
   await modale.locator('select').first().selectOption({ label: 'Alice' });
   await modale.locator('button', { hasText: 'Conferma' }).click();
   await p.waitForTimeout(500);

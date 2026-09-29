@@ -202,7 +202,7 @@ const testo = (p) => p.locator('main').innerText();
   ok('e il brutto viene detto a parte, col suo momento',
     /temporale nel pomeriggio/i.test(tf));
   ok('si mostrano i millimetri invece della probabilita\' dell\'ora peggiore',
-    /2\.4 mm/.test(tf) && !/40%/.test(tf));
+    /2,4 mm/.test(tf) && !/40%/.test(tf));
   // Il codice severo del giorno non si butta: serve alla compatibilita' e a chi
   // legge il dato grezzo.
   const grezzo = await a.page.evaluate(() => {

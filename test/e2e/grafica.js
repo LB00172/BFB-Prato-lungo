@@ -64,7 +64,7 @@ const H = require('../lib/app').SBLOCCO;
   });
   console.log('nome per esteso:', JSON.stringify(info.testoCompleto));
   console.log('tagliato dai puntini:', info.troncato === false ? 'NO -> OK' : 'PROBLEMA');
-  const prezzo = await riga.locator('span', { hasText: '180.00' }).first().innerText().catch(() => '');
+  const prezzo = await riga.locator('span', { hasText: '180,00' }).first().innerText().catch(() => '');
   console.log('prezzo sulla stessa riga del nome:', prezzo.trim() ? 'OK (' + prezzo.trim() + ')' : 'PROBLEMA');
   const badge = await riga.innerText();
   console.log('etichette presenti:', /BEVANDE/.test(badge) && /SEPARATO/.test(badge) ? 'OK' : 'PROBLEMA');

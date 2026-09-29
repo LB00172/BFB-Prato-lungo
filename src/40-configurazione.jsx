@@ -139,7 +139,7 @@ const raccontaMeteo = (wx) => {
   const testa = wmoInfo(testaCode);
   const nominaBrutto = wx.peggio != null && gravitaWmo(wx.peggio) > gravitaWmo(testaCode);
   const mm = typeof wx.mm === 'number' && wx.mm >= 0.2
-    ? (wx.mm < 10 ? wx.mm.toFixed(1) : String(Math.round(wx.mm))) + ' mm'
+    ? new Intl.NumberFormat(L.locale, { maximumFractionDigits: wx.mm < 10 ? 1 : 0 }).format(wx.mm) + ' mm'
     : null;
   return {
     icon: testa.icon,

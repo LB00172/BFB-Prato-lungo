@@ -639,11 +639,11 @@ const schedaLista = ({
         <div>
           <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.prezzo')}</label>
           <input
-            type="number" min="0" step="0.01" inputMode="decimal"
+            type="number" min="0" step="0.01" inputMode="decimal" data-cifra
             value={pPrice}
             onChange={(e) => setPPrice(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addPurchase()}
-            placeholder="0.00"
+            placeholder={money(0)}
             className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded font-bold"
           />
         </div>
@@ -836,7 +836,7 @@ const schedaAttrezzatura = ({
       </div>
       <div className="flex gap-2">
         <input
-          type="number" min="0" step="0.01" inputMode="decimal"
+          type="number" min="0" step="0.01" inputMode="decimal" data-cifra
           value={newEquipPrice}
           onChange={(e) => setNewEquipPrice(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addEquip()}

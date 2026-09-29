@@ -43,7 +43,7 @@ const { scontriniSalvati, fotoSalvate } = require('../lib/app');
   }
   const capForm = await p.locator('h3:has-text("Prodotto acquistato")').locator('..').locator('input[type=file]').getAttribute('capture');
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Sale');
-  await p.fill('input[placeholder="0.00"]', '2');
+  await p.fill('input[data-cifra]', '2');
   await p.click('button:has-text("Salva")'); await p.waitForTimeout(250);
   const capHist = await p.locator('li:has-text("Sale") input[type=file]').getAttribute('capture');
   await p.setInputFiles('li:has-text("Sale") input[type=file]', require('path').join(__dirname,'..','fixture','scontrino.png'));

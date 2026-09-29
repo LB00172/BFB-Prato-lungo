@@ -69,6 +69,14 @@
   </style>
 
   <style>
+    /* Le caselle da scrivere e da scegliere sono alte almeno 44 px, come i
+       bottoni (src/50-interfaccia.jsx): erano 42, e la data in Presenze 20.
+       Una regola sola invece di una classe in ognuno dei loro sessanta
+       posti. Le spunte e i pallini restano piccoli: si tocca l'etichetta. */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+    select {
+      min-height: 2.75rem;
+    }
     .font-rustic {
       font-family: 'Special Elite', system-ui, -apple-system, sans-serif;
     }

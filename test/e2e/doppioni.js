@@ -137,13 +137,13 @@ const aggiungi = async (p, nome) => {
     const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
     if (await b.count()) { await b.first().click(); await p.waitForTimeout(300); }
     await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Spesa Conad');
-    await p.locator('input[placeholder="0.00"]').first().fill('87');
+    await p.locator('input[data-cifra]').first().fill('87');
     await p.locator('button', { hasText: /Salva/ }).first().click();
     await p.waitForTimeout(500);
   }
 
   const spese = await p.locator('main').innerText();
-  ok('la spesa doppia viene segnalata', /"Spesa Conad" da 87\.00 € è registrata 2 volte/i.test(spese));
+  ok('la spesa doppia viene segnalata', /"Spesa Conad" da 87,00 € è registrata 2 volte/i.test(spese));
   ok('spiega che gonfia il totale e le quote', /quota di tutti sale/i.test(spese));
   ok('ma NON offre di cancellarla da sola: di mezzo ci sono i soldi',
     (await p.locator('button', { hasText: /Unisci le spese/i }).count()) === 0);

@@ -79,7 +79,7 @@ const { chromium } = require('playwright-core');
   await p.waitForTimeout(300);
   { const m = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await m.count()) { await m.first().click(); await p.waitForTimeout(350); } }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Pasta');
-  await p.locator('input[placeholder="0.00"]').first().fill('30');
+  await p.locator('input[data-cifra]').first().fill('30');
   await p.locator('select').filter({ has: p.locator('option', { hasText: 'Lorenzo' }) }).first().selectOption({ label: 'Lorenzo' });
   await p.locator('button', { hasText: /Salva/ }).first().click();
   await p.waitForTimeout(400);

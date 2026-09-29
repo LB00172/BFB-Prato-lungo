@@ -503,7 +503,7 @@ const schedaImpostazioni = ({
             <button
               key={n}
               onClick={() => { setPhotoCap(n); scriviLocale(PHOTO_CAP_KEY, String(n)); }}
-              className={bottoneScelta('linguetta', 'sezione', photoCap === n, 'minuscolo', 'w-9')}
+              className={bottoneScelta('linguetta', 'sezione', photoCap === n, 'minuscolo', 'w-11')}
             >
               {n}
             </button>
@@ -914,7 +914,7 @@ const schedaImpostazioni = ({
       </p>
       {/* L'informativa: Google Play la vuole raggiungibile anche DENTRO
           l'app, non solo nella scheda dello store (ROADMAP § 3). */}
-      <a href="./privacy.html" target="_blank" rel="noopener" className="block text-piccolo text-carta underline">{L.t('info.privacy')}</a>
+      <a href="./privacy.html" target="_blank" rel="noopener" className="inline-flex items-center min-h-11 text-piccolo text-carta underline">{L.t('info.privacy')}</a>
       <p className="text-minuto text-salvia/80 pt-1">{BRAND.credits}</p>
     </div>
   </div>

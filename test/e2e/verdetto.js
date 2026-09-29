@@ -82,7 +82,7 @@ const spesa = async (p, menu, nome, prezzo, tipo, chi) => {
   const man = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
   if (await man.count()) { await man.first().click(); await p.waitForTimeout(280); }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', nome);
-  await p.locator('input[placeholder="0.00"]').first().fill(String(prezzo));
+  await p.locator('input[data-cifra]').first().fill(String(prezzo));
   if (tipo) await p.locator('select').filter({ hasText: /Alimentare/i }).first().selectOption(tipo);
   if (chi) await p.locator('select').filter({ hasText: /—/ }).first().selectOption({ label: chi }).catch(() => {});
   await p.locator('button', { hasText: /Salva/ }).first().click();

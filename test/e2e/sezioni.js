@@ -36,7 +36,7 @@ const { chromium } = require('playwright-core');
 
   // registro un acquisto manuale SENZA foto
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Sale');
-  await p.fill('input[placeholder="0.00"]', '2');
+  await p.fill('input[data-cifra]', '2');
   await p.click('button:has-text("Salva")'); await p.waitForTimeout(200);
   // la mini scheda deve avere 📷 per allegare DOPO
   const camOnCard = await p.locator('li:has-text("Sale") label[aria-label="Allega scontrino"]').count();

@@ -25,7 +25,7 @@ const { chromium } = require('playwright-core');
   }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Cambusa');
   await p.locator('h3:has-text("Prodotto acquistato")').locator('xpath=../..').locator('select').first().selectOption({ label: 'Alice' });
-  await p.fill('input[placeholder="0.00"]', '90');
+  await p.fill('input[data-cifra]', '90');
   await p.click('button:has-text("Salva")'); await p.waitForTimeout(150);
 
   await go('Spese Totali');

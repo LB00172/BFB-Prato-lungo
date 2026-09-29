@@ -51,7 +51,7 @@ const semina = () => {
   const nRighe = await righe.count();
   const testi = await righe.allInnerTexts();
   ok(`due passaggi identici, uno per cassa (${testi.map((t) => t.replace(/\s+/g, ' ').trim()).join(' | ')})`,
-    nRighe === 2 && testi.every((t) => /Bruno/.test(t) && /Alice/.test(t) && /20\.00/.test(t)));
+    nRighe === 2 && testi.every((t) => /Bruno/.test(t) && /Alice/.test(t) && /20,00/.test(t)));
 
   // Si spunta SOLO il primo.
   await righe.first().click();

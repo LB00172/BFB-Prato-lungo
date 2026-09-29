@@ -166,7 +166,7 @@ function misura() {
     if (!visibile(el)) return;
     const r = el.getBoundingClientRect();
     const lato = Math.min(r.width, r.height);
-    if (lato < 40) {
+    if (lato < 44) {
       const nome = (el.getAttribute('aria-label') || el.innerText || el.value || el.placeholder || el.tagName).trim().replace(/\s+/g, ' ');
       tasti.push({ nome: nome.slice(0, 40), larghezza: Math.round(r.width), altezza: Math.round(r.height) });
     }

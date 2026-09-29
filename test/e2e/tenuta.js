@@ -173,7 +173,7 @@ const aggiungiMembro = async (p, nome) => {
     await p2.waitForTimeout(300);
     { const b = p2.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await b.count()) { await b.first().click(); await p2.waitForTimeout(350); } }
     await p2.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Pane');
-    await p2.locator('input[placeholder="0.00"]').first().fill('3');
+    await p2.locator('input[data-cifra]').first().fill('3');
     await p2.locator('button', { hasText: /Salva/ }).first().click();
     await p2.waitForTimeout(500);
 

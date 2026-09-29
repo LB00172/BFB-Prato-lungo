@@ -74,7 +74,7 @@ const L = { lunch: true, dinner: false };
 
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Spesa dell 11');
   await p.locator('h3:has-text("Prodotto acquistato")').locator('xpath=../..').locator('select').first().selectOption({ label: 'Alice' });
-  await p.locator('input[placeholder="0.00"]').first().fill('60');
+  await p.locator('input[data-cifra]').first().fill('60');
   await tendina.first().selectOption('sep');
   await p.waitForTimeout(200);
   await p.locator('button', { hasText: /^Salva$/ }).first().click();
@@ -84,7 +84,7 @@ const L = { lunch: true, dinner: false };
   { const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); } }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Spesa comune');
   await p.locator('h3:has-text("Prodotto acquistato")').locator('xpath=../..').locator('select').first().selectOption({ label: 'Carlo' });
-  await p.locator('input[placeholder="0.00"]').first().fill('30');
+  await p.locator('input[data-cifra]').first().fill('30');
   await tendina.first().selectOption('comune');
   await p.locator('button', { hasText: /^Salva$/ }).first().click();
   await p.waitForTimeout(350);
@@ -121,7 +121,7 @@ const L = { lunch: true, dinner: false };
   // La somma delle due casse e' anche scritta, cosi' nessuno la fa a mente.
   const totPersona = await p.locator('h3:has-text("Totale a persona")').locator('..').innerText();
   console.log('totale a persona mostrato:',
-    /10\.00 € comune \+ 30\.00 € separata/.test(totPersona.replace(/\s+/g, ' ')) ? 'OK' : 'PROBLEMA');
+    /10,00 € comune \+ 30,00 € separata/.test(totPersona.replace(/\s+/g, ' ')) ? 'OK' : 'PROBLEMA');
 
   // --- 4. Riquadro della quota separata nei Totali ---
   await p.getByRole('button', { name: 'Totali', exact: true }).first().click();
@@ -145,7 +145,7 @@ const L = { lunch: true, dinner: false };
   // diventano un buco DICHIARATO nella cassa separata, non spariscono dentro
   // l'arrotondamento della cassa comune.
   const cartaSepDopo = await p.locator('h3:has-text("Quote cassa separata")').locator('..').innerText();
-  const buco = /60\.00 € non sono nelle quote di nessuno/.test(cartaSepDopo.replace(/\s+/g, ' '));
+  const buco = /60,00 € non sono nelle quote di nessuno/.test(cartaSepDopo.replace(/\s+/g, ' '));
   console.log('i 60 € separati sono dichiarati come buco nella loro cassa:', buco ? 'OK' : 'PROBLEMA');
   const cartaComDopo = await p.locator('h3:has-text("Quote cassa comune")').locator('..').innerText();
   console.log('la cassa comune resta pulita:',

@@ -42,7 +42,7 @@ const H = require('../lib/app').SBLOCCO;
 
   // registro una spesa scegliendo dalla tendina
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Pane');
-  await p.locator('input[placeholder="0.00"]').first().fill('6');
+  await p.locator('input[data-cifra]').first().fill('6');
   await selForm.selectOption({ label: 'Bruno Rossi' });
   await p.locator('button', { hasText: /^Salva$/ }).first().click();
   await p.waitForTimeout(400);
@@ -57,7 +57,7 @@ const H = require('../lib/app').SBLOCCO;
   console.log('maschera acquisto: è una tendina:', await selModale.evaluate(e => e.tagName) === 'SELECT' ? 'OK' : 'PROBLEMA');
   console.log('  opzioni:', JSON.stringify(await opzioni(selModale)));
   await selModale.selectOption({ label: 'Alice' });
-  await modale.locator('input[placeholder="0.00"]').fill('9');
+  await modale.locator('input[data-cifra]').fill('9');
   await modale.locator('button', { hasText: 'Conferma' }).click();
   await p.waitForTimeout(400);
   const carb = await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_purchases')).find(x => x.name === 'Carbonella'));

@@ -52,7 +52,7 @@ const { scontriniSalvati, fotoSalvate } = require('../lib/app');
   { const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' }); if (await b.count()) { await b.first().click(); await p.waitForTimeout(350); } }
   await p.waitForTimeout(200);
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Pasta');
-  await p.locator('input[placeholder="0.00"]').first().fill('30');
+  await p.locator('input[data-cifra]').first().fill('30');
   const acq = p.locator('input[placeholder="Chi ha acquistato"]');
   if (await acq.count()) await acq.first().fill('Lorenzo');
   await p.locator('button', { hasText: /Salva/ }).first().click();

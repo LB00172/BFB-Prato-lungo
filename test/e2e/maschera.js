@@ -41,7 +41,7 @@ const H = require('../lib/app').SBLOCCO;
   const campi = await p.locator('h3:has-text("Prodotto acquistato")').locator('xpath=../..').evaluate((el) => ({
     nome: !!el.querySelector('input[placeholder*="Pasta"]'),
     acquirente: el.querySelectorAll('select').length >= 1,
-    prezzo: !!el.querySelector('input[placeholder="0.00"]'),
+    prezzo: !!el.querySelector('input[data-cifra]'),
     foto: !!el.querySelector('input[type=file]'),
     salva: Array.from(el.querySelectorAll('button')).some(b => b.innerText.trim() === 'Salva'),
     chiudi: Array.from(el.querySelectorAll('button')).some(b => b.getAttribute('aria-label') === 'Chiudi la maschera'),
@@ -56,13 +56,13 @@ const H = require('../lib/app').SBLOCCO;
   // 4) salvando si richiude e la spesa compare in cronologia
   await bottone.click(); await p.waitForTimeout(350);
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', 'Ghiaccio');
-  await p.locator('input[placeholder="0.00"]').first().fill('3.5');
+  await p.locator('input[data-cifra]').first().fill('3.5');
   await p.locator('h3:has-text("Prodotto acquistato")').locator('xpath=../..').locator('select').first().selectOption({ label: 'Alice' });
   await p.locator('button', { hasText: /^Salva$/ }).first().click();
   await p.waitForTimeout(500);
   console.log('dopo Salva si richiude:', (await p.locator('input[placeholder="Es. Pasta, Acqua, Piatti…"]').count()) === 0 ? 'OK' : 'PROBLEMA');
   const crono = await p.locator('h3:has-text("Cronologia acquisti")').locator('xpath=../..').innerText();
-  console.log('la spesa è in cronologia:', /Ghiaccio/.test(crono) && /3\.50/.test(crono) ? 'OK' : 'PROBLEMA');
+  console.log('la spesa è in cronologia:', /Ghiaccio/.test(crono) && /3,50/.test(crono) ? 'OK' : 'PROBLEMA');
   const salvata = await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_purchases')).find(x => x.name === 'Ghiaccio'));
   console.log('acquirente corretto:', salvata && salvata.buyer === 'Alice' ? 'OK' : 'PROBLEMA');
   await p.screenshot({ path: require('path').join(__dirname,'..','tmp','vista-maschera-dopo.png') });

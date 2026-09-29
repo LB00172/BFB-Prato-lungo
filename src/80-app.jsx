@@ -1997,8 +1997,12 @@ function App({ eredita, cambiaCampo } = {}) {
           const isSelected = dateStr === selectedDateStr;
           const isCampPeriod = dateStr >= CAMP_START && dateStr <= CAMP_END;
           const label = L.data(d, 'settimanaSola');
+          // I sette giorni devono stare in una riga anche a 320 px, dove
+          // sono larghi 37: si compensa in altezza (71). E' l'unica
+          // eccezione ai 44×44, dichiarata qui e ammessa da e2e/tocco.
           return (
             <button
+              data-tocco-stretto="1"
               key={dateStr}
               onClick={() => { setSelectedDateStr(dateStr); setCurrentDate(new Date(d)); }}
               className={`p-2 flex flex-col items-center rounded-lg border transition-all ${
@@ -2775,11 +2779,14 @@ function App({ eredita, cambiaCampo } = {}) {
           onClick={() => setMenuOpen((o) => !o)}
           aria-label="Menu"
           aria-expanded={menuOpen}
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-scheda/10"
+          className="absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-scheda/10"
         >
-          <span className="block w-5 h-0.5 bg-carta"></span>
-          <span className="block w-5 h-0.5 bg-carta"></span>
-          <span className="block w-5 h-0.5 bg-carta"></span>
+          {/* Le righe prendono il colore del testo della testata. Erano
+              bg-carta, e il tema scuro ridipinge di scuro tutto quello che ha
+              bg-carta (serve agli sfondi): il tasto del menu spariva. */}
+          <span className="block w-5 h-0.5 bg-current"></span>
+          <span className="block w-5 h-0.5 bg-current"></span>
+          <span className="block w-5 h-0.5 bg-current"></span>
         </button>
         <h1 className="font-rustic text-titolo tracking-wide">{BRAND.appTitle}</h1>
         <p className="text-piccolo uppercase tracking-wider text-salvia">{tabs[scheda]}</p>
@@ -3153,11 +3160,11 @@ function App({ eredita, cambiaCampo } = {}) {
             <div>
               <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.prezzo')}</label>
               <input
-                type="number" min="0" step="0.01" inputMode="decimal" autoFocus
+                type="number" min="0" step="0.01" inputMode="decimal" data-cifra autoFocus
                 value={buying.price}
                 onChange={(e) => setBuying((b) => ({ ...b, price: e.target.value }))}
                 onKeyDown={(e) => e.key === 'Enter' && confirmBuy()}
-                placeholder="0.00"
+                placeholder={money(0)}
                 className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded font-bold"
               />
             </div>
@@ -3244,7 +3251,7 @@ function App({ eredita, cambiaCampo } = {}) {
               <div>
                 <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">Prezzo (€)</label>
                 <input
-                  type="number" min="0" step="0.01" inputMode="decimal"
+                  type="number" min="0" step="0.01" inputMode="decimal" data-cifra
                   value={editing.price}
                   onChange={(e) => setEditing((x) => ({ ...x, price: e.target.value }))}
                   className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded font-bold"

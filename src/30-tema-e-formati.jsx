@@ -21,7 +21,20 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 // li usa di piu'. Qui si riprendono da li' invece di riscriverli, perche' due
 // copie della stessa regola sui soldi prima o poi divergono — e l'app e i
 // conti mostrerebbero due cifre diverse per la stessa spesa.
-const money = window.Conti.money;
+//
+// Le cifre si LEGGONO nella lingua dell'app: 281,10 € e non 281.10 €. Il
+// punto era l'inglese di toFixed, e in italiano, spagnolo e francese i
+// decimali vanno con la virgola. L'arrotondamento resta quello di conti.js
+// (una regola sola sui soldi, uguale a quella della versione privata): qui
+// cambia soltanto come la cifra arrotondata si scrive. Tutti gli usi di
+// money finiscono a schermo o nel resoconto da mandare nel gruppo — nessuno
+// la rimette in un calcolo, dove una virgola farebbe danni.
+const money = (n) => {
+  const s = window.Conti.money(n);
+  try {
+    return new Intl.NumberFormat(L.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(s));
+  } catch (e) { return s; }
+};
 const posNum = window.Conti.posNum;
 
 // "note" tiene il MENÙ del giorno (la scheda Menù scrive lì da sempre);

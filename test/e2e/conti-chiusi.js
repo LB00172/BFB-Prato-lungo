@@ -48,7 +48,7 @@ const spesa = async (p, nome, prezzo, chi) => {
   const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
   if (await b.count()) { await b.first().click(); await p.waitForTimeout(300); }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', nome);
-  await p.locator('input[placeholder="0.00"]').first().fill(String(prezzo));
+  await p.locator('input[data-cifra]').first().fill(String(prezzo));
   if (chi) await p.locator('select').filter({ hasText: /Chi ha pagato|acquirente|—/i }).first().selectOption({ label: chi }).catch(() => {});
   await p.locator('button', { hasText: /Salva/ }).first().click();
   await p.waitForTimeout(500);

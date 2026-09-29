@@ -379,7 +379,7 @@ const schedaMenu = ({
               <li key={ds}>
                 <button
                   onClick={() => { setSelectedDateStr(ds); setCurrentDate(parseDate(ds)); }}
-                  className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded border transition-colors ${
+                  className={`w-full min-h-11 text-left flex items-center gap-2 px-3 py-2 rounded border transition-colors ${
                     ds === selectedDateStr ? 'bg-legno/15 border-legno/50' : 'bg-carta/60 border-salvia/20 hover:bg-orlo'
                   }`}
                 >
@@ -583,14 +583,14 @@ const schedaPresenze = ({
                   <button
                     onClick={() => toggleMeal(selectedDateStr, m.id, 'lunch')}
                     disabled={chiuso}
-                    className={bottoneScelta('spunta', 'pranzo', meal.lunch, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')}
+                    className={bottoneScelta('spunta', 'pranzo', meal.lunch, 'minuscolo', `min-h-12 ${chiuso ? 'opacity-60 cursor-not-allowed' : ''}`)}
                   >
                     {L.t('presenze.pranzo')}
                   </button>
                   <button
                     onClick={() => toggleMeal(selectedDateStr, m.id, 'dinner')}
                     disabled={chiuso}
-                    className={bottoneScelta('spunta', 'cena', meal.dinner, 'minuscolo', chiuso ? 'opacity-60 cursor-not-allowed' : '')}
+                    className={bottoneScelta('spunta', 'cena', meal.dinner, 'minuscolo', `min-h-12 ${chiuso ? 'opacity-60 cursor-not-allowed' : ''}`)}
                   >
                     {L.t('presenze.cena')}
                   </button>

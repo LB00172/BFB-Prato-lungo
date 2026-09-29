@@ -52,8 +52,8 @@ const schedaMembri = ({
         />
         <button onClick={addMember} className={bottoneIcona('pieno')}>+</button>
       </div>
-      <label className="flex items-center gap-2 text-piccolo text-gray-600">
-        <input type="checkbox" checked={newMemberChild} onChange={(e) => setNewMemberChild(e.target.checked)} />
+      <label className="flex items-center gap-2 min-h-11 text-piccolo text-gray-600">
+        <input type="checkbox" className="w-5 h-5" checked={newMemberChild} onChange={(e) => setNewMemberChild(e.target.checked)} />
         {L.t('membri.bambinoGratis')}
       </label>
     </div>
@@ -78,9 +78,10 @@ const schedaMembri = ({
                     onClick={() => setInfoMember((v) => (v === m.id ? null : m.id))}
                     aria-label={L.t('membri.datiDi', m.name)}
                     title={L.t('membri.datiRimborso')}
-                    className={`w-6 h-6 rounded-full border-2 font-serif italic font-bold text-piccolo leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-bosco border-bosco text-white' : 'bg-scheda border-salvia text-legno'}`}
+                    className="w-11 h-11 -mx-2 flex items-center justify-center"
                   >
-                    i
+                    {/* Il cerchio resta piccolo, il posto da toccare no. */}
+                    <span className={`w-6 h-6 rounded-full border-2 font-serif italic font-bold text-piccolo leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-bosco border-bosco text-white' : 'bg-scheda border-salvia text-legno'}`}>i</span>
                   </button>
                   <button
                     onClick={() => toggleChild(m.id)}

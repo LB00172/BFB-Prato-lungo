@@ -27,10 +27,15 @@
 //
 // Quello che resta le distingue davvero, ed e' il corpo: px-3 py-1.5,
 // px-4 py-2.5, px-4 py-3.
+//
+// E sotto tutte e tre, un'altezza minima di 44 px (min-h-11): e' la misura
+// sotto la quale un pollice sbaglia — Android ne chiede 48, Apple 44. Il
+// minuscolo era alto 31, il normale 41. Resta minuscolo il TESTO, non il
+// posto da toccare (e2e/tocco misura ogni tasto dell'app).
 const BOTTONE_MISURA = {
-  minuscolo: 'px-3 py-1.5 text-piccolo border',
-  normale: 'px-4 py-2.5 text-piccolo border-2',
-  grande: 'px-4 py-3 text-normale border-2',
+  minuscolo: 'px-3 py-1.5 min-h-11 text-piccolo border',
+  normale: 'px-4 py-2.5 min-h-11 text-piccolo border-2',
+  grande: 'px-4 py-3 min-h-11 text-normale border-2',
 };
 
 // I ruoli veri, guardando cosa fanno i bottoni e non come sono scritti.
@@ -62,8 +67,10 @@ const BOTTONE_ICONA = {
   tenue: 'bg-salvia/20 text-bosco hover:bg-salvia/40',
 };
 
+// Almeno 44×44 anche loro: la × per togliere era di 30×32, e sbagliarla
+// vuol dire togliere la riga accanto.
 const bottoneIcona = (tono, extra) => [
-  'px-2.5 py-2 rounded font-bold leading-none disabled:opacity-40',
+  'min-w-11 min-h-11 inline-flex items-center justify-center px-2.5 py-2 rounded font-bold leading-none disabled:opacity-40',
   BOTTONE_ICONA[tono] || BOTTONE_ICONA.neutro,
   extra || '',
 ].filter(Boolean).join(' ');
@@ -72,7 +79,7 @@ const bottoneIcona = (tono, extra) => [
 // diversa — larga, allineata a sinistra, senza maiuscolo, con il contenuto ai
 // due estremi. Passa da qui perche' e' un ruolo, non un caso particolare.
 const bottoneRiga = (extra) => [
-  'w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-orlo/60',
+  'w-full min-h-11 flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-orlo/60',
   extra || '',
 ].filter(Boolean).join(' ');
 
@@ -84,7 +91,7 @@ const bottoneRiga = (extra) => [
 // diventate due copie della stessa riga — ed e' il momento in cui una forma
 // va nel vocabolario, non il momento in cui si aggiunge una riga al censimento.
 const bottoneMenu = (accesa, extra) => [
-  'w-full text-left px-3 py-2.5 rounded font-bold uppercase text-normale',
+  'w-full min-h-11 text-left px-3 py-2.5 rounded font-bold uppercase text-normale',
   'tracking-wide transition-colors flex items-center gap-2.5',
   accesa ? 'bg-bosco text-carta' : 'text-bosco hover:bg-orlo',
   extra || '',
@@ -111,25 +118,27 @@ const bottone = (ruolo, misura, extra) => [
 // Servono tutte e due perche' la stessa forma cambia colore secondo il
 // significato: il chip del pranzo e' verde, quello della cena bruno, e non
 // e' un vezzo — sono i due colori con cui l'app distingue i pasti ovunque.
+// Tutte alte almeno 44 px, per la stessa ragione dei bottoni. La casella
+// della spunta e' quadrata, quindi cresce in tutte e due le direzioni.
 const SCELTA_FORMA = {
   // Linguetta: in quale sezione sto. Il filo spesso sotto dice dove sei.
-  linguetta: 'py-2.5 rounded font-bold uppercase tracking-wide border-b-4 transition-all',
+  linguetta: 'min-h-11 py-2.5 rounded font-bold uppercase tracking-wide border-b-4 transition-all',
   // Interruttore: una cosa sola, accesa o spenta, a piena larghezza.
-  interruttore: 'py-2.5 rounded font-bold uppercase tracking-wide border-2',
+  interruttore: 'min-h-11 py-2.5 rounded font-bold uppercase tracking-wide border-2',
   // Spunta: chip minuto in riga, quello dei pasti.
-  spunta: 'px-2.5 py-1.5 rounded font-bold uppercase border',
+  spunta: 'min-h-11 px-2.5 py-1.5 rounded font-bold uppercase border',
   // Pillola: scelta leggera in un gruppo che va a capo.
-  pillola: 'px-3 py-1.5 rounded-full font-bold transition-colors',
+  pillola: 'min-h-11 px-3 py-1.5 rounded-full font-bold transition-colors',
   // Giunta: due chip attaccati dentro una cornice sola. Niente angoli
   // propri: glieli da' il contenitore, altrimenti si vedono due bordi.
-  giunta: 'px-2.5 py-1.5 font-bold uppercase',
+  giunta: 'min-h-11 px-2.5 py-1.5 font-bold uppercase',
   // Etichetta: dice cos'e' una cosa (adulto/bambino), non cosa succede.
-  etichetta: 'px-2 py-1 rounded font-bold uppercase',
+  etichetta: 'min-h-11 px-2 py-1 rounded font-bold uppercase',
   // Casella: la spunta quadrata di una lista di cose da fare. Non e' un chip
   // con dentro una parola — e' un quadrato con dentro un segno — ma il
   // meccanismo e' lo stesso: acceso o spento, e si tocca per cambiare.
   // E' entrata nel vocabolario quando e' comparsa la seconda volta.
-  casella: 'w-6 h-6 shrink-0 rounded border-2 flex items-center justify-center font-bold',
+  casella: 'w-11 h-11 shrink-0 rounded border-2 flex items-center justify-center font-bold',
 };
 
 const SCELTA_TONO = {

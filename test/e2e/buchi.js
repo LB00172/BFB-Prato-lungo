@@ -21,7 +21,7 @@ const spesa = async (p, nome, prezzo, conto) => {
   const b = p.locator('main button', { hasText: 'Aggiungi un prodotto a mano' });
   if (await b.count()) { await b.first().click(); await p.waitForTimeout(300); }
   await p.fill('input[placeholder="Es. Pasta, Acqua, Piatti…"]', nome);
-  await p.locator('input[placeholder="0.00"]').first().fill(String(prezzo));
+  await p.locator('input[data-cifra]').first().fill(String(prezzo));
   if (conto) await p.locator('select').filter({ hasText: 'Conto comune' }).first().selectOption(conto);
   await p.locator('button', { hasText: /Salva/ }).first().click();
   await p.waitForTimeout(500);
@@ -144,7 +144,7 @@ const quote = (p) => p.evaluate(() => {
     }, 0);
   const totPersona = await p.locator('h3:has-text("Totale a persona")').locator('..').innerText();
   ok(`e ora le quote comprendono tutto (${q2.join(' | ')})`,
-    sommaQuote('Anna') === 80 && sommaQuote('Bruno') === 80 && /80\.00 €/.test(totPersona));
+    sommaQuote('Anna') === 80 && sommaQuote('Bruno') === 80 && /80,00 €/.test(totPersona));
 
   ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
   await fine(browser);
