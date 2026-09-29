@@ -20,6 +20,12 @@ const AVVISO = /non è ancora pronto per il campo/i;
 // Un campo con dentro qualcosa. La cache non c'e' (il browser di prova non
 // registra il service worker), quindi il primo controllo e' rosso davvero.
 const conCampo = () => {
+  // «La cache non c'e'» deve essere VERA, non una questione di tempo:
+  // index.html il service worker lo registra anche qui, e il controllo si
+  // ripete ogni 5 secondi. Con novanta prove in parallelo la lettura arrivava
+  // dopo il secondo giro, col service worker gia' al comando, e la prova
+  // cadeva una volta su due per un motivo che col codice non c'entrava.
+  if (navigator.serviceWorker) navigator.serviceWorker.register = () => new Promise(() => {});
   localStorage.setItem('cambusa_members', JSON.stringify([
     { id: 'a', name: 'Alice', isChild: false },
   ]));
@@ -96,6 +102,7 @@ const testo = (p) => p.locator('main').innerText();
   {
     const { browser, page: p, menu, errori } = await apri({
       initScript: () => {
+        if (navigator.serviceWorker) navigator.serviceWorker.register = () => new Promise(() => {});
         localStorage.setItem('cambusa_members', JSON.stringify([]));
         localStorage.setItem('cambusa_tobuy', JSON.stringify([{ id: 't1', name: 'Pane', qty: '' }]));
       },

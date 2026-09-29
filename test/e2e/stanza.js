@@ -12,7 +12,7 @@
 // della sua impronta, le regole Firestore continuerebbero a funzionare e
 // nessuna prova se ne accorgerebbe, ma chiunque legga il database entrerebbe
 // in tutte le stanze.
-const { apri, ok, fine } = require('../lib/app');
+const { apri, ok, fine, attendi } = require('../lib/app');
 
 // La bandiera si accende intercettando APP_CONFIG, come in e2e/lingue e
 // e2e/account: firebase-config.js lo riscrive per intero DOPO di noi.
@@ -190,7 +190,9 @@ const home = async (a) => {
   await a.page.locator('main input[type="date"]').first().fill('2027-08-11');
   await a.page.locator('main input[type="date"]').nth(1).fill('2027-08-16');
   await a.page.locator('main button', { hasText: /^Crea$/i }).click();
-  await a.page.waitForTimeout(600);
+  // Creata la stanza si finisce nel suo Calendario, coi primi passi e il
+  // codice: si aspetta quello, non un numero di millisecondi.
+  await attendi(a.page, () => window.__db.scritture.length >= 3 && !!document.querySelector('[data-primi-passi]')).catch(() => {});
 
   const esito = await a.page.evaluate(() => ({
     scritture: window.__db.scritture,
@@ -239,7 +241,9 @@ const home = async (a) => {
     // "permission-denied" deve diventare una frase che si capisce.
     await b.page.locator('main input[placeholder="Codice"]').fill('2345-6789');
     await b.page.locator('main button', { hasText: /^Entra$/i }).click();
-    await b.page.waitForTimeout(500);
+    // Si aspetta la risposta, non un numero di millisecondi: sotto carico
+    // mezzo secondo non bastava.
+    await attendi(b.page, () => /non apre nessuna stanza|permission-denied/i.test(document.querySelector('main').innerText));
     const sbagliato = await b.page.locator('main').innerText();
     ok(`un codice che non apre niente diventa una frase (${/non apre nessuna stanza/.test(sbagliato) ? 'tradotto' : 'NON tradotto'})`,
       /non apre nessuna stanza/.test(sbagliato) && !/permission-denied/.test(sbagliato));
@@ -248,7 +252,7 @@ const home = async (a) => {
     // stesso codice, e deve entrare.
     await b.page.locator('main input[placeholder="Codice"]').fill('k7rx 2mqp');
     await b.page.locator('main button', { hasText: /^Entra$/i }).click();
-    await b.page.waitForTimeout(600);
+    await attendi(b.page, () => localStorage.getItem('cambusa_stanza') === 'K7RX2MQP' && /calendario/i.test(document.querySelector('header').innerText)).catch(() => {});
     // Entrati, si e' DENTRO il campo: la stanza e' quella, e l'app porta
     // al suo Calendario invece di lasciare davanti all'elenco dei campi.
     const dentro = await b.page.evaluate(() => localStorage.getItem('cambusa_stanza'));
@@ -313,7 +317,7 @@ const home = async (a) => {
     ok(`e il codice non resta nella barra (${barra.slice(-24)})`, barra.indexOf('K7RX') < 0);
 
     await d.page.locator('main button', { hasText: /^Entra$/i }).click();
-    await d.page.waitForTimeout(700);
+    await attendi(d.page, () => localStorage.getItem('cambusa_stanza') === 'K7RX2MQP').catch(() => {});
     const entrato = await d.page.evaluate(() => localStorage.getItem('cambusa_stanza'));
     ok(`toccando "Entra" si entra (${entrato || 'FUORI'})`, entrato === 'K7RX2MQP');
 
@@ -363,7 +367,9 @@ const home = async (a) => {
     await f.page.waitForTimeout(300);
     await f.page.locator('main input[placeholder="Codice"]').fill('K7RX-2MQP');
     await f.page.locator('main button', { hasText: /^Entra$/i }).click();
-    await f.page.waitForTimeout(900);
+    // Entrare cambia cassetto e rimonta l'app: l'aggancio arriva dopo, e
+    // quando arriva dipende dal carico. Si aspetta lui.
+    await attendi(f.page, () => (window.__agganci || []).includes('K7RX2MQP')).catch(() => {});
 
     const agganci = await f.page.evaluate(() => window.__agganci || []);
     ok(`entrando nella stanza la sincronizzazione si aggancia al suo codice (${JSON.stringify(agganci)})`,

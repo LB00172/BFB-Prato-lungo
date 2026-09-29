@@ -147,6 +147,15 @@ const spese = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('cam
     !!ultimo && Object.values(ultimo._meta.rev).every((v) => v > 0));
 
   // --- Uno stato remoto identico non deve far rimbalzare niente ---
+  // Si conta da fermi: sotto carico l'invio del passo di prima puo' arrivare
+  // in ritardo, e contato dopo sembrerebbe un rimbalzo che non c'e'. Si
+  // aspetta che il numero di invii resti uguale per un secondo intero.
+  for (let prec = -1, giri = 0; giri < 20; giri++) {
+    const n = await p.evaluate(() => window.__pushes.length);
+    if (n === prec) break;
+    prec = n;
+    await p.waitForTimeout(1000);
+  }
   const primaPush = await p.evaluate(() => window.__pushes.length);
   await p.evaluate(() => {
     const u = window.__pushes[window.__pushes.length - 1];
