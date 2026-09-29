@@ -14,7 +14,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    `frase('chiave')` quando c'è del grassetto dentro — `fraseVestita(classe,
    'chiave')` se quel grassetto ha anche un colore — e `L.data(d, 'forma')`
    per le date. **Mai `'it-IT'` a mano** — ce n'erano 32 sparsi, adesso zero.
-   **Tutti** i sorgenti passano dal dizionario (942 chiavi) e
+   **Tutti** i sorgenti passano dal dizionario (956 chiavi) e
    `FEATURES.lingue` è accesa: `node test/censimento-testi.js` dice se
    qualcuno ha scritto testo nuovo a mano, e una prova lo vieta — compreso
    un sorgente appena nato, che senza quella riga entrerebbe senza contarlo.
@@ -34,7 +34,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 90 prove, **tre minuti
+4. **Prima di dire "fatto" gira `npm test`.** 91 prove, **tre minuti
    scarsi**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
@@ -84,9 +84,10 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `src/8*-schede-*.jsx` | il **disegno** delle schede, uscito da `App()`. Non sono componenti React: sono funzioni che restituiscono JSX e ricevono le dipendenze in un oggetto. Disegnano e **non tengono stato** |
 | `src/45-icone.jsx` | **le icone**, SVG in linea con `stroke="currentColor"`: prendono il colore dal testo, quindi tema scuro e tavolozza vengono gratis. Si chiamano per nome, `icona('calendario')`; un nome inventato non dà errore, dà un buco — una prova lo vieta. Le emoji rimaste possono solo scendere |
 | `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneMenu`, `bottoneScelta` (i chip accesi/spenti). La guardia chiede l'elenco a questo file, non lo tiene scritto |
+| `src/86b-scheda-campo.jsx` | **«Il campo»**: l'invito in cima, poi le cose del campo come righe che si aprono una alla volta (nome e date, luogo del meteo, voci, aiutante, regole) — le cambia il capogruppo, gli altri leggono — e il Pro in fondo. Impostazioni invece è **della persona**: account, lingua, aspetto, pronto senza linea; blocco con password e dati del telefono stanno in modalità tecnica |
 | `src/87-scheda-compiti.jsx` | «Chi fa cosa»: i compiti assegnati, dietro `FEATURES.compiti`. Un compito **non** è una spesa |
 | `src/88-scheda-ingresso.jsx` | **l'ingresso**: la tessera dell'account (una sola, usata da Impostazioni e dalla schermata d'apertura) e la schermata d'apertura, che compare solo a chi non ha **né** un account **né** un campo |
-| `src/89-scheda-campi.jsx` | **la home, «I miei campi»**: l'elenco dei campi della persona e il modulo Crea / Partecipa (uno solo, usato anche da Impostazioni). Compare da sola quando non c'è un campo aperto, e dal menu quando c'è. L'elenco sta sul telefono (`cambusa_campi`) e si corregge dal cloud: la home si apre senza linea. Le regole (ricordare, aggiornare, ordinare) sono in `stanza.js` |
+| `src/89-scheda-campi.jsx` | **la home, «I miei campi»**: l'elenco dei campi della persona e il modulo Crea / Partecipa (sta solo qui: entrando o creando si finisce nel Calendario del campo). Compare da sola quando non c'è un campo aperto, e dal menu quando c'è. L'elenco sta sul telefono (`cambusa_campi`) e si corregge dal cloud: la home si apre senza linea. Le regole (ricordare, aggiornare, ordinare) sono in `stanza.js` |
 | `src/78-usa-account.jsx` | lo stato del login: maschera, occupato, problema. Le regole no — quelle stanno in `auth.js` |
 | `src/79-usa-stanza.jsx` | lo stato della stanza: crea, entra, chi c'è dentro. Dietro `FEATURES.rooms` |
 | ~~`src/60-gioco.jsx`~~ | **non c'è su questo ramo.** «Aiuta Bandy» è della Brigata e vive solo su `main`: tolto dall'app pubblica il 28 settembre (sorgenti, scheda, `bandy.png`, testi, prove). `unita/compilazione` diventa rossa se rientra |
@@ -111,7 +112,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
 | `functions/` | **il server del Pro**, su Firebase (non su Vercel: `.vercelignore`). `pro.js` sono le decisioni (chi paga, fino a quando, un gettone vale una volta), provate da `unita/server-pro` con Google e Firestore finti; `index.js` collega e basta. Niente chiavi: usa l'identità del suo account di servizio. Si pubblica con `npx firebase deploy --only functions` |
-| `test/` | 17 prove unitarie + 73 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo; `apri({ prima })` per quello che deve esistere prima dell'apertura (le strade di rete finte) |
+| `test/` | 17 prove unitarie + 74 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo; `apri({ prima })` per quello che deve esistere prima dell'apertura (le strade di rete finte) |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -467,7 +468,7 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
 
 ## Se al campo qualcosa non torna
 
-Impostazioni → Backup Dati → **Esporta**: produce il JSON completo dello
+Spese Totali → Dati → **Esporta**: produce il JSON completo dello
 stato. È il modo di guardare i dati veri invece di ipotizzare — Firestore
 da qui non si vede, e l'export funziona anche senza linea.
 

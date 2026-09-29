@@ -893,6 +893,8 @@ const ICONE = {
   pronto: 'M7 8h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3z M9 8V6a3 3 0 0 1 6 0v2 M9 14h6 M10 21v-4h4v4',
   // Aggiungere: il tasto «+ Spesa».
   piu: 'M12 5v14 M5 12h14',
+  // «Il campo»: la bandierina piantata.
+  campo: 'M5 21V4 M5 4h12l-2.5 4L17 12H5',
   // La spunta di un passo fatto.
   fatto: 'M5 12l5 5L20 7',
   // Il luogo del campo: il segnaposto, il gesto che tutti conoscono dalle mappe.
@@ -1166,7 +1168,7 @@ const avvisoPro = ({
 }, segnoPro(), L.t(NOME_PRO[funzione])), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-600 leading-snug"
 }, L.t(capogruppo ? 'pro.perCapogruppo' : 'pro.perMembro')), capogruppo && goTo && /*#__PURE__*/React.createElement("button", {
-  onClick: () => goTo('impostazioni'),
+  onClick: () => goTo('campo', 'pro'),
   className: bottone('avviso', 'minuscolo', 'w-full')
 }, L.t('pro.scopri')));
 
@@ -1180,7 +1182,7 @@ const rigaPro = ({
   goTo
 }) => /*#__PURE__*/React.createElement("button", {
   "data-pro-bloccata": funzione,
-  onClick: () => goTo('impostazioni'),
+  onClick: () => goTo('campo', 'pro'),
   className: bottoneRiga('rounded border border-fuoco/40 bg-fuoco/10')
 }, /*#__PURE__*/React.createElement("span", {
   className: "flex items-center gap-2 min-w-0 text-piccolo font-bold text-bosco"
@@ -2413,6 +2415,45 @@ const usaStanza = () => {
     const c = window.Stanza.normalizza(stanza.codice);
     setCampi(l => l.map(v => window.Stanza.normalizza(v.codice) === c ? Object.assign({}, v, campi) : v));
   };
+  // ---------- La scheda «Il campo» ----------
+  // Le righe si aprono una alla volta: e' l'elenco delle cose del campo, e
+  // aperte tutte insieme tornerebbe il muro di riquadri che c'era in
+  // Impostazioni. Quale riga e' aperta sta qui e non nella scheda: le schede
+  // disegnano e non tengono stato.
+  const [rigaCampo, setRigaCampo] = useState('');
+  const apriRigaCampo = k => setRigaCampo(v => v === k ? '' : k);
+
+  // Nome e date: il capogruppo li corregge. Le regole sono quelle del modulo
+  // di creazione (Stanza.validaModulo), e le date sono quelle che il
+  // Calendario usa per tutti: a correggerle si sposta il campo di ognuno.
+  const [bozzaCampo, setBozzaCampo] = useState(null);
+  const apriBozzaCampo = () => {
+    const v = voceAperta || {};
+    setBozzaCampo({
+      nome: v.nome || stanza && stanza.nome || '',
+      inizio: v.inizio || '',
+      fine: v.fine || ''
+    });
+    pulisci();
+  };
+  const salvaNomeDate = async () => {
+    if (!stanza || !bozzaCampo) return false;
+    const dati = {
+      nome: String(bozzaCampo.nome || '').trim(),
+      inizio: bozzaCampo.inizio,
+      fine: bozzaCampo.fine
+    };
+    const problemi = window.Stanza.validaModulo(dati);
+    if (problemi.length) {
+      setProblema(problemi[0]);
+      return false;
+    }
+    const fatto = await prova(c => c.impostaStanza(stanza.codice, dati).then(() => true));
+    if (!fatto) return false;
+    aggiornaVoceAperta(dati);
+    setBozzaCampo(null);
+    return true;
+  };
   const salvaRegole = async testo => {
     if (!stanza) return false;
     const elenco = window.Stanza.regoleDaTesto(testo);
@@ -2762,6 +2803,14 @@ const usaStanza = () => {
     riagganciaStanza,
     mandaInvito,
     invitoMandato,
+    rigaCampo,
+    apriRigaCampo,
+    setRigaCampo,
+    bozzaCampo,
+    setBozzaCampo,
+    apriBozzaCampo,
+    salvaNomeDate,
+    voceAperta,
     campi,
     apriCampo,
     aggiornaCampi
@@ -3621,8 +3670,14 @@ function App({
     if (cassettoFallito && eredita.cassetto.a === code) return false;
     const CS = window.CloudSync;
     if (CS && CS.isConnected()) CS.disconnect();
+    // Dalla home si entra nel campo: chi l'ha appena creato, o e' appena
+    // entrato col codice, deve trovarsi DENTRO — nel Calendario, dove chi
+    // l'ha creato trova i primi passi — non di nuovo davanti all'elenco.
+    // Solo entrando in una stanza: uscendone (lasciare il campo, esci) si
+    // torna alla home, ed e' li' che si deve restare.
+    const entrando = !!(stanzaStato.stanza && window.Stanza && window.Stanza.normalizza(stanzaStato.stanza.codice) === window.Stanza.normalizza(code));
     cambiaCampo(code, {
-      tab: activeTab
+      tab: activeTab === 'campi' && entrando ? 'calendario' : activeTab
     });
     return false;
   };
@@ -5873,12 +5928,12 @@ function App({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stanzaStato.stanza && stanzaStato.stanza.codice, account.utente && account.utente.uid]);
 
-  // Il capogruppo, aprendo Impostazioni, deve poter scegliere l'aiutante fra
+  // Il capogruppo, aprendo «Il campo», deve poter scegliere l'aiutante fra
   // chi c'e': l'elenco dei membri si chiede li', e solo a lui.
   useEffect(() => {
     // E nel Calendario, finche' l'invito dei primi passi non e' partito da
     // qui: se qualcuno e' gia' entrato, quel passo e' fatto lo stesso.
-    if (FEATURES.rooms && stanzaStato.capogruppo && (scheda === 'impostazioni' || scheda === 'calendario' && !stanzaStato.invitoMandato)) stanzaStato.aggiornaMembri();
+    if (FEATURES.rooms && stanzaStato.capogruppo && (scheda === 'campo' || scheda === 'calendario' && !stanzaStato.invitoMandato)) stanzaStato.aggiornaMembri();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheda, stanzaStato.capogruppo]);
 
@@ -5958,7 +6013,8 @@ function App({
     archivio: L.t('area.archivio'),
     guida: L.t('area.guida'),
     impostazioni: L.t('area.impostazioni'),
-    campi: L.t('area.campi')
+    campi: L.t('area.campi'),
+    campo: L.t('area.campo')
   };
 
   // Le icone delle aree stanno in src/45-icone.jsx e si chiamano per nome,
@@ -6002,10 +6058,21 @@ function App({
   }, L.t('acquirente.nonPiuMembro', value))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-fuoco mt-1"
   }, L.t('galleria.primaMembri')));
-  const goTo = tab => {
+
+  // Il secondo argomento apre una riga di «Il campo» (o ci scorre, per il
+  // Pro): chi tocca «scegli il luogo» dal Calendario deve arrivare al luogo,
+  // non a una scheda da cercare.
+  const goTo = (tab, riga) => {
     setActiveTab(tab);
     setMenuOpen(false);
     setManualOpen(false);
+    if (tab === 'campo' && riga) stanzaStato.setRigaCampo(riga === 'pro' ? '' : riga);
+    if (tab === 'campo' && riga === 'pro') setTimeout(() => {
+      const el = document.querySelector('[data-riquadro="pro"]');
+      if (el && el.scrollIntoView) el.scrollIntoView({
+        block: 'start'
+      });
+    }, 50);
   };
 
   // Guida: una "pill" per ogni area di lavoro.
@@ -6162,7 +6229,15 @@ function App({
     className: "w-5 shrink-0 flex items-center justify-center"
   }, icona('campi')), /*#__PURE__*/React.createElement("span", {
     className: "min-w-0 truncate"
-  }, L.t('area.campi'))), !dentroUnCampo && [['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => /*#__PURE__*/React.createElement("button", {
+  }, L.t('area.campi'))), dentroUnCampo && /*#__PURE__*/React.createElement("button", {
+    "data-voce": "campo",
+    onClick: () => goTo('campo'),
+    className: bottoneMenu(scheda === 'campo')
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-5 shrink-0 flex items-center justify-center"
+  }, icona('campo')), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, L.t('area.campo'))), !dentroUnCampo && [['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => /*#__PURE__*/React.createElement("button", {
     key: modo,
     onClick: () => {
       stanzaStato.setModo(modo);
@@ -6538,6 +6613,11 @@ function App({
     GUIDE,
     guideOpen,
     setGuideOpen
+  }), scheda === 'campo' && FEATURES.rooms && schedaCampo({
+    account,
+    contiBloccati: !!bloccoConti(),
+    goTo,
+    stanzaStato
   }), scheda === 'impostazioni' && schedaImpostazioni({
     account,
     stanzaStato,
@@ -7028,7 +7108,7 @@ const schedaCalendario = ({
     if (!capogruppo) return null;
     return /*#__PURE__*/React.createElement("button", {
       "data-luogo-manca": true,
-      onClick: () => goTo('impostazioni'),
+      onClick: () => goTo('campo', 'luogo'),
       className: bottoneRiga('rounded border border-salvia/20 bg-carta/60')
     }, /*#__PURE__*/React.createElement("span", {
       className: "flex items-center gap-2"
@@ -8966,34 +9046,7 @@ const schedaImpostazioni = ({
   adminPermesso
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
-}, /*#__PURE__*/React.createElement("div", {
-  className: `p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-scheda border-bosco/20' : 'bg-scheda border-fuoco/50'}`
-}, /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center justify-between border-b border-salvia/40 pb-2"
-}, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-grande text-bosco"
-}, L.t('pronto.titolo')), /*#__PURE__*/React.createElement("span", {
-  className: `text-minuto uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-fuoco text-white' : 'bg-bosco text-white'}`
-}, L.t(!campoInCorso ? 'pronto.nessunCampo' : readyOk ? 'pronto.si' : 'pronto.nonAncora'))), !campoInCorso ? /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-gray-500 leading-snug"
-}, frase('pronto.senzaCampo')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-gray-500 leading-snug"
-}, frase('pronto.treCose')), /*#__PURE__*/React.createElement("ul", {
-  className: "space-y-2"
-}, readyChecks.map(c => /*#__PURE__*/React.createElement("li", {
-  key: c.titolo,
-  className: `flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-carta/60 border-salvia/20' : 'bg-fuoco/10 border-fuoco/40'}`
-}, /*#__PURE__*/React.createElement("span", {
-  className: "text-medio leading-none shrink-0"
-}, c.ok ? '✅' : '⚠️'), /*#__PURE__*/React.createElement("div", {
-  className: "min-w-0"
-}, /*#__PURE__*/React.createElement("div", {
-  className: "text-piccolo font-bold text-bosco"
-}, c.titolo), !c.ok && /*#__PURE__*/React.createElement("div", {
-  className: "text-piccolo text-legno leading-snug mt-0.5"
-}, c.no))))), readyOk && /*#__PURE__*/React.createElement("p", {
-  className: "text-minuto text-gray-400 italic"
-}, L.t('pronto.tuttoBene')))), FEATURES.auth && schedaAccount({
+}, FEATURES.auth && schedaAccount({
   account,
   // Cancellato l'account, si esce anche dalla stanza su questo telefono:
   // la scheda li' dentro non c'e' piu', e la sincronizzazione andrebbe a
@@ -9002,26 +9055,7 @@ const schedaImpostazioni = ({
     const fatto = await account.cancellaAccount(stanzaStato.stanza && stanzaStato.stanza.codice);
     if (fatto) stanzaStato.esci();
   }
-}), FEATURES.rooms && /*#__PURE__*/React.createElement("div", {
-  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
-}, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
-}, L.t('stanza.titolo')), stanzaStato.invito && /*#__PURE__*/React.createElement("div", {
-  className: "bg-carta/70 border border-bosco/20 rounded p-3 space-y-2"
-}, /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-bosco leading-snug"
-}, frase('stanza.invitoCodice', Stanza.bello(stanzaStato.invito))), /*#__PURE__*/React.createElement("div", {
-  className: "flex gap-2"
-}, /*#__PURE__*/React.createElement("button", {
-  onClick: stanzaStato.rifiutaInvito,
-  className: bottone('testuale', 'normale', 'flex-1')
-}, L.t('stanza.rifiutaInvito')), /*#__PURE__*/React.createElement("button", {
-  onClick: () => stanzaStato.accettaInvito(account.utente),
-  disabled: stanzaStato.occupato,
-  className: bottone('primario', 'normale', 'flex-1')
-}, L.t('stanza.accettaInvito')))), stanzaStato.stanza ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-bosco leading-snug"
-}, frase('stanza.entrato', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice))), FEATURES.auth && (account.stato === 'ospite' || account.stato === 'anonimo') && /*#__PURE__*/React.createElement("div", {
+}), FEATURES.rooms && stanzaStato.stanza && FEATURES.auth && (account.stato === 'ospite' || account.stato === 'anonimo') && /*#__PURE__*/React.createElement("div", {
   "data-riquadro": "tieni-il-posto",
   className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
 }, /*#__PURE__*/React.createElement("p", {
@@ -9035,252 +9069,24 @@ const schedaImpostazioni = ({
   },
   disabled: account.occupato || stanzaStato.occupato,
   className: bottone('primario', 'normale', 'w-full')
-}, L.t('stanza.collegaGoogle'))), /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center justify-between gap-2 bg-carta/60 rounded p-2"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "font-mono text-medio tracking-widest text-bosco min-w-0 break-words"
-}, Stanza.bello(stanzaStato.stanza.codice)), /*#__PURE__*/React.createElement("button", {
-  onClick: () => {
-    try {
-      navigator.clipboard.writeText(Stanza.bello(stanzaStato.stanza.codice));
-    } catch (e) {/* niente */}
-  },
-  className: bottone('secondario', 'minuscolo', 'shrink-0')
-}, L.t('stanza.copiaCodice'))), /*#__PURE__*/React.createElement("div", {
+}, L.t('stanza.collegaGoogle'))), FEATURES.rooms && stanzaStato.fatto === 'stanza.postoTenuto' && /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-bosco leading-snug px-1"
+}, L.t('stanza.postoTenuto')), FEATURES.rooms && stanzaStato.invito && /*#__PURE__*/React.createElement("div", {
+  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2"
+}, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-bosco leading-snug"
+}, frase('stanza.invitoCodice', Stanza.bello(stanzaStato.invito))), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("button", {
-  onClick: stanzaStato.mandaInvito,
-  className: bottone('primario', 'normale', 'flex-1')
-}, L.t('stanza.condividi')), /*#__PURE__*/React.createElement("button", {
-  onClick: () => {
-    try {
-      navigator.clipboard.writeText(stanzaStato.linkDaMandare());
-    } catch (e) {/* niente */}
-  },
-  className: bottone('secondario', 'normale', 'flex-1')
-}, L.t('stanza.copiaLink'))), stanzaStato.membri.length > 0 && /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-gray-500"
-}, L.t('stanza.dentro', stanzaStato.membri.length)), /*#__PURE__*/React.createElement("div", {
-  "data-riquadro": "pro",
-  className: `rounded border p-3 space-y-2 ${stanzaStato.pro ? 'border-fuoco/40 bg-fuoco/10' : 'border-bosco/25 bg-orlo/40'}`
-}, /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo font-bold text-bosco flex items-center gap-2"
-}, segnoPro(), stanzaStato.pro ? stanzaStato.proFino ? L.t('pro.attivoFino', L.data(parseDate(stanzaStato.proFino), 'breve')) : L.t('pro.attivo') : L.t('pro.gratuito')), !stanzaStato.pro && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-  className: "text-minuto text-gray-600 leading-snug"
-}, L.t(stanzaStato.capogruppo ? 'pro.cosaSblocca' : 'pro.perMembro')), /*#__PURE__*/React.createElement("ul", {
-  className: "text-minuto text-bosco space-y-0.5 pl-1"
-}, window.Stanza.FUNZIONI_PRO.map(f => /*#__PURE__*/React.createElement("li", {
-  key: f
-}, "\xB7 ", L.t(NOME_PRO[f])))), /*#__PURE__*/React.createElement("p", {
-  className: "text-minuto text-gray-500 leading-snug"
-}, L.t('pro.maiIConti')), stanzaStato.capogruppo && stanzaStato.negozio === 'assente' && /*#__PURE__*/React.createElement("p", {
-  "data-pro-solo-android": true,
-  className: "text-minuto text-bosco leading-snug"
-}, L.t('pro.soloAndroid')), stanzaStato.capogruppo && stanzaStato.negozio && stanzaStato.negozio !== 'assente' && /*#__PURE__*/React.createElement("div", {
-  className: "space-y-2 pt-1"
-}, [[window.Stanza.PRODOTTI_PRO.campo, 'pro.compraCampo', 'pro.compraCampoSpiega'], [window.Stanza.PRODOTTI_PRO.anno, 'pro.compraAnno', 'pro.compraAnnoSpiega']].map(([sku, etichetta, spiega]) => /*#__PURE__*/React.createElement("div", {
-  key: sku
-}, /*#__PURE__*/React.createElement("button", {
-  "data-compra": sku,
-  onClick: () => stanzaStato.compraPro(sku),
-  disabled: !!stanzaStato.acquistando,
-  className: bottone(sku === window.Stanza.PRODOTTI_PRO.campo ? 'avviso' : 'secondario', 'normale', 'w-full')
-}, stanzaStato.acquistando === sku ? '…' : L.t(etichetta, stanzaStato.negozio.prezzi[sku] || '')), /*#__PURE__*/React.createElement("p", {
-  className: "text-minuto text-gray-500 leading-snug mt-1"
-}, L.t(spiega)))))), stanzaStato.esitoPro && stanzaStato.esitoPro.fatto && /*#__PURE__*/React.createElement("p", {
-  "data-pro-esito": true,
-  className: "text-piccolo font-bold text-bosco leading-snug"
-}, L.t(stanzaStato.esitoPro.fatto)), stanzaStato.esitoPro && stanzaStato.esitoPro.errore && /*#__PURE__*/React.createElement("p", {
-  "data-pro-esito": true,
-  className: "text-piccolo font-bold text-red-700 leading-snug"
-}, L.t(stanzaStato.esitoPro.errore))), stanzaStato.capogruppo && (() => {
-  const io = account.utente && account.utente.uid;
-  const altri = stanzaStato.membri.filter(m => m.uid !== io);
-  const nomeDi = uid => {
-    const m = stanzaStato.membri.find(x => x.uid === uid);
-    return m && m.nome || L.t('stanza.unMembro');
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    "data-riquadro": "aiutante",
-    className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-piccolo font-bold text-bosco"
-  }, L.t('stanza.aiutanteTitolo')), /*#__PURE__*/React.createElement("p", {
-    className: "text-minuto text-gray-500 leading-snug"
-  }, L.t('stanza.aiutanteSpiega')), stanzaStato.vice && /*#__PURE__*/React.createElement("p", {
-    className: "text-piccolo text-bosco leading-snug"
-  }, frase('stanza.aiutanteE', nomeDi(stanzaStato.vice))), altri.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2"
-  }, /*#__PURE__*/React.createElement("select", {
-    value: stanzaStato.sceltaAiutante,
-    onChange: e => stanzaStato.setSceltaAiutante(e.target.value),
-    className: "flex-1 min-w-0 p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, L.t('stanza.aiutanteScegli')), altri.map(m => /*#__PURE__*/React.createElement("option", {
-    key: m.uid,
-    value: m.uid
-  }, m.nome || L.t('stanza.unMembro')))), /*#__PURE__*/React.createElement("button", {
-    onClick: () => stanzaStato.nominaAiutante(stanzaStato.sceltaAiutante),
-    disabled: !stanzaStato.sceltaAiutante || stanzaStato.occupato,
-    className: bottone('secondario', 'normale', 'shrink-0')
-  }, L.t('stanza.aiutanteNomina'))), stanzaStato.fatto === 'stanza.aiutanteNominato' && /*#__PURE__*/React.createElement("p", {
-    className: "text-piccolo text-bosco leading-snug"
-  }, L.t('stanza.aiutanteNominato')), stanzaStato.vice && /*#__PURE__*/React.createElement("button", {
-    onClick: async () => {
-      if (!window.confirm(L.t('stanza.confermaLascia', nomeDi(stanzaStato.vice), stanzaStato.pro))) return;
-      await stanzaStato.lasciaCampo(account.utente, () => goTo('campi'));
-    },
-    disabled: stanzaStato.occupato,
-    className: bottone('distruttivo', 'minuscolo', 'w-full')
-  }, L.t('stanza.lasciaCampo', nomeDi(stanzaStato.vice))));
-})(), stanzaStato.capogruppo && !stanzaStato.sbloccata('meteo') && avvisoPro({
-  funzione: 'meteo',
-  capogruppo: true
-}), stanzaStato.capogruppo && stanzaStato.sbloccata('meteo') && (() => {
-  const campoTesto = 'p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco';
-  const l = stanzaStato.luogo;
-  const c = stanzaStato.candidatoLuogo;
-  return /*#__PURE__*/React.createElement("div", {
-    "data-riquadro": "luogo",
-    className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-piccolo font-bold text-bosco flex items-center gap-1.5"
-  }, icona('luogo', 'w-4 h-4'), L.t('luogo.titolo')), /*#__PURE__*/React.createElement("p", {
-    className: "text-minuto text-gray-500 leading-snug"
-  }, L.t('luogo.spiega')), stanzaStato.cercaLuogo === null ? /*#__PURE__*/React.createElement(React.Fragment, null, l ? /*#__PURE__*/React.createElement("p", {
-    "data-luogo-scelto": true,
-    className: "text-piccolo text-bosco leading-snug"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, l.label || L.t('luogo.senzaNome')), /*#__PURE__*/React.createElement("span", {
-    className: "block text-minuto text-gray-500 font-mono"
-  }, l.lat, ", ", l.lon, typeof l.alt === 'number' ? ` · ${L.t('luogo.aQuota', l.alt)}` : ` · ${L.t('luogo.quotaNonDetta')}`)) : /*#__PURE__*/React.createElement("p", {
-    className: "text-piccolo text-gray-500 leading-snug"
-  }, L.t('luogo.nonScelto')), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: stanzaStato.apriLuogo,
-    disabled: stanzaStato.occupato,
-    className: bottone('secondario', 'normale', 'flex-1')
-  }, L.t(l ? 'luogo.cambia' : 'luogo.scegli')), l && /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      if (window.confirm(L.t('luogo.confermaTogli'))) stanzaStato.salvaLuogo(null);
-    },
-    disabled: stanzaStato.occupato,
-    className: bottone('testuale', 'normale', 'shrink-0')
-  }, L.t('luogo.togli')))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2"
-  }, /*#__PURE__*/React.createElement("input", {
-    "data-cerca-luogo": true,
-    value: stanzaStato.cercaLuogo,
-    onChange: e => stanzaStato.setCercaLuogo(e.target.value),
-    onKeyDown: e => {
-      if (e.key === 'Enter') stanzaStato.trovaLuogo();
-    },
-    placeholder: L.t('luogo.segnaposto'),
-    className: `flex-1 min-w-0 ${campoTesto}`
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: stanzaStato.trovaLuogo,
-    disabled: stanzaStato.cercandoLuogo,
-    className: bottone('secondario', 'normale', 'shrink-0')
-  }, stanzaStato.cercandoLuogo ? '…' : L.t('luogo.cerca'))), /*#__PURE__*/React.createElement("p", {
-    className: "text-minuto text-gray-500 leading-snug"
-  }, L.t('luogo.aiuto')), stanzaStato.trovatiLuogo.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "rounded border border-salvia/30 bg-scheda divide-y divide-salvia/20"
-  }, stanzaStato.trovatiLuogo.map((t, i) => {
-    const scelto = !!(c && c.lat === t.lat && c.lon === t.lon);
-    return /*#__PURE__*/React.createElement("button", {
-      key: i,
-      "data-trovato": i,
-      onClick: () => stanzaStato.setCandidatoLuogo(t),
-      className: bottoneRiga()
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `text-piccolo leading-snug ${scelto ? 'font-bold text-bosco' : 'text-gray-700'}`
-    }, t.label), /*#__PURE__*/React.createElement("span", {
-      className: "text-minuto text-gray-400 shrink-0"
-    }, typeof t.alt === 'number' ? L.t('luogo.aQuota', t.alt) : ''));
-  })), stanzaStato.erroreLuogo && /*#__PURE__*/React.createElement("p", {
-    className: "text-piccolo font-bold text-red-700 leading-snug"
-  }, L.t(stanzaStato.erroreLuogo)), c && /*#__PURE__*/React.createElement("div", {
-    "data-candidato": true,
-    className: "rounded border border-bosco/30 bg-scheda p-2 space-y-2"
-  }, /*#__PURE__*/React.createElement("input", {
-    "data-nome-luogo": true,
-    value: c.label || '',
-    onChange: e => stanzaStato.setCandidatoLuogo(Object.assign({}, c, {
-      label: e.target.value
-    })),
-    placeholder: L.t('luogo.nome'),
-    className: `w-full ${campoTesto}`
-  }), /*#__PURE__*/React.createElement("p", {
-    className: "text-minuto text-gray-500 font-mono"
-  }, c.lat, ", ", c.lon), /*#__PURE__*/React.createElement("label", {
-    className: "flex items-center gap-2 text-piccolo text-gray-600"
-  }, /*#__PURE__*/React.createElement("span", null, L.t('luogo.quota')), /*#__PURE__*/React.createElement("input", {
-    "data-quota-luogo": true,
-    type: "number",
-    inputMode: "numeric",
-    value: typeof c.alt === 'number' || typeof c.alt === 'string' ? c.alt : '',
-    onChange: e => stanzaStato.setCandidatoLuogo(Object.assign({}, c, {
-      alt: e.target.value
-    })),
-    className: `w-24 ${campoTesto}`
-  }), /*#__PURE__*/React.createElement("span", null, "m")), /*#__PURE__*/React.createElement("p", {
-    className: "text-minuto text-gray-500 leading-snug"
-  }, L.t('luogo.quotaSpiega'))), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2"
-  }, /*#__PURE__*/React.createElement("button", {
-    "data-salva-luogo": true,
-    onClick: () => stanzaStato.salvaLuogo(c),
-    disabled: !c || stanzaStato.occupato,
-    className: bottone('primario', 'normale', 'flex-1')
-  }, L.t('luogo.salva')), /*#__PURE__*/React.createElement("button", {
-    onClick: stanzaStato.chiudiLuogo,
-    className: bottone('testuale', 'normale', 'shrink-0')
-  }, L.t('luogo.annulla')))));
-})(), stanzaStato.capogruppo && window.Voci && /*#__PURE__*/React.createElement("div", {
-  "data-riquadro": "voci",
-  className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
-}, /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo font-bold text-bosco"
-}, L.t('voci.titolo')), /*#__PURE__*/React.createElement("p", {
-  className: "text-minuto text-gray-500 leading-snug"
-}, L.t('voci.spiega')), /*#__PURE__*/React.createElement("div", {
-  className: "grid grid-cols-2 gap-2"
-}, window.Voci.CATEGORIE.map(cat => {
-  const spenta = !!(stanzaStato.voci && stanzaStato.voci[cat] === 'fuori');
-  return /*#__PURE__*/React.createElement("button", {
-    key: cat,
-    "data-voce": cat,
-    onClick: () => {
-      if (!window.confirm(L.t('voci.conferma', L.t(NOME_VOCE[cat]), !spenta))) return;
-      stanzaStato.cambiaVoce(cat, !spenta);
-    },
-    disabled: contiBloccati || stanzaStato.occupato,
-    className: bottoneScelta('interruttore', 'bordato', !spenta, 'minuscolo', contiBloccati ? 'opacity-60 cursor-not-allowed' : '')
-  }, L.t(NOME_VOCE[cat]));
-})), /*#__PURE__*/React.createElement("p", {
-  className: "text-minuto text-gray-500 leading-snug"
-}, L.t(contiBloccati ? 'voci.chiuse' : 'voci.legenda'))), stanzaStato.aiutante && /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-bosco leading-snug"
-}, L.t('stanza.seiAiutante')), /*#__PURE__*/React.createElement("button", {
-  onClick: () => {
-    stanzaStato.esci();
-    goTo('campi');
-  },
+  onClick: stanzaStato.rifiutaInvito,
+  className: bottone('testuale', 'normale', 'flex-1')
+}, L.t('stanza.rifiutaInvito')), /*#__PURE__*/React.createElement("button", {
+  onClick: () => stanzaStato.accettaInvito(account.utente),
   disabled: stanzaStato.occupato,
-  className: bottone('testuale', 'minuscolo', 'w-full')
-}, L.t('stanza.esci'))) : moduloStanza({
-  stanzaStato,
-  account
-}), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
+  className: bottone('primario', 'normale', 'flex-1')
+}, L.t('stanza.accettaInvito'))), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo font-bold text-red-700 leading-snug"
-}, L.t(stanzaStato.problema)), stanzaStato.fatto === 'stanza.creata' && stanzaStato.stanza && /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-bosco leading-snug"
-}, frase('stanza.creata', Stanza.bello(stanzaStato.stanza.codice))), stanzaStato.fatto === 'stanza.postoTenuto' && /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-bosco leading-snug"
-}, L.t('stanza.postoTenuto'))), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
+}, L.t(stanzaStato.problema))), FEATURES.rooms && !stanzaStato.invito && esitoStanza(stanzaStato), FEATURES.lingue && /*#__PURE__*/React.createElement("div", {
   className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
@@ -9310,6 +9116,33 @@ const schedaImpostazioni = ({
 }, icon), l))), /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-gray-500"
 }, L.t('aspetto.spiegazione', theme === 'auto', theme === 'auto' ? isDark : theme === 'dark'))), /*#__PURE__*/React.createElement("div", {
+  className: `p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-scheda border-bosco/20' : 'bg-scheda border-fuoco/50'}`
+}, /*#__PURE__*/React.createElement("div", {
+  className: "flex items-center justify-between border-b border-salvia/40 pb-2"
+}, /*#__PURE__*/React.createElement("h3", {
+  className: "font-rustic text-grande text-bosco"
+}, L.t('pronto.titolo')), /*#__PURE__*/React.createElement("span", {
+  className: `text-minuto uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-fuoco text-white' : 'bg-bosco text-white'}`
+}, L.t(!campoInCorso ? 'pronto.nessunCampo' : readyOk ? 'pronto.si' : 'pronto.nonAncora'))), !campoInCorso ? /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-gray-500 leading-snug"
+}, frase('pronto.senzaCampo')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-gray-500 leading-snug"
+}, frase('pronto.treCose')), /*#__PURE__*/React.createElement("ul", {
+  className: "space-y-2"
+}, readyChecks.map(c => /*#__PURE__*/React.createElement("li", {
+  key: c.titolo,
+  className: `flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-carta/60 border-salvia/20' : 'bg-fuoco/10 border-fuoco/40'}`
+}, /*#__PURE__*/React.createElement("span", {
+  className: "text-medio leading-none shrink-0"
+}, c.ok ? '✅' : '⚠️'), /*#__PURE__*/React.createElement("div", {
+  className: "min-w-0"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "text-piccolo font-bold text-bosco"
+}, c.titolo), !c.ok && /*#__PURE__*/React.createElement("div", {
+  className: "text-piccolo text-legno leading-snug mt-0.5"
+}, c.no))))), readyOk && /*#__PURE__*/React.createElement("p", {
+  className: "text-minuto text-gray-400 italic"
+}, L.t('pronto.tuttoBene')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
 }, /*#__PURE__*/React.createElement("h3", {
   className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
@@ -9485,7 +9318,7 @@ const schedaImpostazioni = ({
     },
     className: bottone('secondario', 'normale', 'flex-1')
   }, L.t('registro.svuota'))));
-})())), /*#__PURE__*/React.createElement("div", {
+})())), admin && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
   className: "bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setBloccoOpen(v => !v),
@@ -9577,7 +9410,7 @@ const schedaImpostazioni = ({
   className: bottone('distruttivo', 'normale', 'w-full')
 }, L.t('dati.cancellaLocale')), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic leading-snug"
-}, L.t('dati.notaCancella')))), /*#__PURE__*/React.createElement("div", {
+}, L.t('dati.notaCancella'))))), /*#__PURE__*/React.createElement("div", {
   className: "bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: () => setTecnicaOpen(v => !v),
@@ -9644,6 +9477,381 @@ const schedaImpostazioni = ({
 }, L.t('info.privacy')), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-salvia/80 pt-1"
 }, BRAND.credits)));
+// ---------- «Il campo» ----------
+// La scheda del campo aperto: prima stava tutta dentro Impostazioni, in
+// mezzo alla lingua e al tema scuro, e per mandare l'invito bisognava
+// scendere oltre il proprio account. Adesso Impostazioni e' della persona, e
+// il campo ha la sua scheda (bozza C1):
+//
+//   1. l'INVITO in cima, perche' e' la cosa che si fa piu' spesso: il codice,
+//      Condividi, Copia il link;
+//   2. le cose del campo, una riga per una, che si aprono una alla volta:
+//      nome e date, il luogo del meteo, cosa si divide, l'aiutante, le regole
+//      e cosa portare. Le cambia il capogruppo; gli altri le leggono;
+//   3. il Pro, in fondo: lo vedono tutti, e lo compra solo il capogruppo.
+//
+// Come le altre schede disegna e non tiene stato: quale riga e' aperta sta in
+// usaStanza (rigaCampo).
+const schedaCampo = ({
+  account,
+  contiBloccati,
+  goTo,
+  stanzaStato
+}) => {
+  if (!stanzaStato.stanza) return null;
+  const capo = stanzaStato.capogruppo;
+  const v = stanzaStato.voceAperta || {};
+  const nomeCampo = v.nome || stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice);
+  const date = v.inizio && v.fine ? L.t('campo.dal', L.data(parseDate(v.inizio), 'breve'), L.data(parseDate(v.fine), 'breve')) : L.t('campo.senzaDate');
+  // Una riga: il titolo, com'e' adesso, e sotto — se aperta — il suo riquadro.
+  const riga = (k, titolo, adesso, contenuto) => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    className: "border-t border-salvia/20 first:border-t-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-riga": k,
+    "aria-expanded": stanzaStato.rigaCampo === k,
+    onClick: () => stanzaStato.apriRigaCampo(k),
+    className: bottoneRiga()
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-normale font-bold text-bosco"
+  }, titolo), adesso && /*#__PURE__*/React.createElement("span", {
+    className: "block text-minuto text-gray-500 truncate"
+  }, adesso)), /*#__PURE__*/React.createElement("span", {
+    className: "text-salvia shrink-0"
+  }, stanzaStato.rigaCampo === k ? '−' : '+')), stanzaStato.rigaCampo === k && /*#__PURE__*/React.createElement("div", {
+    className: "px-4 pb-3"
+  }, contenuto));
+  const campoTesto = 'p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco';
+  const b = stanzaStato.bozzaCampo;
+  const luogo = stanzaStato.luogo;
+  const spente = window.Voci ? window.Voci.CATEGORIE.filter(c => stanzaStato.voci && stanzaStato.voci[c] === 'fuori') : [];
+  return /*#__PURE__*/React.createElement("div", {
+    "data-scheda": "campo",
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-riquadro": "invito",
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande text-bosco"
+  }, L.t('campo.invitaTitolo')), /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500 leading-snug -mt-1"
+  }, L.t('passi.invitaNota')), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2 bg-carta/60 rounded p-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-medio tracking-widest text-bosco min-w-0 break-words"
+  }, Stanza.bello(stanzaStato.stanza.codice)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      try {
+        navigator.clipboard.writeText(Stanza.bello(stanzaStato.stanza.codice));
+      } catch (e) {/* niente */}
+    },
+    className: bottone('secondario', 'minuscolo', 'shrink-0')
+  }, L.t('stanza.copiaCodice'))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: stanzaStato.mandaInvito,
+    className: bottone('primario', 'normale', 'flex-1')
+  }, L.t('stanza.condividi')), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      try {
+        navigator.clipboard.writeText(stanzaStato.linkDaMandare());
+      } catch (e) {/* niente */}
+    },
+    className: bottone('secondario', 'normale', 'flex-1')
+  }, L.t('stanza.copiaLink'))), stanzaStato.membri.length > 0 && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500"
+  }, L.t('stanza.dentro', stanzaStato.membri.length))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-4 pt-3 pb-2 border-b border-salvia/40"
+  }, /*#__PURE__*/React.createElement("h3", {
+    "data-nome-campo": true,
+    className: "font-rustic text-grande text-bosco"
+  }, nomeCampo), /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500"
+  }, date), stanzaStato.aiutante && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-bosco leading-snug mt-1"
+  }, L.t('stanza.seiAiutante'))), capo ? /*#__PURE__*/React.createElement("div", null, riga('nome', L.t('campo.nomeDate'), date, b ? /*#__PURE__*/React.createElement("div", {
+    "data-riquadro": "nome-date",
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    "data-nome": true,
+    value: b.nome,
+    onChange: e => stanzaStato.setBozzaCampo(Object.assign({}, b, {
+      nome: e.target.value
+    })),
+    placeholder: L.t('stanza.nome'),
+    className: `w-full ${campoTesto}`
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "text-minuto uppercase font-bold text-gray-500"
+  }, L.t('stanza.inizio'), /*#__PURE__*/React.createElement("input", {
+    "data-inizio": true,
+    type: "date",
+    value: b.inizio,
+    onChange: e => stanzaStato.setBozzaCampo(Object.assign({}, b, {
+      inizio: e.target.value
+    })),
+    className: `w-full mt-1 ${campoTesto}`
+  })), /*#__PURE__*/React.createElement("label", {
+    className: "text-minuto uppercase font-bold text-gray-500"
+  }, L.t('stanza.fine'), /*#__PURE__*/React.createElement("input", {
+    "data-fine": true,
+    type: "date",
+    value: b.fine,
+    onChange: e => stanzaStato.setBozzaCampo(Object.assign({}, b, {
+      fine: e.target.value
+    })),
+    className: `w-full mt-1 ${campoTesto}`
+  }))), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t('campo.dateSpiega')), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-salva-nome": true,
+    onClick: stanzaStato.salvaNomeDate,
+    disabled: stanzaStato.occupato,
+    className: bottone('primario', 'normale', 'flex-1')
+  }, L.t('luogo.salva')), /*#__PURE__*/React.createElement("button", {
+    onClick: () => stanzaStato.setBozzaCampo(null),
+    className: bottone('testuale', 'normale', 'shrink-0')
+  }, L.t('luogo.annulla')))) : /*#__PURE__*/React.createElement("button", {
+    "data-cambia-nome": true,
+    onClick: stanzaStato.apriBozzaCampo,
+    className: bottone('secondario', 'normale', 'w-full')
+  }, L.t('campo.cambia'))), riga('luogo', L.t('luogo.titolo'), !stanzaStato.sbloccata('meteo') ? L.t('pro.soloPro') : luogo ? luogo.label || L.t('luogo.senzaNome') : L.t('luogo.nonScelto'), /*#__PURE__*/React.createElement("div", null, stanzaStato.capogruppo && !stanzaStato.sbloccata('meteo') && avvisoPro({
+    funzione: 'meteo',
+    capogruppo: true
+  }), stanzaStato.capogruppo && stanzaStato.sbloccata('meteo') && (() => {
+    const campoTesto = 'p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco';
+    const l = stanzaStato.luogo;
+    const c = stanzaStato.candidatoLuogo;
+    return /*#__PURE__*/React.createElement("div", {
+      "data-riquadro": "luogo",
+      className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-piccolo font-bold text-bosco flex items-center gap-1.5"
+    }, icona('luogo', 'w-4 h-4'), L.t('luogo.titolo')), /*#__PURE__*/React.createElement("p", {
+      className: "text-minuto text-gray-500 leading-snug"
+    }, L.t('luogo.spiega')), stanzaStato.cercaLuogo === null ? /*#__PURE__*/React.createElement(React.Fragment, null, l ? /*#__PURE__*/React.createElement("p", {
+      "data-luogo-scelto": true,
+      className: "text-piccolo text-bosco leading-snug"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, l.label || L.t('luogo.senzaNome')), /*#__PURE__*/React.createElement("span", {
+      className: "block text-minuto text-gray-500 font-mono"
+    }, l.lat, ", ", l.lon, typeof l.alt === 'number' ? ` · ${L.t('luogo.aQuota', l.alt)}` : ` · ${L.t('luogo.quotaNonDetta')}`)) : /*#__PURE__*/React.createElement("p", {
+      className: "text-piccolo text-gray-500 leading-snug"
+    }, L.t('luogo.nonScelto')), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: stanzaStato.apriLuogo,
+      disabled: stanzaStato.occupato,
+      className: bottone('secondario', 'normale', 'flex-1')
+    }, L.t(l ? 'luogo.cambia' : 'luogo.scegli')), l && /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        if (window.confirm(L.t('luogo.confermaTogli'))) stanzaStato.salvaLuogo(null);
+      },
+      disabled: stanzaStato.occupato,
+      className: bottone('testuale', 'normale', 'shrink-0')
+    }, L.t('luogo.togli')))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement("input", {
+      "data-cerca-luogo": true,
+      value: stanzaStato.cercaLuogo,
+      onChange: e => stanzaStato.setCercaLuogo(e.target.value),
+      onKeyDown: e => {
+        if (e.key === 'Enter') stanzaStato.trovaLuogo();
+      },
+      placeholder: L.t('luogo.segnaposto'),
+      className: `flex-1 min-w-0 ${campoTesto}`
+    }), /*#__PURE__*/React.createElement("button", {
+      onClick: stanzaStato.trovaLuogo,
+      disabled: stanzaStato.cercandoLuogo,
+      className: bottone('secondario', 'normale', 'shrink-0')
+    }, stanzaStato.cercandoLuogo ? '…' : L.t('luogo.cerca'))), /*#__PURE__*/React.createElement("p", {
+      className: "text-minuto text-gray-500 leading-snug"
+    }, L.t('luogo.aiuto')), stanzaStato.trovatiLuogo.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "rounded border border-salvia/30 bg-scheda divide-y divide-salvia/20"
+    }, stanzaStato.trovatiLuogo.map((t, i) => {
+      const scelto = !!(c && c.lat === t.lat && c.lon === t.lon);
+      return /*#__PURE__*/React.createElement("button", {
+        key: i,
+        "data-trovato": i,
+        onClick: () => stanzaStato.setCandidatoLuogo(t),
+        className: bottoneRiga()
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `text-piccolo leading-snug ${scelto ? 'font-bold text-bosco' : 'text-gray-700'}`
+      }, t.label), /*#__PURE__*/React.createElement("span", {
+        className: "text-minuto text-gray-400 shrink-0"
+      }, typeof t.alt === 'number' ? L.t('luogo.aQuota', t.alt) : ''));
+    })), stanzaStato.erroreLuogo && /*#__PURE__*/React.createElement("p", {
+      className: "text-piccolo font-bold text-red-700 leading-snug"
+    }, L.t(stanzaStato.erroreLuogo)), c && /*#__PURE__*/React.createElement("div", {
+      "data-candidato": true,
+      className: "rounded border border-bosco/30 bg-scheda p-2 space-y-2"
+    }, /*#__PURE__*/React.createElement("input", {
+      "data-nome-luogo": true,
+      value: c.label || '',
+      onChange: e => stanzaStato.setCandidatoLuogo(Object.assign({}, c, {
+        label: e.target.value
+      })),
+      placeholder: L.t('luogo.nome'),
+      className: `w-full ${campoTesto}`
+    }), /*#__PURE__*/React.createElement("p", {
+      className: "text-minuto text-gray-500 font-mono"
+    }, c.lat, ", ", c.lon), /*#__PURE__*/React.createElement("label", {
+      className: "flex items-center gap-2 text-piccolo text-gray-600"
+    }, /*#__PURE__*/React.createElement("span", null, L.t('luogo.quota')), /*#__PURE__*/React.createElement("input", {
+      "data-quota-luogo": true,
+      type: "number",
+      inputMode: "numeric",
+      value: typeof c.alt === 'number' || typeof c.alt === 'string' ? c.alt : '',
+      onChange: e => stanzaStato.setCandidatoLuogo(Object.assign({}, c, {
+        alt: e.target.value
+      })),
+      className: `w-24 ${campoTesto}`
+    }), /*#__PURE__*/React.createElement("span", null, "m")), /*#__PURE__*/React.createElement("p", {
+      className: "text-minuto text-gray-500 leading-snug"
+    }, L.t('luogo.quotaSpiega'))), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-salva-luogo": true,
+      onClick: () => stanzaStato.salvaLuogo(c),
+      disabled: !c || stanzaStato.occupato,
+      className: bottone('primario', 'normale', 'flex-1')
+    }, L.t('luogo.salva')), /*#__PURE__*/React.createElement("button", {
+      onClick: stanzaStato.chiudiLuogo,
+      className: bottone('testuale', 'normale', 'shrink-0')
+    }, L.t('luogo.annulla')))));
+  })())), window.Voci && riga('voci', L.t('voci.titolo'), spente.length ? L.t('campo.vociSpente', spente.map(c => L.t(NOME_VOCE[c])).join(', ')) : L.t('campo.vociTutte'), /*#__PURE__*/React.createElement("div", null, stanzaStato.capogruppo && window.Voci && /*#__PURE__*/React.createElement("div", {
+    "data-riquadro": "voci",
+    className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo font-bold text-bosco"
+  }, L.t('voci.titolo')), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t('voci.spiega')), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, window.Voci.CATEGORIE.map(cat => {
+    const spenta = !!(stanzaStato.voci && stanzaStato.voci[cat] === 'fuori');
+    return /*#__PURE__*/React.createElement("button", {
+      key: cat,
+      "data-voce": cat,
+      onClick: () => {
+        if (!window.confirm(L.t('voci.conferma', L.t(NOME_VOCE[cat]), !spenta))) return;
+        stanzaStato.cambiaVoce(cat, !spenta);
+      },
+      disabled: contiBloccati || stanzaStato.occupato,
+      className: bottoneScelta('interruttore', 'bordato', !spenta, 'minuscolo', contiBloccati ? 'opacity-60 cursor-not-allowed' : '')
+    }, L.t(NOME_VOCE[cat]));
+  })), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t(contiBloccati ? 'voci.chiuse' : 'voci.legenda'))))), riga('aiutante', L.t('stanza.aiutanteTitolo'), stanzaStato.vice ? (stanzaStato.membri.find(m => m.uid === stanzaStato.vice) || {}).nome || L.t('stanza.unMembro') : L.t('campo.nessunAiutante'), /*#__PURE__*/React.createElement("div", null, stanzaStato.capogruppo && (() => {
+    const io = account.utente && account.utente.uid;
+    const altri = stanzaStato.membri.filter(m => m.uid !== io);
+    const nomeDi = uid => {
+      const m = stanzaStato.membri.find(x => x.uid === uid);
+      return m && m.nome || L.t('stanza.unMembro');
+    };
+    return /*#__PURE__*/React.createElement("div", {
+      "data-riquadro": "aiutante",
+      className: "rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-piccolo font-bold text-bosco"
+    }, L.t('stanza.aiutanteTitolo')), /*#__PURE__*/React.createElement("p", {
+      className: "text-minuto text-gray-500 leading-snug"
+    }, L.t('stanza.aiutanteSpiega')), stanzaStato.vice && /*#__PURE__*/React.createElement("p", {
+      className: "text-piccolo text-bosco leading-snug"
+    }, frase('stanza.aiutanteE', nomeDi(stanzaStato.vice))), altri.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement("select", {
+      value: stanzaStato.sceltaAiutante,
+      onChange: e => stanzaStato.setSceltaAiutante(e.target.value),
+      className: "flex-1 min-w-0 p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, L.t('stanza.aiutanteScegli')), altri.map(m => /*#__PURE__*/React.createElement("option", {
+      key: m.uid,
+      value: m.uid
+    }, m.nome || L.t('stanza.unMembro')))), /*#__PURE__*/React.createElement("button", {
+      onClick: () => stanzaStato.nominaAiutante(stanzaStato.sceltaAiutante),
+      disabled: !stanzaStato.sceltaAiutante || stanzaStato.occupato,
+      className: bottone('secondario', 'normale', 'shrink-0')
+    }, L.t('stanza.aiutanteNomina'))), stanzaStato.fatto === 'stanza.aiutanteNominato' && /*#__PURE__*/React.createElement("p", {
+      className: "text-piccolo text-bosco leading-snug"
+    }, L.t('stanza.aiutanteNominato')), stanzaStato.vice && /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        if (!window.confirm(L.t('stanza.confermaLascia', nomeDi(stanzaStato.vice), stanzaStato.pro))) return;
+        await stanzaStato.lasciaCampo(account.utente, () => goTo('campi'));
+      },
+      disabled: stanzaStato.occupato,
+      className: bottone('distruttivo', 'minuscolo', 'w-full')
+    }, L.t('stanza.lasciaCampo', nomeDi(stanzaStato.vice))));
+  })())), riga('regole', L.t('campo.regoleDotazioni'), L.t('campo.regoleNota'), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => goTo('regole'),
+    className: bottone('secondario', 'normale', 'flex-1')
+  }, L.t('area.regole')), /*#__PURE__*/React.createElement("button", {
+    onClick: () => goTo('dotazioni'),
+    className: bottone('secondario', 'normale', 'flex-1')
+  }, L.t('area.dotazioni'))))) :
+  /*#__PURE__*/
+  // Chi non e' il capogruppo legge: dove si va e chi tiene il campo.
+  React.createElement("div", {
+    className: "px-4 py-3 space-y-1"
+  }, luogo && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-bosco flex items-center gap-1.5"
+  }, icona('luogo', 'w-4 h-4'), luogo.label || L.t('luogo.senzaNome')), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t('campo.soloCapogruppo')))), /*#__PURE__*/React.createElement("div", {
+    "data-riquadro": "pro",
+    className: `rounded-lg border-2 p-4 space-y-2 ${stanzaStato.pro ? 'border-fuoco/40 bg-fuoco/10' : 'border-bosco/25 bg-orlo/40'}`
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo font-bold text-bosco flex items-center gap-2"
+  }, segnoPro(), stanzaStato.pro ? stanzaStato.proFino ? L.t('pro.attivoFino', L.data(parseDate(stanzaStato.proFino), 'breve')) : L.t('pro.attivo') : L.t('pro.gratuito')), !stanzaStato.pro && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-600 leading-snug"
+  }, L.t(stanzaStato.capogruppo ? 'pro.cosaSblocca' : 'pro.perMembro')), /*#__PURE__*/React.createElement("ul", {
+    className: "text-minuto text-bosco space-y-0.5 pl-1"
+  }, window.Stanza.FUNZIONI_PRO.map(f => /*#__PURE__*/React.createElement("li", {
+    key: f
+  }, "\xB7 ", L.t(NOME_PRO[f])))), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t('pro.maiIConti')), stanzaStato.capogruppo && stanzaStato.negozio === 'assente' && /*#__PURE__*/React.createElement("p", {
+    "data-pro-solo-android": true,
+    className: "text-minuto text-bosco leading-snug"
+  }, L.t('pro.soloAndroid')), stanzaStato.capogruppo && stanzaStato.negozio && stanzaStato.negozio !== 'assente' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2 pt-1"
+  }, [[window.Stanza.PRODOTTI_PRO.campo, 'pro.compraCampo', 'pro.compraCampoSpiega'], [window.Stanza.PRODOTTI_PRO.anno, 'pro.compraAnno', 'pro.compraAnnoSpiega']].map(([sku, etichetta, spiega]) => /*#__PURE__*/React.createElement("div", {
+    key: sku
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-compra": sku,
+    onClick: () => stanzaStato.compraPro(sku),
+    disabled: !!stanzaStato.acquistando,
+    className: bottone(sku === window.Stanza.PRODOTTI_PRO.campo ? 'avviso' : 'secondario', 'normale', 'w-full')
+  }, stanzaStato.acquistando === sku ? '…' : L.t(etichetta, stanzaStato.negozio.prezzi[sku] || '')), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug mt-1"
+  }, L.t(spiega)))))), stanzaStato.esitoPro && stanzaStato.esitoPro.fatto && /*#__PURE__*/React.createElement("p", {
+    "data-pro-esito": true,
+    className: "text-piccolo font-bold text-bosco leading-snug"
+  }, L.t(stanzaStato.esitoPro.fatto)), stanzaStato.esitoPro && stanzaStato.esitoPro.errore && /*#__PURE__*/React.createElement("p", {
+    "data-pro-esito": true,
+    className: "text-piccolo font-bold text-red-700 leading-snug"
+  }, L.t(stanzaStato.esitoPro.errore))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      stanzaStato.esci();
+      goTo('campi');
+    },
+    disabled: stanzaStato.occupato,
+    className: bottone('testuale', 'minuscolo', 'w-full')
+  }, L.t('stanza.esci')), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo font-bold text-red-700 leading-snug"
+  }, L.t(stanzaStato.problema)));
+};
 // ---------- Scheda "Chi fa cosa": i compiti assegnati ----------
 //
 // Uscita da App() come le altre: e' una funzione che restituisce JSX, non un
@@ -9947,6 +10155,22 @@ React.createElement("div", {
 // home, che deve mostrare lo STESSO modulo — due copie divergono alla prima
 // correzione. Impostazioni e' identica al carattere a com'era (confronto del
 // DOM).
+// Com'e' andata, detto dove si e' fatto il gesto: nella home per chi crea o
+// entra col codice, in Impostazioni per chi accetta un invito arrivato da un
+// link. Uno per uno e non un L.t(stanzaStato.fatto) generico: queste due
+// chiavi vogliono un argomento, e senza stamperebbero "undefined" a meta'
+// frase.
+const esitoStanza = stanzaStato => {
+  const s = stanzaStato.stanza;
+  if (!s) return null;
+  if (stanzaStato.fatto === 'stanza.entrato') return /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-bosco leading-snug"
+  }, frase('stanza.entrato', s.nome || Stanza.bello(s.codice)));
+  if (stanzaStato.fatto === 'stanza.creata') return /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-bosco leading-snug"
+  }, frase('stanza.creata', Stanza.bello(s.codice)));
+  return null;
+};
 const moduloStanza = ({
   stanzaStato,
   account
@@ -10077,7 +10301,7 @@ const schedaCampi = ({
     account
   }), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo font-bold text-red-700 leading-snug"
-  }, L.t(stanzaStato.problema))));
+  }, L.t(stanzaStato.problema)), esitoStanza(stanzaStato)));
 };
 
 // ---------- Un cassetto per campo (cassetti.js) ----------

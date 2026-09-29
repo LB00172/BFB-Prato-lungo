@@ -176,7 +176,7 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   `frase()` (o `fraseVestita()` se il grassetto ha un colore), `L.data()`.
   **Nessun `'it-IT'` scritto a mano** — ce n'erano 32 sparsi in otto file,
   adesso sono zero e c'e' una prova che li conta. Tutti e diciannove i
-  sorgenti passano dal dizionario (942 chiavi) e `FEATURES.lingue` e'
+  sorgenti passano dal dizionario (956 chiavi) e `FEATURES.lingue` e'
   **accesa**: l'italiano resta predefinito, e quello che scrive l'utente non
   si traduce mai. I file non possono tornare indietro: una prova conta i testi
   scritti a mano in ognuno (`node test/censimento-testi.js`) e diventa rossa

@@ -138,7 +138,7 @@ const schedaCalendario = ({
           return (
             <button
               data-luogo-manca
-              onClick={() => goTo('impostazioni')}
+              onClick={() => goTo('campo', 'luogo')}
               className={bottoneRiga('rounded border border-salvia/20 bg-carta/60')}
             >
               <span className="flex items-center gap-2">

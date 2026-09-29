@@ -126,6 +126,13 @@ const impostazioni = async (a) => {
   await a.page.waitForTimeout(400);
   return a.page.locator('main').innerText();
 };
+// Creare e entrare col codice si fa dalla home, «I miei campi»: in
+// Impostazioni, che e' della persona, il modulo non c'e' piu'.
+const home = async (a) => {
+  await a.menu('I miei campi');
+  await a.page.waitForTimeout(400);
+  return a.page.locator('main').innerText();
+};
 
 (async () => {
   // ---------- 1. Bandiera spenta: non esiste, e l'app va ----------
@@ -164,7 +171,7 @@ const impostazioni = async (a) => {
   ok('senza stanza si aggiunge un membro lo stesso',
     /Senza Stanza/.test(await a.page.locator('main').innerText()));
 
-  const imp = await impostazioni(a);
+  const imp = await home(a);
   ok('con la bandiera accesa la tessera c\'è', /entra con un codice/i.test(imp));
 
   // ---------- 3. Il modulo parla prima di disturbare la rete ----------
@@ -215,7 +222,7 @@ const impostazioni = async (a) => {
   // ---------- 5. Entrare: il codice giusto apre, quello sbagliato no ------
   {
     const b = await apri({ initScript: conStanze(true, REGISTRATO, 'K7RX2MQP') });
-    await impostazioni(b);
+    await home(b);
     await b.page.locator('main button', { hasText: /Entra con un codice/i }).click();
     await b.page.waitForTimeout(300);
 
@@ -242,9 +249,12 @@ const impostazioni = async (a) => {
     await b.page.locator('main input[placeholder="Codice"]').fill('k7rx 2mqp');
     await b.page.locator('main button', { hasText: /^Entra$/i }).click();
     await b.page.waitForTimeout(600);
-    const dentro = await b.page.locator('main').innerText();
-    ok(`scritto a modo suo si entra lo stesso (${/sei dentro/i.test(dentro) ? 'dentro' : 'FUORI'})`,
-      /sei dentro/i.test(dentro));
+    // Entrati, si e' DENTRO il campo: la stanza e' quella, e l'app porta
+    // al suo Calendario invece di lasciare davanti all'elenco dei campi.
+    const dentro = await b.page.evaluate(() => localStorage.getItem('cambusa_stanza'));
+    const dove = await b.page.locator('header').innerText();
+    ok(`scritto a modo suo si entra lo stesso (${dentro || 'FUORI'}, ${dove.replace(/\s+/g, ' ').trim()})`,
+      dentro === 'K7RX2MQP' && /calendario/i.test(dove));
     const entrata = await b.page.evaluate(() => window.__db.scritture.filter((s) => /members/.test(s.dove)));
     ok('e ci si scrive da redattori, non da proprietari',
       entrata.length === 1 && entrata[0].dati.ruolo === 'redattore');
@@ -259,7 +269,7 @@ const impostazioni = async (a) => {
   // si dice PRIMA, perché un permission-denied non spiega niente a nessuno.
   {
     const c = await apri({ initScript: conStanze(true, OSPITE) });
-    await impostazioni(c);
+    await home(c);
     await c.page.locator('main button', { hasText: /Crea una stanza/i }).click();
     await c.page.waitForTimeout(300);
     await c.page.locator('main input[placeholder="Nome del campo"]').fill('Campo');
@@ -304,8 +314,8 @@ const impostazioni = async (a) => {
 
     await d.page.locator('main button', { hasText: /^Entra$/i }).click();
     await d.page.waitForTimeout(700);
-    const entrato = await d.page.locator('main').innerText();
-    ok(`toccando "Entra" si entra (${/sei dentro/i.test(entrato) ? 'dentro' : 'FUORI'})`, /sei dentro/i.test(entrato));
+    const entrato = await d.page.evaluate(() => localStorage.getItem('cambusa_stanza'));
+    ok(`toccando "Entra" si entra (${entrato || 'FUORI'})`, entrato === 'K7RX2MQP');
 
     ok('nessun errore JavaScript con l\'invito' + (d.errori.length ? ': ' + d.errori.join(' | ') : ''),
       d.errori.length === 0);
@@ -348,7 +358,7 @@ const impostazioni = async (a) => {
         onStatus: () => {}, onReceipts: () => {}, onWeather: () => {},
       });
     });
-    await impostazioni(f);
+    await home(f);
     await f.page.locator('main button', { hasText: /Entra con un codice/i }).click();
     await f.page.waitForTimeout(300);
     await f.page.locator('main input[placeholder="Codice"]').fill('K7RX-2MQP');

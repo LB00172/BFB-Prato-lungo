@@ -64,44 +64,6 @@ const schedaImpostazioni = ({
   adminPermesso,
 }) => (
   <div className="space-y-4">
-    {/* Pronto per il campo.
-        Senza un campo in corso i controlli non hanno oggetto: due dei tre
-        parlano dei dati, e i dati sono quelli del campo. Dopo la chiusura
-        resterebbero rossi per sempre — su un telefono che sta benissimo. */}
-    <div className={`p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-scheda border-bosco/20' : 'bg-scheda border-fuoco/50'}`}>
-      <div className="flex items-center justify-between border-b border-salvia/40 pb-2">
-        <h3 className="font-rustic text-grande text-bosco">{L.t('pronto.titolo')}</h3>
-        <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-fuoco text-white' : 'bg-bosco text-white'}`}>
-          {L.t(!campoInCorso ? 'pronto.nessunCampo' : readyOk ? 'pronto.si' : 'pronto.nonAncora')}
-        </span>
-      </div>
-      {!campoInCorso ? (
-        <p className="text-piccolo text-gray-500 leading-snug">
-          {frase('pronto.senzaCampo')}
-        </p>
-      ) : (
-        <>
-          <p className="text-piccolo text-gray-500 leading-snug">
-            {frase('pronto.treCose')}
-          </p>
-          <ul className="space-y-2">
-            {readyChecks.map((c) => (
-              <li key={c.titolo} className={`flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-carta/60 border-salvia/20' : 'bg-fuoco/10 border-fuoco/40'}`}>
-                <span className="text-medio leading-none shrink-0">{c.ok ? '✅' : '⚠️'}</span>
-                <div className="min-w-0">
-                  <div className="text-piccolo font-bold text-bosco">{c.titolo}</div>
-                  {!c.ok && <div className="text-piccolo text-legno leading-snug mt-0.5">{c.no}</div>}
-                </div>
-              </li>
-            ))}
-          </ul>
-          {readyOk && (
-            <p className="text-minuto text-gray-400 italic">{L.t('pronto.tuttoBene')}</p>
-          )}
-        </>
-      )}
-    </div>
-
     {/* Account (ROADMAP.md § 1). Dietro FEATURES.auth.
 
         Sta QUI, in fondo a Impostazioni, e non davanti all'app: e' la nota di
@@ -120,332 +82,53 @@ const schedaImpostazioni = ({
       },
     })}
 
-    {/* La stanza (ROADMAP.md § 2 e § 9). Dietro FEATURES.rooms.
-
-        Come l'account, sta in fondo a Impostazioni e non davanti all'app:
-        chi usa il campo che ha gia' non incontra niente di tutto questo.
-        Le regole del codice stanno in stanza.js, quelle di CHI puo' entrare
-        in firestore.rules — qui si disegna e basta. */}
-    {FEATURES.rooms && (
-    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3">
-      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('stanza.titolo')}</h3>
-
-      {/* Un invito arrivato da un link. Si mostra e si CHIEDE: entrare di
-          nascosto perche' qualcuno ha inoltrato un messaggio e' il genere di
-          cosa che fa disinstallare un'app. */}
-      {stanzaStato.invito && (
-        <div className="bg-carta/70 border border-bosco/20 rounded p-3 space-y-2">
-          <p className="text-piccolo text-bosco leading-snug">{frase('stanza.invitoCodice', Stanza.bello(stanzaStato.invito))}</p>
-          <div className="flex gap-2">
-            <button onClick={stanzaStato.rifiutaInvito} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('stanza.rifiutaInvito')}</button>
-            <button onClick={() => stanzaStato.accettaInvito(account.utente)} disabled={stanzaStato.occupato} className={bottone('primario', 'normale', 'flex-1')}>{L.t('stanza.accettaInvito')}</button>
-          </div>
-        </div>
-      )}
-
-      {stanzaStato.stanza ? (
-        <>
-          <p className="text-piccolo text-bosco leading-snug">{frase('stanza.entrato', stanzaStato.stanza.nome || Stanza.bello(stanzaStato.stanza.codice))}</p>
-
-          {/* Tieni il tuo posto: per chi e' entrato col solo codice. Non e' un
-              muro — si usa il campo anche senza — ma e' l'unica cosa che
-              impedisce, cambiando telefono, di rientrare come una persona
-              nuova e perdere il ruolo. Da anonimo il collegamento tiene lo
-              stesso uid (Auth.promuovibile); se l'account Google era gia'
-              usato altrove si diventa quello (Auth.passaAllAccountEsistente)
-              e si rientra col codice salvato. Il posto si rilegge comunque:
-              una lettura in piu', e la conferma a schermo e' vera in tutti e
-              due i casi. */}
-          {FEATURES.auth && (account.stato === 'ospite' || account.stato === 'anonimo') && (
-            <div data-riquadro="tieni-il-posto" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
-              <p className="text-piccolo text-bosco leading-snug">{frase('stanza.tieniIlPosto')}</p>
-              <button
-                onClick={async () => {
-                  const u = await account.entraConGoogle();
-                  // Serve un utente VERO: un semplice "riuscito" non basta a
-                  // sapere con quale uid rientrare.
-                  if (u && u.uid && !u.isAnonimo) await stanzaStato.riagganciaStanza(u);
-                }}
-                disabled={account.occupato || stanzaStato.occupato}
-                className={bottone('primario', 'normale', 'w-full')}
-              >{L.t('stanza.collegaGoogle')}</button>
-            </div>
-          )}
-          <div className="flex items-center justify-between gap-2 bg-carta/60 rounded p-2">
-            <span className="font-mono text-medio tracking-widest text-bosco min-w-0 break-words">{Stanza.bello(stanzaStato.stanza.codice)}</span>
-            <button
-              onClick={() => { try { navigator.clipboard.writeText(Stanza.bello(stanzaStato.stanza.codice)); } catch (e) { /* niente */ } }}
-              className={bottone('secondario', 'minuscolo', 'shrink-0')}
-            >{L.t('stanza.copiaCodice')}</button>
-          </div>
-          {/* Le tre strade per mandare l'invito. "Condividi" sul telefono apre
-              WhatsApp, Telegram, SMS e mail con un gesto solo ed e' il tasto
-              giusto; gli altri due sono il ripiego per chi sta al computer,
-              dove navigator.share spesso non c'e'. Il meccanismo e' lo stesso
-              gia' usato per il PDF ricordo e il resoconto delle spese. */}
-          <div className="flex gap-2">
-            <button
-              onClick={stanzaStato.mandaInvito}
-              className={bottone('primario', 'normale', 'flex-1')}
-            >{L.t('stanza.condividi')}</button>
-            <button
-              onClick={() => { try { navigator.clipboard.writeText(stanzaStato.linkDaMandare()); } catch (e) { /* niente */ } }}
-              className={bottone('secondario', 'normale', 'flex-1')}
-            >{L.t('stanza.copiaLink')}</button>
-          </div>
-          {stanzaStato.membri.length > 0 && (
-            <p className="text-piccolo text-gray-500">{L.t('stanza.dentro', stanzaStato.membri.length)}</p>
-          )}
-          {/* Il Pro del campo. Lo vedono tutti: sapere se il campo e' Pro serve
-              anche a chi non lo paga, per capire perche' una cosa non c'e'. */}
-          <div data-riquadro="pro" className={`rounded border p-3 space-y-2 ${stanzaStato.pro ? 'border-fuoco/40 bg-fuoco/10' : 'border-bosco/25 bg-orlo/40'}`}>
-            <p className="text-piccolo font-bold text-bosco flex items-center gap-2">
-              {segnoPro()}
-              {stanzaStato.pro
-                ? (stanzaStato.proFino ? L.t('pro.attivoFino', L.data(parseDate(stanzaStato.proFino), 'breve')) : L.t('pro.attivo'))
-                : L.t('pro.gratuito')}
-            </p>
-            {!stanzaStato.pro && (
-              <>
-                <p className="text-minuto text-gray-600 leading-snug">{L.t(stanzaStato.capogruppo ? 'pro.cosaSblocca' : 'pro.perMembro')}</p>
-                <ul className="text-minuto text-bosco space-y-0.5 pl-1">
-                  {window.Stanza.FUNZIONI_PRO.map((f) => <li key={f}>· {L.t(NOME_PRO[f])}</li>)}
-                </ul>
-                <p className="text-minuto text-gray-500 leading-snug">{L.t('pro.maiIConti')}</p>
-                {/* Comprarlo: solo il capogruppo, e solo dall'app Android —
-                    Google Play Billing. Fuori si dice dove, senza tasti finti. */}
-                {stanzaStato.capogruppo && stanzaStato.negozio === 'assente' && (
-                  <p data-pro-solo-android className="text-minuto text-bosco leading-snug">{L.t('pro.soloAndroid')}</p>
-                )}
-                {stanzaStato.capogruppo && stanzaStato.negozio && stanzaStato.negozio !== 'assente' && (
-                  <div className="space-y-2 pt-1">
-                    {[
-                      [window.Stanza.PRODOTTI_PRO.campo, 'pro.compraCampo', 'pro.compraCampoSpiega'],
-                      [window.Stanza.PRODOTTI_PRO.anno, 'pro.compraAnno', 'pro.compraAnnoSpiega'],
-                    ].map(([sku, etichetta, spiega]) => (
-                      <div key={sku}>
-                        <button
-                          data-compra={sku}
-                          onClick={() => stanzaStato.compraPro(sku)}
-                          disabled={!!stanzaStato.acquistando}
-                          className={bottone(sku === window.Stanza.PRODOTTI_PRO.campo ? 'avviso' : 'secondario', 'normale', 'w-full')}
-                        >{stanzaStato.acquistando === sku ? '…' : L.t(etichetta, stanzaStato.negozio.prezzi[sku] || '')}</button>
-                        <p className="text-minuto text-gray-500 leading-snug mt-1">{L.t(spiega)}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-            {stanzaStato.esitoPro && stanzaStato.esitoPro.fatto && (
-              <p data-pro-esito className="text-piccolo font-bold text-bosco leading-snug">{L.t(stanzaStato.esitoPro.fatto)}</p>
-            )}
-            {stanzaStato.esitoPro && stanzaStato.esitoPro.errore && (
-              <p data-pro-esito className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.esitoPro.errore)}</p>
-            )}
-          </div>
-          {/* L'aiutante: il capogruppo lo nomina fra chi c'e', e se deve
-              lasciare il campo lo passa a lui. Il Pro non passa: l'ha pagato
-              chi se ne va (firestore.rules lo spegne nel passaggio). */}
-          {stanzaStato.capogruppo && (() => {
-            const io = account.utente && account.utente.uid;
-            const altri = stanzaStato.membri.filter((m) => m.uid !== io);
-            const nomeDi = (uid) => {
-              const m = stanzaStato.membri.find((x) => x.uid === uid);
-              return (m && m.nome) || L.t('stanza.unMembro');
-            };
-            return (
-              <div data-riquadro="aiutante" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
-                <p className="text-piccolo font-bold text-bosco">{L.t('stanza.aiutanteTitolo')}</p>
-                <p className="text-minuto text-gray-500 leading-snug">{L.t('stanza.aiutanteSpiega')}</p>
-                {stanzaStato.vice && <p className="text-piccolo text-bosco leading-snug">{frase('stanza.aiutanteE', nomeDi(stanzaStato.vice))}</p>}
-                {altri.length > 0 && (
-                  <div className="flex gap-2">
-                    <select
-                      value={stanzaStato.sceltaAiutante}
-                      onChange={(e) => stanzaStato.setSceltaAiutante(e.target.value)}
-                      className="flex-1 min-w-0 p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-                    >
-                      <option value="">{L.t('stanza.aiutanteScegli')}</option>
-                      {altri.map((m) => (<option key={m.uid} value={m.uid}>{m.nome || L.t('stanza.unMembro')}</option>))}
-                    </select>
-                    <button
-                      onClick={() => stanzaStato.nominaAiutante(stanzaStato.sceltaAiutante)}
-                      disabled={!stanzaStato.sceltaAiutante || stanzaStato.occupato}
-                      className={bottone('secondario', 'normale', 'shrink-0')}
-                    >{L.t('stanza.aiutanteNomina')}</button>
-                  </div>
-                )}
-                {stanzaStato.fatto === 'stanza.aiutanteNominato' && <p className="text-piccolo text-bosco leading-snug">{L.t('stanza.aiutanteNominato')}</p>}
-                {stanzaStato.vice && (
-                  <button
-                    onClick={async () => {
-                      if (!window.confirm(L.t('stanza.confermaLascia', nomeDi(stanzaStato.vice), stanzaStato.pro))) return;
-                      await stanzaStato.lasciaCampo(account.utente, () => goTo('campi'));
-                    }}
-                    disabled={stanzaStato.occupato}
-                    className={bottone('distruttivo', 'minuscolo', 'w-full')}
-                  >{L.t('stanza.lasciaCampo', nomeDi(stanzaStato.vice))}</button>
-                )}
-              </div>
-            );
-          })()}
-          {/* Il luogo del campo, per il meteo. Lo sceglie il capogruppo per
-              tutti: le previsioni sono una sola per tutto il campo. Una
-              casella sola: un nome da cercare, oppure un link di Google Maps
-              o due coordinate incollate. */}
-          {stanzaStato.capogruppo && !stanzaStato.sbloccata('meteo') && avvisoPro({ funzione: 'meteo', capogruppo: true })}
-          {stanzaStato.capogruppo && stanzaStato.sbloccata('meteo') && (() => {
-            const campoTesto = 'p-2 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco';
-            const l = stanzaStato.luogo;
-            const c = stanzaStato.candidatoLuogo;
-            return (
-              <div data-riquadro="luogo" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
-                <p className="text-piccolo font-bold text-bosco flex items-center gap-1.5">{icona('luogo', 'w-4 h-4')}{L.t('luogo.titolo')}</p>
-                <p className="text-minuto text-gray-500 leading-snug">{L.t('luogo.spiega')}</p>
-                {stanzaStato.cercaLuogo === null ? (
-                  <>
-                    {l ? (
-                      <p data-luogo-scelto className="text-piccolo text-bosco leading-snug">
-                        <span className="font-bold">{l.label || L.t('luogo.senzaNome')}</span>
-                        <span className="block text-minuto text-gray-500 font-mono">
-                          {l.lat}, {l.lon}{typeof l.alt === 'number' ? ` · ${L.t('luogo.aQuota', l.alt)}` : ` · ${L.t('luogo.quotaNonDetta')}`}
-                        </span>
-                      </p>
-                    ) : (
-                      <p className="text-piccolo text-gray-500 leading-snug">{L.t('luogo.nonScelto')}</p>
-                    )}
-                    <div className="flex gap-2">
-                      <button onClick={stanzaStato.apriLuogo} disabled={stanzaStato.occupato} className={bottone('secondario', 'normale', 'flex-1')}>
-                        {L.t(l ? 'luogo.cambia' : 'luogo.scegli')}
-                      </button>
-                      {l && (
-                        <button
-                          onClick={() => { if (window.confirm(L.t('luogo.confermaTogli'))) stanzaStato.salvaLuogo(null); }}
-                          disabled={stanzaStato.occupato}
-                          className={bottone('testuale', 'normale', 'shrink-0')}
-                        >{L.t('luogo.togli')}</button>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex gap-2">
-                      <input
-                        data-cerca-luogo
-                        value={stanzaStato.cercaLuogo}
-                        onChange={(e) => stanzaStato.setCercaLuogo(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') stanzaStato.trovaLuogo(); }}
-                        placeholder={L.t('luogo.segnaposto')}
-                        className={`flex-1 min-w-0 ${campoTesto}`}
-                      />
-                      <button onClick={stanzaStato.trovaLuogo} disabled={stanzaStato.cercandoLuogo} className={bottone('secondario', 'normale', 'shrink-0')}>
-                        {stanzaStato.cercandoLuogo ? '…' : L.t('luogo.cerca')}
-                      </button>
-                    </div>
-                    <p className="text-minuto text-gray-500 leading-snug">{L.t('luogo.aiuto')}</p>
-                    {stanzaStato.trovatiLuogo.length > 0 && (
-                      <div className="rounded border border-salvia/30 bg-scheda divide-y divide-salvia/20">
-                        {stanzaStato.trovatiLuogo.map((t, i) => {
-                          const scelto = !!(c && c.lat === t.lat && c.lon === t.lon);
-                          return (
-                            <button key={i} data-trovato={i} onClick={() => stanzaStato.setCandidatoLuogo(t)} className={bottoneRiga()}>
-                              <span className={`text-piccolo leading-snug ${scelto ? 'font-bold text-bosco' : 'text-gray-700'}`}>{t.label}</span>
-                              <span className="text-minuto text-gray-400 shrink-0">{typeof t.alt === 'number' ? L.t('luogo.aQuota', t.alt) : ''}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {stanzaStato.erroreLuogo && (
-                      <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.erroreLuogo)}</p>
-                    )}
-                    {c && (
-                      <div data-candidato className="rounded border border-bosco/30 bg-scheda p-2 space-y-2">
-                        <input
-                          data-nome-luogo
-                          value={c.label || ''}
-                          onChange={(e) => stanzaStato.setCandidatoLuogo(Object.assign({}, c, { label: e.target.value }))}
-                          placeholder={L.t('luogo.nome')}
-                          className={`w-full ${campoTesto}`}
-                        />
-                        <p className="text-minuto text-gray-500 font-mono">{c.lat}, {c.lon}</p>
-                        <label className="flex items-center gap-2 text-piccolo text-gray-600">
-                          <span>{L.t('luogo.quota')}</span>
-                          <input
-                            data-quota-luogo
-                            type="number"
-                            inputMode="numeric"
-                            value={typeof c.alt === 'number' || typeof c.alt === 'string' ? c.alt : ''}
-                            onChange={(e) => stanzaStato.setCandidatoLuogo(Object.assign({}, c, { alt: e.target.value }))}
-                            className={`w-24 ${campoTesto}`}
-                          />
-                          <span>m</span>
-                        </label>
-                        <p className="text-minuto text-gray-500 leading-snug">{L.t('luogo.quotaSpiega')}</p>
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <button
-                        data-salva-luogo
-                        onClick={() => stanzaStato.salvaLuogo(c)}
-                        disabled={!c || stanzaStato.occupato}
-                        className={bottone('primario', 'normale', 'flex-1')}
-                      >{L.t('luogo.salva')}</button>
-                      <button onClick={stanzaStato.chiudiLuogo} className={bottone('testuale', 'normale', 'shrink-0')}>{L.t('luogo.annulla')}</button>
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })()}
-          {/* Le voci che si dividono (§ 8). Le sceglie il capogruppo per tutto
-              il campo: le quote devono essere le stesse su ogni telefono.
-              Spegnerne una a rimborsi gia' fatti riscrive le quote di tutti,
-              quindi a conti chiusi non si muove, e prima di cambiare chiede. */}
-          {stanzaStato.capogruppo && window.Voci && (
-            <div data-riquadro="voci" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
-              <p className="text-piccolo font-bold text-bosco">{L.t('voci.titolo')}</p>
-              <p className="text-minuto text-gray-500 leading-snug">{L.t('voci.spiega')}</p>
-              <div className="grid grid-cols-2 gap-2">
-                {window.Voci.CATEGORIE.map((cat) => {
-                  const spenta = !!(stanzaStato.voci && stanzaStato.voci[cat] === 'fuori');
-                  return (
-                    <button
-                      key={cat}
-                      data-voce={cat}
-                      onClick={() => {
-                        if (!window.confirm(L.t('voci.conferma', L.t(NOME_VOCE[cat]), !spenta))) return;
-                        stanzaStato.cambiaVoce(cat, !spenta);
-                      }}
-                      disabled={contiBloccati || stanzaStato.occupato}
-                      className={bottoneScelta('interruttore', 'bordato', !spenta, 'minuscolo', contiBloccati ? 'opacity-60 cursor-not-allowed' : '')}
-                    >{L.t(NOME_VOCE[cat])}</button>
-                  );
-                })}
-              </div>
-              <p className="text-minuto text-gray-500 leading-snug">{L.t(contiBloccati ? 'voci.chiuse' : 'voci.legenda')}</p>
-            </div>
-          )}
-          {stanzaStato.aiutante && (
-            <p className="text-piccolo text-bosco leading-snug">{L.t('stanza.seiAiutante')}</p>
-          )}
-          <button onClick={() => { stanzaStato.esci(); goTo('campi'); }} disabled={stanzaStato.occupato} className={bottone('testuale', 'minuscolo', 'w-full')}>{L.t('stanza.esci')}</button>
-        </>
-      ) : moduloStanza({ stanzaStato, account })}
-
-      {stanzaStato.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.problema)}</p>}
-      {stanzaStato.fatto === 'stanza.creata' && stanzaStato.stanza && (
-        <p className="text-piccolo text-bosco leading-snug">{frase('stanza.creata', Stanza.bello(stanzaStato.stanza.codice))}</p>
-      )}
-      {/* Uno per uno, non un {L.t(stanzaStato.fatto)} generico: alcune chiavi
-          vogliono un argomento (stanza.entrato vuole il nome del campo) e
-          senza stamperebbero "undefined" in mezzo alla frase. */}
-      {stanzaStato.fatto === 'stanza.postoTenuto' && (
-        <p className="text-piccolo text-bosco leading-snug">{L.t('stanza.postoTenuto')}</p>
-      )}
-    </div>
+    {/* Tieni il tuo posto: per chi e' entrato col solo codice. Non e' un
+        muro — si usa il campo anche senza — ma e' l'unica cosa che
+        impedisce, cambiando telefono, di rientrare come una persona
+        nuova e perdere il ruolo. Da anonimo il collegamento tiene lo
+        stesso uid (Auth.promuovibile); se l'account Google era gia'
+        usato altrove si diventa quello (Auth.passaAllAccountEsistente)
+        e si rientra col codice salvato. Il posto si rilegge comunque:
+        una lettura in piu', e la conferma a schermo e' vera in tutti e
+        due i casi. */}
+    {FEATURES.rooms && stanzaStato.stanza && FEATURES.auth && (account.stato === 'ospite' || account.stato === 'anonimo') && (
+      <div data-riquadro="tieni-il-posto" className="rounded border border-bosco/25 bg-orlo/40 p-3 space-y-2">
+        <p className="text-piccolo text-bosco leading-snug">{frase('stanza.tieniIlPosto')}</p>
+        <button
+          onClick={async () => {
+            const u = await account.entraConGoogle();
+            // Serve un utente VERO: un semplice "riuscito" non basta a
+            // sapere con quale uid rientrare.
+            if (u && u.uid && !u.isAnonimo) await stanzaStato.riagganciaStanza(u);
+          }}
+          disabled={account.occupato || stanzaStato.occupato}
+          className={bottone('primario', 'normale', 'w-full')}
+        >{L.t('stanza.collegaGoogle')}</button>
+      </div>
     )}
+    {FEATURES.rooms && stanzaStato.fatto === 'stanza.postoTenuto' && (
+      <p className="text-piccolo text-bosco leading-snug px-1">{L.t('stanza.postoTenuto')}</p>
+    )}
+
+    {/* Il campo non sta piu' qui: ha la sua scheda, «Il campo»
+        (86b-scheda-campo.jsx). Impostazioni e' della PERSONA — account,
+        lingua, aspetto — e restano qui solo le due cose della stanza che
+        riguardano lei: un invito arrivato da un link, che si accetta o no, e
+        «tieni il tuo posto», che e' il suo account (sopra). */}
+    {FEATURES.rooms && stanzaStato.invito && (
+      <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2">
+        {/* Si mostra e si CHIEDE: entrare di nascosto perche' qualcuno ha
+            inoltrato un messaggio e' il genere di cosa che fa disinstallare
+            un'app. */}
+        <p className="text-piccolo text-bosco leading-snug">{frase('stanza.invitoCodice', Stanza.bello(stanzaStato.invito))}</p>
+        <div className="flex gap-2">
+          <button onClick={stanzaStato.rifiutaInvito} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('stanza.rifiutaInvito')}</button>
+          <button onClick={() => stanzaStato.accettaInvito(account.utente)} disabled={stanzaStato.occupato} className={bottone('primario', 'normale', 'flex-1')}>{L.t('stanza.accettaInvito')}</button>
+        </div>
+        {stanzaStato.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.problema)}</p>}
+      </div>
+    )}
+    {FEATURES.rooms && !stanzaStato.invito && esitoStanza(stanzaStato)}
 
     {/* Lingua. Dietro FEATURES.lingue: finche' i dizionari non coprono tutta
         l'app, offrire la scelta vorrebbe dire mostrare meta' schermata in una
@@ -486,6 +169,45 @@ const schedaImpostazioni = ({
       <p className="text-piccolo text-gray-500">
         {L.t('aspetto.spiegazione', theme === 'auto', theme === 'auto' ? isDark : theme === 'dark')}
       </p>
+    </div>
+
+    {/* Pronto per il campo: questo telefono, senza linea. Viene dopo lingua
+        e aspetto perche' si guarda prima di partire, non ogni giorno.
+        Senza un campo in corso i controlli non hanno oggetto: due dei tre
+        parlano dei dati, e i dati sono quelli del campo. Dopo la chiusura
+        resterebbero rossi per sempre — su un telefono che sta benissimo. */}
+    <div className={`p-4 rounded-lg border-2 shadow-sm space-y-3 ${!campoInCorso || readyOk ? 'bg-scheda border-bosco/20' : 'bg-scheda border-fuoco/50'}`}>
+      <div className="flex items-center justify-between border-b border-salvia/40 pb-2">
+        <h3 className="font-rustic text-grande text-bosco">{L.t('pronto.titolo')}</h3>
+        <span className={`text-minuto uppercase font-bold px-2 py-1 rounded ${campoInCorso && !readyOk ? 'bg-fuoco text-white' : 'bg-bosco text-white'}`}>
+          {L.t(!campoInCorso ? 'pronto.nessunCampo' : readyOk ? 'pronto.si' : 'pronto.nonAncora')}
+        </span>
+      </div>
+      {!campoInCorso ? (
+        <p className="text-piccolo text-gray-500 leading-snug">
+          {frase('pronto.senzaCampo')}
+        </p>
+      ) : (
+        <>
+          <p className="text-piccolo text-gray-500 leading-snug">
+            {frase('pronto.treCose')}
+          </p>
+          <ul className="space-y-2">
+            {readyChecks.map((c) => (
+              <li key={c.titolo} className={`flex items-start gap-2 p-2.5 rounded border ${c.ok ? 'bg-carta/60 border-salvia/20' : 'bg-fuoco/10 border-fuoco/40'}`}>
+                <span className="text-medio leading-none shrink-0">{c.ok ? '✅' : '⚠️'}</span>
+                <div className="min-w-0">
+                  <div className="text-piccolo font-bold text-bosco">{c.titolo}</div>
+                  {!c.ok && <div className="text-piccolo text-legno leading-snug mt-0.5">{c.no}</div>}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {readyOk && (
+            <p className="text-minuto text-gray-400 italic">{L.t('pronto.tuttoBene')}</p>
+          )}
+        </>
+      )}
     </div>
 
     {/* Galleria */}
@@ -713,6 +435,11 @@ const schedaImpostazioni = ({
     </div>
     )}
 
+    {/* Il blocco con password e i dati di questo telefono stanno in
+        modalita' tecnica: il primo nell'app pubblica non c'e' (APP_LOCK =
+        null), i secondi cancellano. Esportare resta a tutti, da Spese →
+        Dati: e' di sola lettura. */}
+    {admin && (<>
     {/* Blocco con password — riga richiudibile: si imposta una volta e
         non si tocca più, quindi sta chiusa e in fondo. */}
     <div className="bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
@@ -819,6 +546,7 @@ const schedaImpostazioni = ({
       </p>
       </div>)}
     </div>
+    </>)}
 
     {/* Modalità tecnica — riga richiudibile. Si accende con una
         password sua, per telefono: gli avvisi sulle voci cancellate,

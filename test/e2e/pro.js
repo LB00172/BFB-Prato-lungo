@@ -104,12 +104,15 @@ async function scontrino(a) {
     ok(`e le foto degli scontrini restano sul telefono (${f.inCoda} in coda per il cloud)`, f.inCoda === 0);
     ok('e lo si dice a chi la scatta', f.nota === 1);
 
-    await a.menu('Impostazioni');
+    await a.menu('Il campo');
     await attendi(a.page, () => !!document.querySelector('[data-riquadro="pro"]'));
     const r = await a.page.locator('[data-riquadro="pro"]').innerText();
     ok('il riquadro del Pro dice che il campo è gratuito, e cosa sbloccherebbe',
       /campo gratuito/i.test(r) && /meteo live/i.test(r) && /chi fa cosa/i.test(r));
     ok('e che i conti sono sempre completi', /sempre completi/i.test(r));
+    ok('la riga del luogo dice già che è una cosa del Pro', /con il pro/i.test(await a.page.locator('[data-riga="luogo"]').innerText()));
+    await a.page.click('[data-riga="luogo"]');
+    await attendi(a.page, () => !!document.querySelector('[data-pro-bloccata="meteo"]'));
     ok('il luogo per il meteo non si sceglie senza Pro',
       (await a.page.locator('[data-riquadro="luogo"]').count()) === 0 && (await bloccata(a, 'meteo')) === 1);
 
@@ -146,7 +149,8 @@ async function scontrino(a) {
     const f = await scontrino(a);
     ok(`e le foto degli scontrini vanno nel cloud (${f.inCoda} in coda)`, f.inCoda === 1 && f.nota === 0);
 
-    await a.menu('Impostazioni');
+    await a.menu('Il campo');
+    await a.page.click('[data-riga="luogo"]');
     await attendi(a.page, () => !!document.querySelector('[data-riquadro="luogo"]'));
     ok('il capogruppo sceglie il luogo del meteo', true);
     ok('e il riquadro del Pro dice fino a quando', /campo pro fino al/i.test(await a.page.locator('[data-riquadro="pro"]').innerText()));
@@ -177,7 +181,7 @@ async function scontrino(a) {
     await a.menu('Calendario');
     await a.page.waitForTimeout(300);
     ok('e al posto del meteo, niente: nessun rimprovero', (await bloccata(a, 'meteo')) === 0);
-    await a.menu('Impostazioni');
+    await a.menu('Il campo');
     await attendi(a.page, () => !!document.querySelector('[data-riquadro="pro"]'));
     ok('anche il membro sa che il campo è gratuito, e chi può cambiarlo',
       /campo gratuito/i.test(await a.page.locator('[data-riquadro="pro"]').innerText()));

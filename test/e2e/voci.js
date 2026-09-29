@@ -78,7 +78,8 @@ const scena = (o) => [(s) => {
     ok(`il resoconto non porta più il nome del campo della Brigata (${r.title})`, !/prato lungo/i.test(r.title));
 
     // ---------- 2. Il capogruppo spegne un'altra voce ----------
-    await a.menu('Impostazioni');
+    await a.menu('Il campo');
+    await a.page.click('[data-riga="voci"]');
     const inter = a.page.locator('[data-riquadro="voci"] [data-voce="attrezzatura"]');
     await inter.click();
     await attendi(a.page, () => window.__scritture.some((x) => x.voci));
@@ -92,7 +93,8 @@ const scena = (o) => [(s) => {
   // ---------- 3. A conti chiusi l'interruttore sta fermo ----------
   {
     const a = await apri({ admin: false, initScript: scena({ voci: null, contiChiusi: true }) });
-    await a.menu('Impostazioni');
+    await a.menu('Il campo');
+    await a.page.click('[data-riga="voci"]');
     await attendi(a.page, () => !!document.querySelector('[data-riquadro="voci"] [data-voce="logistica"]'));
     const inter = a.page.locator('[data-riquadro="voci"] [data-voce="logistica"]');
     ok('a conti chiusi gli interruttori sono fermi', await inter.isDisabled());

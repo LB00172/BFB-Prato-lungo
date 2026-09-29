@@ -15,6 +15,9 @@ const { bloccoDiProva, PASSWORD_PROVA } = require('../lib/app');
   p.on('pageerror', (e) => errs.push(e.message));
   p.on('dialog', (d) => d.accept());
   await p.addInitScript(...bloccoDiProva());
+  // Il blocco con password sta in modalita' tecnica (Impostazioni e' della
+  // persona): la si accende prima di aprire, come fa apri() per le altre.
+  await p.addInitScript(() => localStorage.setItem('cambusa_admin', '1'));
   await p.addInitScript(() => localStorage.setItem('cambusa_sync_optout', '1'));
 
   const entra = async (pwd) => {
@@ -153,6 +156,9 @@ const { bloccoDiProva, PASSWORD_PROVA } = require('../lib/app');
   await ctx.newPage();  // non tocca la sessione della prima pagina
   const p2 = await ctx.newPage();
   await p2.addInitScript(...bloccoDiProva());
+  // Il blocco con password sta in modalita' tecnica (Impostazioni e' della
+  // persona): la si accende prima di aprire, come fa apri() per le altre.
+  await p2.addInitScript(() => localStorage.setItem('cambusa_admin', '1'));
   await p2.addInitScript(...campoDiProva());
   await p2.goto((process.env.APP_URL || 'http://localhost:8091') + '/index.html', { waitUntil: 'load' });
   await p2.waitForTimeout(900);

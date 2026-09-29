@@ -162,7 +162,10 @@ const riquadro = (a) => a.page.locator('[data-riquadro="luogo"]');
     ok('e l\'invito a scegliere il luogo non c\'è più', (await a.page.locator('[data-luogo-manca]').count()) === 0);
 
     // Togliere il luogo: il meteo sparisce per tutti.
-    await a.menu('Impostazioni');
+    // Il luogo sta in «Il campo», nella sua riga: la riga resta aperta
+    // tornandoci, ma si apre se non lo e'.
+    await a.menu('Il campo');
+    if (!(await riquadro(a).count())) await a.page.click('[data-riga="luogo"]');
     await riquadro(a).locator('button', { hasText: /^togli$/i }).click();
     await attendi(a.page, () => window.__scritture.some((x) => 'luogo' in x && x.luogo === null));
     ok('il luogo si può togliere', true);
@@ -180,9 +183,9 @@ const riquadro = (a) => a.page.locator('[data-riquadro="luogo"]');
     await attendi(a.page, () => /12 luglio/i.test(document.querySelector('main').innerText));
     ok('a chi non è capogruppo nessun rimprovero per il luogo che manca',
       (await a.page.locator('[data-luogo-manca]').count()) === 0 && !/meteo|luogo del campo/i.test(await main(a)));
-    await a.menu('Impostazioni');
+    await a.menu('Il campo');
     await a.page.waitForTimeout(300);
-    ok('e nemmeno il riquadro per sceglierlo', (await riquadro(a).count()) === 0);
+    ok('e nemmeno il riquadro per sceglierlo', (await riquadro(a).count()) === 0 && (await a.page.locator('[data-riga="luogo"]').count()) === 0);
     await a.browser.close();
   }
 

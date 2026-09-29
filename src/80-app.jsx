@@ -756,7 +756,13 @@ function App({ eredita, cambiaCampo } = {}) {
     if (cassettoFallito && eredita.cassetto.a === code) return false;
     const CS = window.CloudSync;
     if (CS && CS.isConnected()) CS.disconnect();
-    cambiaCampo(code, { tab: activeTab });
+    // Dalla home si entra nel campo: chi l'ha appena creato, o e' appena
+    // entrato col codice, deve trovarsi DENTRO — nel Calendario, dove chi
+    // l'ha creato trova i primi passi — non di nuovo davanti all'elenco.
+    // Solo entrando in una stanza: uscendone (lasciare il campo, esci) si
+    // torna alla home, ed e' li' che si deve restare.
+    const entrando = !!(stanzaStato.stanza && window.Stanza && window.Stanza.normalizza(stanzaStato.stanza.codice) === window.Stanza.normalizza(code));
+    cambiaCampo(code, { tab: activeTab === 'campi' && entrando ? 'calendario' : activeTab });
     return false;
   };
   useEffect(() => {
@@ -2652,12 +2658,12 @@ function App({ eredita, cambiaCampo } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stanzaStato.stanza && stanzaStato.stanza.codice, account.utente && account.utente.uid]);
 
-  // Il capogruppo, aprendo Impostazioni, deve poter scegliere l'aiutante fra
+  // Il capogruppo, aprendo «Il campo», deve poter scegliere l'aiutante fra
   // chi c'e': l'elenco dei membri si chiede li', e solo a lui.
   useEffect(() => {
     // E nel Calendario, finche' l'invito dei primi passi non e' partito da
     // qui: se qualcuno e' gia' entrato, quel passo e' fatto lo stesso.
-    if (FEATURES.rooms && stanzaStato.capogruppo && (scheda === 'impostazioni' || (scheda === 'calendario' && !stanzaStato.invitoMandato))) stanzaStato.aggiornaMembri();
+    if (FEATURES.rooms && stanzaStato.capogruppo && (scheda === 'campo' || (scheda === 'calendario' && !stanzaStato.invitoMandato))) stanzaStato.aggiornaMembri();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheda, stanzaStato.capogruppo]);
 
@@ -2731,6 +2737,7 @@ function App({ eredita, cambiaCampo } = {}) {
     guida: L.t('area.guida'),
     impostazioni: L.t('area.impostazioni'),
     campi: L.t('area.campi'),
+    campo: L.t('area.campo'),
   };
 
   // Le icone delle aree stanno in src/45-icone.jsx e si chiamano per nome,
@@ -2776,7 +2783,14 @@ function App({ eredita, cambiaCampo } = {}) {
     </>
   );
 
-  const goTo = (tab) => { setActiveTab(tab); setMenuOpen(false); setManualOpen(false); };
+  // Il secondo argomento apre una riga di «Il campo» (o ci scorre, per il
+  // Pro): chi tocca «scegli il luogo» dal Calendario deve arrivare al luogo,
+  // non a una scheda da cercare.
+  const goTo = (tab, riga) => {
+    setActiveTab(tab); setMenuOpen(false); setManualOpen(false);
+    if (tab === 'campo' && riga) stanzaStato.setRigaCampo(riga === 'pro' ? '' : riga);
+    if (tab === 'campo' && riga === 'pro') setTimeout(() => { const el = document.querySelector('[data-riquadro="pro"]'); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' }); }, 50);
+  };
 
   // Guida: una "pill" per ogni area di lavoro.
   // I testi stanno in lingue.js: qui restano la chiave e l'icona. GUIDE e'
@@ -2879,6 +2893,14 @@ function App({ eredita, cambiaCampo } = {}) {
                 <span className="w-5 shrink-0 flex items-center justify-center">{icona('campi')}</span>
                 <span className="min-w-0 truncate">{L.t('area.campi')}</span>
               </button>
+              {/* «Il campo»: quello aperto — l'invito, le sue impostazioni, il
+                  Pro. Sta accanto ai campi perche' e' la stessa famiglia. */}
+              {dentroUnCampo && (
+                <button data-voce="campo" onClick={() => goTo('campo')} className={bottoneMenu(scheda === 'campo')}>
+                  <span className="w-5 shrink-0 flex items-center justify-center">{icona('campo')}</span>
+                  <span className="min-w-0 truncate">{L.t('area.campo')}</span>
+                </button>
+              )}
               {!dentroUnCampo && [['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => (
                 <button
                   key={modo}
@@ -3154,6 +3176,9 @@ function App({ eredita, cambiaCampo } = {}) {
         })}
 
         {/* ---------- IMPOSTAZIONI ---------- */}
+        {/* ---------- IL CAMPO ---------- */}
+        {scheda === 'campo' && FEATURES.rooms && schedaCampo({ account, contiBloccati: !!bloccoConti(), goTo, stanzaStato })}
+
         {scheda === 'impostazioni' && schedaImpostazioni({
           account, stanzaStato, admin, adminErr, adminPwd, annullaSync, askAlways, bloccoOpen, campData, campoInCorso, cloud, datiOpen, diagTick, entraAdmin, esciAdmin, esportaRegistro, exportData, fotoDove, goTo, isDark, isOnline, lingua, lockNow, logOpen, members, metaRef, photoCap, purchases, readyChecks, readyOk, receipts, setAdminErr, setAdminPwd, setBloccoOpen, setDatiOpen, setDiagTick, setLingua, setLogOpen, setLostSync, setPhotoCap, setTecnicaOpen, setTheme, swVersion, syncStateRef, tecnicaOpen, theme, toggleAskAlways, wipeLocal,
           contiBloccati: !!bloccoConti(), adminPermesso,

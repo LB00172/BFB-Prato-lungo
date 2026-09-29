@@ -345,6 +345,35 @@ const usaStanza = () => {
     const c = window.Stanza.normalizza(stanza.codice);
     setCampi((l) => l.map((v) => (window.Stanza.normalizza(v.codice) === c ? Object.assign({}, v, campi) : v)));
   };
+  // ---------- La scheda «Il campo» ----------
+  // Le righe si aprono una alla volta: e' l'elenco delle cose del campo, e
+  // aperte tutte insieme tornerebbe il muro di riquadri che c'era in
+  // Impostazioni. Quale riga e' aperta sta qui e non nella scheda: le schede
+  // disegnano e non tengono stato.
+  const [rigaCampo, setRigaCampo] = useState('');
+  const apriRigaCampo = (k) => setRigaCampo((v) => (v === k ? '' : k));
+
+  // Nome e date: il capogruppo li corregge. Le regole sono quelle del modulo
+  // di creazione (Stanza.validaModulo), e le date sono quelle che il
+  // Calendario usa per tutti: a correggerle si sposta il campo di ognuno.
+  const [bozzaCampo, setBozzaCampo] = useState(null);
+  const apriBozzaCampo = () => {
+    const v = voceAperta || {};
+    setBozzaCampo({ nome: v.nome || (stanza && stanza.nome) || '', inizio: v.inizio || '', fine: v.fine || '' });
+    pulisci();
+  };
+  const salvaNomeDate = async () => {
+    if (!stanza || !bozzaCampo) return false;
+    const dati = { nome: String(bozzaCampo.nome || '').trim(), inizio: bozzaCampo.inizio, fine: bozzaCampo.fine };
+    const problemi = window.Stanza.validaModulo(dati);
+    if (problemi.length) { setProblema(problemi[0]); return false; }
+    const fatto = await prova((c) => c.impostaStanza(stanza.codice, dati).then(() => true));
+    if (!fatto) return false;
+    aggiornaVoceAperta(dati);
+    setBozzaCampo(null);
+    return true;
+  };
+
   const salvaRegole = async (testo) => {
     if (!stanza) return false;
     const elenco = window.Stanza.regoleDaTesto(testo);
@@ -554,6 +583,7 @@ const usaStanza = () => {
     problema, fatto, occupato, chiudi,
     crea, entra, esci, aggiornaMembri,
     invito, accettaInvito, rifiutaInvito, linkDaMandare, riagganciaStanza, mandaInvito, invitoMandato,
+    rigaCampo, apriRigaCampo, setRigaCampo, bozzaCampo, setBozzaCampo, apriBozzaCampo, salvaNomeDate, voceAperta,
     campi, apriCampo, aggiornaCampi,
   };
 };

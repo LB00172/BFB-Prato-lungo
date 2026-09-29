@@ -10,6 +10,9 @@ const { bloccoDiProva, PASSWORD_PROVA } = require('../lib/app');
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   p.on('dialog', d => d.accept());
   await p.addInitScript(...bloccoDiProva());
+  // Il blocco con password sta in modalita' tecnica (Impostazioni e' della
+  // persona): la si accende prima di aprire, come fa apri() per le altre.
+  await p.addInitScript(() => localStorage.setItem('cambusa_admin', '1'));
   await p.addInitScript(() => {
     localStorage.setItem('cambusa_install_hint_off', '1');
     window.__log = [];

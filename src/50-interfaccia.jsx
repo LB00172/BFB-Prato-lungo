@@ -256,7 +256,7 @@ const avvisoPro = ({ funzione, capogruppo, goTo }) => (
     <p className="text-piccolo font-bold text-bosco flex items-center gap-2">{segnoPro()}{L.t(NOME_PRO[funzione])}</p>
     <p className="text-minuto text-gray-600 leading-snug">{L.t(capogruppo ? 'pro.perCapogruppo' : 'pro.perMembro')}</p>
     {capogruppo && goTo && (
-      <button onClick={() => goTo('impostazioni')} className={bottone('avviso', 'minuscolo', 'w-full')}>{L.t('pro.scopri')}</button>
+      <button onClick={() => goTo('campo', 'pro')} className={bottone('avviso', 'minuscolo', 'w-full')}>{L.t('pro.scopri')}</button>
     )}
   </div>
 );
@@ -267,7 +267,7 @@ const avvisoPro = ({ funzione, capogruppo, goTo }) => (
 // porta dove il Pro si attiva — la sa solo il capogruppo, gli altri non la
 // vedono.
 const rigaPro = ({ funzione, goTo }) => (
-  <button data-pro-bloccata={funzione} onClick={() => goTo('impostazioni')} className={bottoneRiga('rounded border border-fuoco/40 bg-fuoco/10')}>
+  <button data-pro-bloccata={funzione} onClick={() => goTo('campo', 'pro')} className={bottoneRiga('rounded border border-fuoco/40 bg-fuoco/10')}>
     <span className="flex items-center gap-2 min-w-0 text-piccolo font-bold text-bosco">{segnoPro()}<span className="truncate">{L.t(NOME_PRO[funzione])}</span></span>
     <span className="shrink-0 text-minuto font-bold uppercase tracking-wide text-legno">{L.t('pro.scopri')}</span>
   </button>

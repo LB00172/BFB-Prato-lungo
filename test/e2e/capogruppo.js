@@ -115,7 +115,9 @@ const testo = (a) => a.page.locator('main').innerText();
     await attendi(a.page, () => document.querySelectorAll('[data-scheda="dotazioni"] li').length === 2);
     ok('e si vede subito', true);
 
-    await a.menu('Impostazioni');
+    // L'aiutante sta in «Il campo», nella sua riga.
+    await a.menu('Il campo');
+    await a.page.click('[data-riga="aiutante"]');
     await attendi(a.page, () => !!document.querySelector('[data-riquadro="aiutante"] option[value="bruno"]'));
     const riquadro = a.page.locator('[data-riquadro="aiutante"]');
     ok('il capogruppo trova il riquadro dell\'aiutante, con chi c\'è ma senza se stesso',
@@ -130,7 +132,9 @@ const testo = (a) => a.page.locator('main').innerText();
       && !!document.querySelector('[data-riquadro="aiutante"] button.w-full'));
     ok('e il riquadro dice chi è', /il tuo aiutante è bruno/i.test(await riquadro.innerText()));
 
-    // La modalita' tecnica: il capogruppo la accende senza password.
+    // La modalita' tecnica: il capogruppo la accende senza password. Sta in
+    // Impostazioni, che e' della persona.
+    await a.menu('Impostazioni');
     const tecnica = a.page.locator('main button', { hasText: /modalit. tecnica/i }).first();
     if (await tecnica.count()) await tecnica.click();
     const attiva = a.page.locator('main button', { hasText: /^attiva$/i });
@@ -139,6 +143,9 @@ const testo = (a) => a.page.locator('main').innerText();
     await attendi(a.page, () => localStorage.getItem('cambusa_admin') === '1');
     ok('e la accende senza password', true);
 
+    // Tornando in «Il campo» la riga dell'aiutante e' ancora aperta.
+    await a.menu('Il campo');
+    await attendi(a.page, () => !!document.querySelector('[data-riquadro="aiutante"]'));
     await riquadro.locator('button', { hasText: /lascia il campo a bruno/i }).click();
     await attendi(a.page, () => window.__scritture.some((x) => x.che === 'lascia'));
     ok(`prima di lasciarlo si chiede, e si dice che il Pro non passa (${(dialoghi[0] || '').slice(0, 60)}…)`,
@@ -172,10 +179,11 @@ const testo = (a) => a.page.locator('main').innerText();
     await attendi(a.page, () => /borraccia/i.test(document.querySelector('main').innerText));
     ok('un membro legge la lista delle dotazioni', true);
     ok('ma non la cambia', (await a.page.locator('main button', { hasText: /modifica la lista/i }).count()) === 0);
-    await a.menu('Impostazioni');
+    await a.menu('Il campo');
     await attendi(a.page, () => /sei l'aiutante/i.test(document.querySelector('main').innerText));
     ok('l\'aiutante sa di esserlo', true);
-    ok('e il riquadro del capogruppo non c\'è', (await a.page.locator('[data-riquadro="aiutante"]').count()) === 0);
+    ok('e il riquadro del capogruppo non c\'è', (await a.page.locator('[data-riquadro="aiutante"], [data-riga="aiutante"]').count()) === 0);
+    await a.menu('Impostazioni');
     const tecnica = a.page.locator('main button', { hasText: /modalit. tecnica/i }).first();
     if (await tecnica.count()) await tecnica.click();
     ok('la modalità tecnica gli dice che è del capogruppo',

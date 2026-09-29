@@ -110,10 +110,9 @@ const scena = [(s) => {
 const testo = (a) => a.page.locator('main').innerText();
 
 const entraNellaStanza = async (a, codice) => {
-  await a.menu('Impostazioni');
-  // Da dentro una stanza non si entra in un'altra: prima si esce.
-  const esci = a.page.locator('main button', { hasText: /Esci dalla stanza/i });
-  if (await esci.count()) await esci.first().click();
+  // Si entra dalla home, «I miei campi», che ha il modulo anche da dentro
+  // un altro campo: si passa dall'uno all'altro senza uscire.
+  await a.menu('I miei campi');
   await a.page.locator('main button', { hasText: /Entra con un codice/i }).click();
   await a.page.locator('main input[placeholder="Codice"]').fill(codice);
   await a.page.locator('main button', { hasText: /^Entra$/i }).click();

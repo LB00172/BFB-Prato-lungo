@@ -68,8 +68,9 @@ const scena = (o) => [(s) => {
 
 const giro = (a) => a.page.evaluate(() => window.__giro);
 const riquadro = (a) => a.page.locator('[data-riquadro="pro"]');
+// Il Pro sta in fondo a «Il campo».
 async function impostazioni(a) {
-  await a.menu('Impostazioni');
+  await a.menu('Il campo');
   await attendi(a.page, () => !!document.querySelector('[data-riquadro="pro"]'));
 }
 

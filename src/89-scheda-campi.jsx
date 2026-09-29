@@ -18,6 +18,19 @@
 // home, che deve mostrare lo STESSO modulo — due copie divergono alla prima
 // correzione. Impostazioni e' identica al carattere a com'era (confronto del
 // DOM).
+// Com'e' andata, detto dove si e' fatto il gesto: nella home per chi crea o
+// entra col codice, in Impostazioni per chi accetta un invito arrivato da un
+// link. Uno per uno e non un L.t(stanzaStato.fatto) generico: queste due
+// chiavi vogliono un argomento, e senza stamperebbero "undefined" a meta'
+// frase.
+const esitoStanza = (stanzaStato) => {
+  const s = stanzaStato.stanza;
+  if (!s) return null;
+  if (stanzaStato.fatto === 'stanza.entrato') return <p className="text-piccolo text-bosco leading-snug">{frase('stanza.entrato', s.nome || Stanza.bello(s.codice))}</p>;
+  if (stanzaStato.fatto === 'stanza.creata') return <p className="text-piccolo text-bosco leading-snug">{frase('stanza.creata', Stanza.bello(s.codice))}</p>;
+  return null;
+};
+
 const moduloStanza = ({ stanzaStato, account }) => (
   <>
     <p className="text-piccolo text-gray-500 leading-snug">{L.t('stanza.aCosaServe')}</p>
@@ -120,6 +133,7 @@ const schedaCampi = ({ stanzaStato, account, codiceInGioco, onApri }) => {
         <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco">{L.t('campi.nuovo')}</h3>
         {moduloStanza({ stanzaStato, account })}
         {stanzaStato.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(stanzaStato.problema)}</p>}
+        {esitoStanza(stanzaStato)}
       </div>
     </div>
   );
