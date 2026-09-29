@@ -70,6 +70,11 @@ entrano in conflitto, vince il collaudo.
 
 ### Dicembre 2026, e il lancio di gennaio — deciso da Lorenzo il 29 settembre
 
+**iPhone e mondo Apple: messi da parte per ora** (Lorenzo, 29 settembre). Il
+lancio è Android (Play Store); la PWA continua a funzionare nel browser
+dell'iPhone, ma non si verifica né si cura in modo particolare finché non si
+decide di riprenderlo. Il giro a mano del § 10 non è un blocco per gennaio.
+
 Il lancio si anticipa a **gennaio 2027**. Fino a dicembre si lavora
 sull'interfaccia, la grafica e le prove; **a dicembre** si fanno le cose che
 costano soldi o che hanno senso solo a ridosso del lancio. Il codice per tutte
@@ -78,7 +83,7 @@ costano soldi o che hanno senso solo a ridosso del lancio. Il codice per tutte
 | Cosa | Dove sono i passi |
 | --- | --- |
 | Il Pro: piano Blaze, API di Google Play, `firebase deploy --only functions`, account di servizio in Play Console, prodotti `pro_campo` e `pro_anno` con i prezzi, notifiche in tempo reale, tester di licenza | `PLAY-STORE.md` § 6 |
-| Le regole Firestore nuove in console (foto nel cloud solo col Pro) | `PLAY-STORE.md` § 6, passo 7 |
+| ~~Le regole Firestore nuove in console (foto nel cloud solo col Pro)~~ | **fatto** da Lorenzo il 29 settembre |
 | Il pacchetto Android con Play Billing, `assetlinks.json`, il test chiuso di 14 giorni con 12 tester | `PLAY-STORE.md` §§ 4–6 |
 | Il canale social (Instagram), con i primi post pronti | da preparare a novembre: nome utente, biografia, immagine, 9 post |
 | Il contatto dell'informativa e il campo di prova per il revisore | `PLAY-STORE.md` § 0 |
