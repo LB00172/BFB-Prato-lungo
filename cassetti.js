@@ -52,6 +52,8 @@
     'cambusa_receipts',
   ];
   var DEL_TELEFONO = [
+    // I gruppi del menu aperti: un'abitudine di chi tiene il telefono.
+    'cambusa_menu_gruppi',
     // Dove si e': sono le chiavi che DECIDONO il cassetto, non ci stanno dentro.
     'cambusa_stanza', 'cambusa_camp_code', 'cambusa_sync_optout',
     // Quali campi ha questa persona: serve a scegliere il cassetto.

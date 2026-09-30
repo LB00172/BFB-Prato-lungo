@@ -6,6 +6,7 @@ const { chromium } = require('playwright-core');
   const b = await chromium.launch({ executablePath: require('../lib/app').chromium(), args: ['--no-sandbox'] });
   const p = await b.newPage({ viewport: { width: 390, height: 800 } });
   await p.addInitScript((h) => localStorage.setItem('cambusa_unlock', h), require('../lib/app').SBLOCCO);
+  await p.addInitScript((g) => localStorage.setItem('cambusa_menu_gruppi', g), require('../lib/app').TUTTI_I_GRUPPI);
   const errs = [];
   p.on('pageerror', (e) => errs.push(e.message));
   p.on('dialog', (d) => d.accept());

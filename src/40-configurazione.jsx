@@ -24,6 +24,8 @@ const BRAND = {
 // Quello che scrive l'utente (nomi, menu', spese) non si traduce mai.
 const FEATURES = { auth: false, rooms: false, equipExemption: false, compiti: true, lingue: true, ...(CFG.features || {}) };
 const LINGUA_KEY = 'cambusa_lingua';
+// Quali gruppi del menu sono aperti, su questo telefono.
+const MENU_GRUPPI_KEY = 'cambusa_menu_gruppi';
 
 // Periodo del campo. Durante il campo l'app si apre sul giorno corrente.
 //

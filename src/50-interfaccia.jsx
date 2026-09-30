@@ -93,6 +93,16 @@ const bottoneRiga = (extra) => [
   extra || '',
 ].filter(Boolean).join(' ');
 
+// ---------- L'intestazione di un gruppo del menu ----------
+// Dal 30 settembre i gruppi del menu si aprono e si chiudono: l'intestazione
+// e' un tasto, largo quanto il cassetto e alto 44 come tutto quello che si
+// tocca. Il colore del titolo lo decide chi chiama (quello della scheda in cui
+// sei e' piu' scuro), la forma sta qui.
+const bottoneGruppo = (extra) => [
+  'w-full min-h-11 flex items-center gap-2 px-1 text-left rounded hover:bg-orlo/60',
+  extra || '',
+].filter(Boolean).join(' ');
+
 // ---------- La voce del menu ----------
 // La riga del cassetto: icona a sinistra, etichetta che si accorcia invece di
 // traboccare, e lo stato acceso quando e' l'area che stai guardando. Era

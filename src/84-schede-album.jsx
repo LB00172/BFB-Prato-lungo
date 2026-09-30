@@ -99,51 +99,66 @@ const schedaArchivio = ({
   </div>
 );
 
+// ---------- Come funziona ----------
+// Erano venti pillole tutte insieme e un testo solo sotto: per trovare una
+// cosa si leggevano le etichette di tutte le altre. Adesso i tre passi per
+// cominciare stanno in cima, e il resto e' diviso in capitoli per MOMENTO
+// (prima di partire, al campo, le spese, i conti, il telefono): dentro, una
+// riga per voce, che si apre sul suo testo — una alla volta, come le righe
+// di «Il campo». Non una tendina: una tendina nasconde l'elenco, e l'elenco
+// e' proprio quello che serve vedere per sapere cosa chiedere.
 const schedaGuida = ({
   GUIDE,
   guideOpen,
   setGuideOpen,
 }) => (
   <div className="space-y-4">
-    <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
-      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-1">{L.t('guida.titolo')}</h3>
-      <p className="text-piccolo text-gray-500 mb-3">{L.t('guida.sottotitolo')}</p>
-
-      {/* Pills */}
-      <div className="flex flex-wrap gap-1.5">
-        {GUIDE.map((g) => (
-          <button
-            key={g.k}
-            onClick={() => setGuideOpen(g.k)}
-            className={bottoneScelta('pillola', 'tenue', guideOpen === g.k, 'minuscolo')}
-          >
-            <span className="inline-flex items-center gap-1.5">{icona(g.k, 'w-4 h-4')}{g.title}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Testo della pill selezionata */}
-      {(() => {
-        const g = GUIDE.find((x) => x.k === guideOpen) || GUIDE[0];
-        return (
-          <div className="mt-3 bg-carta/60 p-3 rounded border border-salvia/20">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-bosco">{icona(g.k, 'w-6 h-6')}</span>
-              <span className="font-rustic text-bosco">{g.title}</span>
-            </div>
-            <p className="text-piccolo text-bosco leading-relaxed">{g.body}</p>
-          </div>
-        );
-      })()}
-    </div>
-
     <div className="bg-bosco text-carta p-4 rounded-lg border-b-4 border-legno shadow-md">
+      <h3 className="font-rustic text-grande mb-1">{L.t('guida.titolo')}</h3>
+      <p className="text-piccolo text-carta/80 mb-3">{L.t('guida.sottotitolo')}</p>
       <h4 className="font-rustic text-medio mb-2">{L.t('guida.trePassi')}</h4>
-      <ol className="text-piccolo space-y-1.5 list-decimal list-inside text-carta/90">
+      <ol data-tre-passi className="text-piccolo space-y-1.5 list-decimal list-inside text-carta/90">
         <li>{frase('guida.passo1')}</li>
         <li>{frase('guida.passo2')}</li>
         <li>{frase('guida.passo3')}</li>
       </ol>
     </div>
+
+    {CAPITOLI_GUIDA.map((cap) => {
+      const voci = cap.voci.map((k) => GUIDE.find((g) => g.k === k)).filter(Boolean);
+      if (!voci.length) return null;
+      return (
+        <div key={cap.id} data-capitolo={cap.id} className="bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden">
+          <h3 className="font-rustic text-grande text-bosco px-4 pt-3 pb-2 border-b border-salvia/40">{L.t(cap.titolo)}</h3>
+          {voci.map((g) => {
+            const aperta = guideOpen === g.k;
+            return (
+              <div key={g.k} className="border-t border-salvia/20 first:border-t-0">
+                <button data-guida={g.k} aria-expanded={aperta} onClick={() => setGuideOpen(aperta ? '' : g.k)} className={bottoneRiga()}>
+                  <span className="flex items-center gap-3 min-w-0">
+                    <span className="text-bosco shrink-0">{icona(g.k, 'w-5 h-5')}</span>
+                    <span className="text-normale font-bold text-bosco">{g.title}</span>
+                  </span>
+                  <span className="text-salvia shrink-0">{aperta ? '−' : '+'}</span>
+                </button>
+                {aperta && <p className="px-4 pb-3 text-piccolo text-bosco leading-relaxed">{g.body}</p>}
+              </div>
+            );
+          })}
+        </div>
+      );
+    })}
   </div>
 );
+
+// I capitoli: tengono le CHIAVI delle voci, i testi li chiede il disegno
+// (una tabella di testi qui si congelerebbe nella lingua di quel momento).
+// Una voce che non sta in nessun capitolo non si vedrebbe piu': una prova
+// lo vieta.
+const CAPITOLI_GUIDA = [
+  { id: 'partire', titolo: 'guida.cap.partire', voci: ['campo', 'membri', 'compiti', 'dotazioni', 'pronto', 'installa'] },
+  { id: 'campo', titolo: 'guida.cap.campo', voci: ['calendario', 'menu', 'presenze', 'galleria'] },
+  { id: 'spese', titolo: 'guida.cap.spese', voci: ['lista', 'attrezzatura', 'correggi'] },
+  { id: 'conti', titolo: 'guida.cap.conti', voci: ['spesa', 'conti', 'separato', 'saldi'] },
+  { id: 'dati', titolo: 'guida.cap.dati', voci: ['sync', 'backup', 'chiusura', 'impostazioni'] },
+];

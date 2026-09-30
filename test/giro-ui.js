@@ -182,6 +182,12 @@ const passi = {
   menu: (voce) => async (p) => {
     await p.click('button[aria-label="Menu"]');
     await p.waitForTimeout(300);
+    // I gruppi del menu sono chiusi, come per chi apre l'app: si aprono uno
+    // alla volta finche' la voce non compare, come farebbe una persona.
+    for (const g of await p.locator('nav button[data-gruppo][aria-expanded="false"]').all()) {
+      if (await p.locator(`nav button[data-voce="${voce}"]`).count()) break;
+      await g.click();
+    }
     await p.locator(`nav button[data-voce="${voce}"]`).first().click();
     await p.waitForTimeout(500);
   },

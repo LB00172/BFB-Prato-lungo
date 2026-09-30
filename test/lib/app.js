@@ -38,9 +38,17 @@ const luogoDiProva = () => [(l) => {
   Object.defineProperty(window, 'CAMP_LOCATION', { configurable: true, get() { return l; }, set() {} });
 }, { lat: 42.0486, lon: 13.14855, alt: 1337, label: 'Luogo di prova' }];
 
-const campoDiProva = () => [(c) => {
-  Object.defineProperty(window, 'CAMP_CODE_DEFAULT', { configurable: true, get() { return c; }, set() {} });
-}, CAMPO_DI_PROVA];
+// I gruppi del menu: nell'app partono chiusi (tranne quello della scheda in
+// cui si e'), e il telefono si ricorda quali hai aperto. Le prove partono con
+// tutti aperti, com'era prima del 30 settembre: cliccano le voci per nome, e
+// un gruppo chiuso le nasconderebbe. Il comportamento vero — gruppi chiusi —
+// lo guarda e2e/menu-chiuso, che questa chiave non la scrive.
+const TUTTI_I_GRUPPI = JSON.stringify(['pianificazione', 'spese', 'gruppo', 'altro']);
+
+const campoDiProva = () => [(o) => {
+  Object.defineProperty(window, 'CAMP_CODE_DEFAULT', { configurable: true, get() { return o.c; }, set() {} });
+  if (!localStorage.getItem('cambusa_menu_gruppi')) localStorage.setItem('cambusa_menu_gruppi', o.g);
+}, { c: CAMPO_DI_PROVA, g: TUTTI_I_GRUPPI }];
 
 // Impronta della password del campo: la scrivo in localStorage così i test
 // entrano già sbloccati, senza passare dalla schermata di blocco.
@@ -238,6 +246,7 @@ async function apri(opzioni) {
   await page.addInitScript((o) => {
     localStorage.setItem('cambusa_unlock', o.h);
     if (o.admin) localStorage.setItem('cambusa_admin', '1');
+    if (o.gruppi && !localStorage.getItem('cambusa_menu_gruppi')) localStorage.setItem('cambusa_menu_gruppi', o.gruppi);
     // Quasi tutte le prove guardano un campo, e dal 28 settembre l'app
     // pubblica non ne ha uno predefinito: glielo si da' qui. Chi vuole l'app
     // senza campo lo toglie con ingressoFinto({ senzaCampo }), che gira dopo
@@ -247,7 +256,7 @@ async function apri(opzioni) {
       get() { return o.campo; },
       set() { /* firebase-config.js assegna "" dopo di noi: vale il nostro */ },
     });
-  }, { h: o.blocco ? BLOCCO_PROVA.hash : SBLOCCO, admin: o.admin !== false, campo: CAMPO_DI_PROVA });
+  }, { h: o.blocco ? BLOCCO_PROVA.hash : SBLOCCO, admin: o.admin !== false, campo: CAMPO_DI_PROVA, gruppi: o.menuChiuso ? null : TUTTI_I_GRUPPI });
   // `blocco`: il blocco con password, per le prove che lo attraversano.
   // Nell'app pubblica non c'e' (APP_LOCK = null): se lo installano loro.
   if (o.blocco) await page.addInitScript(...bloccoDiProva());
@@ -338,4 +347,4 @@ async function scontriniSalvati(page, n, ms) {
   }
 }
 
-module.exports = { chromium, apri, campoDiProva, luogoDiProva, CAMPO_DI_PROVA, ingressoFinto, ok, fine, attendi, scontriniSalvati, fotoSalvate, URL_APP, SBLOCCO, bloccoDiProva, PASSWORD_PROVA, BLOCCO_PROVA };
+module.exports = { chromium, apri, campoDiProva, TUTTI_I_GRUPPI, luogoDiProva, CAMPO_DI_PROVA, ingressoFinto, ok, fine, attendi, scontriniSalvati, fotoSalvate, URL_APP, SBLOCCO, bloccoDiProva, PASSWORD_PROVA, BLOCCO_PROVA };

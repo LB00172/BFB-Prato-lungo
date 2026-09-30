@@ -544,6 +544,8 @@ const FEATURES = {
   ...(CFG.features || {})
 };
 const LINGUA_KEY = 'cambusa_lingua';
+// Quali gruppi del menu sono aperti, su questo telefono.
+const MENU_GRUPPI_KEY = 'cambusa_menu_gruppi';
 
 // Periodo del campo. Durante il campo l'app si apre sul giorno corrente.
 //
@@ -1010,6 +1012,13 @@ const bottoneFlottante = extra => ['min-h-12 inline-flex items-center gap-2 pl-4
 // diversa — larga, allineata a sinistra, senza maiuscolo, con il contenuto ai
 // due estremi. Passa da qui perche' e' un ruolo, non un caso particolare.
 const bottoneRiga = extra => ['w-full min-h-11 flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-orlo/60', extra || ''].filter(Boolean).join(' ');
+
+// ---------- L'intestazione di un gruppo del menu ----------
+// Dal 30 settembre i gruppi del menu si aprono e si chiudono: l'intestazione
+// e' un tasto, largo quanto il cassetto e alto 44 come tutto quello che si
+// tocca. Il colore del titolo lo decide chi chiama (quello della scheda in cui
+// sei e' piu' scuro), la forma sta qui.
+const bottoneGruppo = extra => ['w-full min-h-11 flex items-center gap-2 px-1 text-left rounded hover:bg-orlo/60', extra || ''].filter(Boolean).join(' ');
 
 // ---------- La voce del menu ----------
 // La riga del cassetto: icona a sinistra, etichetta che si accorcia invece di
@@ -2893,6 +2902,18 @@ function App({
   // scrive il disegno — cosi' il calendario, i giorni del campo e il controllo
   // «pronto per il campo» parlano del campo in cui si e' adesso.
   aggiornaPeriodoCampo();
+
+  // Quali gruppi del menu sono aperti (vedi apriChiudiGruppo, piu' in basso).
+  // Sta qui in cima perche' e' un hook: dopo il return anticipato della
+  // schermata d'ingresso React li conterebbe diversi a ogni disegno.
+  const [gruppiAperti, setGruppiAperti] = useState(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem(MENU_GRUPPI_KEY) || 'null');
+      return Array.isArray(v) ? v : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [locked, setLocked] = useState(() => !isUnlocked());
   const [lockReason, setLockReason] = useState('');
   // Il saluto col logo solo all'apertura: dopo un cambio di campo si va diretti.
@@ -2946,7 +2967,7 @@ function App({
   // Giorno dell'ultimo backup su file (o del "ho già fatto"): serve al promemoria.
   const [backupOggi, setBackupOggi] = useState(() => localStorage.getItem(BACKUP_KEY) || '');
   const [spesaSection, setSpesaSection] = useState('totali'); // sotto-sezione attiva in Spesa
-  const [guideOpen, setGuideOpen] = useState('calendario'); // pill aperta nella guida
+  const [guideOpen, setGuideOpen] = useState(''); // voce aperta nella guida: nessuna, all'inizio
 
   // Rimborsi segnati come "saldati" (solo barrati, non rimossi). Condivisi via sync.
   const [settled, setSettled] = useState(() => load('cambusa_settled', []));
@@ -6079,21 +6100,45 @@ function App({
   // Il menu raggruppa le aree per momento d'uso: prima quello che si tocca
   // ogni giorno, poi i soldi, poi le cose del gruppo, in fondo il resto.
   const MENU_GROUPS = [{
+    id: 'pianificazione',
     title: L.t('menu.pianificazione'),
     items: ['calendario', 'menu', 'presenze']
   },
   // "Chi fa cosa" viene PRIMA della lista, ed e' l'ordine dei fatti: ci si
   // divide i compiti, poi si compra, poi si registra la spesa.
   {
+    id: 'spese',
     title: L.t('menu.spese'),
     items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa']
   }, {
+    id: 'gruppo',
     title: L.t('menu.gruppo'),
     items: ['membri', 'regole', 'dotazioni', 'galleria']
   }, {
+    id: 'altro',
     title: L.t('menu.altro'),
     items: ['archivio', 'guida', 'impostazioni']
   }];
+
+  // ---------- I gruppi del menu si chiudono ----------
+  // Sedici voci aperte tutte insieme erano un elenco da scorrere per trovare
+  // la propria. Adesso i gruppi sono intestazioni che si aprono e si chiudono,
+  // e il telefono si ricorda quali hai lasciato aperti (MENU_GRUPPI_KEY, una
+  // chiave del TELEFONO: e' un'abitudine di chi lo tiene in mano, non del
+  // campo). Chi non ha mai toccato niente trova aperto solo il gruppo della
+  // scheda in cui e' — la voce in cui si trova non resta mai nascosta.
+  // (lo stato, gruppiAperti, sta in cima ad App: e' un hook, e qui sotto c'e'
+  // gia' stato un return anticipato.)
+  // Fuori da un campo il menu ha tre voci in tutto: niente da chiudere, e
+  // un'intestazione chiusa nasconderebbe proprio Impostazioni.
+  const menuComprimibile = dentroUnCampo;
+  const gruppoAperto = g => !menuComprimibile || (gruppiAperti ? gruppiAperti.includes(g.id) : g.items.includes(activeTab));
+  const apriChiudiGruppo = g => {
+    const adesso = MENU_GROUPS.filter(gruppoAperto).map(x => x.id);
+    const dopo = adesso.includes(g.id) ? adesso.filter(x => x !== g.id) : adesso.concat([g.id]);
+    setGruppiAperti(dopo);
+    scriviLocale(MENU_GRUPPI_KEY, JSON.stringify(dopo));
+  };
   const GRUPPI_VISIBILI = window.Stanza ? window.Stanza.gruppiMenu(MENU_GROUPS, dentroUnCampo) : MENU_GROUPS;
 
   // Acquirente: si sceglie dai membri, non si scrive. Un nome digitato a mano
@@ -6133,7 +6178,11 @@ function App({
   // I testi stanno in lingue.js: qui restano la chiave e l'icona. GUIDE e'
   // una const DENTRO App(), quindi si ricostruisce a ogni disegno e la
   // lingua la segue (una const di modulo invece la congelerebbe).
-  const GUIDE = [{
+  const GUIDE = [...(FEATURES.rooms ? [{
+    k: 'campo',
+    title: L.t('guida.campo.titolo'),
+    body: L.t('guida.campo.corpo')
+  }] : []), {
     k: 'calendario',
     title: L.t('guida.calendario.titolo'),
     body: L.t('guida.calendario.corpo')
@@ -6302,25 +6351,42 @@ function App({
     className: "w-5 shrink-0 flex items-center justify-center"
   }, icona(modo === 'crea' ? 'compiti' : 'membri')), /*#__PURE__*/React.createElement("span", {
     className: "min-w-0 truncate"
-  }, L.t(chiave))))), GRUPPI_VISIBILI.map(group => /*#__PURE__*/React.createElement("div", {
-    key: group.title,
-    className: "pt-2 first:pt-0"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 px-1 pb-1"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-minuto uppercase tracking-widest font-bold text-salvia shrink-0"
-  }, group.title), /*#__PURE__*/React.createElement("span", {
-    className: "flex-grow h-px bg-salvia/30"
-  })), group.items.map(tab => /*#__PURE__*/React.createElement("button", {
-    key: tab,
-    "data-voce": tab,
-    onClick: () => goTo(tab),
-    className: bottoneMenu(activeTab === tab)
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "w-5 shrink-0 flex items-center justify-center"
-  }, icona(tab)), /*#__PURE__*/React.createElement("span", {
-    className: "min-w-0 truncate"
-  }, tabs[tab])))))))), showInstallHint && /*#__PURE__*/React.createElement("div", {
+  }, L.t(chiave))))), GRUPPI_VISIBILI.map(group => {
+    const aperto = gruppoAperto(group);
+    const qui = group.items.includes(activeTab);
+    return /*#__PURE__*/React.createElement("div", {
+      key: group.id || group.title,
+      className: "pt-1 first:pt-0"
+    }, !menuComprimibile ? /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 px-1 pb-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-minuto uppercase tracking-widest font-bold text-salvia shrink-0"
+    }, group.title), /*#__PURE__*/React.createElement("span", {
+      className: "flex-grow h-px bg-salvia/30"
+    })) : /*#__PURE__*/React.createElement("button", {
+      "data-gruppo": group.id,
+      "aria-expanded": aperto,
+      onClick: () => apriChiudiGruppo(group),
+      className: bottoneGruppo()
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-minuto uppercase tracking-widest font-bold shrink-0 ${qui ? 'text-bosco' : 'text-salvia'}`
+    }, group.title), qui && !aperto && /*#__PURE__*/React.createElement("span", {
+      className: "w-1.5 h-1.5 rounded-full bg-fuoco shrink-0"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "flex-grow h-px bg-salvia/30"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-minuto text-salvia shrink-0"
+    }, aperto ? '−' : `+ ${group.items.length}`)), aperto && group.items.map(tab => /*#__PURE__*/React.createElement("button", {
+      key: tab,
+      "data-voce": tab,
+      onClick: () => goTo(tab),
+      className: bottoneMenu(activeTab === tab)
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "w-5 shrink-0 flex items-center justify-center"
+    }, icona(tab)), /*#__PURE__*/React.createElement("span", {
+      className: "min-w-0 truncate"
+    }, tabs[tab]))));
+  })))), showInstallHint && /*#__PURE__*/React.createElement("div", {
     className: "bg-fuoco/15 border-b border-fuoco/40 px-4 py-2.5 flex items-start gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-medio leading-none mt-0.5"
@@ -8803,6 +8869,15 @@ const schedaArchivio = ({
 }, p.by))))), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic text-center px-4"
 }, L.t('archivio.conservalo')));
+
+// ---------- Come funziona ----------
+// Erano venti pillole tutte insieme e un testo solo sotto: per trovare una
+// cosa si leggevano le etichette di tutte le altre. Adesso i tre passi per
+// cominciare stanno in cima, e il resto e' diviso in capitoli per MOMENTO
+// (prima di partire, al campo, le spese, i conti, il telefono): dentro, una
+// riga per voce, che si apre sul suo testo — una alla volta, come le righe
+// di «Il campo». Non una tendina: una tendina nasconde l'elenco, e l'elenco
+// e' proprio quello che serve vedere per sapere cosa chiedere.
 const schedaGuida = ({
   GUIDE,
   guideOpen,
@@ -8810,39 +8885,74 @@ const schedaGuida = ({
 }) => /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
 }, /*#__PURE__*/React.createElement("div", {
-  className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
-}, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-1"
-}, L.t('guida.titolo')), /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-gray-500 mb-3"
-}, L.t('guida.sottotitolo')), /*#__PURE__*/React.createElement("div", {
-  className: "flex flex-wrap gap-1.5"
-}, GUIDE.map(g => /*#__PURE__*/React.createElement("button", {
-  key: g.k,
-  onClick: () => setGuideOpen(g.k),
-  className: bottoneScelta('pillola', 'tenue', guideOpen === g.k, 'minuscolo')
-}, /*#__PURE__*/React.createElement("span", {
-  className: "inline-flex items-center gap-1.5"
-}, icona(g.k, 'w-4 h-4'), g.title)))), (() => {
-  const g = GUIDE.find(x => x.k === guideOpen) || GUIDE[0];
-  return /*#__PURE__*/React.createElement("div", {
-    className: "mt-3 bg-carta/60 p-3 rounded border border-salvia/20"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 mb-1"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-bosco"
-  }, icona(g.k, 'w-6 h-6')), /*#__PURE__*/React.createElement("span", {
-    className: "font-rustic text-bosco"
-  }, g.title)), /*#__PURE__*/React.createElement("p", {
-    className: "text-piccolo text-bosco leading-relaxed"
-  }, g.body));
-})()), /*#__PURE__*/React.createElement("div", {
   className: "bg-bosco text-carta p-4 rounded-lg border-b-4 border-legno shadow-md"
-}, /*#__PURE__*/React.createElement("h4", {
+}, /*#__PURE__*/React.createElement("h3", {
+  className: "font-rustic text-grande mb-1"
+}, L.t('guida.titolo')), /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-carta/80 mb-3"
+}, L.t('guida.sottotitolo')), /*#__PURE__*/React.createElement("h4", {
   className: "font-rustic text-medio mb-2"
 }, L.t('guida.trePassi')), /*#__PURE__*/React.createElement("ol", {
+  "data-tre-passi": true,
   className: "text-piccolo space-y-1.5 list-decimal list-inside text-carta/90"
-}, /*#__PURE__*/React.createElement("li", null, frase('guida.passo1')), /*#__PURE__*/React.createElement("li", null, frase('guida.passo2')), /*#__PURE__*/React.createElement("li", null, frase('guida.passo3')))));
+}, /*#__PURE__*/React.createElement("li", null, frase('guida.passo1')), /*#__PURE__*/React.createElement("li", null, frase('guida.passo2')), /*#__PURE__*/React.createElement("li", null, frase('guida.passo3')))), CAPITOLI_GUIDA.map(cap => {
+  const voci = cap.voci.map(k => GUIDE.find(g => g.k === k)).filter(Boolean);
+  if (!voci.length) return null;
+  return /*#__PURE__*/React.createElement("div", {
+    key: cap.id,
+    "data-capitolo": cap.id,
+    className: "bg-scheda rounded-lg border-2 border-bosco/20 shadow-sm overflow-hidden"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande text-bosco px-4 pt-3 pb-2 border-b border-salvia/40"
+  }, L.t(cap.titolo)), voci.map(g => {
+    const aperta = guideOpen === g.k;
+    return /*#__PURE__*/React.createElement("div", {
+      key: g.k,
+      className: "border-t border-salvia/20 first:border-t-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-guida": g.k,
+      "aria-expanded": aperta,
+      onClick: () => setGuideOpen(aperta ? '' : g.k),
+      className: bottoneRiga()
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "flex items-center gap-3 min-w-0"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-bosco shrink-0"
+    }, icona(g.k, 'w-5 h-5')), /*#__PURE__*/React.createElement("span", {
+      className: "text-normale font-bold text-bosco"
+    }, g.title)), /*#__PURE__*/React.createElement("span", {
+      className: "text-salvia shrink-0"
+    }, aperta ? '−' : '+')), aperta && /*#__PURE__*/React.createElement("p", {
+      className: "px-4 pb-3 text-piccolo text-bosco leading-relaxed"
+    }, g.body));
+  }));
+}));
+
+// I capitoli: tengono le CHIAVI delle voci, i testi li chiede il disegno
+// (una tabella di testi qui si congelerebbe nella lingua di quel momento).
+// Una voce che non sta in nessun capitolo non si vedrebbe piu': una prova
+// lo vieta.
+const CAPITOLI_GUIDA = [{
+  id: 'partire',
+  titolo: 'guida.cap.partire',
+  voci: ['campo', 'membri', 'compiti', 'dotazioni', 'pronto', 'installa']
+}, {
+  id: 'campo',
+  titolo: 'guida.cap.campo',
+  voci: ['calendario', 'menu', 'presenze', 'galleria']
+}, {
+  id: 'spese',
+  titolo: 'guida.cap.spese',
+  voci: ['lista', 'attrezzatura', 'correggi']
+}, {
+  id: 'conti',
+  titolo: 'guida.cap.conti',
+  voci: ['spesa', 'conti', 'separato', 'saldi']
+}, {
+  id: 'dati',
+  titolo: 'guida.cap.dati',
+  voci: ['sync', 'backup', 'chiusura', 'impostazioni']
+}];
 // ---------- Scheda Galleria ----------
 // Primo pezzo di interfaccia uscito da 80-app.jsx.
 //

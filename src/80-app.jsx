@@ -25,6 +25,15 @@ function App({ eredita, cambiaCampo } = {}) {
   // «pronto per il campo» parlano del campo in cui si e' adesso.
   aggiornaPeriodoCampo();
 
+  // Quali gruppi del menu sono aperti (vedi apriChiudiGruppo, piu' in basso).
+  // Sta qui in cima perche' e' un hook: dopo il return anticipato della
+  // schermata d'ingresso React li conterebbe diversi a ogni disegno.
+  const [gruppiAperti, setGruppiAperti] = useState(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem(MENU_GRUPPI_KEY) || 'null');
+      return Array.isArray(v) ? v : null;
+    } catch (e) { return null; }
+  });
   const [locked, setLocked] = useState(() => !isUnlocked());
   const [lockReason, setLockReason] = useState('');
   // Il saluto col logo solo all'apertura: dopo un cambio di campo si va diretti.
@@ -74,7 +83,7 @@ function App({ eredita, cambiaCampo } = {}) {
   // Giorno dell'ultimo backup su file (o del "ho già fatto"): serve al promemoria.
   const [backupOggi, setBackupOggi] = useState(() => localStorage.getItem(BACKUP_KEY) || '');
   const [spesaSection, setSpesaSection] = useState('totali'); // sotto-sezione attiva in Spesa
-  const [guideOpen, setGuideOpen] = useState('calendario'); // pill aperta nella guida
+  const [guideOpen, setGuideOpen] = useState(''); // voce aperta nella guida: nessuna, all'inizio
 
   // Rimborsi segnati come "saldati" (solo barrati, non rimossi). Condivisi via sync.
   const [settled, setSettled] = useState(() => load('cambusa_settled', []));
@@ -2748,13 +2757,33 @@ function App({ eredita, cambiaCampo } = {}) {
   // Il menu raggruppa le aree per momento d'uso: prima quello che si tocca
   // ogni giorno, poi i soldi, poi le cose del gruppo, in fondo il resto.
   const MENU_GROUPS = [
-    { title: L.t('menu.pianificazione'), items: ['calendario', 'menu', 'presenze'] },
+    { id: 'pianificazione', title: L.t('menu.pianificazione'), items: ['calendario', 'menu', 'presenze'] },
     // "Chi fa cosa" viene PRIMA della lista, ed e' l'ordine dei fatti: ci si
     // divide i compiti, poi si compra, poi si registra la spesa.
-    { title: L.t('menu.spese'), items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa'] },
-    { title: L.t('menu.gruppo'), items: ['membri', 'regole', 'dotazioni', 'galleria'] },
-    { title: L.t('menu.altro'), items: ['archivio', 'guida', 'impostazioni'] },
+    { id: 'spese', title: L.t('menu.spese'), items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa'] },
+    { id: 'gruppo', title: L.t('menu.gruppo'), items: ['membri', 'regole', 'dotazioni', 'galleria'] },
+    { id: 'altro', title: L.t('menu.altro'), items: ['archivio', 'guida', 'impostazioni'] },
   ];
+
+  // ---------- I gruppi del menu si chiudono ----------
+  // Sedici voci aperte tutte insieme erano un elenco da scorrere per trovare
+  // la propria. Adesso i gruppi sono intestazioni che si aprono e si chiudono,
+  // e il telefono si ricorda quali hai lasciato aperti (MENU_GRUPPI_KEY, una
+  // chiave del TELEFONO: e' un'abitudine di chi lo tiene in mano, non del
+  // campo). Chi non ha mai toccato niente trova aperto solo il gruppo della
+  // scheda in cui e' — la voce in cui si trova non resta mai nascosta.
+  // (lo stato, gruppiAperti, sta in cima ad App: e' un hook, e qui sotto c'e'
+  // gia' stato un return anticipato.)
+  // Fuori da un campo il menu ha tre voci in tutto: niente da chiudere, e
+  // un'intestazione chiusa nasconderebbe proprio Impostazioni.
+  const menuComprimibile = dentroUnCampo;
+  const gruppoAperto = (g) => !menuComprimibile || (gruppiAperti ? gruppiAperti.includes(g.id) : g.items.includes(activeTab));
+  const apriChiudiGruppo = (g) => {
+    const adesso = MENU_GROUPS.filter(gruppoAperto).map((x) => x.id);
+    const dopo = adesso.includes(g.id) ? adesso.filter((x) => x !== g.id) : adesso.concat([g.id]);
+    setGruppiAperti(dopo);
+    scriviLocale(MENU_GRUPPI_KEY, JSON.stringify(dopo));
+  };
 
   const GRUPPI_VISIBILI = window.Stanza
     ? window.Stanza.gruppiMenu(MENU_GROUPS, dentroUnCampo)
@@ -2797,6 +2826,7 @@ function App({ eredita, cambiaCampo } = {}) {
   // una const DENTRO App(), quindi si ricostruisce a ogni disegno e la
   // lingua la segue (una const di modulo invece la congelerebbe).
   const GUIDE = [
+    ...(FEATURES.rooms ? [{ k: 'campo', title: L.t('guida.campo.titolo'), body: L.t('guida.campo.corpo') }] : []),
     { k: 'calendario', title: L.t('guida.calendario.titolo'), body: L.t('guida.calendario.corpo') },
     { k: 'menu', title: L.t('guida.menu.titolo'), body: L.t('guida.menu.corpo') },
     { k: 'membri', title: L.t('guida.membri.titolo'), body: L.t('guida.membri.corpo') },
@@ -2913,13 +2943,31 @@ function App({ eredita, cambiaCampo } = {}) {
               ))}
             </div>
           )}
-          {GRUPPI_VISIBILI.map((group) => (
-            <div key={group.title} className="pt-2 first:pt-0">
-              <div className="flex items-center gap-2 px-1 pb-1">
-                <span className="text-minuto uppercase tracking-widest font-bold text-salvia shrink-0">{group.title}</span>
+          {GRUPPI_VISIBILI.map((group) => {
+            const aperto = gruppoAperto(group);
+            const qui = group.items.includes(activeTab);
+            return (
+            <div key={group.id || group.title} className="pt-1 first:pt-0">
+              {!menuComprimibile ? (
+                <div className="flex items-center gap-2 px-1 pb-1">
+                  <span className="text-minuto uppercase tracking-widest font-bold text-salvia shrink-0">{group.title}</span>
+                  <span className="flex-grow h-px bg-salvia/30"></span>
+                </div>
+              ) : (
+              <button
+                data-gruppo={group.id}
+                aria-expanded={aperto}
+                onClick={() => apriChiudiGruppo(group)}
+                className={bottoneGruppo()}
+              >
+                <span className={`text-minuto uppercase tracking-widest font-bold shrink-0 ${qui ? 'text-bosco' : 'text-salvia'}`}>{group.title}</span>
+                {/* Da chiuso, un pallino dice che la scheda in cui sei sta li'. */}
+                {qui && !aperto && <span className="w-1.5 h-1.5 rounded-full bg-fuoco shrink-0"></span>}
                 <span className="flex-grow h-px bg-salvia/30"></span>
-              </div>
-              {group.items.map((tab) => (
+                <span className="text-minuto text-salvia shrink-0">{aperto ? '−' : `+ ${group.items.length}`}</span>
+              </button>
+              )}
+              {aperto && group.items.map((tab) => (
                 <button
                   key={tab}
                   data-voce={tab}
@@ -2931,7 +2979,8 @@ function App({ eredita, cambiaCampo } = {}) {
                 </button>
               ))}
             </div>
-          ))}
+            );
+          })}
         </nav>
         </div>
       </div>
