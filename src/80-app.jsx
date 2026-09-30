@@ -112,7 +112,7 @@ function App({ eredita, cambiaCampo } = {}) {
   // ---------- L'account (§ 1) ----------
   // Dietro FEATURES.auth. L'hook gira comunque: senza bandiera nessuno guarda
   // il suo stato, e senza Firebase configurato resta "ospite" e basta.
-  const account = usaAccount();
+  const account = usaAccount({ scegliLingua: (k) => { setLingua(k); scriviLocale(LINGUA_KEY, k); } });
 
   // ---------- La stanza (§ 2, § 9) ----------
   // Dietro FEATURES.rooms. Come l'account, l'hook gira comunque: senza

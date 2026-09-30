@@ -1,4 +1,4 @@
-const CACHE_NAME = 'camp-ops-198c946d5b';
+const CACHE_NAME = 'camp-ops-b2c8007057';
 
 // Tutte le risorse sono locali (stesso dominio): il precache è affidabile.
 // Nessuna dipendenza da CDN esterni -> l'app funziona offline al 100%.

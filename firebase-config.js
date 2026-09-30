@@ -130,6 +130,19 @@ window.CAMP_LOCATION = null;
 // "features" tiene spente le funzioni non ancora pronte: restano invisibili
 // finché non vengono attivate.
 // ============================================================================
+// L'indirizzo di sistema dell'app: quello a cui scrive chi ha un problema con
+// l'account (la verifica che non arriva) e il contatto dell'informativa.
+// Provvisorio, deciso il 30 settembre: quello di Lorenzo, finche' non ne
+// nasce uno dedicato — e allora si cambia qui e basta. Sta nel codice che
+// arriva su ogni telefono e nella pagina dell'informativa: e' pubblico.
+// Le email di verifica NON partono da qui: le manda Firebase, da
+// noreply@<progetto>.firebaseapp.com; nella console (Authentication →
+// Templates) si mette questo indirizzo come «Rispondi a».
+//
+// Si scrive una volta, dentro APP_CONFIG.sistema, e il contatto
+// dell'informativa lo prende da li' (in fondo al file). Niente variabile
+// globale: l'app ha gia' una EMAIL_SISTEMA sua, e due script che dichiarano
+// lo stesso nome fanno cadere la pagina intera.
 window.APP_CONFIG = {
   // DOVE finiscono i dati del campo. Su questo ramo dentro la stanza
   // (rooms/<codice>/dati/stato), che e' quello che permettono le regole
@@ -157,10 +170,13 @@ window.APP_CONFIG = {
   // cosi' il contatto si scrive in un posto solo. Google Play vuole un modo
   // per raggiungere chi gestisce i dati; finche' `contatto` e' vuoto, le
   // pagine lo dicono in rosso invece di inventarne uno.
+  sistema: {
+    email: "darkpsyco87@gmail.com",
+  },
   privacy: {
     titolare: "Lorenzo Ballerini",
-    contatto: "",
-    aggiornata: "28 settembre 2026",
+    contatto: "",   // vuoto: si prende l'indirizzo di sistema, qui sotto
+    aggiornata: "30 settembre 2026",
   },
   features: {
     // Accese il 21 settembre: i provider Google ed Email/Password sono attivi
@@ -172,3 +188,10 @@ window.APP_CONFIG = {
     equipExemption: false, // esenzione per membro dalla spesa attrezzatura (da rivedere)
   },
 };
+
+// Il contatto dell'informativa e' l'indirizzo di sistema, finche' non se ne
+// sceglie uno apposta scrivendolo in privacy.contatto.
+(function () {
+  var c = window.APP_CONFIG;
+  if (c && c.privacy && !c.privacy.contatto && c.sistema && c.sistema.email) c.privacy.contatto = c.sistema.email;
+})();

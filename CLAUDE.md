@@ -14,7 +14,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    `frase('chiave')` quando c'è del grassetto dentro — `fraseVestita(classe,
    'chiave')` se quel grassetto ha anche un colore — e `L.data(d, 'forma')`
    per le date. **Mai `'it-IT'` a mano** — ce n'erano 32 sparsi, adesso zero.
-   **Tutti** i sorgenti passano dal dizionario (956 chiavi) e
+   **Tutti** i sorgenti passano dal dizionario (966 chiavi) e
    `FEATURES.lingue` è accesa: `node test/censimento-testi.js` dice se
    qualcuno ha scritto testo nuovo a mano, e una prova lo vieta — compreso
    un sorgente appena nato, che senza quella riga entrerebbe senza contarlo.

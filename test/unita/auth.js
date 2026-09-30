@@ -74,7 +74,7 @@ if (!A) { fine(); }
 
 // ---------- La registrazione ----------
 {
-  const buona = { nome: 'Mario', cognome: 'Rossi', email: 'mario@example.com', password: 'cavallo-batteria' };
+  const buona = { nome: 'Mario', cognome: 'Rossi', citta: 'Pescara', paese: 'IT', email: 'mario@example.com', password: 'cavallo-batteria' };
   ok(`una registrazione completa non ha problemi (${A.validaRegistrazione(buona).length})`,
     A.validaRegistrazione(buona).length === 0);
 
@@ -120,7 +120,7 @@ if (!A) { fine(); }
   // Niente esplode con dati assenti: la maschera puo' chiamare la validazione
   // mentre l'utente sta ancora scrivendo.
   ok('la validazione regge anche senza niente',
-    A.validaRegistrazione().length === 4 && A.validaRegistrazione({}).length === 4);
+    A.validaRegistrazione().length === 6 && A.validaRegistrazione({}).length === 6);
 }
 
 // ---------- Promuovere, non ricominciare ----------
@@ -268,6 +268,42 @@ if (!A) { fine(); }
   ok('finestra chiusa: no', A.passaAllAccountEsistente({ code: 'auth/popup-closed-by-user' }) === false);
   ok('rete che manca: no', A.passaAllAccountEsistente({ code: 'auth/network-request-failed' }) === false);
   ok('e senza errore niente', A.passaAllAccountEsistente(null) === false);
+}
+
+// ---------- Il modulo completo: citta', paese, password ripetuta, lingua ----------
+// Il 30 settembre la registrazione e' diventata il modulo classico. Ognuna
+// delle caselle nuove ha il suo modo di sbagliare, e ognuno si prova qui.
+{
+  const buona = { nome: 'Ana', cognome: 'García', citta: 'Sevilla', paese: 'ES', email: 'ana@example.com', password: 'girasoles-8', ripeti: 'girasoles-8', lingua: 'es' };
+  const con = (x) => A.validaRegistrazione(Object.assign({}, buona, x));
+  ok(`il modulo completo passa (${con({}).join(', ') || 'nessun problema'})`, con({}).length === 0);
+  ok('senza città si dice', con({ citta: '  ' }).includes('auth.serveCitta'));
+  ok('senza paese si dice', con({ paese: '' }).includes('auth.servePaese'));
+  ok('un paese scritto a mano non passa', con({ paese: 'Italia' }).includes('auth.paeseNonValido'));
+  ok('un codice di paese in minuscolo sì', con({ paese: 'es' }).length === 0);
+  ok('due password diverse si dicono', con({ ripeti: 'girasoles-9' }).includes('auth.passwordDiverse'));
+  ok('una lingua che l\'app non parla non passa', con({ lingua: 'de' }).includes('auth.linguaNonValida'));
+
+  const p = A.profilo({ uid: 'u', email: 'Ana@Example.com' }, buona);
+  ok(`il profilo tiene città, paese e lingua (${JSON.stringify([p.citta, p.paese, p.lingua])})`,
+    p.citta === 'Sevilla' && p.paese === 'ES' && p.lingua === 'es');
+  ok('e la password non ci entra, né quella ripetuta', !('password' in p) && !('ripeti' in p));
+  // Il profilo si scrive in merge: una casella vuota scritta da un accesso
+  // con Google cancellerebbe la citta' messa registrandosi.
+  const g = A.profilo({ uid: 'u', email: 'ana@example.com' }, { nome: 'Ana', cognome: 'García' });
+  ok('senza città, paese e lingua il profilo non li scrive vuoti', !('citta' in g) && !('paese' in g) && !('lingua' in g));
+
+  ok(`il paese di partenza viene dal telefono (${A.paeseDelTelefono('it-IT')}, ${A.paeseDelTelefono('es_ES')})`,
+    A.paeseDelTelefono('it-IT') === 'IT' && A.paeseDelTelefono('es_ES') === 'ES');
+  ok('e se il telefono non lo dice, nessuno', A.paeseDelTelefono('it') === '' && A.paeseDelTelefono('') === '');
+
+  // Le lingue del profilo sono scritte in auth.js, che si prova da solo: qui
+  // si controlla che restino quelle dei dizionari.
+  require(path.resolve(__dirname, '..', '..', 'lingue.js'));
+  const diz = Object.keys(globalThis.Lingue.LINGUE).sort().join(',');
+  ok(`le lingue del profilo sono quelle dell'app (${A.LINGUE_PROFILO.join(',')})`, A.LINGUE_PROFILO.slice().sort().join(',') === diz);
+  ok(`l'elenco dei paesi è di codici ISO, senza doppioni (${A.PAESI.length})`,
+    A.PAESI.length > 240 && new Set(A.PAESI).size === A.PAESI.length && A.PAESI.every((c) => /^[A-Z]{2}$/.test(c)) && A.PAESI.includes('IT'));
 }
 
 fine();

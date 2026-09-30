@@ -1,6 +1,9 @@
 // Branding e funzionalità: letti da window.APP_CONFIG (firebase-config.js),
 // con fallback ai valori attuali se la configurazione non è presente.
 const CFG = (typeof window !== 'undefined' && window.APP_CONFIG) || {};
+// L'indirizzo di sistema: a chi scrivere se la verifica non arriva, e il
+// contatto dell'informativa. Uno, scritto in firebase-config.js.
+const EMAIL_SISTEMA = (CFG.sistema && CFG.sistema.email) || '';
 const BRAND = {
   appTitle: 'PRATO LUNGO 2026',
   groupName: 'Brigata Fabio Bandone',

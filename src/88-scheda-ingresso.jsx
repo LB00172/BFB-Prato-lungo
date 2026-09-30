@@ -73,13 +73,22 @@ const schedaAccount = ({ account, senzaTitolo, onCancella }) => (
           {account.modo && (
             <div className="space-y-2 pt-1">
               {account.modo === 'registra' && (
-                <div className="grid grid-cols-2 gap-2">
+                <div data-modulo-registrazione className="grid grid-cols-2 gap-2">
                   <input type="text" value={account.nome} onChange={(e) => account.setNome(e.target.value)}
                     placeholder={L.t('auth.nome')} autoComplete="given-name"
-                    className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
+                    className={CASELLA_ACCOUNT} />
                   <input type="text" value={account.cognome} onChange={(e) => account.setCognome(e.target.value)}
                     placeholder={L.t('auth.cognome')} autoComplete="family-name"
-                    className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
+                    className={CASELLA_ACCOUNT} />
+                  <input type="text" data-citta value={account.citta} onChange={(e) => account.setCitta(e.target.value)}
+                    placeholder={L.t('auth.citta')} autoComplete="address-level2"
+                    className={CASELLA_ACCOUNT} />
+                  <select data-paese value={account.paese} onChange={(e) => account.setPaese(e.target.value)}
+                    aria-label={L.t('auth.paese')} autoComplete="country"
+                    className={CASELLA_ACCOUNT}>
+                    <option value="">{L.t('auth.paese')}</option>
+                    {paesiInLingua().map(([c, n]) => <option key={c} value={c}>{n}</option>)}
+                  </select>
                 </div>
               )}
               <input type="email" inputMode="email" value={account.email} onChange={(e) => account.setEmail(e.target.value)}
@@ -89,6 +98,29 @@ const schedaAccount = ({ account, senzaTitolo, onCancella }) => (
                 onKeyDown={(e) => e.key === 'Enter' && (account.modo === 'entra' ? account.entraConEmail() : account.registrati())}
                 placeholder={L.t('auth.password')} autoComplete={account.modo === 'entra' ? 'current-password' : 'new-password'}
                 className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
+              {account.modo === 'registra' && (
+                <>
+                  <input type="password" data-ripeti value={account.ripeti} onChange={(e) => account.setRipeti(e.target.value)}
+                    placeholder={L.t('auth.ripetiPassword')} autoComplete="new-password"
+                    className={CASELLA_ACCOUNT} />
+                  {/* La lingua preferita: si sceglie fra quelle che l'app
+                      parla, e l'app la prende subito. Parte da quella di
+                      adesso — chi sta leggendo in italiano, di solito, vuole
+                      l'italiano. */}
+                  <div>
+                    <span className="block text-minuto uppercase font-bold tracking-wide text-gray-500 mb-1.5">{L.t('auth.linguaPreferita')}</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Object.keys(window.Lingue.LINGUE).map((k) => (
+                        <button key={k} data-lingua-preferita={k} aria-pressed={(account.linguaPreferita || L.codice) === k}
+                          onClick={() => account.setLinguaPreferita(k)}
+                          className={bottoneScelta('pillola', 'tenue', (account.linguaPreferita || L.codice) === k, 'minuscolo')}>
+                          {window.Lingue.LINGUE[k].nome || k}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
               <div className="flex gap-2">
                 <button onClick={account.chiudi} className={bottone('testuale', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
                 <button
@@ -112,8 +144,31 @@ const schedaAccount = ({ account, senzaTitolo, onCancella }) => (
           scrive dentro il nome da copiare in Firebase. */}
       {account.problema && <p className="text-piccolo font-bold text-red-700 leading-snug">{L.t(account.problema, account.problemaDati != null ? account.problemaDati : (typeof window !== 'undefined' ? window.location.hostname : ''))}</p>}
       {account.fatto && <p className="text-piccolo text-bosco leading-snug">{L.t(account.fatto)}</p>}
+      {/* Chi aspetta un'email che non arriva deve sapere a chi scrivere: e'
+          il momento in cui un'app nuova si disinstalla. */}
+      {EMAIL_SISTEMA && (account.modo === 'registra' || account.stato === 'daVerificare' || account.fatto === 'auth.controllaEmail') && (
+        <p data-email-sistema className="text-minuto text-gray-500 leading-snug">
+          {L.t('auth.aiuto')} <a href={'mailto:' + EMAIL_SISTEMA} className="underline text-bosco break-all">{EMAIL_SISTEMA}</a>
+        </p>
+      )}
     </div>
 );
+
+// Le caselle della tessera: una forma sola, scritta una volta.
+const CASELLA_ACCOUNT = 'w-full min-w-0 p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco';
+
+// I paesi con il nome nella lingua dell'app, in ordine alfabetico di quella
+// lingua. I nomi li da' il browser (Intl.DisplayNames): nessuno li traduce a
+// mano, e «Germania», «Alemania», «Allemagne» restano lo stesso DE. Un
+// browser vecchio senza DisplayNames mostra il codice, che e' brutto ma
+// giusto.
+const paesiInLingua = () => {
+  let nomi = null;
+  try { nomi = new Intl.DisplayNames([L.locale], { type: 'region' }); } catch (e) { nomi = null; }
+  return window.Auth.PAESI
+    .map((c) => [c, (nomi && nomi.of(c)) || c])
+    .sort((a, b) => a[1].localeCompare(b[1], L.locale));
+};
 
 // ---------- La schermata d'apertura ----------
 // Quello che vede chi apre Camp Ops per la prima volta: il logo, e le strade

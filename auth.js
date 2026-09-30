@@ -71,6 +71,13 @@
 
     if (!testo(d.nome)) problemi.push('auth.serveNome');
     if (!testo(d.cognome)) problemi.push('auth.serveCognome');
+    // Citta' e paese: dove sta chi organizza. Il paese e' un codice ISO di
+    // due lettere, scelto da un elenco (PAESI): scritto a mano diventerebbe
+    // "Italia", "italia", "IT" e "Itaila", e un dato che non si confronta non
+    // serve a niente.
+    if (!testo(d.citta)) problemi.push('auth.serveCitta');
+    if (!testo(d.paese)) problemi.push('auth.servePaese');
+    else if (PAESI.indexOf(testo(d.paese).toUpperCase()) < 0) problemi.push('auth.paeseNonValido');
 
     const email = testo(d.email);
     if (!email) problemi.push('auth.serveEmail');
@@ -92,6 +99,13 @@
     // perche' l'indirizzo e' l'unica cosa che l'attaccante conosce di sicuro.
     else if (!pwd.trim()) problemi.push('auth.passwordVuota');
     else if (email && pwd.toLowerCase() === email.toLowerCase()) problemi.push('auth.passwordUgualeEmail');
+    // La password ripetuta: sul telefono si scrive senza vederla, e una
+    // lettera sbagliata la prima volta e' un account che non si apre piu'.
+    else if (d.ripeti !== undefined && String(d.ripeti) !== pwd) problemi.push('auth.passwordDiverse');
+
+    // La lingua preferita: una di quelle che l'app parla davvero. Facoltativa
+    // per chi chiama senza (Google non la chiede), obbligatoria se c'e'.
+    if (d.lingua !== undefined && LINGUE_PROFILO.indexOf(testo(d.lingua)) < 0) problemi.push('auth.linguaNonValida');
 
     return problemi;
   }
@@ -155,16 +169,50 @@
   // Quello che si scrive in users/<uid>. Niente di piu': la password non passa
   // di qui, e i campi a cui uno partecipa li scrive la room (§ 2), non il
   // login — se li scrivesse il login, uscire e rientrare li riscriverebbe.
+  //
+  // Citta', paese e lingua ci sono solo se qualcuno li ha dati: il profilo si
+  // scrive in merge, e una casella vuota scritta da un accesso con Google
+  // cancellerebbe quello che la persona aveva messo registrandosi.
   function profilo(utente, dati) {
     const d = dati || {};
     const testo = (v) => String(v === null || v === undefined ? '' : v).trim();
-    return {
+    const p = {
       nome: testo(d.nome),
       cognome: testo(d.cognome),
       email: testo((utente && utente.email) || d.email).toLowerCase(),
       creatoIl: d.creatoIl || Date.now(),
     };
+    if (testo(d.citta)) p.citta = testo(d.citta);
+    if (testo(d.paese)) p.paese = testo(d.paese).toUpperCase();
+    if (LINGUE_PROFILO.indexOf(testo(d.lingua)) >= 0) p.lingua = testo(d.lingua);
+    return p;
   }
+
+  // ---------- I paesi ----------
+  // I codici ISO 3166-1 di due lettere. I NOMI non stanno qui: li da' il
+  // browser nella lingua dell'app (Intl.DisplayNames), cosi' «Germania»,
+  // «Alemania» e «Allemagne» sono lo stesso DE e nessuno li traduce a mano.
+  const PAESI = ('AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ '
+    + 'CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR '
+    + 'GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP '
+    + 'KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT '
+    + 'MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW '
+    + 'SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG '
+    + 'UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW').split(' ');
+
+  // Il paese di partenza del modulo: quello che dice il telefono ("it-IT" ->
+  // IT). Se il telefono non lo dice, nessuno: meglio una scelta da fare che
+  // una sbagliata gia' fatta.
+  function paeseDelTelefono(etichetta) {
+    const m = /[-_]([A-Za-z]{2})\b/.exec(String(etichetta || ''));
+    const c = m ? m[1].toUpperCase() : '';
+    return PAESI.indexOf(c) >= 0 ? c : '';
+  }
+
+  // Le lingue che un profilo puo' preferire: quelle dei dizionari. Scritte
+  // qui e non chieste a lingue.js perche' questo file si prova da solo; una
+  // prova controlla che le due liste restino uguali.
+  const LINGUE_PROFILO = ['it', 'es', 'fr'];
 
   // Google manda un nome intero ("Lorenzo Ballerini"), l'app ne tiene due
   // pezzi. La prima parola e' il nome, il resto il cognome: sbaglia sui nomi
@@ -267,6 +315,9 @@
     passaAllAccountEsistente: passaAllAccountEsistente,
     profiloDaSalvare: profiloDaSalvare,
     nomeVisibile: nomeVisibile,
+    PAESI: PAESI,
+    LINGUE_PROFILO: LINGUE_PROFILO,
+    paeseDelTelefono: paeseDelTelefono,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -369,6 +420,17 @@
     }
     const nome = [d.nome, d.cognome].filter(Boolean).join(' ').trim();
     if (nome && f.updateProfile) { try { await f.updateProfile(a.currentUser, { displayName: nome }); } catch (e) { /* il nome si puo' rimettere dopo */ } }
+    // Il profilo completo — citta', paese, lingua — si scrive QUI, con quello
+    // che la persona ha appena scritto: l'osservatore dell'accesso conosce
+    // solo l'utente di Firebase, che di citta' e lingua non sa niente. Se non
+    // riesce (la linea) l'account c'e' lo stesso: non si ferma per questo.
+    try {
+      if (root.Auth) {
+        const fs = await sdkFirestore();
+        const db = await dbase();
+        await fs.setDoc(fs.doc(db, 'users', a.currentUser.uid), root.Auth.profilo(nostro(a.currentUser), d), { merge: true });
+      }
+    } catch (e) { /* il profilo si ricompone al prossimo accesso */ }
     await f.sendEmailVerification(a.currentUser);
     ultimo = nostro(a.currentUser);
     annuncia();
@@ -510,6 +572,21 @@
   // Se il profilo non si legge — la linea, di solito — si alza l'errore: la
   // cancellazione deve sapere di quali campi sei proprietario, e non puo'
   // farlo alla cieca.
+  // Il profilo di chi e' entrato, o null: serve a rimettere la sua lingua
+  // preferita quando entra su un telefono nuovo. Non alza eccezioni: senza
+  // profilo si resta nella lingua che c'e'.
+  async function leggiProfilo() {
+    try {
+      const a = await init();
+      const u = a.currentUser;
+      if (!u || u.isAnonymous) return null;
+      const fs = await sdkFirestore();
+      const db = await dbase();
+      const x = await fs.getDoc(fs.doc(db, 'users', u.uid));
+      return x.exists() ? x.data() : null;
+    } catch (e) { return null; }
+  }
+
   async function stanzeDelProfilo() {
     const a = await init();
     const u = a.currentUser;
@@ -542,6 +619,7 @@
   root.AuthCloud = {
     disponibile: disponibile,
     sincronizzaProfilo: sincronizzaProfilo,
+    leggiProfilo: leggiProfilo,
     stanzeDelProfilo: stanzeDelProfilo,
     cancellaProfiloEAccount: cancellaProfiloEAccount,
     osserva: osserva,

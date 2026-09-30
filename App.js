@@ -514,6 +514,9 @@ const copyToClipboard = testo => {
 // Branding e funzionalità: letti da window.APP_CONFIG (firebase-config.js),
 // con fallback ai valori attuali se la configurazione non è presente.
 const CFG = typeof window !== 'undefined' && window.APP_CONFIG || {};
+// L'indirizzo di sistema: a chi scrivere se la verifica non arriva, e il
+// contatto dell'informativa. Uno, scritto in firebase-config.js.
+const EMAIL_SISTEMA = CFG.sistema && CFG.sistema.email || '';
 const BRAND = {
   appTitle: 'PRATO LUNGO 2026',
   groupName: 'Brigata Fabio Bandone',
@@ -1806,7 +1809,12 @@ const usaScontrini = ({
 // campo segna presenze e spese come ha sempre fatto, e questo hook resta uno
 // stato che nessuno guarda. Serve per CREARE e AMMINISTRARE un campo, cioe'
 // per le cose che nella versione pubblica avranno un proprietario.
-const usaAccount = () => {
+// `scegliLingua` e' della App (la lingua e' sua): la registrazione la usa
+// per mettere l'app nella lingua preferita appena scelta, e l'accesso per
+// rimetterla su un telefono nuovo.
+const usaAccount = ({
+  scegliLingua
+} = {}) => {
   // L'utente com'e' adesso: null vuol dire ospite. Ci pensa AuthCloud ad
   // aggiornarlo, e parte da quello che sa gia' (di solito null) per non
   // lasciare la scheda vuota mentre l'SDK arriva da gstatic.
@@ -1818,6 +1826,13 @@ const usaAccount = () => {
   const [cognome, setCognome] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Le caselle della registrazione, oltre a quelle dell'accesso. Il paese e la
+  // lingua partono da quello che dice il telefono e da quella dell'app: una
+  // scelta gia' fatta e giusta si lascia com'e', una vuota si deve pensare.
+  const [ripeti, setRipeti] = useState('');
+  const [citta, setCitta] = useState('');
+  const [paese, setPaese] = useState(() => window.Auth && typeof navigator !== 'undefined' ? window.Auth.paeseDelTelefono(navigator.language) : '');
+  const [linguaPreferita, setLinguaPreferita] = useState('');
   // Una chiave del dizionario, non una frase: i messaggi li sceglie il disegno
   // (§ 18). null vuol dire che non c'e' niente da dire.
   const [problema, setProblema] = useState(null);
@@ -1857,7 +1872,17 @@ const usaAccount = () => {
   const chiudi = () => {
     setModo('');
     setPassword('');
+    setRipeti('');
     pulisci();
+  };
+
+  // Entrando, la lingua preferita del profilo — se c'e', e se l'app parla
+  // gia' un'altra lingua. Solo a un accesso fatto adesso, non a ogni
+  // apertura: chi poi cambia lingua in Impostazioni non se la vede rimettere.
+  const linguaDalProfilo = async ac => {
+    if (!scegliLingua || !ac || !ac.leggiProfilo) return;
+    const p = await ac.leggiProfilo();
+    if (p && p.lingua && window.Lingue && window.Lingue.LINGUE[p.lingua] && p.lingua !== L.codice) scegliLingua(p.lingua);
   };
 
   // Ogni azione passa di qui: una sola strada per "occupato", per l'errore
@@ -1891,7 +1916,11 @@ const usaAccount = () => {
       setOccupato(false);
     }
   };
-  const entraConGoogle = () => prova(ac => ac.conGoogle());
+  const entraConGoogle = () => prova(async ac => {
+    const u = await ac.conGoogle();
+    await linguaDalProfilo(ac);
+    return u;
+  });
 
   // ---------- Cancellare l'account (ROADMAP § 3) ----------
   // Tre passi, e il primo decide se si fanno gli altri due:
@@ -1946,14 +1975,22 @@ const usaAccount = () => {
       setProblema('auth.serveEmailEPassword');
       return;
     }
-    if (await prova(ac => ac.entra(email, password))) chiudi();
+    if (await prova(async ac => {
+      await ac.entra(email, password);
+      await linguaDalProfilo(ac);
+    })) chiudi();
   };
   const registrati = async () => {
+    const lingua = linguaPreferita || L.codice;
     const dati = {
       nome,
       cognome,
+      citta,
+      paese,
       email,
-      password
+      password,
+      ripeti,
+      lingua
     };
     const problemi = window.Auth ? window.Auth.validaRegistrazione(dati) : [];
     // Si mostra il primo: un elenco di cinque righe rosse sotto una maschera
@@ -1965,8 +2002,10 @@ const usaAccount = () => {
     }
     if (await prova(ac => ac.registra(dati))) {
       setPassword('');
+      setRipeti('');
       setModo('');
       setFatto('auth.controllaEmail');
+      if (scegliLingua && lingua !== L.codice) scegliLingua(lingua);
     }
   };
   const esci = () => prova(ac => ac.esci());
@@ -1996,6 +2035,14 @@ const usaAccount = () => {
     setEmail,
     password,
     setPassword,
+    ripeti,
+    setRipeti,
+    citta,
+    setCitta,
+    paese,
+    setPaese,
+    linguaPreferita,
+    setLinguaPreferita,
     problema,
     problemaDati,
     fatto,
@@ -2949,7 +2996,12 @@ function App({
   // ---------- L'account (§ 1) ----------
   // Dietro FEATURES.auth. L'hook gira comunque: senza bandiera nessuno guarda
   // il suo stato, e senza Firebase configurato resta "ospite" e basta.
-  const account = usaAccount();
+  const account = usaAccount({
+    scegliLingua: k => {
+      setLingua(k);
+      scriviLocale(LINGUA_KEY, k);
+    }
+  });
 
   // ---------- La stanza (§ 2, § 9) ----------
   // Dietro FEATURES.rooms. Come l'account, l'hook gira comunque: senza
@@ -10033,6 +10085,7 @@ const schedaAccount = ({
 }, L.t('auth.creaAccount'))), account.modo && /*#__PURE__*/React.createElement("div", {
   className: "space-y-2 pt-1"
 }, account.modo === 'registra' && /*#__PURE__*/React.createElement("div", {
+  "data-modulo-registrazione": true,
   className: "grid grid-cols-2 gap-2"
 }, /*#__PURE__*/React.createElement("input", {
   type: "text",
@@ -10040,15 +10093,35 @@ const schedaAccount = ({
   onChange: e => account.setNome(e.target.value),
   placeholder: L.t('auth.nome'),
   autoComplete: "given-name",
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+  className: CASELLA_ACCOUNT
 }), /*#__PURE__*/React.createElement("input", {
   type: "text",
   value: account.cognome,
   onChange: e => account.setCognome(e.target.value),
   placeholder: L.t('auth.cognome'),
   autoComplete: "family-name",
-  className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-})), /*#__PURE__*/React.createElement("input", {
+  className: CASELLA_ACCOUNT
+}), /*#__PURE__*/React.createElement("input", {
+  type: "text",
+  "data-citta": true,
+  value: account.citta,
+  onChange: e => account.setCitta(e.target.value),
+  placeholder: L.t('auth.citta'),
+  autoComplete: "address-level2",
+  className: CASELLA_ACCOUNT
+}), /*#__PURE__*/React.createElement("select", {
+  "data-paese": true,
+  value: account.paese,
+  onChange: e => account.setPaese(e.target.value),
+  "aria-label": L.t('auth.paese'),
+  autoComplete: "country",
+  className: CASELLA_ACCOUNT
+}, /*#__PURE__*/React.createElement("option", {
+  value: ""
+}, L.t('auth.paese')), paesiInLingua().map(([c, n]) => /*#__PURE__*/React.createElement("option", {
+  key: c,
+  value: c
+}, n)))), /*#__PURE__*/React.createElement("input", {
   type: "email",
   inputMode: "email",
   value: account.email,
@@ -10064,7 +10137,25 @@ const schedaAccount = ({
   placeholder: L.t('auth.password'),
   autoComplete: account.modo === 'entra' ? 'current-password' : 'new-password',
   className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-}), /*#__PURE__*/React.createElement("div", {
+}), account.modo === 'registra' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("input", {
+  type: "password",
+  "data-ripeti": true,
+  value: account.ripeti,
+  onChange: e => account.setRipeti(e.target.value),
+  placeholder: L.t('auth.ripetiPassword'),
+  autoComplete: "new-password",
+  className: CASELLA_ACCOUNT
+}), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+  className: "block text-minuto uppercase font-bold tracking-wide text-gray-500 mb-1.5"
+}, L.t('auth.linguaPreferita')), /*#__PURE__*/React.createElement("div", {
+  className: "grid grid-cols-3 gap-2"
+}, Object.keys(window.Lingue.LINGUE).map(k => /*#__PURE__*/React.createElement("button", {
+  key: k,
+  "data-lingua-preferita": k,
+  "aria-pressed": (account.linguaPreferita || L.codice) === k,
+  onClick: () => account.setLinguaPreferita(k),
+  className: bottoneScelta('pillola', 'tenue', (account.linguaPreferita || L.codice) === k, 'minuscolo')
+}, window.Lingue.LINGUE[k].nome || k))))), /*#__PURE__*/React.createElement("div", {
   className: "flex gap-2"
 }, /*#__PURE__*/React.createElement("button", {
   onClick: account.chiudi,
@@ -10081,7 +10172,33 @@ const schedaAccount = ({
   className: "text-piccolo font-bold text-red-700 leading-snug"
 }, L.t(account.problema, account.problemaDati != null ? account.problemaDati : typeof window !== 'undefined' ? window.location.hostname : '')), account.fatto && /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-bosco leading-snug"
-}, L.t(account.fatto)));
+}, L.t(account.fatto)), EMAIL_SISTEMA && (account.modo === 'registra' || account.stato === 'daVerificare' || account.fatto === 'auth.controllaEmail') && /*#__PURE__*/React.createElement("p", {
+  "data-email-sistema": true,
+  className: "text-minuto text-gray-500 leading-snug"
+}, L.t('auth.aiuto'), " ", /*#__PURE__*/React.createElement("a", {
+  href: 'mailto:' + EMAIL_SISTEMA,
+  className: "underline text-bosco break-all"
+}, EMAIL_SISTEMA)));
+
+// Le caselle della tessera: una forma sola, scritta una volta.
+const CASELLA_ACCOUNT = 'w-full min-w-0 p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco';
+
+// I paesi con il nome nella lingua dell'app, in ordine alfabetico di quella
+// lingua. I nomi li da' il browser (Intl.DisplayNames): nessuno li traduce a
+// mano, e «Germania», «Alemania», «Allemagne» restano lo stesso DE. Un
+// browser vecchio senza DisplayNames mostra il codice, che e' brutto ma
+// giusto.
+const paesiInLingua = () => {
+  let nomi = null;
+  try {
+    nomi = new Intl.DisplayNames([L.locale], {
+      type: 'region'
+    });
+  } catch (e) {
+    nomi = null;
+  }
+  return window.Auth.PAESI.map(c => [c, nomi && nomi.of(c) || c]).sort((a, b) => a[1].localeCompare(b[1], L.locale));
+};
 
 // ---------- La schermata d'apertura ----------
 // Quello che vede chi apre Camp Ops per la prima volta: il logo, e le strade
