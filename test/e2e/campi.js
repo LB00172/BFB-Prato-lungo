@@ -99,8 +99,9 @@ const vociMenu = async (a) => {
     ok('le due strade per un campo nuovo ci sono', /crea una stanza/i.test(t) && /entra con un codice/i.test(t));
 
     const menu = await vociMenu(a);
-    ok(`nel menu: i miei campi, crea, partecipa, impostazioni (${menu.join(' | ')})`,
-      menu.length === 4 && menu[0] === 'i miei campi' && menu.includes('impostazioni'));
+    // Chi ha un account trova anche la Panoramica dei campi (30 settembre).
+    ok(`nel menu: i miei campi, panoramica, crea, partecipa, impostazioni (${menu.join(' | ')})`,
+      menu.length === 5 && menu[0] === 'i miei campi' && menu[1] === 'panoramica' && menu.includes('impostazioni'));
 
     // ---------- 2. Toccare un campo lo apre ----------
     await a.page.locator('[data-campo="K7RX2MQP"]').click();

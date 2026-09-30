@@ -161,6 +161,34 @@ const usaStanza = () => {
     ricorda(cod);
   };
 
+  // ---------- La Panoramica (panoramica.js) ----------
+  // Tutti i propri campi in un colpo d'occhio, per chi ha l'abbonamento Pro
+  // annuale. Prima si chiede l'abbonamento (abbonati/<uid>, lo scrive solo il
+  // server); poi, se c'e', lo stato di ogni campo dell'elenco, uno alla
+  // volta, e se ne fa il riassunto con gli stessi conti del campo. Un campo
+  // che non si legge (la linea, o non ci sei piu') resta in elenco con il suo
+  // errore: sparire vorrebbe dire far credere che non esista.
+  const [panoramica, setPanoramica] = useState({ stato: 'ferma', abbonato: null, righe: [] });
+  const caricaPanoramica = async (utente) => {
+    const c = SC();
+    const P = typeof window !== 'undefined' ? window.Panoramica : null;
+    if (!c || !c.disponibile() || !c.abbonamento || !P) { setPanoramica({ stato: 'senzaLinea', abbonato: null, righe: [] }); return; }
+    setPanoramica((x) => Object.assign({}, x, { stato: 'caricando' }));
+    let abb = null;
+    try { abb = await c.abbonamento(utente); } catch (e) { setPanoramica({ stato: 'senzaLinea', abbonato: null, righe: [] }); return; }
+    if (!P.abbonamentoAttivo(abb, Date.now())) { setPanoramica({ stato: 'fatta', abbonato: false, righe: [] }); return; }
+    const righe = [];
+    for (const v of campi) {
+      try {
+        const st = await c.statoCampo(v.codice);
+        righe.push({ voce: v, riassunto: P.riassunto(st, v.voci || null, { equipExemption: FEATURES.equipExemption }) });
+      } catch (e) {
+        righe.push({ voce: v, errore: 'panoramica.nonLetto' });
+      }
+    }
+    setPanoramica({ stato: 'fatta', abbonato: true, righe, fino: abb.scade });
+  };
+
   // L'elenco dal cloud: il profilo (solo per chi e' registrato: lo segue su
   // ogni telefono) e la lettura di ogni stanza, per nome, date e se si e'
   // ancora dentro. Senza linea non si tocca niente e non si dice niente: la
@@ -591,6 +619,6 @@ const usaStanza = () => {
     crea, entra, esci, aggiornaMembri,
     invito, accettaInvito, rifiutaInvito, linkDaMandare, riagganciaStanza, mandaInvito, invitoMandato,
     rigaCampo, apriRigaCampo, setRigaCampo, bozzaCampo, setBozzaCampo, apriBozzaCampo, salvaNomeDate, voceAperta,
-    campi, apriCampo, aggiornaCampi,
+    campi, apriCampo, aggiornaCampi, panoramica, caricaPanoramica,
   };
 };

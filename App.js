@@ -898,6 +898,8 @@ const ICONE = {
   pronto: 'M7 8h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3z M9 8V6a3 3 0 0 1 6 0v2 M9 14h6 M10 21v-4h4v4',
   // Aggiungere: il tasto «+ Spesa».
   piu: 'M12 5v14 M5 12h14',
+  // La Panoramica: quattro riquadri, tanti campi.
+  panoramica: 'M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z',
   // «Il campo»: la bandierina piantata.
   campo: 'M5 21V4 M5 4h12l-2.5 4L17 12H5',
   // La spunta di un passo fatto.
@@ -2251,6 +2253,76 @@ const usaStanza = () => {
     ricorda(cod);
   };
 
+  // ---------- La Panoramica (panoramica.js) ----------
+  // Tutti i propri campi in un colpo d'occhio, per chi ha l'abbonamento Pro
+  // annuale. Prima si chiede l'abbonamento (abbonati/<uid>, lo scrive solo il
+  // server); poi, se c'e', lo stato di ogni campo dell'elenco, uno alla
+  // volta, e se ne fa il riassunto con gli stessi conti del campo. Un campo
+  // che non si legge (la linea, o non ci sei piu') resta in elenco con il suo
+  // errore: sparire vorrebbe dire far credere che non esista.
+  const [panoramica, setPanoramica] = useState({
+    stato: 'ferma',
+    abbonato: null,
+    righe: []
+  });
+  const caricaPanoramica = async utente => {
+    const c = SC();
+    const P = typeof window !== 'undefined' ? window.Panoramica : null;
+    if (!c || !c.disponibile() || !c.abbonamento || !P) {
+      setPanoramica({
+        stato: 'senzaLinea',
+        abbonato: null,
+        righe: []
+      });
+      return;
+    }
+    setPanoramica(x => Object.assign({}, x, {
+      stato: 'caricando'
+    }));
+    let abb = null;
+    try {
+      abb = await c.abbonamento(utente);
+    } catch (e) {
+      setPanoramica({
+        stato: 'senzaLinea',
+        abbonato: null,
+        righe: []
+      });
+      return;
+    }
+    if (!P.abbonamentoAttivo(abb, Date.now())) {
+      setPanoramica({
+        stato: 'fatta',
+        abbonato: false,
+        righe: []
+      });
+      return;
+    }
+    const righe = [];
+    for (const v of campi) {
+      try {
+        const st = await c.statoCampo(v.codice);
+        righe.push({
+          voce: v,
+          riassunto: P.riassunto(st, v.voci || null, {
+            equipExemption: FEATURES.equipExemption
+          })
+        });
+      } catch (e) {
+        righe.push({
+          voce: v,
+          errore: 'panoramica.nonLetto'
+        });
+      }
+    }
+    setPanoramica({
+      stato: 'fatta',
+      abbonato: true,
+      righe,
+      fino: abb.scade
+    });
+  };
+
   // L'elenco dal cloud: il profilo (solo per chi e' registrato: lo segue su
   // ogni telefono) e la lettura di ogni stanza, per nome, date e se si e'
   // ancora dentro. Senza linea non si tocca niente e non si dice niente: la
@@ -2879,7 +2951,9 @@ const usaStanza = () => {
     voceAperta,
     campi,
     apriCampo,
-    aggiornaCampi
+    aggiornaCampi,
+    panoramica,
+    caricaPanoramica
   };
 };
 // `eredita` e `cambiaCampo` arrivano da Radice (90-avvio): servono a cambiare
@@ -5432,7 +5506,8 @@ function App({
   // Chiave del rimborso segnato come saldato. La cassa separata ha il suo
   // prefisso: senza, due passaggi identici nelle due casse (stesse persone,
   // stessa cifra) si spegnerebbero a vicenda con un tocco solo.
-  const chiaveRimborso = t => `${t.cassa === 'separata' ? 'sep:' : t.cassa === 'tutte' ? 'opt:' : ''}${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
+  // Sta in panoramica.js: la Panoramica deve riconoscere gli stessi rimborsi.
+  const chiaveRimborso = window.Panoramica.chiaveRimborso;
 
   // La vista dei passaggi ottimizzati: le due casse messe insieme. Riusa i
   // saldi complessivi, che sono gia' la somma delle due.
@@ -5992,7 +6067,9 @@ function App({
   // niente da mostrare: si sta nella home («I miei campi»), da cui se ne
   // crea uno o si entra in quello di un altro. Impostazioni resta
   // raggiungibile, perche' parla di te e non del campo.
-  const scheda = FEATURES.rooms && !dentroUnCampo && activeTab !== 'impostazioni' ? 'campi' : activeTab;
+  // Impostazioni e la Panoramica si aprono anche fuori da un campo: sono della
+  // persona, non di un campo.
+  const scheda = FEATURES.rooms && !dentroUnCampo && activeTab !== 'impostazioni' && activeTab !== 'panoramica' ? 'campi' : activeTab;
 
   // Aprendo la home si chiede al cloud come stanno i campi: nomi, date, se si
   // e' ancora dentro. Senza linea non succede niente e resta l'elenco di ieri.
@@ -6010,6 +6087,13 @@ function App({
     stanzaStato.aggiornaCampi(account.utente, account.stato === 'registrato' || account.stato === 'daVerificare');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stanzaStato.stanza && stanzaStato.stanza.codice, account.utente && account.utente.uid]);
+
+  // La Panoramica si legge dal cloud ogni volta che la si apre: i campi degli
+  // altri cambiano senza che questo telefono lo sappia.
+  useEffect(() => {
+    if (FEATURES.rooms && scheda === 'panoramica' && account.stato === 'registrato') stanzaStato.caricaPanoramica(account.utente);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheda, account.stato]);
 
   // Il capogruppo, aprendo «Il campo», deve poter scegliere l'aiutante fra
   // chi c'e': l'elenco dei membri si chiede li', e solo a lui.
@@ -6097,7 +6181,8 @@ function App({
     guida: L.t('area.guida'),
     impostazioni: L.t('area.impostazioni'),
     campi: L.t('area.campi'),
-    campo: L.t('area.campo')
+    campo: L.t('area.campo'),
+    panoramica: L.t('area.panoramica')
   };
 
   // Le icone delle aree stanno in src/45-icone.jsx e si chiamano per nome,
@@ -6348,7 +6433,15 @@ function App({
     className: "w-5 shrink-0 flex items-center justify-center"
   }, icona('campo')), /*#__PURE__*/React.createElement("span", {
     className: "min-w-0 truncate"
-  }, L.t('area.campo'))), !dentroUnCampo && [['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => /*#__PURE__*/React.createElement("button", {
+  }, L.t('area.campo'))), account.stato === 'registrato' && /*#__PURE__*/React.createElement("button", {
+    "data-voce": "panoramica",
+    onClick: () => goTo('panoramica'),
+    className: bottoneMenu(scheda === 'panoramica')
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-5 shrink-0 flex items-center justify-center"
+  }, icona('panoramica')), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, L.t('area.panoramica'))), !dentroUnCampo && [['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => /*#__PURE__*/React.createElement("button", {
     key: modo,
     onClick: () => {
       stanzaStato.setModo(modo);
@@ -6510,6 +6603,11 @@ function App({
     account,
     codiceInGioco,
     onApri: apriCampo
+  }), scheda === 'panoramica' && FEATURES.rooms && schedaPanoramica({
+    account,
+    goTo,
+    onApri: apriCampo,
+    stanzaStato
   }), scheda === 'calendario' && schedaCalendario({
     admin,
     apriFoglioSpesa,
@@ -10538,6 +10636,154 @@ const schedaCampi = ({
   }), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo font-bold text-red-700 leading-snug"
   }, L.t(stanzaStato.problema)), esitoStanza(stanzaStato)));
+};
+// ---------- La Panoramica ----------
+// Tutti i propri campi in un colpo d'occhio: quanto si e' speso, quanto costa
+// a testa, i rimborsi ancora da fare e i conti che non tornano. Per chi tiene
+// d'occhio piu' campi insieme — l'organizzatore, di solito secondo capogruppo
+// accanto al capo sul posto. Si apre con l'abbonamento Pro annuale, che e'
+// della persona (panoramica.js). I numeri vengono dagli stessi conti del
+// campo: aprendo un campo si ritrovano identici.
+//
+// Serve la linea: legge i campi dal cloud, uno per uno. Senza, lo dice.
+// Come le altre schede disegna e non tiene stato: quello sta in usaStanza.
+const schedaPanoramica = ({
+  account,
+  goTo,
+  onApri,
+  stanzaStato
+}) => {
+  const p = stanzaStato.panoramica;
+  const scatola = 'bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3';
+  const intestazione = /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande text-bosco flex items-center gap-2"
+  }, segnoPro(), L.t('panoramica.titolo')), p.abbonato && /*#__PURE__*/React.createElement("button", {
+    "data-aggiorna": true,
+    onClick: () => stanzaStato.caricaPanoramica(account.utente),
+    disabled: p.stato === 'caricando',
+    className: bottone('secondario', 'minuscolo', 'shrink-0')
+  }, L.t('panoramica.aggiorna')));
+
+  // Senza un account vero non c'e' un abbonamento da cercare.
+  if (account.stato !== 'registrato') {
+    return /*#__PURE__*/React.createElement("div", {
+      "data-scheda": "panoramica",
+      className: "space-y-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: scatola
+    }, intestazione, /*#__PURE__*/React.createElement("p", {
+      className: "text-piccolo text-gray-600 leading-snug"
+    }, L.t('panoramica.serveAccount')), /*#__PURE__*/React.createElement("button", {
+      onClick: () => goTo('impostazioni'),
+      className: bottone('primario', 'normale', 'w-full')
+    }, L.t('area.impostazioni'))));
+  }
+  if (p.stato === 'ferma' || p.stato === 'caricando' && p.abbonato === null) {
+    return /*#__PURE__*/React.createElement("div", {
+      "data-scheda": "panoramica",
+      className: "space-y-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: scatola
+    }, intestazione, /*#__PURE__*/React.createElement("p", {
+      className: "text-piccolo text-gray-500"
+    }, L.t('panoramica.leggo'))));
+  }
+  if (p.stato === 'senzaLinea') {
+    return /*#__PURE__*/React.createElement("div", {
+      "data-scheda": "panoramica",
+      className: "space-y-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: scatola
+    }, intestazione, /*#__PURE__*/React.createElement("p", {
+      "data-panoramica-senza-linea": true,
+      className: "text-piccolo text-legno leading-snug"
+    }, L.t('panoramica.senzaLinea')), /*#__PURE__*/React.createElement("button", {
+      onClick: () => stanzaStato.caricaPanoramica(account.utente),
+      className: bottone('secondario', 'normale', 'w-full')
+    }, L.t('panoramica.riprova'))));
+  }
+
+  // Senza abbonamento: cosa sarebbe, e dove si prende. L'abbonamento si
+  // compra dal riquadro del Pro di un proprio campo (e' lo stesso pro_anno
+  // che rende Pro tutti i campi di cui si e' capogruppo).
+  if (!p.abbonato) {
+    return /*#__PURE__*/React.createElement("div", {
+      "data-scheda": "panoramica",
+      className: "space-y-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      "data-pro-bloccata": "panoramica",
+      className: "rounded-lg border-2 border-fuoco/40 bg-fuoco/10 p-4 space-y-2"
+    }, intestazione, /*#__PURE__*/React.createElement("p", {
+      className: "text-piccolo text-bosco leading-snug"
+    }, L.t('panoramica.cosE')), /*#__PURE__*/React.createElement("p", {
+      className: "text-minuto text-gray-600 leading-snug"
+    }, L.t('panoramica.soloAnno')), stanzaStato.stanza && stanzaStato.primoCapo && /*#__PURE__*/React.createElement("button", {
+      onClick: () => goTo('campo', 'pro'),
+      className: bottone('avviso', 'minuscolo', 'w-full')
+    }, L.t('pro.scopri'))));
+  }
+  const tot = window.Panoramica.totali(p.righe);
+  const date = v => v.inizio && v.fine ? L.t('campo.dal', L.data(parseDate(v.inizio), 'breve'), L.data(parseDate(v.fine), 'breve')) : L.t('campo.senzaDate');
+  const ruolo = v => L.t(v.ruolo === 'proprietario' ? 'campi.organizzi' : v.aiutante ? 'campi.aiutante' : 'campi.partecipi');
+  const cifra = (etichetta, valore, attr) => /*#__PURE__*/React.createElement("div", attr || {}, /*#__PURE__*/React.createElement("div", {
+    className: "text-minuto uppercase tracking-wide text-gray-500"
+  }, etichetta), /*#__PURE__*/React.createElement("div", {
+    className: "text-normale font-bold text-bosco"
+  }, valore));
+  return /*#__PURE__*/React.createElement("div", {
+    "data-scheda": "panoramica",
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: scatola
+  }, intestazione, /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500 leading-snug"
+  }, L.t('panoramica.sottotitolo')), /*#__PURE__*/React.createElement("div", {
+    "data-totali": true,
+    className: "grid grid-cols-2 md:grid-cols-4 gap-3 bg-carta/60 rounded p-3"
+  }, cifra(L.t('panoramica.campi'), tot.campi), cifra(L.t('panoramica.speso'), `${money(tot.speso)} €`), cifra(L.t('panoramica.rimborsi'), tot.rimborsiAperti), cifra(L.t('panoramica.buchi'), tot.buchi)), p.stato === 'caricando' && /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500"
+  }, L.t('panoramica.leggo'))), p.righe.length === 0 && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500 px-1"
+  }, L.t('panoramica.nessunCampo')), /*#__PURE__*/React.createElement("div", {
+    className: "grid gap-4 md:grid-cols-2"
+  }, p.righe.map(({
+    voce: v,
+    riassunto: r,
+    errore
+  }) => /*#__PURE__*/React.createElement("div", {
+    key: v.codice,
+    "data-panoramica-campo": v.codice,
+    className: `bg-scheda rounded-lg border-2 shadow-sm p-4 space-y-3 ${r && r.buchi ? 'border-fuoco/50' : 'border-bosco/20'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-rustic text-medio text-bosco truncate"
+  }, v.nome || Stanza.bello(v.codice)), /*#__PURE__*/React.createElement("div", {
+    className: "text-minuto text-gray-500"
+  }, date(v), " \xB7 ", ruolo(v))), /*#__PURE__*/React.createElement("button", {
+    "data-apri": v.codice,
+    onClick: () => onApri(v.codice),
+    className: bottone('secondario', 'minuscolo', 'shrink-0')
+  }, L.t('panoramica.apri'))), errore ? /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-legno leading-snug"
+  }, L.t(errore)) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-3"
+  }, cifra(L.t('panoramica.persone'), r.bambini ? L.t('panoramica.adultiBambini', r.adulti, r.bambini) : r.adulti), cifra(L.t('panoramica.speso'), `${money(r.speso)} €`, {
+    'data-speso': r.speso
+  }), cifra(L.t('panoramica.aTesta'), r.aTesta === null ? '—' : `${money(r.aTesta)} €`)), /*#__PURE__*/React.createElement("p", {
+    className: `text-piccolo leading-snug ${r.rimborsiAperti ? 'text-legno' : 'text-bosco'}`
+  }, r.rimborsiAperti ? L.t('panoramica.daRimborsare', r.rimborsiAperti, money(r.daMuovere)) : L.t('panoramica.tuttoPari')), r.buchi > 0 && /*#__PURE__*/React.createElement("p", {
+    "data-buchi": true,
+    className: "text-piccolo font-bold text-legno leading-snug"
+  }, L.t('panoramica.conBuchi')), r.fuoriConto > 0 && /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500"
+  }, L.t('panoramica.fuoriConto', money(r.fuoriConto))), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-400"
+  }, r.ultimaSpesa ? L.t('panoramica.ultimaSpesa', L.data(new Date(r.ultimaSpesa), 'breve')) : L.t('panoramica.nessunaSpesa')))))));
 };
 
 // ---------- Un cassetto per campo (cassetti.js) ----------

@@ -421,7 +421,14 @@ const permesso = async (msg, azione) => {
   // (functions/index.js). Un telefono che ci scrivesse si farebbe abbonato
   // da solo, e il Pro dei suoi campi nuovi arriverebbe gratis.
   await negato('nessun telefono si scrive abbonato', () => setDoc(doc(anna, 'abbonati/anna'), { scade: Timestamp.fromMillis(Date.now() + 365 * giorno) }));
-  await negato('né legge chi lo è', () => getDoc(doc(anna, 'abbonati/anna')));
+  // Dal 30 settembre ognuno legge il PROPRIO abbonamento: la Panoramica dei
+  // campi si apre con l'abbonamento annuale, e l'app deve sapere se c'e'.
+  // Quello degli altri resta chiuso: dice chi paga, e non e' affare di nessuno.
+  await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'abbonati/anna'), { scade: Date.now() + 365 * giorno, stato: 'SUBSCRIPTION_STATE_ACTIVE' }));
+  await permesso('ognuno legge il proprio abbonamento', () => getDoc(doc(anna, 'abbonati/anna')));
+  await negato('ma non quello degli altri', () => getDoc(doc(bruno, 'abbonati/anna')));
+  await negato('né da estraneo', () => getDoc(doc(env.unauthenticatedContext().firestore(), 'abbonati/anna')));
+  await negato('e anche il proprio non lo riscrive', () => setDoc(doc(anna, 'abbonati/anna'), { scade: Date.now() + 999 * giorno }));
   await negato('né scrive il registro degli acquisti', () => setDoc(doc(anna, 'acquisti/qualcosa'), { uid: 'anna' }));
   await negato('né lo legge', () => getDoc(doc(anna, 'acquisti/qualcosa')));
 

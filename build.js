@@ -49,6 +49,7 @@ const SORGENTI = [
   '87-scheda-compiti.jsx',
   '88-scheda-ingresso.jsx',  // Chi fa cosa: compiti assegnati (FEATURES.compiti)
   '89-scheda-campi.jsx',     // I miei campi: la home, e il modulo Crea / Partecipa
+  '89b-scheda-panoramica.jsx', // la Panoramica dei campi (Pro annuale)
   '90-avvio.jsx',            // il mount di React
 ];
 

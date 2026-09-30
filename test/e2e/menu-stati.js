@@ -41,13 +41,14 @@ const vociDelMenu = async (page) => {
     viewport: { width: 390, height: 900 },
   });
   const senza = await vociDelMenu(fuori.page);
-  // Quattro dal 28 settembre: in testa la home, «I miei campi».
-  ok(`senza campo il menu ha quattro voci (${senza.length}: ${senza.join(', ')})`, senza.length === 4);
+  // Quattro dal 28 settembre: in testa la home, «I miei campi». Cinque dal 30
+  // per chi ha un account: c'e' la Panoramica dei campi.
+  ok(`senza campo il menu ha cinque voci (${senza.length}: ${senza.join(', ')})`, senza.length === 5);
   // Il confronto sul testo a schermo va sempre con /i: i bottoni sono in
   // maiuscolo per CSS e innerText restituisce il disegnato, non il DOM.
-  ok('e sono i miei campi, creare, partecipare, impostazioni',
-    /i miei campi/i.test(senza[0]) && /crea un campo/i.test(senza[1])
-    && /partecipa/i.test(senza[2]) && /impostazioni/i.test(senza[3]));
+  ok('e sono i miei campi, la panoramica, creare, partecipare, impostazioni',
+    /i miei campi/i.test(senza[0]) && /panoramica/i.test(senza[1]) && /crea un campo/i.test(senza[2])
+    && /partecipa/i.test(senza[3]) && /impostazioni/i.test(senza[4]));
   ok('nessuna area che parlerebbe di dati inesistenti',
     !senza.some((v) => /calendario|presenze|spese totali|galleria/i.test(v)));
   ok('nessun errore JavaScript' + (fuori.errori.length ? ': ' + fuori.errori.join(' | ') : ''),

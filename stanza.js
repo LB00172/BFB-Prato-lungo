@@ -867,6 +867,31 @@
     });
   }
 
+  // ---------- Per la Panoramica ----------
+  // Lo stato di un campo come lo tiene la sincronizzazione: il documento
+  // rooms/<codice>/dati/stato, con dentro il JSON dello stato in `data`. Si
+  // legge soltanto: la Panoramica guarda, non scrive, e non passa dalla
+  // sincronizzazione (che tiene un campo alla volta, quello aperto). null se
+  // il campo non ha ancora niente nel cloud.
+  async function statoCampo(codice) {
+    const f = await sdk();
+    const d = await init();
+    const s = await f.getDoc(f.doc(d, 'rooms', root.Stanza.normalizza(codice), 'dati', 'stato'));
+    if (!s.exists()) return null;
+    const x = s.data() || {};
+    try { return typeof x.data === 'string' ? JSON.parse(x.data) : null; } catch (e) { return null; }
+  }
+
+  // L'abbonamento annuale di chi e' entrato (abbonati/<uid>, lo scrive solo
+  // il server). null se non c'e': le regole lo fanno leggere solo a lui.
+  async function abbonamento(utente) {
+    if (!utente || !utente.uid || utente.isAnonimo) return null;
+    const f = await sdk();
+    const d = await init();
+    const s = await f.getDoc(f.doc(d, 'abbonati', utente.uid));
+    return s.exists() ? s.data() : null;
+  }
+
   // Un permission-denied qui vuol dire quasi sempre una cosa sola: il codice
   // e' sbagliato. Dirlo cosi' e' piu' utile di "operazione non consentita",
   // che manda a cercare un guasto dove non c'e'.
@@ -993,5 +1018,5 @@
     }
   }
 
-  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, statoDi, togliMe, impostaStanza, lasciaAllAiutante, motivo, attivaPro };
+  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, statoDi, togliMe, impostaStanza, lasciaAllAiutante, motivo, attivaPro, statoCampo, abbonamento };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

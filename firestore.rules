@@ -256,6 +256,16 @@ service cloud.firestore {
       allow read, write: if request.auth != null && uid == request.auth.uid;
     }
 
+    // ---------- L'abbonamento annuale ----------
+    // Lo scrive solo il server che verifica il pagamento (functions/): da un
+    // telefono nessuno, nemmeno il proprio. Ma ognuno legge il PROPRIO — la
+    // Panoramica dei campi si apre con l'abbonamento annuale, e l'app deve
+    // sapere se c'e'. Quello degli altri no: dice chi paga.
+    match /abbonati/{uid} {
+      allow read: if request.auth != null && uid == request.auth.uid;
+      allow write: if false;
+    }
+
     // ---------- Tutto il resto e' chiuso ----------
     // Va per ultimo e nega: una collezione nuova non nasce aperta per
     // distrazione. Se domani serve, si scrive la sua regola qui sopra.

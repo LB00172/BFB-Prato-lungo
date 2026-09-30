@@ -2089,8 +2089,8 @@ function App({ eredita, cambiaCampo } = {}) {
   // Chiave del rimborso segnato come saldato. La cassa separata ha il suo
   // prefisso: senza, due passaggi identici nelle due casse (stesse persone,
   // stessa cifra) si spegnerebbero a vicenda con un tocco solo.
-  const chiaveRimborso = (t) =>
-    `${t.cassa === 'separata' ? 'sep:' : t.cassa === 'tutte' ? 'opt:' : ''}${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
+  // Sta in panoramica.js: la Panoramica deve riconoscere gli stessi rimborsi.
+  const chiaveRimborso = window.Panoramica.chiaveRimborso;
 
   // La vista dei passaggi ottimizzati: le due casse messe insieme. Riusa i
   // saldi complessivi, che sono gia' la somma delle due.
@@ -2648,7 +2648,9 @@ function App({ eredita, cambiaCampo } = {}) {
   // niente da mostrare: si sta nella home («I miei campi»), da cui se ne
   // crea uno o si entra in quello di un altro. Impostazioni resta
   // raggiungibile, perche' parla di te e non del campo.
-  const scheda = FEATURES.rooms && !dentroUnCampo && activeTab !== 'impostazioni' ? 'campi' : activeTab;
+  // Impostazioni e la Panoramica si aprono anche fuori da un campo: sono della
+  // persona, non di un campo.
+  const scheda = FEATURES.rooms && !dentroUnCampo && activeTab !== 'impostazioni' && activeTab !== 'panoramica' ? 'campi' : activeTab;
 
   // Aprendo la home si chiede al cloud come stanno i campi: nomi, date, se si
   // e' ancora dentro. Senza linea non succede niente e resta l'elenco di ieri.
@@ -2666,6 +2668,13 @@ function App({ eredita, cambiaCampo } = {}) {
     stanzaStato.aggiornaCampi(account.utente, account.stato === 'registrato' || account.stato === 'daVerificare');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stanzaStato.stanza && stanzaStato.stanza.codice, account.utente && account.utente.uid]);
+
+  // La Panoramica si legge dal cloud ogni volta che la si apre: i campi degli
+  // altri cambiano senza che questo telefono lo sappia.
+  useEffect(() => {
+    if (FEATURES.rooms && scheda === 'panoramica' && account.stato === 'registrato') stanzaStato.caricaPanoramica(account.utente);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheda, account.stato]);
 
   // Il capogruppo, aprendo «Il campo», deve poter scegliere l'aiutante fra
   // chi c'e': l'elenco dei membri si chiede li', e solo a lui.
@@ -2747,6 +2756,7 @@ function App({ eredita, cambiaCampo } = {}) {
     impostazioni: L.t('area.impostazioni'),
     campi: L.t('area.campi'),
     campo: L.t('area.campo'),
+    panoramica: L.t('area.panoramica'),
   };
 
   // Le icone delle aree stanno in src/45-icone.jsx e si chiamano per nome,
@@ -2929,6 +2939,15 @@ function App({ eredita, cambiaCampo } = {}) {
                 <button data-voce="campo" onClick={() => goTo('campo')} className={bottoneMenu(scheda === 'campo')}>
                   <span className="w-5 shrink-0 flex items-center justify-center">{icona('campo')}</span>
                   <span className="min-w-0 truncate">{L.t('area.campo')}</span>
+                </button>
+              )}
+              {/* La Panoramica di tutti i campi: per chi ha un account vero
+                  (l'abbonamento annuale e' suo). Senza abbonamento si apre
+                  lo stesso, e dice cos'e' e dove si prende. */}
+              {account.stato === 'registrato' && (
+                <button data-voce="panoramica" onClick={() => goTo('panoramica')} className={bottoneMenu(scheda === 'panoramica')}>
+                  <span className="w-5 shrink-0 flex items-center justify-center">{icona('panoramica')}</span>
+                  <span className="min-w-0 truncate">{L.t('area.panoramica')}</span>
                 </button>
               )}
               {!dentroUnCampo && [['crea', 'menu.creaCampo'], ['entra', 'menu.partecipa']].map(([modo, chiave]) => (
@@ -3156,6 +3175,7 @@ function App({ eredita, cambiaCampo } = {}) {
       <main className={`flex-grow p-4 ${dentroUnCampo && scheda !== 'campi' ? 'pb-24' : ''}`}>
         {/* ---------- CALENDARIO ---------- */}
         {scheda === 'campi' && schedaCampi({ stanzaStato, account, codiceInGioco, onApri: apriCampo })}
+        {scheda === 'panoramica' && FEATURES.rooms && schedaPanoramica({ account, goTo, onApri: apriCampo, stanzaStato })}
         {scheda === 'calendario' && schedaCalendario({
           admin, apriFoglioSpesa, primiPassi, campoInCorso, capogruppo: stanzaStato.capogruppo, meteoAperto: stanzaStato.sbloccata('meteo'), fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, purchases, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
         })}
