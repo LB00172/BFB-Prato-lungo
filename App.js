@@ -2014,9 +2014,11 @@ const usaAccount = ({
       setProblema('auth.serveEmail');
       return;
     }
-    await prova(ac => ac.reimposta(email), 'auth.emailReimpostaInviata');
+    await prova(ac => ac.reimposta(email, L.codice), 'auth.emailReimpostaInviata');
   };
-  const rimandaVerifica = () => prova(ac => ac.inviaVerifica(), 'auth.emailVerificaInviata');
+
+  // Le email partono nella lingua dell'app: Firebase le traduce da se'.
+  const rimandaVerifica = () => prova(ac => ac.inviaVerifica(L.codice), 'auth.emailVerificaInviata');
 
   // Firebase non si accorge da solo che l'utente ha cliccato il link: l'oggetto
   // in memoria resta "da verificare" finche' non lo si ricarica. Senza questo

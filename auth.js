@@ -214,6 +214,16 @@
   // prova controlla che le due liste restino uguali.
   const LINGUE_PROFILO = ['it', 'es', 'fr'];
 
+  // In che lingua Firebase scrive le email (verifica, nuova password). Firebase
+  // i suoi modelli li traduce da se' se glielo si dice; senza, usa la lingua
+  // della console, e a chi si e' appena registrato in spagnolo arrivava
+  // «Verify your email». Una lingua che l'app non parla non si passa:
+  // restituisce '' e Firebase tiene la sua.
+  function linguaDelleEmail(lingua) {
+    const l = String(lingua || '').trim().toLowerCase();
+    return LINGUE_PROFILO.indexOf(l) >= 0 ? l : '';
+  }
+
   // Google manda un nome intero ("Lorenzo Ballerini"), l'app ne tiene due
   // pezzi. La prima parola e' il nome, il resto il cognome: sbaglia sui nomi
   // composti, ma e' un valore di partenza che l'utente puo' correggere — e
@@ -318,6 +328,7 @@
     PAESI: PAESI,
     LINGUE_PROFILO: LINGUE_PROFILO,
     paeseDelTelefono: paeseDelTelefono,
+    linguaDelleEmail: linguaDelleEmail,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -431,6 +442,8 @@
         await fs.setDoc(fs.doc(db, 'users', a.currentUser.uid), root.Auth.profilo(nostro(a.currentUser), d), { merge: true });
       }
     } catch (e) { /* il profilo si ricompone al prossimo accesso */ }
+    // La verifica arriva nella lingua preferita appena scelta nel modulo.
+    parlaIn(a, d.lingua);
     await f.sendEmailVerification(a.currentUser);
     ultimo = nostro(a.currentUser);
     annuncia();
@@ -480,16 +493,24 @@
     annuncia();
   }
 
-  async function reimposta(email) {
+  // La lingua delle email di Firebase (Auth.linguaDelleEmail decide se vale).
+  function parlaIn(a, lingua) {
+    const l = root.Auth ? root.Auth.linguaDelleEmail(lingua) : '';
+    if (l) a.languageCode = l;
+  }
+
+  async function reimposta(email, lingua) {
     const f = await sdk();
     const a = await init();
+    parlaIn(a, lingua);
     await f.sendPasswordResetEmail(a, String(email || '').trim());
   }
 
-  async function inviaVerifica() {
+  async function inviaVerifica(lingua) {
     const f = await sdk();
     const a = await init();
     if (!a.currentUser) return;
+    parlaIn(a, lingua);
     await f.sendEmailVerification(a.currentUser);
   }
 

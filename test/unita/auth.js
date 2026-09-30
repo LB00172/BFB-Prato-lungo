@@ -302,6 +302,9 @@ if (!A) { fine(); }
   require(path.resolve(__dirname, '..', '..', 'lingue.js'));
   const diz = Object.keys(globalThis.Lingue.LINGUE).sort().join(',');
   ok(`le lingue del profilo sono quelle dell'app (${A.LINGUE_PROFILO.join(',')})`, A.LINGUE_PROFILO.slice().sort().join(',') === diz);
+  ok(`le email si chiedono a Firebase nella lingua giusta (${A.linguaDelleEmail('es')}, ${A.linguaDelleEmail('FR')})`,
+    A.linguaDelleEmail('es') === 'es' && A.linguaDelleEmail('FR') === 'fr');
+  ok('e una lingua che l\'app non parla non si passa', A.linguaDelleEmail('de') === '' && A.linguaDelleEmail(undefined) === '');
   ok(`l'elenco dei paesi è di codici ISO, senza doppioni (${A.PAESI.length})`,
     A.PAESI.length > 240 && new Set(A.PAESI).size === A.PAESI.length && A.PAESI.every((c) => /^[A-Z]{2}$/.test(c)) && A.PAESI.includes('IT'));
 }
