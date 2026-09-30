@@ -10362,7 +10362,10 @@ const schedaAccount = ({
   placeholder: L.t('auth.password'),
   autoComplete: account.modo === 'entra' ? 'current-password' : 'new-password',
   className: "w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
-}), account.modo === 'registra' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("input", {
+}), account.modo === 'registra' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+  "data-regole-password": true,
+  className: "text-minuto text-gray-500 leading-snug -mt-1"
+}, L.t('auth.regolePassword')), /*#__PURE__*/React.createElement("input", {
   type: "password",
   "data-ripeti": true,
   value: account.ripeti,

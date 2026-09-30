@@ -100,6 +100,7 @@ const schedaAccount = ({ account, senzaTitolo, onCancella }) => (
                 className="w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco" />
               {account.modo === 'registra' && (
                 <>
+                  <p data-regole-password className="text-minuto text-gray-500 leading-snug -mt-1">{L.t('auth.regolePassword')}</p>
                   <input type="password" data-ripeti value={account.ripeti} onChange={(e) => account.setRipeti(e.target.value)}
                     placeholder={L.t('auth.ripetiPassword')} autoComplete="new-password"
                     className={CASELLA_ACCOUNT} />

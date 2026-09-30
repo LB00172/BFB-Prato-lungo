@@ -86,7 +86,9 @@
     // sugli indirizzi rifiutano indirizzi validi (quelli con il +, i domini
     // lunghi, le lettere accentate) e non aggiungono niente: la verifica vera
     // e' l'email che arriva, non la forma.
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) problemi.push('auth.emailNonValida');
+    // Il dominio deve finire con almeno due lettere (.it, .com, .museum): «a@b.c0»
+    // e «admin@localhost» non sono indirizzi a cui arrivi una verifica.
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]*[A-Za-z]{2,}$/.test(email)) problemi.push('auth.emailNonValida');
 
     const pwd = String(d.password === null || d.password === undefined ? '' : d.password);
     if (!pwd) problemi.push('auth.servePassword');
@@ -99,6 +101,13 @@
     // perche' l'indirizzo e' l'unica cosa che l'attaccante conosce di sicuro.
     else if (!pwd.trim()) problemi.push('auth.passwordVuota');
     else if (email && pwd.toLowerCase() === email.toLowerCase()) problemi.push('auth.passwordUgualeEmail');
+    // Dal 30 settembre: almeno una lettera, un numero e un carattere speciale.
+    // Lettera vuol dire qualunque alfabeto (\p{L}: la «è» conta); speciale e'
+    // tutto quello che non e' lettera, numero o spazio. Ognuna si dice per
+    // nome: «ci vuole un numero» si corregge, «password non valida» no.
+    else if (!/\p{L}/u.test(pwd)) problemi.push('auth.passwordSenzaLettera');
+    else if (!/[0-9]/.test(pwd)) problemi.push('auth.passwordSenzaNumero');
+    else if (!/[^\p{L}\p{N}\s]/u.test(pwd)) problemi.push('auth.passwordSenzaSpeciale');
     // La password ripetuta: sul telefono si scrive senza vederla, e una
     // lettera sbagliata la prima volta e' un account che non si apre piu'.
     else if (d.ripeti !== undefined && String(d.ripeti) !== pwd) problemi.push('auth.passwordDiverse');

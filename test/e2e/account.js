@@ -158,8 +158,8 @@ const impostazioni = async (a) => {
 
   // ---------- 4. Un codice di Firebase diventa una frase ----------
   await campo('Email').fill('presa@example.com');
-  await campo('Password').fill('cavallo-batteria');
-  await campo('Ripeti la password').fill('cavallo-batteria');
+  await campo('Password').fill('cavallo-batteria-7');
+  await campo('Ripeti la password').fill('cavallo-batteria-7');
   await a.page.locator('main button', { hasText: /^Registrati$/ }).click();
   await a.page.waitForTimeout(400);
   const presa = await a.page.locator('main').innerText();
@@ -168,8 +168,8 @@ const impostazioni = async (a) => {
 
   // ---------- 5. Registrazione riuscita: si resta da verificare ----------
   await campo('Email').fill('mario@example.com');
-  await campo('Password').fill('cavallo-batteria');
-  await campo('Ripeti la password').fill('cavallo-batteria');
+  await campo('Password').fill('cavallo-batteria-7');
+  await campo('Ripeti la password').fill('cavallo-batteria-7');
   await a.page.locator('main button', { hasText: /^Registrati$/ }).click();
   await a.page.waitForTimeout(500);
   const dopo = await a.page.locator('main').innerText();
@@ -206,8 +206,8 @@ const impostazioni = async (a) => {
     await c('Città').fill('Roma');
     await b.page.locator('main select[data-paese]').selectOption('IT');
     await c('Email').fill('anna@example.com');
-    await c('Password').fill('cavallo-batteria');
-    await c('Ripeti la password').fill('cavallo-batteria');
+    await c('Password').fill('cavallo-batteria-7');
+    await c('Ripeti la password').fill('cavallo-batteria-7');
     await b.page.locator('main button', { hasText: /^Registrati$/ }).click();
     await b.page.waitForTimeout(500);
     const esito = await b.page.evaluate(() => ({ chiamate: window.__auth.chiamate, uid: window.__auth.utente && window.__auth.utente.uid }));

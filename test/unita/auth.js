@@ -74,7 +74,7 @@ if (!A) { fine(); }
 
 // ---------- La registrazione ----------
 {
-  const buona = { nome: 'Mario', cognome: 'Rossi', citta: 'Pescara', paese: 'IT', email: 'mario@example.com', password: 'cavallo-batteria' };
+  const buona = { nome: 'Mario', cognome: 'Rossi', citta: 'Pescara', paese: 'IT', email: 'mario@example.com', password: 'cavallo-batteria-7' };
   ok(`una registrazione completa non ha problemi (${A.validaRegistrazione(buona).length})`,
     A.validaRegistrazione(buona).length === 0);
 
@@ -106,9 +106,9 @@ if (!A) { fine(); }
   });
 
   ok('sette caratteri sono pochi',
-    A.validaRegistrazione(Object.assign({}, buona, { password: 'abcdefg' })).includes('auth.passwordCorta'));
+    A.validaRegistrazione(Object.assign({}, buona, { password: 'abcde1!' })).includes('auth.passwordCorta'));
   ok('otto vanno bene',
-    A.validaRegistrazione(Object.assign({}, buona, { password: 'abcdefgh' })).length === 0);
+    A.validaRegistrazione(Object.assign({}, buona, { password: 'abcdef1!' })).length === 0);
   ok('una password di soli spazi non e\' una password',
     A.validaRegistrazione(Object.assign({}, buona, { password: '        ' })).includes('auth.passwordVuota'));
   // L'indirizzo e' l'unica cosa che chi attacca conosce di sicuro.
@@ -268,6 +268,28 @@ if (!A) { fine(); }
   ok('finestra chiusa: no', A.passaAllAccountEsistente({ code: 'auth/popup-closed-by-user' }) === false);
   ok('rete che manca: no', A.passaAllAccountEsistente({ code: 'auth/network-request-failed' }) === false);
   ok('e senza errore niente', A.passaAllAccountEsistente(null) === false);
+}
+
+// ---------- La password: una lettera, un numero, un carattere speciale ----------
+// Deciso il 30 settembre: otto caratteri non bastano se sono otto lettere.
+// Ognuna delle tre mancanze si dice per nome — «deve avere un numero» si
+// corregge, «password non valida» no.
+{
+  const base = { nome: 'Mario', cognome: 'Rossi', citta: 'Pescara', paese: 'IT', email: 'mario@example.com' };
+  const con = (pwd) => A.validaRegistrazione(Object.assign({}, base, { password: pwd }));
+  ok('lettere, numero e carattere speciale: va bene', con('A12345678@').length === 0 && con('prato-lungo7').length === 0);
+  ok('senza numero si dice', con('cavallo-batteria').includes('auth.passwordSenzaNumero'));
+  ok('senza carattere speciale si dice', con('cavallo7batteria').includes('auth.passwordSenzaSpeciale'));
+  ok('senza lettera si dice', con('12345678@').includes('auth.passwordSenzaLettera'));
+  ok('una lettera accentata è una lettera', con('èèèèèè1!').length === 0);
+  ok('lo spazio non vale come carattere speciale', con('abcdef1 x').includes('auth.passwordSenzaSpeciale'));
+  ok('e sotto gli otto caratteri resta corta anche se ha tutto', con('ab1!').includes('auth.passwordCorta'));
+  // L'email: scritta bene, con un dominio che finisce con almeno due lettere.
+  const email = (e) => A.validaRegistrazione(Object.assign({}, base, { email: e, password: 'A12345678@' }));
+  ok('un\'email senza dominio vero non passa', email('admin@localhost').includes('auth.emailNonValida') && email('Admin').includes('auth.emailNonValida'));
+  ok('né con il dominio che finisce con un numero', email('mario@example.c0').includes('auth.emailNonValida'));
+  ok('né con due chiocciole', email('ma@rio@example.com').includes('auth.emailNonValida'));
+  ok('ma quelle vere col + e i domini lunghi sì', email('darkpsyco87+admin@gmail.com').length === 0 && email('a.b@posta.esempio.museum').length === 0);
 }
 
 // ---------- Il modulo completo: citta', paese, password ripetuta, lingua ----------
