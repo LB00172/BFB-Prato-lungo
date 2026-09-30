@@ -246,12 +246,14 @@ const schedaCampo = ({ account, contiBloccati, goTo, stanzaStato }) => {
                   )}
             </div>
           ))}
-          {riga('aiutante', L.t('stanza.aiutanteTitolo'), stanzaStato.vice ? ((stanzaStato.membri.find((m) => m.uid === stanzaStato.vice) || {}).nome || L.t('stanza.unMembro')) : L.t('campo.nessunAiutante'), (
+          {/* Il secondo capogruppo lo sceglie solo il primo (firestore.rules,
+              primoCapo): al secondo la riga non serve. */}
+          {stanzaStato.primoCapo && riga('aiutante', L.t('stanza.aiutanteTitolo'), stanzaStato.vice ? ((stanzaStato.membri.find((m) => m.uid === stanzaStato.vice) || {}).nome || L.t('stanza.unMembro')) : L.t('campo.nessunAiutante'), (
             <div>
                   {/* L'aiutante: il capogruppo lo nomina fra chi c'e', e se deve
                       lasciare il campo lo passa a lui. Il Pro non passa: l'ha pagato
                       chi se ne va (firestore.rules lo spegne nel passaggio). */}
-                  {stanzaStato.capogruppo && (() => {
+                  {stanzaStato.primoCapo && (() => {
                     const io = account.utente && account.utente.uid;
                     const altri = stanzaStato.membri.filter((m) => m.uid !== io);
                     const nomeDi = (uid) => {
@@ -329,10 +331,15 @@ const schedaCampo = ({ account, contiBloccati, goTo, stanzaStato }) => {
           <p className="text-minuto text-gray-500 leading-snug">{L.t('pro.maiIConti')}</p>
           {/* Comprarlo: solo il capogruppo, e solo dall'app Android —
               Google Play Billing. Fuori si dice dove, senza tasti finti. */}
-          {stanzaStato.capogruppo && stanzaStato.negozio === 'assente' && (
+          {/* Il Pro lo compra il PRIMO capogruppo: e' a lui che il server lo
+              lega, e l'abbonamento annuale e' il suo. Al secondo si dice chi. */}
+          {!stanzaStato.primoCapo && stanzaStato.capogruppo && (
+            <p data-pro-solo-primo className="text-minuto text-bosco leading-snug">{L.t('pro.soloPrimo')}</p>
+          )}
+          {stanzaStato.primoCapo && stanzaStato.negozio === 'assente' && (
             <p data-pro-solo-android className="text-minuto text-bosco leading-snug">{L.t('pro.soloAndroid')}</p>
           )}
-          {stanzaStato.capogruppo && stanzaStato.negozio && stanzaStato.negozio !== 'assente' && (
+          {stanzaStato.primoCapo && stanzaStato.negozio && stanzaStato.negozio !== 'assente' && (
             <div className="space-y-2 pt-1">
               {[
                 [window.Stanza.PRODOTTI_PRO.campo, 'pro.compraCampo', 'pro.compraCampoSpiega'],

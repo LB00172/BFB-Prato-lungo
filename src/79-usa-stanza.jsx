@@ -330,8 +330,15 @@ const usaStanza = () => {
   // Quali voci di spesa si dividono qui (voci.js). E' della stanza: le quote
   // devono essere le stesse su tutti i telefoni.
   const voci = (voceAperta && voceAperta.voci) || null;
-  const capogruppo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
+  // Due capigruppo (30 settembre). Il PRIMO e' chi ha creato il campo (o
+  // l'ha ricevuto): sceglie il secondo, compra il Pro, puo' lasciare il campo.
+  // Il SECONDO (aiutante, il vice della stanza) amministra con lui tutto il
+  // resto. `capogruppo` vuol dire «amministra»: e' vero per tutti e due.
+  // Come per il Pro, lo dice l'elenco sul telefono; chi puo' davvero lo
+  // decidono le regole Firestore (amministra e primoCapo).
+  const primoCapo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
   const aiutante = !!(voceAperta && voceAperta.aiutante);
+  const capogruppo = primoCapo || aiutante;
   const vice = (voceAperta && voceAperta.vice) || '';
   // Il luogo per il meteo. Passa da luogoValido anche qui: l'elenco sul
   // telefono lo scrive un'app, e un'app puo' essere vecchia.
@@ -571,7 +578,7 @@ const usaStanza = () => {
   };
 
   return {
-    pro, proFino, sbloccata, puoCreare, regole, capogruppo,
+    pro, proFino, sbloccata, puoCreare, regole, capogruppo, primoCapo,
     negozio, acquistando, esitoPro, compraPro, aiutante, vice, salvaRegole, nominaAiutante, lasciaCampo,
     bozzaRegole, setBozzaRegole, sceltaAiutante, setSceltaAiutante,
     dotazioni, bozzaDotazioni, setBozzaDotazioni, salvaDotazioni,

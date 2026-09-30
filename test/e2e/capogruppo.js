@@ -125,12 +125,12 @@ const testo = (a) => a.page.locator('main').innerText();
     ok('prima di nominarlo non si può lasciare il campo a nessuno',
       (await riquadro.locator('button', { hasText: /lascia il campo/i }).count()) === 0);
     await riquadro.locator('select').selectOption('bruno');
-    await riquadro.locator('button', { hasText: /nomina aiutante/i }).click();
+    await riquadro.locator('button', { hasText: /^nomina$/i }).click();
     await attendi(a.page, () => window.__scritture.some((x) => x.campi && x.campi.vice === 'bruno'));
     ok('l\'aiutante si nomina per uid', true);
     await attendi(a.page, () => /Bruno/.test(document.querySelector('[data-riquadro="aiutante"]').innerText)
       && !!document.querySelector('[data-riquadro="aiutante"] button.w-full'));
-    ok('e il riquadro dice chi è', /il tuo aiutante è bruno/i.test(await riquadro.innerText()));
+    ok('e il riquadro dice chi è', /il secondo capogruppo è bruno/i.test(await riquadro.innerText()));
 
     // La modalita' tecnica: il capogruppo la accende senza password. Sta in
     // Impostazioni, che e' della persona.
@@ -160,33 +160,82 @@ const testo = (a) => a.page.locator('main').innerText();
     await a.browser.close();
   }
 
-  // ---------- 2. Un membro, che è anche l'aiutante ----------
+  // ---------- 2. Il secondo capogruppo ----------
+  // Dal 30 settembre l'aiutante e' un SECONDO capogruppo: amministra subito,
+  // accanto al primo — il capo sul posto accanto a chi organizza. Tre cose
+  // pero' restano del primo: scegliere il secondo, comprare il Pro, lasciare
+  // il campo. Le regole Firestore lo decidono davvero (test/regole, 9-bis);
+  // qui si guarda che l'app gli mostri quello che puo' fare, e non il resto.
   {
     const a = await apri({
       admin: false,
       initScript: scena({
         utente: { uid: 'bruno', email: 'bruno@example.com', nome: 'Bruno', isAnonimo: false, emailVerificata: true },
-        stanza: { proprietario: 'anna', vice: 'bruno', regole: ['Si lava a turno.'], dotazioni: [{ testo: 'Borraccia' }] },
+        // Pro, perche' scrivere regole e dotazioni e' del Pro: qui si guarda
+        // chi puo', non se il campo ha pagato.
+        stanza: { proprietario: 'anna', vice: 'bruno', pro: { attivo: true }, regole: ['Si lava a turno.'], dotazioni: [{ testo: 'Borraccia' }] },
+      }),
+    });
+    await a.menu('Regole');
+    await attendi(a.page, () => /si lava a turno/i.test(document.querySelector('main').innerText));
+    ok('il secondo capogruppo trova il tasto per cambiare le regole',
+      (await a.page.locator('main button', { hasText: /modifica le regole/i }).count()) === 1);
+    await a.menu('Dotazioni personali');
+    await attendi(a.page, () => /borraccia/i.test(document.querySelector('main').innerText));
+    ok('e quello per la lista delle dotazioni', (await a.page.locator('main button', { hasText: /modifica la lista/i }).count()) === 1);
+    await a.menu('Il campo');
+    await attendi(a.page, () => /sei il secondo capogruppo/i.test(document.querySelector('main').innerText));
+    ok('sa di esserlo', true);
+    const righe = await a.page.evaluate(() => [...document.querySelectorAll('[data-riga]')].map((r) => r.getAttribute('data-riga')));
+    ok(`amministra il campo (${righe.join(', ')})`, righe.includes('nome') && righe.includes('luogo') && righe.includes('voci'));
+    ok('ma non sceglie il secondo capogruppo: quello lo fa il primo', !righe.includes('aiutante') && (await a.page.locator('[data-riquadro="aiutante"]').count()) === 0);
+    await a.menu('Impostazioni');
+    const tecnica = a.page.locator('main button', { hasText: /modalit. tecnica/i }).first();
+    if (await tecnica.count()) await tecnica.click();
+    ok('e la modalità tecnica è anche sua', (await a.page.locator('main button', { hasText: /^attiva$/i }).count()) === 1
+      && (await a.page.locator('[data-tecnica="solo-capogruppo"]').count()) === 0);
+    ok('nessun errore JavaScript' + (a.errori.length ? ': ' + a.errori.join(' | ') : ''), a.errori.length === 0);
+    await a.browser.close();
+  }
+
+  // In un campo gratuito, il Pro lo compra il primo: al secondo si dice chi.
+  {
+    const a = await apri({
+      admin: false,
+      initScript: scena({
+        utente: { uid: 'bruno', email: 'bruno@example.com', nome: 'Bruno', isAnonimo: false, emailVerificata: true },
+        stanza: { proprietario: 'anna', vice: 'bruno' },
+        android: true,
+      }),
+    });
+    await a.menu('Il campo');
+    await attendi(a.page, () => !!document.querySelector('[data-riquadro="pro"]'));
+    ok('il secondo capogruppo il Pro non lo compra: gli si dice chi lo attiva',
+      (await a.page.locator('[data-compra]').count()) === 0 && (await a.page.locator('[data-pro-solo-primo]').count()) === 1);
+    await a.browser.close();
+  }
+
+  // ---------- 3. Un membro qualunque ----------
+  {
+    const a = await apri({
+      admin: false,
+      initScript: scena({
+        utente: { uid: 'carla', email: 'carla@example.com', nome: 'Carla', isAnonimo: false, emailVerificata: true },
+        stanza: { proprietario: 'anna', vice: 'bruno', pro: { attivo: true }, regole: ['Si lava a turno.'], dotazioni: [{ testo: 'Borraccia' }] },
         adminAcceso: true,
       }),
     });
     await a.menu('Regole');
     await attendi(a.page, () => /si lava a turno/i.test(document.querySelector('main').innerText));
-    ok('un membro legge le regole del campo', true);
-    ok('ma non trova il tasto per cambiarle',
+    ok('un membro legge le regole del campo, ma non le cambia',
       (await a.page.locator('main button', { hasText: /modifica le regole/i }).count()) === 0);
-    await a.menu('Dotazioni personali');
-    await attendi(a.page, () => /borraccia/i.test(document.querySelector('main').innerText));
-    ok('un membro legge la lista delle dotazioni', true);
-    ok('ma non la cambia', (await a.page.locator('main button', { hasText: /modifica la lista/i }).count()) === 0);
     await a.menu('Il campo');
-    await attendi(a.page, () => /sei l'aiutante/i.test(document.querySelector('main').innerText));
-    ok('l\'aiutante sa di esserlo', true);
-    ok('e il riquadro del capogruppo non c\'è', (await a.page.locator('[data-riquadro="aiutante"], [data-riga="aiutante"]').count()) === 0);
+    await attendi(a.page, () => !!document.querySelector('[data-scheda="campo"]'));
+    ok('e in «Il campo» non trova righe da cambiare', (await a.page.locator('[data-riga]').count()) === 0);
     await a.menu('Impostazioni');
     const tecnica = a.page.locator('main button', { hasText: /modalit. tecnica/i }).first();
     if (await tecnica.count()) await tecnica.click();
-    ok('la modalità tecnica gli dice che è del capogruppo',
+    ok('la modalità tecnica gli dice che è dei capigruppo',
       (await a.page.locator('[data-tecnica="solo-capogruppo"]').count()) === 1);
     ok('e, anche se sul suo telefono era accesa, in questo campo non vale',
       (await a.page.locator('main button', { hasText: /spegni/i }).count()) === 0);

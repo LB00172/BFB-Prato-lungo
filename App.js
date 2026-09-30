@@ -2458,8 +2458,15 @@ const usaStanza = () => {
   // Quali voci di spesa si dividono qui (voci.js). E' della stanza: le quote
   // devono essere le stesse su tutti i telefoni.
   const voci = voceAperta && voceAperta.voci || null;
-  const capogruppo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
+  // Due capigruppo (30 settembre). Il PRIMO e' chi ha creato il campo (o
+  // l'ha ricevuto): sceglie il secondo, compra il Pro, puo' lasciare il campo.
+  // Il SECONDO (aiutante, il vice della stanza) amministra con lui tutto il
+  // resto. `capogruppo` vuol dire «amministra»: e' vero per tutti e due.
+  // Come per il Pro, lo dice l'elenco sul telefono; chi puo' davvero lo
+  // decidono le regole Firestore (amministra e primoCapo).
+  const primoCapo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
   const aiutante = !!(voceAperta && voceAperta.aiutante);
+  const capogruppo = primoCapo || aiutante;
   const vice = voceAperta && voceAperta.vice || '';
   // Il luogo per il meteo. Passa da luogoValido anche qui: l'elenco sul
   // telefono lo scrive un'app, e un'app puo' essere vecchia.
@@ -2803,6 +2810,7 @@ const usaStanza = () => {
     puoCreare,
     regole,
     capogruppo,
+    primoCapo,
     negozio,
     acquistando,
     esitoPro,
@@ -9912,7 +9920,7 @@ const schedaCampo = ({
     }, L.t(NOME_VOCE[cat]));
   })), /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-gray-500 leading-snug"
-  }, L.t(contiBloccati ? 'voci.chiuse' : 'voci.legenda'))))), riga('aiutante', L.t('stanza.aiutanteTitolo'), stanzaStato.vice ? (stanzaStato.membri.find(m => m.uid === stanzaStato.vice) || {}).nome || L.t('stanza.unMembro') : L.t('campo.nessunAiutante'), /*#__PURE__*/React.createElement("div", null, stanzaStato.capogruppo && (() => {
+  }, L.t(contiBloccati ? 'voci.chiuse' : 'voci.legenda'))))), stanzaStato.primoCapo && riga('aiutante', L.t('stanza.aiutanteTitolo'), stanzaStato.vice ? (stanzaStato.membri.find(m => m.uid === stanzaStato.vice) || {}).nome || L.t('stanza.unMembro') : L.t('campo.nessunAiutante'), /*#__PURE__*/React.createElement("div", null, stanzaStato.primoCapo && (() => {
     const io = account.utente && account.utente.uid;
     const altri = stanzaStato.membri.filter(m => m.uid !== io);
     const nomeDi = uid => {
@@ -9981,10 +9989,13 @@ const schedaCampo = ({
     key: f
   }, "\xB7 ", L.t(NOME_PRO[f])))), /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-gray-500 leading-snug"
-  }, L.t('pro.maiIConti')), stanzaStato.capogruppo && stanzaStato.negozio === 'assente' && /*#__PURE__*/React.createElement("p", {
+  }, L.t('pro.maiIConti')), !stanzaStato.primoCapo && stanzaStato.capogruppo && /*#__PURE__*/React.createElement("p", {
+    "data-pro-solo-primo": true,
+    className: "text-minuto text-bosco leading-snug"
+  }, L.t('pro.soloPrimo')), stanzaStato.primoCapo && stanzaStato.negozio === 'assente' && /*#__PURE__*/React.createElement("p", {
     "data-pro-solo-android": true,
     className: "text-minuto text-bosco leading-snug"
-  }, L.t('pro.soloAndroid')), stanzaStato.capogruppo && stanzaStato.negozio && stanzaStato.negozio !== 'assente' && /*#__PURE__*/React.createElement("div", {
+  }, L.t('pro.soloAndroid')), stanzaStato.primoCapo && stanzaStato.negozio && stanzaStato.negozio !== 'assente' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-2 pt-1"
   }, [[window.Stanza.PRODOTTI_PRO.campo, 'pro.compraCampo', 'pro.compraCampoSpiega'], [window.Stanza.PRODOTTI_PRO.anno, 'pro.compraAnno', 'pro.compraAnnoSpiega']].map(([sku, etichetta, spiega]) => /*#__PURE__*/React.createElement("div", {
     key: sku

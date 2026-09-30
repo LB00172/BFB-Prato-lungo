@@ -430,7 +430,15 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   chi ha appena ceduto il campo ha ancora per un attimo una scheda con scritto
   «proprietario», e non deve contare. Il capogruppo nomina un **aiutante** fra
   i membri; lasciando il campo lo passa a lui, e a nessun altro, e il **Pro
-  si spegne nel passaggio** (l'ha pagato chi se ne va). È l'unica scrittura
+  si spegne nel passaggio** (l'ha pagato chi se ne va).
+  **Dal 30 settembre i capigruppo sono due**: l'aiutante è un **secondo
+  capogruppo** che amministra subito, a pari titolo — il capo sul posto
+  accanto a chi organizza (`amministra()` guarda `proprietario` e `vice`).
+  Tre cose restano solo del **primo** (`primoCapo()` nelle regole,
+  `stanzaStato.primoCapo` nell'app): scegliere il secondo, comprare il Pro,
+  cedere o cancellare il campo. Un secondo che potesse usare la strada del
+  passaggio si prenderebbe il campo di chi l'ha creato: `9-bis` in
+  `test/regole/stanze.js`. È l'unica scrittura
   con cui un telefono tocca `pro`: per toglierlo, mai per darlo. Le **regole
   del campo** e le **dotazioni** stanno nella stanza (`rooms/<codice>.regole`,
   `.dotazioni`) e le scrive solo il capogruppo; quelle della Brigata restano

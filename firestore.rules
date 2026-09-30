@@ -63,7 +63,19 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/rooms/$(stanza)).data;
     }
 
+    // Chi amministra: il capogruppo — il proprietario — e, dal 30 settembre,
+    // il SECONDO capogruppo che lui ha nominato (vice): il capo sul posto
+    // accanto a chi organizza. Lo dicono tutti e due i nomi scritti nella
+    // stanza, non le schede dei membri.
     function amministra(stanza) {
+      let s = stanzaDoc(stanza);
+      return membro(stanza)
+        && (s.proprietario == request.auth.uid || s.get('vice', '') == request.auth.uid);
+    }
+
+    // Il PRIMO capogruppo: chi ha creato il campo (o l'ha ricevuto). Tre cose
+    // restano solo sue: scegliere il secondo, passare il campo, cancellarlo.
+    function primoCapo(stanza) {
       return membro(stanza) && stanzaDoc(stanza).proprietario == request.auth.uid;
     }
 
@@ -113,7 +125,16 @@ service cloud.firestore {
         //    toglie.
         (request.resource.data.proprietario == resource.data.proprietario
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['pro'])
-          && (!('vice' in request.resource.data)
+          // Il secondo capogruppo amministra, ma non sceglie chi e' il
+          // secondo: ne' un altro al posto suo, ne' nessuno.
+          && (resource.data.proprietario == request.auth.uid
+              || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['vice']))
+          // Il vice nuovo, QUANDO cambia: un membro, e non se stessi. Si
+          // guarda solo se cambia, perche' il documento dopo la scrittura lo
+          // contiene sempre: per il secondo capogruppo e' il suo stesso uid, e
+          // guardarlo sempre gli negherebbe ogni scrittura.
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['vice'])
+              || !('vice' in request.resource.data)
               || (request.resource.data.vice != request.auth.uid
                   && membroDi(stanza, request.resource.data.vice))))
         ||
@@ -122,14 +143,17 @@ service cloud.firestore {
         //    di mano: il passaggio lo deve spegnere nello stesso gesto. E'
         //    l'unica scrittura con cui un telefono tocca il Pro — per
         //    toglierlo, mai per darlo.
-        ('vice' in resource.data
+        // Solo il PRIMO: altrimenti il secondo userebbe questa strada per
+        // prendersi il campo di chi l'ha creato.
+        (resource.data.proprietario == request.auth.uid
+          && 'vice' in resource.data
           && request.resource.data.proprietario == resource.data.vice
           && membroDi(stanza, resource.data.vice)
           && !('pro' in request.resource.data)
           && !('vice' in request.resource.data))
       );
 
-      allow delete: if amministra(stanza);
+      allow delete: if primoCapo(stanza);
 
       // Il segreto. Non lo legge NESSUNO — nemmeno il proprietario, che
       // l'impronta non ha motivo di rileggerla: il codice ce l'ha lui.
@@ -176,7 +200,10 @@ service cloud.firestore {
         // Il proprietario cambia i ruoli. Ma non il proprio: togliersi il
         // ruolo da soli lascerebbe una stanza che non amministra piu'
         // nessuno e che non si puo' nemmeno cancellare.
-        allow update: if amministra(stanza) && uid != request.auth.uid;
+        // La scheda del primo capogruppo non la riscrive nessun altro,
+        // nemmeno il secondo.
+        allow update: if amministra(stanza) && uid != request.auth.uid
+          && get(/databases/$(database)/documents/rooms/$(stanza)).data.proprietario != uid;
         // (ruolo() resta per modifica(): chi scrive i dati lo dice la scheda.)
 
         // Si esce da soli, o ti toglie il proprietario. Il proprietario no:

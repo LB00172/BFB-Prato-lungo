@@ -332,6 +332,36 @@ const permesso = async (msg, azione) => {
   await permesso('il nuovo capogruppo amministra', () => setDoc(stanzaP(bruno), { nome: 'Di Bruno' }, { merge: true }));
   await negato('ma il Pro non se lo riaccende', () => setDoc(stanzaP(bruno), { pro: { attivo: true } }, { merge: true }));
 
+  console.log('\n9-bis) Due capigruppo: il secondo amministra, il primo resta il padrone');
+  // Dal 30 settembre l'aiutante non aspetta che il capogruppo se ne vada: e'
+  // un SECONDO capogruppo, che amministra subito — il capo sul posto accanto
+  // a chi organizza. Ma tre cose restano del primo, che ha creato il campo e
+  // l'ha pagato: chi e' il secondo, il passaggio del campo, cancellarlo.
+  await env.withSecurityRulesDisabled(async (c) => {
+    const db = c.firestore();
+    await setDoc(doc(db, 'rooms/DUECAPIX'), { nome: 'Due capi', proprietario: 'anna', vice: 'bruno', pro: { attivo: true } });
+    await setDoc(doc(db, 'rooms/DUECAPIX/members/anna'), { ruolo: 'proprietario', nome: 'Anna' });
+    await setDoc(doc(db, 'rooms/DUECAPIX/members/bruno'), { ruolo: 'redattore', nome: 'Bruno' });
+    await setDoc(doc(db, 'rooms/DUECAPIX/members/carla'), { ruolo: 'redattore', nome: 'Carla' });
+  });
+  const due = (db) => doc(db, 'rooms/DUECAPIX');
+  await permesso('il secondo capogruppo cambia nome e date', () => setDoc(due(bruno), { nome: 'Di tutti e due', inizio: '2027-08-01' }, { merge: true }));
+  await permesso('e scrive le regole del campo', () => setDoc(due(bruno), { regole: ['Si parte alle otto.'] }, { merge: true }));
+  await negato('un membro qualunque invece no', () => setDoc(due(carla), { nome: 'Di Carla' }, { merge: true }));
+  await negato('il secondo non si sceglie un altro secondo', () => setDoc(due(bruno), { vice: 'carla' }, { merge: true }));
+  await negato('e non si toglie il titolo per darlo a nessuno', () => updateDoc(due(bruno), { vice: deleteField() }));
+  // IL caso: se il secondo potesse usare la strada del passaggio, si
+  // prenderebbe il campo di chi l'ha creato, e con lui il posto del Pro.
+  await negato('il secondo non si prende il campo con la strada del passaggio',
+    () => updateDoc(due(bruno), { proprietario: 'bruno', vice: deleteField(), pro: deleteField() }));
+  await negato('il secondo non tocca il Pro', () => updateDoc(due(bruno), { pro: deleteField() }));
+  await negato('e non cancella il campo', () => deleteDoc(due(bruno)));
+  await negato('e non riscrive la scheda del primo', () => setDoc(doc(bruno, 'rooms/DUECAPIX/members/anna'), { ruolo: 'redattore' }, { merge: true }));
+  await negato('né la toglie', () => deleteDoc(doc(bruno, 'rooms/DUECAPIX/members/anna')));
+  await permesso('il primo cambia il secondo', () => setDoc(due(anna), { vice: 'carla' }, { merge: true }));
+  await negato('e chi non è più secondo non amministra più', () => setDoc(due(bruno), { nome: 'Ancora mio' }, { merge: true }));
+  await permesso('mentre il nuovo secondo sì', () => setDoc(due(carla), { nome: 'Di Anna e Carla' }, { merge: true }));
+
   console.log('\n10) Le regole del campo le scrive il capogruppo');
   await permesso('il capogruppo scrive le regole',
     () => setDoc(stanzaP(bruno), { regole: ['Si lava a turno.'] }, { merge: true }));
