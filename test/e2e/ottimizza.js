@@ -6,8 +6,10 @@
 // solo — e' il "semplifica i debiti" di Splitwise — senza che nessuno paghi
 // un centesimo in piu' o in meno.
 //
-// Le due cose che questa prova difende: che le CIFRE non cambino, e che le
-// spunte delle due viste non si pestino i piedi.
+// Le due cose che questa prova difende: che le CIFRE non cambino, e che un
+// rimborso pagato da una vista non faccia pagare di nuovo nell'altra. Un
+// pagamento e' denaro (rimborsi.js): pagato dalla vista unica, la vista per
+// cassa non propone piu' i suoi due bonifici — dice dove guardare.
 const { apri, ok, fine } = require('../lib/app');
 
 const semina = () => {
@@ -73,20 +75,25 @@ const totale = (righe) => righe.reduce((a, r) => {
   });
   ok(`le quote restano quelle (${dovuti})`, dovuti === 'Alice:4000 Bruno:4000');
 
-  // --- Le spunte delle due viste non si pestano i piedi ---
-  await p.locator('main li').filter({ hasText: '→' }).first().click();
-  await p.waitForTimeout(400);
+  // --- Un pagamento vale in tutte e due le viste ---
+  await p.locator('main li[data-da-fare]').first().click();
+  await p.waitForFunction(() => !!document.querySelector('main li[data-pagato]'));
   const chiaviOpt = await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_settled') || '[]'));
-  ok(`la spunta dell'ottimizzato ha la sua chiave (${JSON.stringify(chiaviOpt)})`,
+  ok(`il pagamento dell'ottimizzato ha la sua chiave (${JSON.stringify(chiaviOpt)})`,
     chiaviOpt.length === 1 && chiaviOpt[0].startsWith('opt:'));
+  ok('e non resta niente da fare', (await p.locator('main li[data-da-fare]').count()) === 0
+    && (await p.locator('main [data-tutti-fatti]').count()) === 1);
 
   await p.locator('main button', { hasText: /Torna ai saldi per cassa/ }).first().click();
-  await p.waitForTimeout(400);
-  const spuntate = await p.evaluate(() => [...document.querySelectorAll('main li')]
-    .filter((li) => li.textContent.includes('→'))
-    .map((li) => li.textContent.includes('✓')));
-  ok(`tornando alle due casse i loro rimborsi non risultano già fatti (${JSON.stringify(spuntate)})`,
-    spuntate.length === 2 && spuntate.every((x) => x === false));
+  await p.waitForFunction(() => !!document.querySelector('main [data-rimanda]'));
+  const perCassa = await p.evaluate(() => ({
+    daFare: document.querySelectorAll('main li[data-da-fare]').length,
+    rimanda: [...document.querySelectorAll('main [data-rimanda]')].map((x) => x.getAttribute('data-rimanda')),
+  }));
+  ok(`tornando alle due casse i loro bonifici non si ripropongono (${JSON.stringify(perCassa)})`,
+    perCassa.daFare === 0 && perCassa.rimanda.length === 2 && perCassa.rimanda.every((x) => x === 'unica'));
+  // Annullato il pagamento, le due casse tornano a sapere quanto manca.
+  await p.evaluate(() => localStorage.setItem('cambusa_settled', '[]'));
 
   // --- La scelta resta al riavvio: e' del telefono, non del campo ---
   await p.locator('main button', { hasText: /Ottimizza i passaggi/ }).first().click();

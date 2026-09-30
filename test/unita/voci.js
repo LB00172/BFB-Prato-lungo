@@ -92,4 +92,44 @@ const sommaSaldi = (t) => t.settlement.reduce((x, r) => x + r.net, 0);
   ok('senza liste non esplode', V.separa(null, null, { logistica: 'fuori' }).fuori.totale === 0);
 }
 
+// ---------- Tipi di spesa che i conti non conoscono ----------
+// Una spesa senza tipo veniva rimborsata a chi l'aveva pagata ma non divisa
+// fra nessuno: 30 € di credito che nessuno doveva, e sul conto separato quote
+// negative. Adesso si divide come cibo.
+{
+  const fs = require('fs');
+  const conf = fs.readFileSync(path.join(RADICE, 'src', '40-configurazione.jsx'), 'utf8');
+  const m = /const PURCHASE_TYPES = \{([^}]*)\}/.exec(conf);
+  const tipi = m ? m[1].split(',').map((x) => x.split(':')[0].trim()).filter(Boolean) : [];
+  const conti = fs.readFileSync(path.join(RADICE, 'conti.js'), 'utf8');
+  const sommati = [...conti.matchAll(/sumByType\('([a-z]+)'\)/g)].map((x) => x[1]);
+  ok(`i tipi dell'app sono quelli che i conti dividono (${tipi.join(', ')})`,
+    tipi.length > 0 && tipi.join(',') === V.TIPI_SPESA.join(',') && tipi.every((t) => sommati.includes(t)));
+
+  const membri = [{ id: 'a', name: 'Anna', isChild: false }, { id: 'b', name: 'Bruno', isChild: false }, { id: 'c', name: 'Carla', isChild: false }];
+  const P = { lunch: true, dinner: true };
+  const campData = { '2027-08-10': { meals: { a: P, b: P, c: P } }, '2027-08-11': { meals: { a: P, b: P, c: P } } };
+  const conta = (purchases, sepDays) => {
+    const d = V.separa(purchases, [], null);
+    return global.Conti.calcola({ members: membri, campData, purchases: d.purchases, equipment: d.equipment, sepDays: sepDays || [], freeDays: [], equipExemption: false });
+  };
+  const t = conta([
+    { id: '1', price: 60, type: 'alimentare', buyer: 'Anna' },
+    { id: '2', price: 30, buyer: 'Bruno' },
+    { id: '3', price: 12, type: 'altro', buyer: 'Carla' },
+  ]);
+  const somma = t.settlement.reduce((n, x) => n + x.net, 0);
+  ok(`una spesa senza tipo si divide, e i saldi tornano a zero (${t.overallTotal} €, somma ${somma.toFixed(2)})`,
+    Math.abs(t.overallTotal - 102) < 0.005 && Math.abs(somma) < 0.005);
+  const sep = conta([
+    { id: '1', price: 40, type: 'alimentare', buyer: 'Anna' },
+    { id: '2', price: 50, type: 'altro', account: 'sep', buyer: 'Bruno' },
+  ], ['2027-08-11']);
+  ok(`sul conto separato nessuna quota negativa (${sep.breakdown.map((b) => b.pay).join(', ')})`,
+    sep.breakdown.every((b) => b.pay >= 0) && sep.foodDrinksCommon >= 0 && Math.abs(sep.overallTotal - 90) < 0.005);
+  const orig = [{ id: '9', price: 5, buyer: 'Anna' }];
+  V.separa(orig, [], null);
+  ok('e la spesa salvata non si tocca: si corregge solo cosa si dà ai conti', orig[0].type === undefined);
+}
+
 fine();

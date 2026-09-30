@@ -22,6 +22,7 @@ const schedaSpesa = ({
   riapriConti,
   risparmio,
   saldiOttimizzati,
+  rimborsi,
   schedaQuote,
   schedaSaldi,
   setCampCodeInput,
@@ -233,7 +234,7 @@ const schedaSpesa = ({
     {spesaSection === 'saldi' && (<div className="space-y-4">
     {/* Meno bonifici, stesse cifre. Compare solo se serve davvero:
         con una cassa sola le due liste sono identiche. */}
-    {cassaSepAttiva && (risparmio > 0 || saldiOttimizzati) && (
+    {cassaSepAttiva && (risparmio > 0 || saldiOttimizzati || rimborsi.unica) && (
       <div>
         <button
           onClick={() => setSaldiOttimizzati(!saldiOttimizzati)}
@@ -250,20 +251,23 @@ const schedaSpesa = ({
     )}
     {saldiOttimizzati ? schedaSaldi({
       cassa: cassaUnica,
+      rimandaPerCassa: rimborsi.perCassa,
       titolo: L.t('saldi.passaggiOttimizzati'),
       sottotitolo: L.t('saldi.passaggiNota'),
       scarto: totals.roundingDiff,
       nonRipartito: totals.nonRipartito,
     }) : (<>
     {schedaSaldi({
-      cassa: totals.casse.comune,
+      cassa: { ...totals.casse.comune, ...rimborsi.comune },
+      rimandaUnica: rimborsi.unica,
       titolo: L.t(cassaSepAttiva ? 'saldi.cassaComune' : 'saldi.finale'),
       sottotitolo: cassaSepAttiva ? L.t('saldi.cassaComuneNota') : null,
       scarto: totals.roundingDiffComune,
       nonRipartito: totals.nonRipartitoComune,
     })}
     {cassaSepAttiva && schedaSaldi({
-      cassa: totals.casse.separata,
+      cassa: { ...totals.casse.separata, ...rimborsi.separata },
+      rimandaUnica: rimborsi.unica,
       titolo: L.t('saldi.cassaSeparata'),
       sottotitolo: L.t('saldi.cassaSeparataNota', totals.sepDaysCount),
       scarto: totals.roundingDiffSep,
@@ -415,6 +419,7 @@ const schedaSpesa = ({
 );
 
 const schedaLista = ({
+  acquirentePredefinito,
   addToBuy,
   apriFoglioSpesa,
   manualOpen,
@@ -537,7 +542,7 @@ const schedaLista = ({
                 <button onClick={() => removeToBuy(it.id)} aria-label={L.t('dotazioni.rimuovi')} className={bottoneIcona('distruttivo', 'shrink-0')}>&times;</button>
               </div>
               <button
-                onClick={() => setBuying({ id: it.id, name: it.name, qty: it.qty, price: '', buyer: '', type: 'alimentare', account: 'comune' })}
+                onClick={() => setBuying({ id: it.id, name: it.name, qty: it.qty, price: '', buyer: acquirentePredefinito(), type: 'alimentare', account: 'comune' })}
                 className={bottone('bruno', 'normale', 'mt-2 w-full')}
               >
                 {L.t('lista.segnaAcquistata')}

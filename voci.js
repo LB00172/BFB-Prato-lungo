@@ -30,6 +30,9 @@
   // mappa, non due bandierine: una categoria nuova domani non chiede codice
   // nuovo qui.
   var CATEGORIE = ['alimentare', 'bevande', 'logistica', 'attrezzatura'];
+  // I tipi di spesa che conti.js sa dividere (sumByType). Una prova
+  // (unita/voci) pretende che PURCHASE_TYPES non ne abbia altri.
+  var TIPI_SPESA = ['alimentare', 'bevande', 'logistica'];
 
   // Solo 'fuori' spegne. Qualunque altra cosa — una categoria sconosciuta, un
   // valore storto arrivato da una versione vecchia — vuol dire «si divide»:
@@ -66,6 +69,15 @@
       if (!off[p && p.type]) return true;
       aggiungi(p.type, importo(p.price));
       return false;
+    }).map(function (p) {
+      // Una spesa senza tipo, o con un tipo che i conti non conoscono (un
+      // file importato, una versione vecchia, una categoria nuova domani),
+      // conti.js la rimborsava a chi l'aveva pagata ma non la divideva fra
+      // nessuno: saldi che non tornano a zero, e sul conto separato quote
+      // negative. Si divide come cibo — lo stesso tipo che le da' la maschera
+      // di correzione quando la apre —, cosi' conti e schermo dicono la
+      // stessa cosa.
+      return p && TIPI_SPESA.indexOf(p.type) < 0 ? Object.assign({}, p, { type: 'alimentare' }) : p;
     });
     var attrezzatura = equipment || [];
     if (off.attrezzatura) {
@@ -79,5 +91,5 @@
     };
   }
 
-  root.Voci = { CATEGORIE: CATEGORIE, spente: spente, separa: separa };
+  root.Voci = { CATEGORIE: CATEGORIE, TIPI_SPESA: TIPI_SPESA, spente: spente, separa: separa };
 })(typeof window !== 'undefined' ? window : globalThis);

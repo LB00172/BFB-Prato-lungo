@@ -103,18 +103,20 @@ const { chromium } = require('playwright-core');
   const settledDopo = await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_settled') || '[]').length);
   ok('copiare NON segna il rimborso come saldato', settledDopo === 0);
 
-  // segnare saldato nasconde i dati (solo su quella riga: le altre restano)
-  const righe = p.locator('li', { hasText: '→' });
+  // Segnato fatto, il rimborso passa fra quelli fatti: senza i dati di
+  // pagamento, che non servono piu'.
+  const righe = p.locator('li[data-da-fare]');
   const nRighe = await righe.count();
   await righe.first().click();
-  await p.waitForTimeout(350);
-  const rigaSaldata = await righe.first().innerText();
-  ok('a rimborso saldato i dati spariscono da quella riga (' + nRighe + ' passaggi in tutto)',
-    !rigaSaldata.includes('paypal.me/lorenzoballerini') && rigaSaldata.includes('✓'));
+  await p.waitForSelector('li[data-pagato]');
+  const rigaSaldata = await p.locator('li[data-pagato]').first().innerText();
+  ok('a rimborso fatto i dati spariscono da quella riga (' + nRighe + ' passaggi in tutto)',
+    !rigaSaldata.includes('paypal.me/lorenzoballerini') && rigaSaldata.includes('✓')
+    && (await righe.count()) === nRighe - 1);
 
   // --- Chi riceve senza dati ---
-  await righe.first().click();
-  await p.waitForTimeout(250);
+  await p.locator('li[data-pagato]').first().click();
+  await p.waitForFunction(() => !document.querySelector('li[data-pagato]'));
   await menu('Membri');
   await p.locator('button[aria-label="Dati di pagamento di Lorenzo"]').click();
   await p.waitForTimeout(200);

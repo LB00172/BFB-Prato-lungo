@@ -18,24 +18,18 @@
 
   const lista = (v) => (Array.isArray(v) ? v : []);
 
-  // La chiave di un rimborso segnato come fatto. Stava dentro App(); e' uscita
-  // qui perche' la Panoramica deve riconoscere gli stessi rimborsi, e due
-  // copie della stessa chiave divergono alla prima correzione — un rimborso
-  // fatto che nella Panoramica risultasse ancora aperto. La cassa separata e
-  // la vista ottimizzata hanno il loro prefisso: due passaggi identici nelle
-  // due casse non si devono spegnere a vicenda.
-  function chiaveRimborso(t) {
-    const prefisso = t.cassa === 'separata' ? 'sep:' : t.cassa === 'tutte' ? 'opt:' : '';
-    return `${prefisso}${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
-  }
+  // La chiave di un rimborso segnato come fatto sta in rimborsi.js, con le
+  // regole dei pagamenti: la Panoramica deve riconoscere gli stessi rimborsi
+  // dell'app, e due copie della stessa chiave divergono alla prima correzione.
+  const chiaveRimborso = (t) => root.Rimborsi.chiave(t);
 
   // Il riassunto di un campo. `voci` sono le voci spente della stanza
   // (voci.js); `opzioni.equipExemption` come FEATURES.equipExemption.
   //
-  // I rimborsi aperti si contano nella vista che il gruppo usa: se almeno un
-  // rimborso e' stato segnato in quella ottimizzata (prefisso opt:), si pagano
-  // quelli; altrimenti quelli per cassa. Contarli in tutte e due darebbe il
-  // doppio dei bonifici da fare.
+  // I rimborsi aperti sono quello che manca dopo i pagamenti gia' fatti
+  // (rimborsi.js), nella vista che il gruppo usa: se qualcuno ha pagato nella
+  // vista unica, quella; altrimenti quella per cassa. Contarli in tutte e due
+  // darebbe il doppio dei bonifici da fare.
   function riassunto(stato, voci, opzioni) {
     const s = stato || {};
     const o = opzioni || {};
@@ -54,10 +48,7 @@
       freeDays: lista(s.freeDays),
       equipExemption: !!o.equipExemption,
     });
-    const settled = lista(s.settled).map(String);
-    const ottimizzata = settled.some((k) => k.indexOf('opt:') === 0);
-    const daPagare = lista(ottimizzata ? t.transfersOttimizzati : t.transfers);
-    const aperti = daPagare.filter((x) => settled.indexOf(chiaveRimborso(x)) < 0);
+    const aperti = root.Rimborsi.daFare(root.Rimborsi.residui(t, lista(s.settled).map(String)), false);
     const adulti = members.filter((m) => m && !m.isChild).length;
     const ultima = purchases.reduce((max, p) => (p && typeof p.at === 'number' && p.at > max ? p.at : max), 0);
     const tondo = (n) => Math.round((Number(n) || 0) * 100) / 100;

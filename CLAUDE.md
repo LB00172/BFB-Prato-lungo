@@ -14,7 +14,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    `frase('chiave')` quando c'è del grassetto dentro — `fraseVestita(classe,
    'chiave')` se quel grassetto ha anche un colore — e `L.data(d, 'forma')`
    per le date. **Mai `'it-IT'` a mano** — ce n'erano 32 sparsi, adesso zero.
-   **Tutti** i sorgenti passano dal dizionario (966 chiavi) e
+   **Tutti** i sorgenti passano dal dizionario (1013 chiavi) e
    `FEATURES.lingue` è accesa: `node test/censimento-testi.js` dice se
    qualcuno ha scritto testo nuovo a mano, e una prova lo vieta — compreso
    un sorgente appena nato, che senza quella riga entrerebbe senza contarlo.
@@ -34,7 +34,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 95 prove, **tre minuti
+4. **Prima di dire "fatto" gira `npm test`.** 97 prove, **tre minuti
    scarsi**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
@@ -99,6 +99,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `magazzino-foto.js` | dove stanno le foto degli scontrini: IndexedDB, con `localStorage` come rete di sicurezza. Fuori da `src/` per lo stesso motivo |
 | `conti.js` | **i conti**: `Conti.calcola({membri, presenze, acquisti, attrezzatura, giorni separati, giorni gratis})`. Funzione pura, fuori da `src/`, provata sui numeri veri del campo 2026 |
 | `presenze.js` | le **regole** delle presenze: giorno, pasto, blocco, presenze orfane. Pure, fuori da `src/`. I gestori restano in `App()` |
+| `rimborsi.js` | **i rimborsi fatti sono soldi pagati** (30 settembre): una spunta nei Saldi entra nei saldi di chi ha pagato e di chi ha ricevuto, e «chi paga chi» mostra solo quello che manca. Lavora **sopra** `conti.js`, che non si tocca; le chiavi di sempre (`Carla→Anna@4000`, `sep:`, `opt:`) valgono già come pagamenti, e la stessa cifra pagata due volte prende `#2`. Si paga in una vista sola: l'altra rimanda (`unica`, `perCassa`). Pura, fuori da `src/` |
 | `panoramica.js` | **le regole della Panoramica**: il riassunto di un campo (chiama `Voci.separa` e `Conti.calcola`, non rifà i conti), i rimborsi aperti nella vista che il gruppo usa, l'abbonamento che la apre, e `chiaveRimborso` — la stessa che usa `App()`. Pura, fuori da `src/` |
 | `lingue.js` | **le lingue**: dizionario (it/es/fr), plurali come funzioni, le dodici forme di data, e la regola che si prova — ogni chiave italiana esiste altrove e viceversa. Fuori da `src/` |
 | `allarmi.js` | **quando svegliare qualcuno**: orologio di un altro telefono avanti di giorni, e perdite che meritano un allarme invece di essere il recupero di un ritardo. Pure, fuori da `src/` |
@@ -114,7 +115,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
 | `functions/` | **il server del Pro**, su Firebase (non su Vercel: `.vercelignore`). `pro.js` sono le decisioni (chi paga, fino a quando, un gettone vale una volta), provate da `unita/server-pro` con Google e Firestore finti; `index.js` collega e basta. Niente chiavi: usa l'identità del suo account di servizio. Si pubblica con `npx firebase deploy --only functions` |
-| `test/` | 18 prove unitarie + 77 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo; `apri({ prima })` per quello che deve esistere prima dell'apertura (le strade di rete finte). **Il menu dentro un campo ha i gruppi chiusi** (30 settembre): `apri()` e `campoDiProva()` li aprono tutti (`TUTTI_I_GRUPPI`) perché le prove cliccano le voci per nome; `apri({ menuChiuso: true })` mostra il menu vero, ed è quello che guarda `e2e/menu-chiuso`. Una prova che apre il browser da sé senza `campoDiProva()` deve scriversi `cambusa_menu_gruppi` da sola |
+| `test/` | 19 prove unitarie + 78 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo; `apri({ prima })` per quello che deve esistere prima dell'apertura (le strade di rete finte). **Il menu dentro un campo ha i gruppi chiusi** (30 settembre): `apri()` e `campoDiProva()` li aprono tutti (`TUTTI_I_GRUPPI`) perché le prove cliccano le voci per nome; `apri({ menuChiuso: true })` mostra il menu vero, ed è quello che guarda `e2e/menu-chiuso`. Una prova che apre il browser da sé senza `campoDiProva()` deve scriversi `cambusa_menu_gruppi` da sola |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -376,8 +377,17 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   mette insieme le due casse per fare meno bonifici: le cifre dovute restano
   identiche, cambia solo chi gira i soldi a chi. La vista per cassa resta ed è
   quella che spiega PERCHÉ una cifra è quella; l'ottimizzata serve QUANDO si
-  paga. Le spunte delle due viste sono separate (`opt:`), altrimenti un
-  rimborso segnato in una vista sembrerebbe fatto anche nell'altra.
+  paga.
+  **Dal 30 settembre un rimborso segnato è un pagamento, non una spunta**
+  (`rimborsi.js`). Prima la spunta era legata alla cifra: uno scontrino
+  dimenticato registrato dopo ricalcolava tutto e chi aveva già pagato
+  tornava debitore dell'intera cifra — con quattro persone e 8 € in più,
+  76 € di bonifici che nessuno doveva. Adesso compare solo la differenza.
+  Un pagamento vale in tutte e due le viste, ma si paga in una sola: le due
+  viste trattano diversamente i soldi che nessuno paga (centesimi, spese
+  senza acquirente, buchi), quindi pagato dalla vista unica la vista per
+  cassa rimanda a lei, e viceversa. La chiusura dei conti resta: i pagamenti
+  non si perdono più, ma una spesa arrivata dopo rimette in moto bonifici.
 - **L'account non è un muro.** Entrare in un campo col codice, segnare presenze
   e registrare spese si può da ospite, da anonimo, da registrato e da chi non ha
   ancora verificato l'indirizzo. L'account serve a **creare** e **amministrare**

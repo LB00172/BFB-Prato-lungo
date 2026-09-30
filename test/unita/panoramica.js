@@ -10,6 +10,7 @@ const { ok, fine } = require('../lib/app');
 const RADICE = path.resolve(__dirname, '..', '..');
 require(path.join(RADICE, 'conti.js'));
 require(path.join(RADICE, 'voci.js'));
+require(path.join(RADICE, 'rimborsi.js'));
 require(path.join(RADICE, 'panoramica.js'));
 const C = globalThis.Conti;
 const P = globalThis.Panoramica;
