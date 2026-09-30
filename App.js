@@ -6357,14 +6357,14 @@ function App({
     body: L.t('guida.installa.corpo')
   }];
   return /*#__PURE__*/React.createElement("div", {
-    className: "max-w-md mx-auto min-h-screen flex flex-col bg-carta border-x border-salvia/30 shadow-2xl pb-24"
+    className: "max-w-md lg:max-w-6xl mx-auto min-h-screen flex flex-col bg-carta border-x border-salvia/30 shadow-2xl pb-24 lg:pb-0"
   }, /*#__PURE__*/React.createElement("header", {
     className: "bg-bosco text-carta p-4 text-center border-b-4 border-legno relative"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setMenuOpen(o => !o),
     "aria-label": "Menu",
     "aria-expanded": menuOpen,
-    className: "absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-scheda/10"
+    className: "lg:hidden absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-scheda/10"
   }, /*#__PURE__*/React.createElement("span", {
     className: "block w-5 h-0.5 bg-current"
   }), /*#__PURE__*/React.createElement("span", {
@@ -6388,14 +6388,16 @@ function App({
       className: `w-2 h-2 rounded-full ${pallino}`
     }), testo);
   })()), /*#__PURE__*/React.createElement("div", {
-    className: `fixed inset-0 z-40 ${menuOpen ? '' : 'pointer-events-none'}`
+    className: "flex-grow flex flex-col lg:flex-row"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `fixed inset-0 z-40 ${menuOpen ? '' : 'pointer-events-none'} lg:static lg:inset-auto lg:z-auto lg:pointer-events-auto lg:w-72 lg:shrink-0`
   }, /*#__PURE__*/React.createElement("div", {
     onClick: () => setMenuOpen(false),
-    className: `absolute inset-0 bg-black/40 transition-opacity duration-300 ${menuOpen ? 'opacity-100' : 'opacity-0'}`
+    className: `lg:hidden absolute inset-0 bg-black/40 transition-opacity duration-300 ${menuOpen ? 'opacity-100' : 'opacity-0'}`
   }), /*#__PURE__*/React.createElement("div", {
-    className: "absolute inset-0 max-w-md mx-auto overflow-hidden pointer-events-none"
+    className: "absolute inset-0 max-w-md mx-auto overflow-hidden pointer-events-none lg:static lg:max-w-none lg:overflow-visible lg:pointer-events-auto lg:h-full"
   }, /*#__PURE__*/React.createElement("nav", {
-    className: `pointer-events-auto absolute left-0 top-0 bottom-0 w-72 max-w-[80%] bg-carta border-r-4 border-legno shadow-2xl p-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`
+    className: `pointer-events-auto absolute left-0 top-0 bottom-0 w-72 max-w-[80%] bg-carta border-r-4 border-legno shadow-2xl p-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'} lg:sticky lg:translate-x-0 lg:max-w-none lg:h-screen lg:shadow-none`
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3 border-b border-salvia/40 pb-3 mb-2"
   }, /*#__PURE__*/React.createElement("img", {
@@ -6487,7 +6489,9 @@ function App({
     }, icona(tab)), /*#__PURE__*/React.createElement("span", {
       className: "min-w-0 truncate"
     }, tabs[tab]))));
-  })))), showInstallHint && /*#__PURE__*/React.createElement("div", {
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-grow flex flex-col min-w-0"
+  }, showInstallHint && /*#__PURE__*/React.createElement("div", {
     className: "bg-fuoco/15 border-b border-fuoco/40 px-4 py-2.5 flex items-start gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-medio leading-none mt-0.5"
@@ -6597,7 +6601,7 @@ function App({
     onClick: () => setLostSync(null),
     className: bottone('secondario', 'minuscolo')
   }, L.t('perdita.vaBene')))))), /*#__PURE__*/React.createElement("main", {
-    className: `flex-grow p-4 ${dentroUnCampo && scheda !== 'campi' ? 'pb-24' : ''}`
+    className: `flex-grow p-4 lg:p-6 w-full lg:max-w-4xl lg:mx-auto ${dentroUnCampo && scheda !== 'campi' ? 'pb-24' : ''}`
   }, scheda === 'campi' && schedaCampi({
     stanzaStato,
     account,
@@ -6895,8 +6899,8 @@ function App({
     wipeLocal,
     contiBloccati: !!bloccoConti(),
     adminPermesso
-  })), dentroUnCampo && scheda !== 'campi' && !manualOpen && /*#__PURE__*/React.createElement("div", {
-    className: "fixed bottom-0 left-0 right-0 max-w-md mx-auto pointer-events-none z-30"
+  })))), dentroUnCampo && scheda !== 'campi' && !manualOpen && /*#__PURE__*/React.createElement("div", {
+    className: "fixed bottom-0 left-0 right-0 max-w-md lg:max-w-6xl mx-auto pointer-events-none z-30"
   }, /*#__PURE__*/React.createElement("button", {
     "data-tasto-spesa": true,
     onClick: apriFoglioSpesa,

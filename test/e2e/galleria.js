@@ -3,7 +3,9 @@ const { chromium } = require('playwright-core');
 const { scontriniSalvati, fotoSalvate } = require('../lib/app');
 (async () => {
   const b = await chromium.launch({ executablePath: require('../lib/app').chromium(), args: ['--no-sandbox'] });
-  const p = await (await b.newContext()).newPage();
+  // Misura di un telefono: senza, Chromium apre a 1280 px e l'app si mette
+  // nella forma da computer, senza il tasto del menu.
+  const p = await (await b.newContext({ viewport: { width: 390, height: 840 } })).newPage();
   await p.addInitScript((h) => localStorage.setItem('cambusa_unlock', h), require('../lib/app').SBLOCCO);
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   p.on('dialog', async d => { await d.accept(); });

@@ -2860,13 +2860,13 @@ function App({ eredita, cambiaCampo } = {}) {
   ];
 
   return (
-    <div className="max-w-md mx-auto min-h-screen flex flex-col bg-carta border-x border-salvia/30 shadow-2xl pb-24">
+    <div className="max-w-md lg:max-w-6xl mx-auto min-h-screen flex flex-col bg-carta border-x border-salvia/30 shadow-2xl pb-24 lg:pb-0">
       <header className="bg-bosco text-carta p-4 text-center border-b-4 border-legno relative">
         <button
           onClick={() => setMenuOpen((o) => !o)}
           aria-label="Menu"
           aria-expanded={menuOpen}
-          className="absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-scheda/10"
+          className="lg:hidden absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 flex flex-col items-center justify-center gap-[3px] rounded hover:bg-scheda/10"
         >
           {/* Le righe prendono il colore del testo della testata. Erano
               bg-carta, e il tema scuro ridipinge di scuro tutto quello che ha
@@ -2900,17 +2900,24 @@ function App({ eredita, cambiaCampo } = {}) {
         })()}
       </header>
 
+      {/* Su uno schermo largo (dal computer, lg: 1024 px) l'app diventa due
+          colonne: il menu fisso a sinistra, sempre aperto, e la scheda
+          accanto, piu' larga. E' per chi tiene i conti dal computer — il
+          capogruppo, l'organizzatore con la Panoramica. Sul telefono queste
+          classi non valgono e tutto resta com'era: una colonna, il menu che
+          scorre sopra. */}
+      <div className="flex-grow flex flex-col lg:flex-row">
       {/* Menu laterale (drawer): scorre da sinistra sopra il contenuto */}
-      <div className={`fixed inset-0 z-40 ${menuOpen ? '' : 'pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-40 ${menuOpen ? '' : 'pointer-events-none'} lg:static lg:inset-auto lg:z-auto lg:pointer-events-auto lg:w-72 lg:shrink-0`}>
         <div
           onClick={() => setMenuOpen(false)}
-          className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${menuOpen ? 'opacity-100' : 'opacity-0'}`}
+          className={`lg:hidden absolute inset-0 bg-black/40 transition-opacity duration-300 ${menuOpen ? 'opacity-100' : 'opacity-0'}`}
         ></div>
         {/* Il pannello è ancorato alla colonna dell'app (max-w-md centrata),
             così su desktop entra dal bordo dell'app e non da quello della finestra. */}
-        <div className="absolute inset-0 max-w-md mx-auto overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 max-w-md mx-auto overflow-hidden pointer-events-none lg:static lg:max-w-none lg:overflow-visible lg:pointer-events-auto lg:h-full">
         <nav
-          className={`pointer-events-auto absolute left-0 top-0 bottom-0 w-72 max-w-[80%] bg-carta border-r-4 border-legno shadow-2xl p-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          className={`pointer-events-auto absolute left-0 top-0 bottom-0 w-72 max-w-[80%] bg-carta border-r-4 border-legno shadow-2xl p-4 space-y-1 overflow-y-auto transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'} lg:sticky lg:translate-x-0 lg:max-w-none lg:h-screen lg:shadow-none`}
         >
           <div className="flex items-center gap-3 border-b border-salvia/40 pb-3 mb-2">
             <img src="./logo.png" alt="" className="w-11 h-11 rounded-full object-cover border-2 border-salvia bg-scheda" />
@@ -3004,6 +3011,8 @@ function App({ eredita, cambiaCampo } = {}) {
         </div>
       </div>
 
+      {/* La seconda colonna: avvisi e scheda. */}
+      <div className="flex-grow flex flex-col min-w-0">
       {/* Suggerimento installazione app */}
       {showInstallHint && (
         <div className="bg-fuoco/15 border-b border-fuoco/40 px-4 py-2.5 flex items-start gap-2">
@@ -3172,7 +3181,7 @@ function App({ eredita, cambiaCampo } = {}) {
 
       {/* In fondo, lo spazio del tasto «+ Spesa»: senza, l'ultima riga di ogni
           scheda resterebbe sotto il tasto e non si potrebbe toccare. */}
-      <main className={`flex-grow p-4 ${dentroUnCampo && scheda !== 'campi' ? 'pb-24' : ''}`}>
+      <main className={`flex-grow p-4 lg:p-6 w-full lg:max-w-4xl lg:mx-auto ${dentroUnCampo && scheda !== 'campi' ? 'pb-24' : ''}`}>
         {/* ---------- CALENDARIO ---------- */}
         {scheda === 'campi' && schedaCampi({ stanzaStato, account, codiceInGioco, onApri: apriCampo })}
         {scheda === 'panoramica' && FEATURES.rooms && schedaPanoramica({ account, goTo, onApri: apriCampo, stanzaStato })}
@@ -3253,13 +3262,15 @@ function App({ eredita, cambiaCampo } = {}) {
           contiBloccati: !!bloccoConti(), adminPermesso,
         })}
       </main>
+      </div>
+      </div>
 
       {/* Registrazione acquisto di una voce "Da Acquistare" */}
       {/* Il tasto «+ Spesa»: in ogni scheda del campo, dove arriva il
           pollice. Registrare una spesa e' la cosa che si fa piu' spesso, e
           prima stava dietro Lista → Acquistato → «Aggiungi un prodotto a mano». */}
       {dentroUnCampo && scheda !== 'campi' && !manualOpen && (
-        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto pointer-events-none z-30">
+        <div className="fixed bottom-0 left-0 right-0 max-w-md lg:max-w-6xl mx-auto pointer-events-none z-30">
           <button
             data-tasto-spesa
             onClick={apriFoglioSpesa}

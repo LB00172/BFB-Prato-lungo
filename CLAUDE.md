@@ -34,7 +34,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 94 prove, **tre minuti
+4. **Prima di dire "fatto" gira `npm test`.** 95 prove, **tre minuti
    scarsi**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
@@ -114,7 +114,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
 | `functions/` | **il server del Pro**, su Firebase (non su Vercel: `.vercelignore`). `pro.js` sono le decisioni (chi paga, fino a quando, un gettone vale una volta), provate da `unita/server-pro` con Google e Firestore finti; `index.js` collega e basta. Niente chiavi: usa l'identità del suo account di servizio. Si pubblica con `npx firebase deploy --only functions` |
-| `test/` | 18 prove unitarie + 76 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo; `apri({ prima })` per quello che deve esistere prima dell'apertura (le strade di rete finte). **Il menu dentro un campo ha i gruppi chiusi** (30 settembre): `apri()` e `campoDiProva()` li aprono tutti (`TUTTI_I_GRUPPI`) perché le prove cliccano le voci per nome; `apri({ menuChiuso: true })` mostra il menu vero, ed è quello che guarda `e2e/menu-chiuso`. Una prova che apre il browser da sé senza `campoDiProva()` deve scriversi `cambusa_menu_gruppi` da sola |
+| `test/` | 18 prove unitarie + 77 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo; `apri({ prima })` per quello che deve esistere prima dell'apertura (le strade di rete finte). **Il menu dentro un campo ha i gruppi chiusi** (30 settembre): `apri()` e `campoDiProva()` li aprono tutti (`TUTTI_I_GRUPPI`) perché le prove cliccano le voci per nome; `apri({ menuChiuso: true })` mostra il menu vero, ed è quello che guarda `e2e/menu-chiuso`. Una prova che apre il browser da sé senza `campoDiProva()` deve scriversi `cambusa_menu_gruppi` da sola |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -312,6 +312,13 @@ Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
   un effetto, e per un istante l'app si credeva nel campo predefinito — prima
   dei cassetti non costava niente, con i cassetti scambiava verso il campo
   sbagliato.
+- **Una prova senza la misura dello schermo sta provando il computer.** Dal
+  30 settembre, da 1024 px in su, l'app è a due colonne col menu fisso e
+  **senza** il tasto del menu. Chromium, se non gli si dice niente, apre a
+  1280 px: sei prove che aprivano il browser da sé sono diventate rosse
+  insieme, tutte ad aspettare un tasto che sul computer non c'è. Una prova
+  del telefono dice `viewport: { width: 390, … }` (`apri()` lo fa già); la
+  forma da computer la guarda `e2e/desktop`.
 - **Soldi senza divisore non si spalmano su nessuno.** Se una spesa non ha
   presenti a cui attribuirla finisce in `nonRipartito` e si dichiara, non si
   nasconde dentro l'arrotondamento.

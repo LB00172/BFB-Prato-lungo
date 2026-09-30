@@ -277,7 +277,7 @@ const close = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.051 : tol
   const ok = () => { checks++; };
 
   for (const sc of scenari) {
-    const ctx = await b.newContext();
+    const ctx = await b.newContext({ viewport: { width: 390, height: 840 } });   // un telefono
     const p = await ctx.newPage();
     const errs = [];
     p.on('pageerror', (e) => errs.push(e.message));
