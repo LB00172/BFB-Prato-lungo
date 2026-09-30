@@ -13,6 +13,8 @@ const { bloccoDiProva, PASSWORD_PROVA } = require('../lib/app');
   // Il blocco con password sta in modalita' tecnica (Impostazioni e' della
   // persona): la si accende prima di aprire, come fa apri() per le altre.
   await p.addInitScript(() => localStorage.setItem('cambusa_admin', '1'));
+  // Dentro un campo i gruppi del menu partono chiusi: qui si aprono tutti.
+  await p.addInitScript((g) => localStorage.setItem('cambusa_menu_gruppi', g), require('../lib/app').TUTTI_I_GRUPPI);
   await p.addInitScript(() => {
     localStorage.setItem('cambusa_install_hint_off', '1');
     window.__log = [];
