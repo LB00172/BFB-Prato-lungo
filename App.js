@@ -905,7 +905,12 @@ const ICONE = {
   // La spunta di un passo fatto.
   fatto: 'M5 12l5 5L20 7',
   // Il luogo del campo: il segnaposto, il gesto che tutti conoscono dalle mappe.
-  luogo: 'M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z M12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6z'
+  luogo: 'M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z M12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6z',
+  // La scheda di una persona: la «i» dentro il cerchio.
+  info: 'M12 3a9 9 0 1 1 0 18a9 9 0 0 1 0-18z M12 11v6 M12 7.5v.5',
+  // Togliere una riga: una croce sottile, non la × piena che pesava quanto
+  // il nome accanto.
+  togli: 'M6 6l12 12 M18 6L6 18'
 };
 
 // Restituisce il disegno, o null se il nome non c'e'. **Null e non un
@@ -1002,6 +1007,12 @@ const BOTTONE_ICONA = {
 // Almeno 44×44 anche loro: la × per togliere era di 30×32, e sbagliarla
 // vuol dire togliere la riga accanto.
 const bottoneIcona = (tono, extra) => ['min-w-11 min-h-11 inline-flex items-center justify-center px-2.5 py-2 rounded font-bold leading-none disabled:opacity-40', BOTTONE_ICONA[tono] || BOTTONE_ICONA.neutro, extra || ''].filter(Boolean).join(' ');
+
+// Il tasto sottile: il posto da toccare resta 44×44, il disegno no. Serve
+// nelle righe fitte (i membri), dove tre bottoni pieni alti 44 facevano la
+// riga tozza quanto un riquadro. Il bordo si vede solo attorno al segno,
+// non attorno al pollice. `acceso` per le etichette che cambiano stato.
+const bottoneSottile = (tono, extra) => ['min-w-11 min-h-11 -my-1.5 inline-flex items-center justify-center rounded leading-none disabled:opacity-40', BOTTONE_ICONA[tono] || BOTTONE_ICONA.neutro, extra || ''].filter(Boolean).join(' ');
 
 // Il tasto che galleggia: «+ Spesa», sopra ogni scheda del campo, in basso a
 // destra dove arriva il pollice. E' uno solo e resta uno solo — due tasti
@@ -3038,6 +3049,7 @@ function App({
   });
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberChild, setNewMemberChild] = useState(false);
+  const [newMemberIo, setNewMemberIo] = useState(false); // «sono io»: la scheda si lega all'account
   const [infoMember, setInfoMember] = useState(null); // membro con la scheda pagamenti aperta
   const [copied, setCopied] = useState(''); // ultima cosa copiata (feedback)
   const [pName, setPName] = useState('');
@@ -4761,13 +4773,43 @@ function App({
     // saldi (i pagamenti si abbinano per nome): meglio dirlo subito.
     const gia = members.some(m => m.name.trim().toLowerCase() === name.toLowerCase());
     if (gia && !window.confirm(L.t('membri.confermaOmonimo', name))) return;
+    const io = newMemberIo && puoiDireSonoIo() ? {
+      uid: mioUid
+    } : {};
     setMembers(prev => [...prev, {
       id: uid(),
       name,
-      isChild: newMemberChild
+      isChild: newMemberChild,
+      ...io
     }]);
     setNewMemberName('');
     setNewMemberChild(false);
+    setNewMemberIo(false);
+  };
+
+  // ---------- La scheda di una persona ----------
+  // Nome, cognome, email, telefono e i dati per farsi rimborsare (IBAN,
+  // Satispay, PayPal). La compilano la persona stessa e il capogruppo; gli
+  // altri la leggono — servono a sapere a chi fare il bonifico, non a
+  // cambiarlo. «La persona stessa» e' la scheda legata al suo account (uid),
+  // o perche' se l'e' aggiunta lei con «sono io», o perche' l'ha presa dopo.
+  // Senza stanze, o fuori da una stanza (la versione privata, l'utente
+  // condiviso, un campo col codice di prima) non c'e' nessuno da distinguere,
+  // e la compilano tutti come prima.
+  // E' una cortesia dell'interfaccia, non una serratura: i membri stanno nel
+  // documento del campo, che chi e' dentro puo' scrivere.
+  const mioUid = account && account.utente && account.utente.uid || null;
+  const mioMembro = mioUid ? members.find(m => m.uid === mioUid) : null;
+  const puoiDireSonoIo = () => !!(FEATURES.rooms && stanzaStato.stanza && mioUid && !mioMembro);
+  const membroModificabile = m => !FEATURES.rooms || !stanzaStato.stanza || admin || !!stanzaStato.capogruppo || !!mioUid && !!m && m.uid === mioUid;
+  // Prendere una scheda gia' in elenco (l'ha aggiunta il capogruppo): solo se
+  // non e' di nessuno e se io non ne ho gia' una.
+  const prendiMembro = id => {
+    if (!puoiDireSonoIo()) return;
+    setMembers(prev => prev.map(m => m.id === id && !m.uid ? {
+      ...m,
+      uid: mioUid
+    } : m));
   };
   const removeMember = id => {
     if (membroIntoccabile(id, L.t('azione.eliminarla'))) return;
@@ -4791,6 +4833,7 @@ function App({
 
   // Dati di pagamento del membro (PayPal / IBAN): campi liberi e facoltativi.
   const setMemberField = (id, campo, valore) => {
+    if (!membroModificabile(members.find(m => m.id === id))) return;
     setMembers(prev => prev.map(m => m.id === id ? {
       ...m,
       [campo]: valore
@@ -5666,7 +5709,7 @@ function App({
     }, s.transfers.map((t, i) => {
       // Dati di pagamento di chi deve ricevere (scheda Membri, tasto "i").
       const dest = members.find(m => m.name === t.to);
-      const mostraDati = dest && (dest.paypal || dest.iban);
+      const mostraDati = dest && (dest.paypal || dest.iban || dest.satispay);
       return /*#__PURE__*/React.createElement("li", {
         key: `${t.from}→${t.to}@${i}`,
         "data-da-fare": true,
@@ -5686,7 +5729,7 @@ function App({
         className: "font-rustic font-bold text-fuoco"
       }, money(t.amount), " \u20AC")), mostraDati && /*#__PURE__*/React.createElement("div", {
         className: "mt-1.5 pt-1.5 border-t border-salvia/20 space-y-1"
-      }, [['PayPal', dest.paypal], ['IBAN', dest.iban]].filter(r => r[1]).map(r => /*#__PURE__*/React.createElement("div", {
+      }, [['IBAN', dest.iban], [L.t('membri.satispay'), dest.satispay], ['PayPal', dest.paypal]].filter(r => r[1]).map(r => /*#__PURE__*/React.createElement("div", {
         key: r[0],
         className: "flex items-start gap-2"
       }, /*#__PURE__*/React.createElement("span", {
@@ -5703,7 +5746,7 @@ function App({
     })), (() => {
       const senza = [...new Set(s.transfers.map(t => t.to))].filter(n => {
         const d = members.find(m => m.name === n);
-        return d && !d.paypal && !d.iban;
+        return d && !d.paypal && !d.iban && !d.satispay;
       });
       if (senza.length === 0) return null;
       return /*#__PURE__*/React.createElement("p", {
@@ -6737,12 +6780,18 @@ function App({
     infoMember,
     members,
     membriDoppi,
+    membroModificabile,
+    mioMembro,
     newMemberChild,
+    newMemberIo,
     newMemberName,
+    prendiMembro,
+    puoiDireSonoIo,
     removeMember,
     setInfoMember,
     setMemberField,
     setNewMemberChild,
+    setNewMemberIo,
     setNewMemberName,
     toggleChild,
     toggleEquipExempt,
@@ -8698,17 +8747,54 @@ const foglioSpesa = ({
 // ---------- Schede del gruppo: Membri, Regole, Dotazioni personali ----------
 // Vedi 81-schede-giorno.jsx per il perche' sono funzioni e non componenti.
 
+// Un campo della scheda di una persona: in scrittura una casella, in lettura
+// il valore (o un trattino). Le etichette arrivano gia' tradotte.
+const campoMembro = ({
+  m,
+  campo,
+  etichetta,
+  segno,
+  tipo,
+  modi,
+  scrivibile,
+  setMemberField,
+  mono,
+  normalizza,
+  esce
+}) => /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  className: "block text-minuto uppercase font-bold text-gray-500 tracking-wide mb-0.5"
+}, etichetta), scrivibile ? /*#__PURE__*/React.createElement("input", {
+  type: tipo || 'text',
+  inputMode: modi,
+  "data-dato": campo,
+  value: m[campo] || '',
+  onChange: e => setMemberField(m.id, campo, normalizza ? normalizza(e.target.value) : e.target.value),
+  onBlur: esce ? e => esce(e.target.value) : undefined,
+  placeholder: segno,
+  className: `w-full px-2 py-1.5 bg-scheda border border-salvia/40 rounded focus:outline-none focus:border-bosco ${mono ? 'font-mono text-piccolo' : 'text-normale'}`
+}) : /*#__PURE__*/React.createElement("p", {
+  "data-dato": campo,
+  className: `text-normale text-bosco break-all ${mono ? 'font-mono text-piccolo' : ''}`
+}, m[campo] || /*#__PURE__*/React.createElement("span", {
+  className: "text-gray-400"
+}, "\u2014")));
 const schedaMembri = ({
   addMember,
   infoMember,
   members,
   membriDoppi,
+  membroModificabile,
+  mioMembro,
   newMemberChild,
+  newMemberIo,
   newMemberName,
+  prendiMembro,
+  puoiDireSonoIo,
   removeMember,
   setInfoMember,
   setMemberField,
   setNewMemberChild,
+  setNewMemberIo,
   setNewMemberName,
   toggleChild,
   toggleEquipExempt,
@@ -8741,86 +8827,173 @@ const schedaMembri = ({
 }), /*#__PURE__*/React.createElement("button", {
   onClick: addMember,
   className: bottoneIcona('pieno')
-}, "+")), /*#__PURE__*/React.createElement("label", {
+}, "+")), /*#__PURE__*/React.createElement("div", {
+  className: "flex flex-wrap gap-x-5"
+}, /*#__PURE__*/React.createElement("label", {
   className: "flex items-center gap-2 min-h-11 text-piccolo text-gray-600"
 }, /*#__PURE__*/React.createElement("input", {
   type: "checkbox",
   className: "w-5 h-5",
   checked: newMemberChild,
   onChange: e => setNewMemberChild(e.target.checked)
-}), L.t('membri.bambinoGratis'))), /*#__PURE__*/React.createElement("div", {
+}), L.t('membri.bambinoGratis')), puoiDireSonoIo() && /*#__PURE__*/React.createElement("label", {
+  className: "flex items-center gap-2 min-h-11 text-piccolo text-gray-600"
+}, /*#__PURE__*/React.createElement("input", {
+  type: "checkbox",
+  "data-sono-io": true,
+  className: "w-5 h-5",
+  checked: newMemberIo,
+  onChange: e => setNewMemberIo(e.target.checked)
+}), L.t('membri.sonoIo')))), /*#__PURE__*/React.createElement("div", {
   className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3"
+  className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-2"
 }, L.t('membri.quanti', members.length)), members.length === 0 ? /*#__PURE__*/React.createElement("p", {
   className: "text-normale text-gray-400 italic"
-}, L.t('membri.vuoto')) : /*#__PURE__*/React.createElement("ul", {
-  className: "space-y-2"
-}, members.map(m => /*#__PURE__*/React.createElement("li", {
-  key: m.id,
-  className: "bg-carta/60 p-2.5 rounded border border-salvia/20"
-}, /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center justify-between gap-2"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "font-bold text-normale text-bosco truncate"
-}, m.name, (m.paypal || m.iban) && /*#__PURE__*/React.createElement("span", {
-  className: "ml-1.5 text-minuto text-salvia",
-  title: L.t('membri.haRimborso')
-}, "\uD83D\uDCB3")), /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center gap-2 shrink-0"
-}, /*#__PURE__*/React.createElement("button", {
-  onClick: () => setInfoMember(v => v === m.id ? null : m.id),
-  "aria-label": L.t('membri.datiDi', m.name),
-  title: L.t('membri.datiRimborso'),
-  className: "w-11 h-11 -mx-2 flex items-center justify-center"
-}, /*#__PURE__*/React.createElement("span", {
-  className: `w-6 h-6 rounded-full border-2 font-serif italic font-bold text-piccolo leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-bosco border-bosco text-white' : 'bg-scheda border-salvia text-legno'}`
-}, "i")), /*#__PURE__*/React.createElement("button", {
-  onClick: () => toggleChild(m.id),
-  className: bottoneScelta('etichetta', 'ambra', m.isChild, 'minimo')
-}, L.t(m.isChild ? 'membri.bambino' : 'membri.adulto')), /*#__PURE__*/React.createElement("button", {
-  onClick: () => removeMember(m.id),
-  className: bottoneIcona('distruttivo')
-}, "\xD7"))), infoMember === m.id && /*#__PURE__*/React.createElement("div", {
-  className: "mt-2.5 pt-2.5 border-t border-salvia/30 space-y-2"
-}, /*#__PURE__*/React.createElement("p", {
-  className: "text-piccolo text-gray-500 leading-snug"
-}, frase('membri.comeRimborso')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1"
-}, "PayPal"), /*#__PURE__*/React.createElement("input", {
-  type: "text",
-  inputMode: "email",
-  value: m.paypal || '',
-  onChange: e => setMemberField(m.id, 'paypal', e.target.value),
-  placeholder: L.t('membri.paypalSegno'),
-  className: "w-full p-2 bg-scheda border border-salvia/40 rounded text-normale focus:outline-none focus:border-bosco"
-})), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-  className: "block text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1"
-}, "IBAN"), /*#__PURE__*/React.createElement("input", {
-  type: "text",
-  value: m.iban || '',
-  onChange: e => setMemberField(m.id, 'iban', e.target.value.toUpperCase()),
-  onBlur: e => {
-    const p = ibanPretty(e.target.value);
-    if (p !== (m.iban || '')) setMemberField(m.id, 'iban', p);
-  },
-  placeholder: L.t('membri.ibanSegno'),
-  className: "w-full p-2 bg-scheda border border-salvia/40 rounded text-piccolo font-mono focus:outline-none focus:border-bosco"
-}), (m.iban || '').trim() !== '' && (ibanValid(m.iban) ? /*#__PURE__*/React.createElement("p", {
-  className: "text-minuto text-bosco mt-1"
-}, L.t('membri.ibanOk')) : /*#__PURE__*/React.createElement("p", {
-  className: "text-minuto text-fuoco mt-1"
-}, L.t('membri.ibanNo')))), /*#__PURE__*/React.createElement("p", {
-  className: "text-minuto text-gray-400 italic leading-snug"
-}, L.t('membri.datiDove'))), FEATURES.equipExemption && /*#__PURE__*/React.createElement("button", {
-  onClick: () => toggleEquipExempt(m.id),
-  "aria-label": L.t('membri.esenzione'),
-  className: "mt-1.5 flex items-center gap-2 text-left"
-}, /*#__PURE__*/React.createElement("span", {
-  className: `w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-piccolo font-bold ${m.equipExempt ? 'bg-legno border-legno text-white' : 'bg-scheda border-salvia'}`
-}, m.equipExempt ? '✓' : ''), /*#__PURE__*/React.createElement("span", {
-  className: `text-piccolo ${m.equipExempt ? 'font-bold text-legno' : 'text-gray-500'}`
-}, L.t('membri.esente'))))))));
+}, L.t('membri.vuoto')) :
+/*#__PURE__*/
+// Righe sottili, una sotto l'altra con un filo in mezzo: venti
+// persone devono stare in uno schermo, non in tre.
+React.createElement("ul", {
+  className: "divide-y divide-salvia/25"
+}, members.map(m => {
+  const aperta = infoMember === m.id;
+  const scrivibile = membroModificabile(m);
+  const mio = !!(mioMembro && mioMembro.id === m.id);
+  const anagrafe = [m.nome, m.cognome].filter(x => (x || '').trim()).join(' ');
+  const paga = !!(m.paypal || m.iban || m.satispay);
+  return /*#__PURE__*/React.createElement("li", {
+    key: m.id,
+    "data-membro": m.name,
+    className: "py-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 min-h-11"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-grow min-w-0 leading-tight"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-normale text-bosco truncate block"
+  }, m.name, mio && /*#__PURE__*/React.createElement("span", {
+    "data-tu": true,
+    className: "ml-1.5 text-minuto font-normal uppercase text-legno"
+  }, L.t('membri.tu')), paga && /*#__PURE__*/React.createElement("span", {
+    className: "ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-salvia align-middle",
+    title: L.t('membri.haRimborso')
+  })), anagrafe && /*#__PURE__*/React.createElement("span", {
+    className: "text-minuto text-gray-500 truncate block"
+  }, anagrafe)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setInfoMember(v => v === m.id ? null : m.id),
+    "aria-label": L.t('membri.datiDi', m.name),
+    "aria-expanded": aperta,
+    title: L.t('membri.datiRimborso'),
+    className: bottoneSottile('neutro', aperta ? 'text-bosco' : '')
+  }, icona('info', aperta ? 'w-5 h-5 [stroke-width:2.4]' : 'w-5 h-5')), /*#__PURE__*/React.createElement("button", {
+    onClick: () => toggleChild(m.id),
+    "data-eta": true,
+    className: bottoneSottile('neutro', 'px-1')
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `inline-block w-16 text-center text-minuto font-bold uppercase tracking-wide py-0.5 rounded ${m.isChild ? 'bg-fuoco/15 text-legno' : 'bg-salvia/15 text-gray-500'}`
+  }, L.t(m.isChild ? 'membri.bambino' : 'membri.adulto'))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeMember(m.id),
+    "aria-label": L.t('membri.togli', m.name),
+    className: bottoneSottile('distruttivo')
+  }, icona('togli', 'w-4 h-4'))), aperta && /*#__PURE__*/React.createElement("div", {
+    "data-scheda-membro": m.name,
+    className: "mt-1 mb-2 p-3 rounded bg-carta/60 border border-salvia/25 space-y-3"
+  }, !scrivibile && /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug",
+    "data-sola-lettura": true
+  }, L.t('membri.soloLettura')), !m.uid && puoiDireSonoIo() && /*#__PURE__*/React.createElement("button", {
+    onClick: () => prendiMembro(m.id),
+    "data-prendi": true,
+    className: bottone('secondario', 'minuscolo', 'w-full')
+  }, L.t('membri.questaSonoIo')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+    className: "font-rustic text-normale text-bosco mb-1.5"
+  }, L.t('membri.chiE')), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, campoMembro({
+    m,
+    campo: 'nome',
+    etichetta: L.t('membri.nomeVero'),
+    scrivibile,
+    setMemberField
+  }), campoMembro({
+    m,
+    campo: 'cognome',
+    etichetta: L.t('membri.cognome'),
+    scrivibile,
+    setMemberField
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 gap-2 mt-2"
+  }, campoMembro({
+    m,
+    campo: 'email',
+    etichetta: L.t('membri.email'),
+    tipo: 'email',
+    modi: 'email',
+    segno: L.t('membri.emailSegno'),
+    scrivibile,
+    setMemberField
+  }), campoMembro({
+    m,
+    campo: 'telefono',
+    etichetta: L.t('membri.telefono'),
+    tipo: 'tel',
+    modi: 'tel',
+    segno: L.t('membri.telefonoSegno'),
+    scrivibile,
+    setMemberField
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+    className: "font-rustic text-normale text-bosco mb-1"
+  }, L.t('membri.rimborsoTitolo')), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug mb-1.5"
+  }, frase('membri.comeRimborso')), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("div", null, campoMembro({
+    m,
+    campo: 'iban',
+    etichetta: 'IBAN',
+    segno: L.t('membri.ibanSegno'),
+    mono: true,
+    scrivibile,
+    setMemberField,
+    normalizza: v => v.toUpperCase(),
+    esce: v => {
+      const p = ibanPretty(v);
+      if (p !== (m.iban || '')) setMemberField(m.id, 'iban', p);
+    }
+  }), scrivibile && (m.iban || '').trim() !== '' && (ibanValid(m.iban) ? /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-bosco mt-1"
+  }, L.t('membri.ibanOk')) : /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-fuoco mt-1"
+  }, L.t('membri.ibanNo')))), campoMembro({
+    m,
+    campo: 'satispay',
+    etichetta: L.t('membri.satispay'),
+    tipo: 'tel',
+    modi: 'tel',
+    segno: L.t('membri.satispaySegno'),
+    scrivibile,
+    setMemberField
+  }), campoMembro({
+    m,
+    campo: 'paypal',
+    etichetta: 'PayPal',
+    modi: 'email',
+    segno: L.t('membri.paypalSegno'),
+    scrivibile,
+    setMemberField
+  }))), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-400 italic leading-snug"
+  }, L.t('membri.datiDove'))), FEATURES.equipExemption && /*#__PURE__*/React.createElement("button", {
+    onClick: () => toggleEquipExempt(m.id),
+    "aria-label": L.t('membri.esenzione'),
+    className: "mt-0.5 mb-1 flex items-center gap-2 text-left"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-piccolo font-bold ${m.equipExempt ? 'bg-legno border-legno text-white' : 'bg-scheda border-salvia'}`
+  }, m.equipExempt ? '✓' : ''), /*#__PURE__*/React.createElement("span", {
+    className: `text-piccolo ${m.equipExempt ? 'font-bold text-legno' : 'text-gray-500'}`
+  }, L.t('membri.esente'))));
+}))));
 
 // Le Regole non dipendono da niente: e' l'unica scheda che si disegna da
 // sola, e infatti l'elenco delle dipendenze e' vuoto.

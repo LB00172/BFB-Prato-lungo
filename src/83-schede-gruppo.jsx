@@ -1,17 +1,47 @@
 // ---------- Schede del gruppo: Membri, Regole, Dotazioni personali ----------
 // Vedi 81-schede-giorno.jsx per il perche' sono funzioni e non componenti.
 
+// Un campo della scheda di una persona: in scrittura una casella, in lettura
+// il valore (o un trattino). Le etichette arrivano gia' tradotte.
+const campoMembro = ({ m, campo, etichetta, segno, tipo, modi, scrivibile, setMemberField, mono, normalizza, esce }) => (
+  <div>
+    <label className="block text-minuto uppercase font-bold text-gray-500 tracking-wide mb-0.5">{etichetta}</label>
+    {scrivibile ? (
+      <input
+        type={tipo || 'text'}
+        inputMode={modi}
+        data-dato={campo}
+        value={m[campo] || ''}
+        onChange={(e) => setMemberField(m.id, campo, normalizza ? normalizza(e.target.value) : e.target.value)}
+        onBlur={esce ? (e) => esce(e.target.value) : undefined}
+        placeholder={segno}
+        className={`w-full px-2 py-1.5 bg-scheda border border-salvia/40 rounded focus:outline-none focus:border-bosco ${mono ? 'font-mono text-piccolo' : 'text-normale'}`}
+      />
+    ) : (
+      <p data-dato={campo} className={`text-normale text-bosco break-all ${mono ? 'font-mono text-piccolo' : ''}`}>
+        {m[campo] || <span className="text-gray-400">—</span>}
+      </p>
+    )}
+  </div>
+);
+
 const schedaMembri = ({
   addMember,
   infoMember,
   members,
   membriDoppi,
+  membroModificabile,
+  mioMembro,
   newMemberChild,
+  newMemberIo,
   newMemberName,
+  prendiMembro,
+  puoiDireSonoIo,
   removeMember,
   setInfoMember,
   setMemberField,
   setNewMemberChild,
+  setNewMemberIo,
   setNewMemberName,
   toggleChild,
   toggleEquipExempt,
@@ -52,102 +82,138 @@ const schedaMembri = ({
         />
         <button onClick={addMember} className={bottoneIcona('pieno')}>+</button>
       </div>
-      <label className="flex items-center gap-2 min-h-11 text-piccolo text-gray-600">
-        <input type="checkbox" className="w-5 h-5" checked={newMemberChild} onChange={(e) => setNewMemberChild(e.target.checked)} />
-        {L.t('membri.bambinoGratis')}
-      </label>
+      <div className="flex flex-wrap gap-x-5">
+        <label className="flex items-center gap-2 min-h-11 text-piccolo text-gray-600">
+          <input type="checkbox" className="w-5 h-5" checked={newMemberChild} onChange={(e) => setNewMemberChild(e.target.checked)} />
+          {L.t('membri.bambinoGratis')}
+        </label>
+        {/* Chi si aggiunge da solo lega la scheda al suo account: poi i
+            suoi dati li compila lui. Solo finche' non ne ha gia' una. */}
+        {puoiDireSonoIo() && (
+          <label className="flex items-center gap-2 min-h-11 text-piccolo text-gray-600">
+            <input type="checkbox" data-sono-io className="w-5 h-5" checked={newMemberIo} onChange={(e) => setNewMemberIo(e.target.checked)} />
+            {L.t('membri.sonoIo')}
+          </label>
+        )}
+      </div>
     </div>
 
     <div className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
-      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-3">
+      <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-2">
         {L.t('membri.quanti', members.length)}
       </h3>
       {members.length === 0 ? (
         <p className="text-normale text-gray-400 italic">{L.t('membri.vuoto')}</p>
       ) : (
-        <ul className="space-y-2">
-          {members.map((m) => (
-            <li key={m.id} className="bg-carta/60 p-2.5 rounded border border-salvia/20">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-bold text-normale text-bosco truncate">
-                  {m.name}
-                  {(m.paypal || m.iban) && <span className="ml-1.5 text-minuto text-salvia" title={L.t('membri.haRimborso')}>💳</span>}
-                </span>
-                <div className="flex items-center gap-2 shrink-0">
+        // Righe sottili, una sotto l'altra con un filo in mezzo: venti
+        // persone devono stare in uno schermo, non in tre.
+        <ul className="divide-y divide-salvia/25">
+          {members.map((m) => {
+            const aperta = infoMember === m.id;
+            const scrivibile = membroModificabile(m);
+            const mio = !!(mioMembro && mioMembro.id === m.id);
+            const anagrafe = [m.nome, m.cognome].filter((x) => (x || '').trim()).join(' ');
+            const paga = !!(m.paypal || m.iban || m.satispay);
+            return (
+              <li key={m.id} data-membro={m.name} className="py-1">
+                <div className="flex items-center gap-1 min-h-11">
+                  <div className="flex-grow min-w-0 leading-tight">
+                    <span className="font-bold text-normale text-bosco truncate block">
+                      {m.name}
+                      {mio && <span data-tu className="ml-1.5 text-minuto font-normal uppercase text-legno">{L.t('membri.tu')}</span>}
+                      {paga && <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-salvia align-middle" title={L.t('membri.haRimborso')} />}
+                    </span>
+                    {anagrafe && <span className="text-minuto text-gray-500 truncate block">{anagrafe}</span>}
+                  </div>
                   <button
                     onClick={() => setInfoMember((v) => (v === m.id ? null : m.id))}
                     aria-label={L.t('membri.datiDi', m.name)}
+                    aria-expanded={aperta}
                     title={L.t('membri.datiRimborso')}
-                    className="w-11 h-11 -mx-2 flex items-center justify-center"
+                    className={bottoneSottile('neutro', aperta ? 'text-bosco' : '')}
                   >
-                    {/* Il cerchio resta piccolo, il posto da toccare no. */}
-                    <span className={`w-6 h-6 rounded-full border-2 font-serif italic font-bold text-piccolo leading-none flex items-center justify-center ${infoMember === m.id ? 'bg-bosco border-bosco text-white' : 'bg-scheda border-salvia text-legno'}`}>i</span>
+                    {icona('info', aperta ? 'w-5 h-5 [stroke-width:2.4]' : 'w-5 h-5')}
                   </button>
                   <button
                     onClick={() => toggleChild(m.id)}
-                    className={bottoneScelta('etichetta', 'ambra', m.isChild, 'minimo')}
+                    data-eta
+                    className={bottoneSottile('neutro', 'px-1')}
                   >
-                    {L.t(m.isChild ? 'membri.bambino' : 'membri.adulto')}
+                    <span className={`inline-block w-16 text-center text-minuto font-bold uppercase tracking-wide py-0.5 rounded ${m.isChild ? 'bg-fuoco/15 text-legno' : 'bg-salvia/15 text-gray-500'}`}>
+                      {L.t(m.isChild ? 'membri.bambino' : 'membri.adulto')}
+                    </span>
                   </button>
-                  <button onClick={() => removeMember(m.id)} className={bottoneIcona('distruttivo')}>&times;</button>
+                  <button onClick={() => removeMember(m.id)} aria-label={L.t('membri.togli', m.name)} className={bottoneSottile('distruttivo')}>
+                    {icona('togli', 'w-4 h-4')}
+                  </button>
                 </div>
-              </div>
-              {/* Dati per farsi rimborsare dopo il campo. Si aprono con la "i". */}
-              {infoMember === m.id && (
-                <div className="mt-2.5 pt-2.5 border-t border-salvia/30 space-y-2">
-                  <p className="text-piccolo text-gray-500 leading-snug">
-                    {frase('membri.comeRimborso')}
-                  </p>
-                  <div>
-                    <label className="block text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1">PayPal</label>
-                    <input
-                      type="text"
-                      inputMode="email"
-                      value={m.paypal || ''}
-                      onChange={(e) => setMemberField(m.id, 'paypal', e.target.value)}
-                      placeholder={L.t('membri.paypalSegno')}
-                      className="w-full p-2 bg-scheda border border-salvia/40 rounded text-normale focus:outline-none focus:border-bosco"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-minuto uppercase font-bold text-gray-500 tracking-wide mb-1">IBAN</label>
-                    <input
-                      type="text"
-                      value={m.iban || ''}
-                      onChange={(e) => setMemberField(m.id, 'iban', e.target.value.toUpperCase())}
-                      onBlur={(e) => { const p = ibanPretty(e.target.value); if (p !== (m.iban || '')) setMemberField(m.id, 'iban', p); }}
-                      placeholder={L.t('membri.ibanSegno')}
-                      className="w-full p-2 bg-scheda border border-salvia/40 rounded text-piccolo font-mono focus:outline-none focus:border-bosco"
-                    />
-                    {/* Un IBAN sbagliato si scopre solo quando il bonifico torna indietro. */}
-                    {(m.iban || '').trim() !== '' && (
-                      ibanValid(m.iban)
-                        ? <p className="text-minuto text-bosco mt-1">{L.t('membri.ibanOk')}</p>
-                        : <p className="text-minuto text-fuoco mt-1">{L.t('membri.ibanNo')}</p>
+                {/* La scheda della persona. La compilano lei e il capogruppo;
+                    gli altri la leggono, per sapere dove fare il bonifico. */}
+                {aperta && (
+                  <div data-scheda-membro={m.name} className="mt-1 mb-2 p-3 rounded bg-carta/60 border border-salvia/25 space-y-3">
+                    {!scrivibile && (
+                      <p className="text-minuto text-gray-500 leading-snug" data-sola-lettura>{L.t('membri.soloLettura')}</p>
                     )}
+                    {!m.uid && puoiDireSonoIo() && (
+                      <button onClick={() => prendiMembro(m.id)} data-prendi className={bottone('secondario', 'minuscolo', 'w-full')}>
+                        {L.t('membri.questaSonoIo')}
+                      </button>
+                    )}
+                    <div>
+                      <h4 className="font-rustic text-normale text-bosco mb-1.5">{L.t('membri.chiE')}</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {campoMembro({ m, campo: 'nome', etichetta: L.t('membri.nomeVero'), scrivibile, setMemberField })}
+                        {campoMembro({ m, campo: 'cognome', etichetta: L.t('membri.cognome'), scrivibile, setMemberField })}
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 mt-2">
+                        {campoMembro({ m, campo: 'email', etichetta: L.t('membri.email'), tipo: 'email', modi: 'email', segno: L.t('membri.emailSegno'), scrivibile, setMemberField })}
+                        {campoMembro({ m, campo: 'telefono', etichetta: L.t('membri.telefono'), tipo: 'tel', modi: 'tel', segno: L.t('membri.telefonoSegno'), scrivibile, setMemberField })}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-rustic text-normale text-bosco mb-1">{L.t('membri.rimborsoTitolo')}</h4>
+                      <p className="text-minuto text-gray-500 leading-snug mb-1.5">{frase('membri.comeRimborso')}</p>
+                      <div className="space-y-2">
+                        <div>
+                          {campoMembro({
+                            m, campo: 'iban', etichetta: 'IBAN', segno: L.t('membri.ibanSegno'), mono: true, scrivibile, setMemberField,
+                            normalizza: (v) => v.toUpperCase(),
+                            esce: (v) => { const p = ibanPretty(v); if (p !== (m.iban || '')) setMemberField(m.id, 'iban', p); },
+                          })}
+                          {/* Un IBAN sbagliato si scopre solo quando il bonifico torna indietro. */}
+                          {scrivibile && (m.iban || '').trim() !== '' && (
+                            ibanValid(m.iban)
+                              ? <p className="text-minuto text-bosco mt-1">{L.t('membri.ibanOk')}</p>
+                              : <p className="text-minuto text-fuoco mt-1">{L.t('membri.ibanNo')}</p>
+                          )}
+                        </div>
+                        {campoMembro({ m, campo: 'satispay', etichetta: L.t('membri.satispay'), tipo: 'tel', modi: 'tel', segno: L.t('membri.satispaySegno'), scrivibile, setMemberField })}
+                        {campoMembro({ m, campo: 'paypal', etichetta: 'PayPal', modi: 'email', segno: L.t('membri.paypalSegno'), scrivibile, setMemberField })}
+                      </div>
+                    </div>
+                    <p className="text-minuto text-gray-400 italic leading-snug">
+                      {L.t('membri.datiDove')}
+                    </p>
                   </div>
-                  <p className="text-minuto text-gray-400 italic leading-snug">
-                    {L.t('membri.datiDove')}
-                  </p>
-                </div>
-              )}
-              {/* Esenzione attrezzatura: nascosta finche' FEATURES.equipExemption e' false */}
-              {FEATURES.equipExemption && (
-                <button
-                  onClick={() => toggleEquipExempt(m.id)}
-                  aria-label={L.t('membri.esenzione')}
-                  className="mt-1.5 flex items-center gap-2 text-left"
-                >
-                  <span className={`w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-piccolo font-bold ${m.equipExempt ? 'bg-legno border-legno text-white' : 'bg-scheda border-salvia'}`}>
-                    {m.equipExempt ? '✓' : ''}
-                  </span>
-                  <span className={`text-piccolo ${m.equipExempt ? 'font-bold text-legno' : 'text-gray-500'}`}>
-                    {L.t('membri.esente')}
-                  </span>
-                </button>
-              )}
-            </li>
-          ))}
+                )}
+                {/* Esenzione attrezzatura: nascosta finche' FEATURES.equipExemption e' false */}
+                {FEATURES.equipExemption && (
+                  <button
+                    onClick={() => toggleEquipExempt(m.id)}
+                    aria-label={L.t('membri.esenzione')}
+                    className="mt-0.5 mb-1 flex items-center gap-2 text-left"
+                  >
+                    <span className={`w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-piccolo font-bold ${m.equipExempt ? 'bg-legno border-legno text-white' : 'bg-scheda border-salvia'}`}>
+                      {m.equipExempt ? '✓' : ''}
+                    </span>
+                    <span className={`text-piccolo ${m.equipExempt ? 'font-bold text-legno' : 'text-gray-500'}`}>
+                      {L.t('membri.esente')}
+                    </span>
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

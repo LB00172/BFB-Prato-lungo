@@ -36,7 +36,7 @@ const { chromium } = require('playwright-core');
 
   await iLorenzo.click();
   await p.waitForTimeout(250);
-  ok('si aprono i due campi PayPal e IBAN',
+  ok('si aprono i campi PayPal e IBAN',
     (await p.locator('input[placeholder="paypal.me/nome oppure email"]').count()) === 1 &&
     (await p.locator('input[placeholder="IT00 X000 0000 0000 0000 0000 000"]').count()) === 1);
 
@@ -65,7 +65,7 @@ const { chromium } = require('playwright-core');
   await p.reload({ waitUntil: 'load' });
   await p.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
   await menu('Membri');
-  ok('il segnalino 💳 compare sul membro con i dati', (await p.locator('li:has-text("Lorenzo") >> text=💳').count()) > 0);
+  ok('il segnalino compare sul membro con i dati', (await p.locator('li:has-text("Lorenzo") [title="Ha inserito i dati per il rimborso"]').count()) > 0);
 
   // --- Presenze + spesa anticipata da Lorenzo, così Bruno e Anna gli devono dare ---
   await menu('Presenze');
@@ -95,7 +95,8 @@ const { chromium } = require('playwright-core');
   ok('avviso per chi riceve senza dati NON compare (riceve solo Lorenzo)', !/non .*inserito\s*PayPal/.test(testo.replace(/\n/g, ' ')));
 
   // copia
-  const copia = p.locator('button', { hasText: /^copia$/i }).first();
+  // Le righe sono IBAN, Satispay, PayPal: si copia quella del PayPal.
+  const copia = p.locator('li[data-da-fare] div.flex.items-start', { hasText: 'PayPal' }).locator('button', { hasText: /^copia$/i }).first();
   await copia.click();
   await p.waitForTimeout(400);
   const app = await p.evaluate(() => navigator.clipboard.readText().catch(() => ''));

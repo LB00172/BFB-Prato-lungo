@@ -173,7 +173,10 @@ const A_MANO_ATTESI = {
   '80-app.jsx': 6,
   '81-schede-giorno.jsx': 3,
   '82-schede-conti.jsx': 2,
-  '83-schede-gruppo.jsx': 2,
+  // Era 2 fino al 4 ottobre: la «i» della scheda di una persona e' entrata
+  // nel vocabolario (bottoneSottile) quando la lista dei membri e' diventata
+  // a righe sottili.
+  '83-schede-gruppo.jsx': 1,
   '84-schede-album.jsx': 2,
   '85-scheda-galleria.jsx': 4,
   // "Chi fa cosa" non ne ha nessuno: e' nata dopo il vocabolario, e la sua

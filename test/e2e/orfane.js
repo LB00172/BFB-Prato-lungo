@@ -39,7 +39,7 @@ const contaPresenzeDi = (page, nome) => page.evaluate((n) => {
 
   // --- Bruno viene eliminato e riaggiunto: è il caso vero ---
   await menu('Membri');
-  await p.locator('li', { hasText: 'Bruno' }).locator('button', { hasText: '×' }).first().click();
+  await p.locator('li', { hasText: 'Bruno' }).locator('button[aria-label^="Togli"]').first().click();
   await p.waitForTimeout(300);
   await p.fill('input[placeholder="Nome e cognome"]', 'Bruno');
   await p.locator('button', { hasText: /^\+$/ }).first().click();
@@ -73,7 +73,7 @@ const contaPresenzeDi = (page, nome) => page.evaluate((n) => {
 
   // --- I pasti già segnati non vengono sovrascritti, si sommano ---
   await menu('Membri');
-  await p.locator('li', { hasText: 'Anna' }).locator('button', { hasText: '×' }).first().click();
+  await p.locator('li', { hasText: 'Anna' }).locator('button[aria-label^="Togli"]').first().click();
   await p.waitForTimeout(300);
   await p.fill('input[placeholder="Nome e cognome"]', 'Anna');
   await p.locator('button', { hasText: /^\+$/ }).first().click();
@@ -91,7 +91,7 @@ const contaPresenzeDi = (page, nome) => page.evaluate((n) => {
 
   // --- "Butta" toglie le orfane senza toccare nessun altro ---
   await menu('Membri');
-  await p.locator('li', { hasText: 'Lorenzo' }).locator('button', { hasText: '×' }).first().click();
+  await p.locator('li', { hasText: 'Lorenzo' }).locator('button[aria-label^="Togli"]').first().click();
   await p.waitForTimeout(300);
   await menu('Presenze');
   ok('anche senza riaggiungerlo, le sue presenze risultano senza padrone',

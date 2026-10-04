@@ -75,6 +75,16 @@ const bottoneIcona = (tono, extra) => [
   extra || '',
 ].filter(Boolean).join(' ');
 
+// Il tasto sottile: il posto da toccare resta 44×44, il disegno no. Serve
+// nelle righe fitte (i membri), dove tre bottoni pieni alti 44 facevano la
+// riga tozza quanto un riquadro. Il bordo si vede solo attorno al segno,
+// non attorno al pollice. `acceso` per le etichette che cambiano stato.
+const bottoneSottile = (tono, extra) => [
+  'min-w-11 min-h-11 -my-1.5 inline-flex items-center justify-center rounded leading-none disabled:opacity-40',
+  BOTTONE_ICONA[tono] || BOTTONE_ICONA.neutro,
+  extra || '',
+].filter(Boolean).join(' ');
+
 // Il tasto che galleggia: «+ Spesa», sopra ogni scheda del campo, in basso a
 // destra dove arriva il pollice. E' uno solo e resta uno solo — due tasti
 // galleggianti non dicono piu' quale sia la cosa principale. Pillola piena,

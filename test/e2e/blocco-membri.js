@@ -104,7 +104,7 @@ const idDi = (p, nome) => p.evaluate((n) => (JSON.parse(localStorage.getItem('ca
   // ---- 2. Col dito: eliminare non si puo' --------------------------------
   await menu('Membri');
   chiesto.length = 0;
-  await p.locator('li', { hasText: 'Anna' }).locator('button', { hasText: '×' }).first().click();
+  await p.locator('li', { hasText: 'Anna' }).locator('button[aria-label^="Togli"]').first().click();
   await p.waitForTimeout(500);
   ok('eliminare chi ha presenze bloccate viene rifiutato', /non è possibile/i.test(chiesto[0] || ''));
   ok('e il messaggio dice quale giorno la trattiene', /presenze bloccate/i.test(chiesto[0] || ''));
@@ -121,7 +121,7 @@ const idDi = (p, nome) => p.evaluate((n) => (JSON.parse(localStorage.getItem('ca
   // ---- 3. Chi non c'entra si elimina normalmente --------------------------
   // Un blocco che blocca tutto non protegge: paralizza.
   chiesto.length = 0;
-  await p.locator('li', { hasText: 'Carla' }).locator('button', { hasText: '×' }).first().click();
+  await p.locator('li', { hasText: 'Carla' }).locator('button[aria-label^="Togli"]').first().click();
   await p.waitForTimeout(500);
   ok('chi non ha presenze in giorni bloccati si elimina', (await membri(p)) === 'Anna,Bruno');
   ok('e le viene chiesta conferma come sempre', /Eliminare Carla/i.test(chiesto[0] || ''));
@@ -241,7 +241,7 @@ const idDi = (p, nome) => p.evaluate((n) => (JSON.parse(localStorage.getItem('ca
   await p.waitForTimeout(700);
   await menu('Membri');
   chiesto.length = 0;
-  await p.locator('li', { hasText: 'Bruno' }).locator('button', { hasText: '×' }).first().click();
+  await p.locator('li', { hasText: 'Bruno' }).locator('button[aria-label^="Togli"]').first().click();
   await p.waitForTimeout(500);
   ok('sbloccato il giorno, l\'eliminazione passa', (await membri(p)) === 'Anna');
 

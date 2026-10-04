@@ -72,6 +72,7 @@ function App({ eredita, cambiaCampo } = {}) {
 
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberChild, setNewMemberChild] = useState(false);
+  const [newMemberIo, setNewMemberIo] = useState(false); // «sono io»: la scheda si lega all'account
   const [infoMember, setInfoMember] = useState(null); // membro con la scheda pagamenti aperta
   const [copied, setCopied] = useState('');            // ultima cosa copiata (feedback)
   const [pName, setPName] = useState('');
@@ -1512,9 +1513,34 @@ function App({ eredita, cambiaCampo } = {}) {
     // saldi (i pagamenti si abbinano per nome): meglio dirlo subito.
     const gia = members.some((m) => m.name.trim().toLowerCase() === name.toLowerCase());
     if (gia && !window.confirm(L.t('membri.confermaOmonimo', name))) return;
-    setMembers((prev) => [...prev, { id: uid(), name, isChild: newMemberChild }]);
+    const io = newMemberIo && puoiDireSonoIo() ? { uid: mioUid } : {};
+    setMembers((prev) => [...prev, { id: uid(), name, isChild: newMemberChild, ...io }]);
     setNewMemberName('');
     setNewMemberChild(false);
+    setNewMemberIo(false);
+  };
+
+  // ---------- La scheda di una persona ----------
+  // Nome, cognome, email, telefono e i dati per farsi rimborsare (IBAN,
+  // Satispay, PayPal). La compilano la persona stessa e il capogruppo; gli
+  // altri la leggono — servono a sapere a chi fare il bonifico, non a
+  // cambiarlo. «La persona stessa» e' la scheda legata al suo account (uid),
+  // o perche' se l'e' aggiunta lei con «sono io», o perche' l'ha presa dopo.
+  // Senza stanze, o fuori da una stanza (la versione privata, l'utente
+  // condiviso, un campo col codice di prima) non c'e' nessuno da distinguere,
+  // e la compilano tutti come prima.
+  // E' una cortesia dell'interfaccia, non una serratura: i membri stanno nel
+  // documento del campo, che chi e' dentro puo' scrivere.
+  const mioUid = (account && account.utente && account.utente.uid) || null;
+  const mioMembro = mioUid ? members.find((m) => m.uid === mioUid) : null;
+  const puoiDireSonoIo = () => !!(FEATURES.rooms && stanzaStato.stanza && mioUid && !mioMembro);
+  const membroModificabile = (m) => !FEATURES.rooms || !stanzaStato.stanza || admin || !!stanzaStato.capogruppo
+    || (!!mioUid && !!m && m.uid === mioUid);
+  // Prendere una scheda gia' in elenco (l'ha aggiunta il capogruppo): solo se
+  // non e' di nessuno e se io non ne ho gia' una.
+  const prendiMembro = (id) => {
+    if (!puoiDireSonoIo()) return;
+    setMembers((prev) => prev.map((m) => (m.id === id && !m.uid ? { ...m, uid: mioUid } : m)));
   };
 
   const removeMember = (id) => {
@@ -1537,6 +1563,7 @@ function App({ eredita, cambiaCampo } = {}) {
 
   // Dati di pagamento del membro (PayPal / IBAN): campi liberi e facoltativi.
   const setMemberField = (id, campo, valore) => {
+    if (!membroModificabile(members.find((m) => m.id === id))) return;
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, [campo]: valore } : m)));
   };
 
@@ -2257,7 +2284,7 @@ function App({ eredita, cambiaCampo } = {}) {
               {s.transfers.map((t, i) => {
                 // Dati di pagamento di chi deve ricevere (scheda Membri, tasto "i").
                 const dest = members.find((m) => m.name === t.to);
-                const mostraDati = dest && (dest.paypal || dest.iban);
+                const mostraDati = dest && (dest.paypal || dest.iban || dest.satispay);
                 return (
                   <li
                     key={`${t.from}→${t.to}@${i}`}
@@ -2275,7 +2302,7 @@ function App({ eredita, cambiaCampo } = {}) {
                     </div>
                     {mostraDati && (
                       <div className="mt-1.5 pt-1.5 border-t border-salvia/20 space-y-1">
-                        {[['PayPal', dest.paypal], ['IBAN', dest.iban]].filter((r) => r[1]).map((r) => (
+                        {[['IBAN', dest.iban], [L.t('membri.satispay'), dest.satispay], ['PayPal', dest.paypal]].filter((r) => r[1]).map((r) => (
                           <div key={r[0]} className="flex items-start gap-2">
                             <span className="text-minuto uppercase font-bold text-salvia w-11 shrink-0 pt-0.5">{r[0]}</span>
                             <span className={`text-piccolo text-carta break-all leading-snug ${r[0] === 'IBAN' ? 'font-mono' : ''}`}>{r[1]}</span>
@@ -2296,7 +2323,7 @@ function App({ eredita, cambiaCampo } = {}) {
             {/* Chi deve incassare ma non ha lasciato PayPal/IBAN. */}
             {(() => {
               const senza = [...new Set(s.transfers.map((t) => t.to))]
-                .filter((n) => { const d = members.find((m) => m.name === n); return d && !d.paypal && !d.iban; });
+                .filter((n) => { const d = members.find((m) => m.name === n); return d && !d.paypal && !d.iban && !d.satispay; });
               if (senza.length === 0) return null;
               return (
                 <p className="text-minuto text-gray-400 italic mt-2">
@@ -3261,7 +3288,7 @@ function App({ eredita, cambiaCampo } = {}) {
 
         {/* ---------- MEMBRI ---------- */}
         {scheda === 'membri' && schedaMembri({
-          addMember, infoMember, members, membriDoppi, newMemberChild, newMemberName, removeMember, setInfoMember, setMemberField, setNewMemberChild, setNewMemberName, toggleChild, toggleEquipExempt, unisciDoppi,
+          addMember, infoMember, members, membriDoppi, membroModificabile, mioMembro, newMemberChild, newMemberIo, newMemberName, prendiMembro, puoiDireSonoIo, removeMember, setInfoMember, setMemberField, setNewMemberChild, setNewMemberIo, setNewMemberName, toggleChild, toggleEquipExempt, unisciDoppi,
         })}
 
         {/* ---------- PRESENZE ---------- */}

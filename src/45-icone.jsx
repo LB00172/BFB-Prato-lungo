@@ -88,6 +88,11 @@ const ICONE = {
   fatto: 'M5 12l5 5L20 7',
   // Il luogo del campo: il segnaposto, il gesto che tutti conoscono dalle mappe.
   luogo: 'M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z M12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6z',
+  // La scheda di una persona: la «i» dentro il cerchio.
+  info: 'M12 3a9 9 0 1 1 0 18a9 9 0 0 1 0-18z M12 11v6 M12 7.5v.5',
+  // Togliere una riga: una croce sottile, non la × piena che pesava quanto
+  // il nome accanto.
+  togli: 'M6 6l12 12 M18 6L6 18',
 };
 
 // Restituisce il disegno, o null se il nome non c'e'. **Null e non un
