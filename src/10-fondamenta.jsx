@@ -192,7 +192,7 @@ const diffFlat = (prima, dopo) => {
 // La tabella tiene le CHIAVI, non i nomi: e' una costante, e si valuta una
 // volta sola al caricamento — se ci mettessimo i nomi tradotti resterebbero
 // per sempre nella lingua di quel momento. Il nome si chiede al disegno.
-const SEZIONE_DI = { m: 'sezione.membri', p: 'sezione.lista', t: 'sezione.daAcquistare', e: 'sezione.attrezzatura', g: 'sezione.dotazioni', s: 'sezione.saldi', x: 'sezione.contoSeparato', f: 'sezione.giorniGratis' };
+const SEZIONE_DI = { m: 'sezione.membri', p: 'sezione.lista', t: 'sezione.daAcquistare', e: 'sezione.attrezzatura', g: 'sezione.dotazioni', s: 'sezione.saldi', x: 'sezione.contoSeparato', f: 'sezione.giorniGratis', k: 'sezione.compiti', i: 'sezione.cassa' };
 const sezioneDiPath = (p) => {
   const parti = String(p).split('|');
   if (parti[0] === 'c') return L.t(parti[2] === 'meals' ? 'sezione.presenze' : (parti[3] === 'note' ? 'sezione.menu' : 'sezione.calendario'));
@@ -249,6 +249,11 @@ const descriviPath = (p, stato) => {
     case 's': return L.t('percorso.rimborsoSaldato');
     case 'x': return L.t('percorso.giornoSeparato', giorno(parti[1]));
     case 'f': return L.t('percorso.giornoGratis', giorno(parti[1]));
+    case 'k': return L.t('percorso.compito');
+    case 'i': {
+      const it = (stato.incassi || []).find((x) => x.id === parti[1]);
+      return L.t('percorso.incasso') + (it && it.nota ? ` "${it.nota}"` : '');
+    }
     default: return p;
   }
 };

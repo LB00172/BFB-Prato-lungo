@@ -45,7 +45,8 @@ const SORGENTI = [
   '84-schede-album.jsx',    // Archivio, Aiuta Bandy, Come funziona
   '85-scheda-galleria.jsx', // Galleria
   '86-scheda-impostazioni.jsx', // Impostazioni
-  '86b-scheda-campo.jsx',     // Il campo: invito, nome e date, luogo, voci, aiutante, Pro
+  '86b-scheda-campo.jsx',
+  '86c-scheda-cassa.jsx',     // la cassa del campo: entrate, quote, rendiconto (cassa.js)     // Il campo: invito, nome e date, luogo, voci, aiutante, Pro
   '87-scheda-compiti.jsx',
   '88-scheda-ingresso.jsx',  // Chi fa cosa: compiti assegnati (FEATURES.compiti)
   '89-scheda-campi.jsx',     // I miei campi: la home, e il modulo Crea / Partecipa

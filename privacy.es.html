@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camp Ops · Política de privacidad</title>
+  <link href="vendor/fonts.css" rel="stylesheet">
+  <!-- Traduzione di privacy.html (es): va cambiata insieme a quella, nello stesso
+       commit. L'originale resta l'italiano.
+       L'informativa che Google Play chiede a TUTTE le app (ROADMAP § 3).
+       Descrive quello che l'app fa DAVVERO, ed e' stata scritta guardando il
+       codice, non a memoria: l'app parla solo con Firebase, con Open-Meteo e
+       — quando la persona lo chiede — con WhatsApp; nessuna analitica e
+       nessuna pubblicita' (il measurementId in firebase-config.js c'e', ma lo
+       strumento non viene mai caricato). Se una di queste cose cambia, questa
+       pagina va cambiata insieme, nello stesso commit.
+       Titolare e contatto si leggono da firebase-config.js (APP_CONFIG.privacy). -->
+  <style>
+    :root { --carta: #FAF0D8; --scheda: #FFFBF0; --bosco: #00494A; --legno: #7A4A2A; --testo: #1f2a29; }
+    @media (prefers-color-scheme: dark) {
+      :root { --carta: #0E1A1A; --scheda: #142524; --bosco: #A9C2BC; --legno: #D7A878; --testo: #E4EDE4; }
+    }
+    body { margin: 0; background: var(--carta); color: var(--testo); font-family: 'Courier Prime', monospace; line-height: 1.55; }
+    main { max-width: 680px; margin: 0 auto; padding: 28px 18px 60px; }
+    h1 { font-family: 'Special Elite', system-ui, sans-serif; color: var(--bosco); font-size: 26px; margin: 0 0 4px; }
+    h2 { font-family: 'Special Elite', system-ui, sans-serif; color: var(--bosco); font-size: 19px; margin: 30px 0 8px; }
+    .scheda { background: var(--scheda); border: 2px solid color-mix(in srgb, var(--bosco) 20%, transparent); border-radius: 8px; padding: 14px 16px; }
+    .nota { color: var(--legno); font-size: 14px; }
+    .manca { color: #B91C1C; font-weight: bold; }
+    a { color: var(--bosco); }
+    ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Política de privacidad</h1>
+  <p class="nota">Camp Ops · actualizada el <span data-campo="aggiornata"></span></p>
+
+  <p>Camp Ops sirve para que un grupo organice un campamento y divida sus
+  gastos. Aquí encuentras, sin rodeos, qué datos usa, adónde van y cómo
+  puedes quitarlos.</p>
+
+  <h2>Quién trata los datos</h2>
+  <div class="scheda">
+    <p>Responsable: <strong data-campo="titolare"></strong><br>
+    Contacto: <span data-campo="contatto"></span></p>
+  </div>
+
+  <h2>Qué datos, y por qué</h2>
+  <ul>
+    <li><strong>Si creas una cuenta</strong> (con Google o con email y
+      contraseña): nombre, apellido y dirección de email; si te registras con
+      email y contraseña, también la ciudad, el país y el idioma que prefieres.
+      Sirven para crear y administrar un campamento, para recuperar tu sitio
+      si cambias de teléfono y para mostrarte la aplicación en tu idioma. La
+      contraseña la guarda Firebase: nosotros nunca la vemos.</li>
+    <li><strong>Si entras solo con el código</strong>: un identificador
+      anónimo generado por Firebase. Ningún nombre, ninguna dirección.</li>
+    <li><strong>Los datos del campamento</strong>, que escriben los miembros:
+      los nombres de los participantes (y quién está exento de gastos), la
+      asistencia a las comidas, los gastos (importe, quién pagó, cuándo y
+      entre quiénes se dividen), los menús, las listas, las tareas, la caja
+      (las cuotas y los cobros), las fotos de los tiques y de la galería. Los
+      ven <strong>solo los miembros de ese campamento</strong>.</li>
+    <li><strong>La ficha de cada persona</strong>, si alguien la rellena:
+      nombre, apellido, email y teléfono, y los datos para recibir el
+      reembolso (IBAN, Satispay o PayPal). Son todos opcionales. La rellenan
+      la propia persona o el jefe de grupo; sirven solo para mostrar a los
+      demás miembros quién es y adónde hacer la transferencia. La aplicación
+      no mueve dinero, no se conecta con ningún banco ni con Satispay o
+      PayPal, y no escribe ni llama a nadie. Si quien tiene que recibir tiene
+      una dirección paypal.me, en los Saldos hay un botón que abre
+      <strong>PayPal</strong> con la cifra ya escrita: el enlace lleva a PayPal
+      solo ese nombre y esa cifra, y lo abre tu teléfono. También estos datos
+      los ven solo los miembros del campamento, y se borran al cerrar el
+      campamento junto con los miembros.</li>
+    <li><strong>En tu teléfono</strong>: una copia de los datos del
+      campamento, para que la aplicación funcione también sin cobertura. Se
+      queda en la memoria del navegador y se quita borrando los datos del
+      sitio o desinstalando la aplicación.</li>
+  </ul>
+
+  <h2>Quién los recibe</h2>
+  <ul>
+    <li><strong>Google Firebase</strong>: el acceso (Authentication) y la
+      base de datos. La base de datos está en Europa, en Turín.</li>
+    <li><strong>Vercel</strong>: aloja la aplicación. Como cualquier
+      servidor, registra datos técnicos de las peticiones, como la dirección
+      IP.</li>
+    <li><strong>Open-Meteo</strong>: recibe las coordenadas del campamento
+      para la previsión del tiempo y, cuando el jefe de grupo busca el lugar
+      del campamento por nombre, el nombre que ha escrito. Ningún dato
+      personal.</li>
+    <li><strong>Google Play</strong>: cuando el jefe de grupo compra el Pro,
+      el pago lo hace Google Play, con la cuenta de Google del teléfono. A
+      nosotros solo nos llega la confirmación de que el pago se ha hecho (un
+      código de la compra), nunca los datos de la tarjeta.</li>
+    <li><strong>WhatsApp</strong> u otras aplicaciones para compartir del
+      teléfono: solo cuando eres tú quien pulsa «Compartir», y reciben solo
+      lo que estás compartiendo.</li>
+  </ul>
+
+  <h2>Lo que no hacemos</h2>
+  <p>Nada de publicidad, nada de herramientas de análisis, nada de perfiles.
+  Los datos no se venden ni se ceden a nadie.</p>
+
+  <h2>Durante cuánto tiempo</h2>
+  <p>El perfil se queda mientras exista tu cuenta. Los datos de un
+  campamento se quedan mientras exista el campamento: los borra quien lo
+  administra.</p>
+
+  <h2>Borrar la cuenta</h2>
+  <p>Desde la aplicación: <strong>Ajustes → Cuenta → Borrar la cuenta</strong>.
+  Se borran tu perfil, tu sitio en los campamentos donde has entrado y la
+  cuenta. Los gastos y la asistencia que has escrito <strong>se quedan en el
+  campamento</strong>, porque son las cuentas del grupo, como los mensajes en
+  un chat de grupo. Si eres el jefe de grupo de un campamento, el campamento
+  pasa al segundo jefe de grupo; si no hay un segundo jefe de grupo, hay que
+  nombrarlo antes, en «El campamento»: si no, el campamento se quedaría sin
+  nadie que lo pueda administrar.</p>
+  <p>Sin la aplicación: <a href="cancella-account.es.html">pide el borrado aquí</a>.</p>
+
+  <h2>Tus derechos</h2>
+  <p>Puedes pedir ver, corregir o borrar tus datos, y recibir una copia
+  (desde la aplicación: Gastos totales → Datos → Exportar). Puedes oponerte
+  al tratamiento, y tienes derecho a dirigirte a la autoridad de protección
+  de datos de tu país (en Italia, el
+  <a href="https://www.garanteprivacy.it">Garante per la protezione dei dati
+  personali</a>).</p>
+
+  <h2>Niños</h2>
+  <p>La aplicación está pensada para los adultos que organizan el
+  campamento. Los niños aparecen solo como nombres en la lista de
+  participantes, escritos por quien organiza: no usan la aplicación.</p>
+</main>
+<script src="firebase-config.js"></script>
+<script>
+  // Titolare, contatto e data vengono da firebase-config.js: scritti in un
+  // posto solo. Un contatto che manca si dice in rosso invece di inventarlo.
+  (function () {
+    var p = (window.APP_CONFIG && window.APP_CONFIG.privacy) || {};
+    document.querySelectorAll('[data-campo]').forEach(function (el) {
+      var k = el.getAttribute('data-campo');
+      var v = p[k];
+      if (k === 'aggiornata' && p.aggiornataIso) { try { v = new Date(p.aggiornataIso + 'T12:00:00').toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { /* resta quella scritta */ } }
+      if (v) { el.textContent = v; return; }
+      el.textContent = 'pendiente';
+      el.className = 'manca';
+    });
+    var c = document.querySelector('[data-campo="contatto"]');
+    if (p.contatto && c) { c.innerHTML = ''; var a = document.createElement('a'); a.href = 'mailto:' + p.contatto; a.textContent = p.contatto; c.appendChild(a); }
+  })();
+</script>
+</body>
+</html>

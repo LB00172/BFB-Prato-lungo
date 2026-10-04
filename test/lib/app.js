@@ -218,9 +218,16 @@ function ingressoFinto(o) {
       motivo: () => 'stanza.nonRiuscito',
       // `proprietario`: se vero, di ogni stanza guardata si risulta
       // proprietari — il caso in cui la cancellazione deve fermarsi.
+      // `vice`: con un proprietario, l'uid del secondo capogruppo — il caso
+      // in cui la cancellazione cede il campo e va avanti.
       statoDi: async (codici) => {
         window.__stanza.chiamate.push({ che: 'statoDi', codici: (codici || []).slice() });
-        return (codici || []).map((c) => ({ codice: c, membro: true, proprietario: !!o.proprietario }));
+        return (codici || []).map((c) => ({ codice: c, membro: true, proprietario: !!o.proprietario, vice: o.proprietario ? (o.vice || '') : '' }));
+      },
+      lasciaAllAiutante: async (codice, utente) => {
+        window.__stanza.chiamate.push({ che: 'lasciaAllAiutante', codice, uid: utente && utente.uid });
+        window.__ordine.push('lasciaAllAiutante');
+        return o.vice || '';
       },
       togliMe: async (codici, utente) => {
         window.__stanza.chiamate.push({ che: 'togliMe', codici: (codici || []).slice(), uid: utente && utente.uid });

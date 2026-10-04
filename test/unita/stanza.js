@@ -382,7 +382,20 @@ if (!S) { fine(); }
       ]);
       ok('lo stesso campo visto due volte si toglie una volta sola', p3.daTogliere.length === 1);
       ok('senza stanze non esplode',
-        JSON.stringify(S.pianoCancellazione(null)) === JSON.stringify({ bloccata: [], daTogliere: [] }));
+        JSON.stringify(S.pianoCancellazione(null)) === JSON.stringify({ bloccata: [], daCedere: [], daTogliere: [] }));
+      // Dal 4 ottobre: col secondo capogruppo il campo passa a lui, e la
+      // cancellazione va avanti; senza, si ferma tutto come prima.
+      const p4 = S.pianoCancellazione([
+        { codice: 'AAAA-2222', membro: true, proprietario: true, vice: 'u-2' },
+        { codice: 'BBBB-3333', membro: true, proprietario: false },
+      ]);
+      ok('col secondo capogruppo il campo si cede, invece di fermarsi',
+        p4.bloccata.length === 0 && p4.daCedere.join() === S.normalizza('AAAA-2222') && p4.daTogliere.length === 1);
+      const p5 = S.pianoCancellazione([
+        { codice: 'AAAA-2222', membro: true, proprietario: true, vice: 'u-2' },
+        { codice: 'DDDD-5555', membro: true, proprietario: true, vice: '' },
+      ]);
+      ok('senza secondo capogruppo, quel campo ferma tutto', p5.bloccata.join() === S.normalizza('DDDD-5555') && p5.daCedere.length === 1);
     }
 
     // ---------- Il menu quando non sei in nessun campo ----------

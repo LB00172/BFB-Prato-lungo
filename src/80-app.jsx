@@ -156,6 +156,9 @@ function App({ eredita, cambiaCampo } = {}) {
   // che la spesa esista. Non entrano nei conti: nei conti entra la spesa che
   // ne nasce, se ne nasce una (ROADMAP.md § 17).
   const [compiti, setCompiti] = useState(() => load('cambusa_compiti', []));
+  // La cassa del campo (cassa.js): gli incassi, accanto alle spese. Non
+  // entrano nei conti: dicono quanto e' entrato, non chi deve a chi.
+  const [incassi, setIncassi] = useState(() => load('cambusa_incassi', []));
   const [nuovoCompito, setNuovoCompito] = useState('');
   const [nuovoCompitoChi, setNuovoCompitoChi] = useState('');
   // Modifiche arrivate dagli altri DOPO la chiusura dei conti e respinte: non
@@ -337,7 +340,7 @@ function App({ eredita, cambiaCampo } = {}) {
   // Stato sincronizzato sempre aggiornato: serve alla fusione, che deve
   // partire dai dati di ADESSO e non da quelli di quando ci si è connessi.
   const syncStateRef = useRef(null);
-  syncStateRef.current = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi, compiti };
+  syncStateRef.current = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi, compiti, incassi };
 
   // Cronologia delle modifiche (data di ultima modifica/cancellazione per ogni
   // voce). Al primo avvio i dati già presenti restano "senza data": qualsiasi
@@ -423,6 +426,7 @@ function App({ eredita, cambiaCampo } = {}) {
   useEffect(() => salvaLocale('cambusa_freedays', freeDays), [freeDays]);
   useEffect(() => salvaLocale('cambusa_blocchi', blocchi), [blocchi]);
   useEffect(() => salvaLocale('cambusa_compiti', compiti), [compiti]);
+  useEffect(() => salvaLocale('cambusa_incassi', incassi), [incassi]);
   useEffect(() => salvaLocale('cambusa_weather', weather), [weather]);
   useEffect(() => {
     try { localStorage.setItem('cambusa_archives', JSON.stringify(archives)); }
@@ -661,6 +665,7 @@ function App({ eredita, cambiaCampo } = {}) {
     setFreeDays(giorni.freeDays);
     setBlocchi(res.state.blocchi);
     setCompiti(res.state.compiti || []);
+    setIncassi(res.state.incassi || []);
     saveMeta(res.meta);
     setTimeout(() => { suppressPushRef.current = false; }, 0);
   };
@@ -928,7 +933,10 @@ function App({ eredita, cambiaCampo } = {}) {
     if (window.CloudSync) {
       window.CloudSync.pushState({ ...st, _meta: { v: SM ? SM.VERSION : 0, rev: m.rev, del: m.del, hi: m.hi || 0 } });
     }
-  }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi]);
+  // compiti e incassi ci sono: fino al 4 ottobre «compiti» mancava, e un
+  // compito segnato da solo restava su questo telefono finche' qualcos'altro
+  // non cambiava (e2e/cassa lo guarda per tutti e due).
+  }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi, compiti, incassi]);
 
   // ---------- Rete di sicurezza della sincronizzazione ----------
   // Tre casi in cui i dati resterebbero fermi su un telefono senza che nessuno
@@ -1917,6 +1925,9 @@ function App({ eredita, cambiaCampo } = {}) {
       setSepDays(Array.isArray(d.sepDays) ? d.sepDays : []);
       setFreeDays(Array.isArray(d.freeDays) ? d.freeDays : []);
       setBlocchi(Array.isArray(d.blocchi) ? d.blocchi : []);
+      // Le copie piu' vecchie non hanno compiti e cassa: allora restano come sono.
+      if (Array.isArray(d.compiti)) setCompiti(d.compiti);
+      if (Array.isArray(d.incassi)) setIncassi(d.incassi);
       setSnapList(null);
       window.alert(L.t('ripristino.fatto'));
     } catch (e) {
@@ -2463,6 +2474,74 @@ function App({ eredita, cambiaCampo } = {}) {
     );
   };
 
+  // ---------- La cassa del campo (cassa.js) ----------
+  // Gli incassi li segna chi tiene la cassa: il capogruppo, o tutti dove non
+  // c'e' nessuno da distinguere — come la scheda delle persone.
+  const cassaModificabile = !FEATURES.rooms || !stanzaStato.stanza || admin || !!stanzaStato.capogruppo;
+  const cassaRiassunto = window.Cassa.riassunto({ incassi, members, totali: totals, fuoriConto });
+  const [nuovoIncasso, setNuovoIncasso] = useState({ chi: '', da: '', quanto: '', nota: '' });
+  const [quotaPerTutti, setQuotaPerTutti] = useState('');
+  const registraIncasso = (voce) => {
+    const quanto = posNum(voce.quanto);
+    if (quanto <= 0) { window.alert(L.t('cassa.quantoZero')); return false; }
+    if (!voce.chi && !String(voce.da || '').trim()) { window.alert(L.t('cassa.daChiManca')); return false; }
+    setIncassi((prev) => [...prev, {
+      id: uid(), chi: voce.chi || '', da: voce.chi ? '' : String(voce.da || '').trim(),
+      quanto: Math.round(quanto * 100) / 100, nota: String(voce.nota || '').trim(), at: Date.now(),
+    }]);
+    return true;
+  };
+  const addIncasso = () => {
+    if (!cassaModificabile) return;
+    if (registraIncasso(nuovoIncasso)) setNuovoIncasso({ chi: '', da: '', quanto: '', nota: '' });
+  };
+  // La quota che manca, in un tocco: e' il gesto vero, al tavolo
+  // dell'accoglienza, con la fila delle famiglie.
+  const incassaQuota = (p) => {
+    if (!cassaModificabile) return;
+    if (!window.confirm(L.t('cassa.confermaIncassa', p.name, money(p.manca)))) return;
+    registraIncasso({ chi: p.id, quanto: p.manca, nota: L.t('cassa.quota') });
+  };
+  const removeIncasso = (id) => {
+    if (!cassaModificabile) return;
+    const x = incassi.find((v) => v.id === id);
+    if (x && !window.confirm(L.t('cassa.confermaTogli', money(Number(x.quanto) || 0)))) return;
+    setIncassi((prev) => prev.filter((v) => v.id !== id));
+  };
+  // La stessa quota a tutti quelli che pagano: gli esenti dalle spese (spesso
+  // i capi) restano senza, e la si cambia a mano a chi paga di meno.
+  const applicaQuotaATutti = () => {
+    if (!cassaModificabile) return;
+    const q = posNum(quotaPerTutti);
+    if (q <= 0) { window.alert(L.t('cassa.quantoZero')); return; }
+    const chi = members.filter((m) => !m.isChild);
+    if (!window.confirm(L.t('cassa.confermaQuota', money(q), chi.length))) return;
+    setMembers((prev) => prev.map((m) => (m.isChild ? m : { ...m, quota: Math.round(q * 100) / 100 })));
+    setQuotaPerTutti('');
+  };
+  const scaricaRendiconto = () => {
+    const tipi = {};
+    for (const k of Object.keys(PURCHASE_TYPES)) tipi[k] = tipoSpesa(k);
+    const csv = window.Cassa.rendiconto({
+      riassunto: cassaRiassunto, purchases, equipment, members,
+      t: {
+        tipo: L.t('cassa.csvTipo'), data: L.t('cassa.csvData'), descrizione: L.t('cassa.csvDescrizione'), chi: L.t('cassa.csvChi'),
+        categoria: L.t('cassa.csvCategoria'), importo: L.t('cassa.csvImporto'), entrata: L.t('cassa.csvEntrata'), uscita: L.t('cassa.csvUscita'),
+        quota: L.t('cassa.csvIncasso'), attrezzatura: L.t('spesa.logisticaEAttrezzatura'), tipi,
+        totaleEntrate: L.t('cassa.entrate'), totaleUscite: L.t('cassa.uscite'), saldo: L.t('cassa.csvSaldo'), daIncassare: L.t('cassa.csvDaIncassare'),
+      },
+    });
+    // Il segno all'inizio dice al foglio di calcolo che il file e' UTF-8:
+    // senza, gli accenti arrivano rotti.
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${NOME_FILE}-rendiconto-${toDateStr(new Date())}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   // ---------- Backup (Export / Import) ----------
   const downloadJson = (filename, payload) => {
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -2477,7 +2556,7 @@ function App({ eredita, cambiaCampo } = {}) {
   const exportData = () => {
     downloadJson(`${NOME_FILE}-backup-${toDateStr(new Date())}.json`, {
       version: 6, exportedAt: new Date().toISOString(),
-      members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi, compiti, receipts,
+      members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi, compiti, incassi, receipts,
     });
     // Serve al promemoria serale per sapere che oggi è già stato fatto.
     try { localStorage.setItem(BACKUP_KEY, toDateStr(new Date())); } catch (e) { /* niente */ }
@@ -2538,6 +2617,7 @@ function App({ eredita, cambiaCampo } = {}) {
         if (Array.isArray(d.freeDays)) setFreeDays(d.freeDays);
         if (Array.isArray(d.blocchi)) setBlocchi(d.blocchi);
         if (Array.isArray(d.compiti)) setCompiti(d.compiti);
+        if (Array.isArray(d.incassi)) setIncassi(d.incassi);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert(L.t('import.nonLeggibile'));
@@ -2570,7 +2650,8 @@ function App({ eredita, cambiaCampo } = {}) {
     if (!window.confirm(L.t('campo.confermaChiusura', name, money(t.overallTotal), members.length, warn))) return;
 
     const id = toDateStr(new Date()) + '-' + uid();
-    const state = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays };
+    // Nell'archivio vanno anche compiti e cassa: prima i compiti si perdevano.
+    const state = { members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, compiti, incassi };
     const meta = {
       id,
       name,
@@ -2624,6 +2705,7 @@ function App({ eredita, cambiaCampo } = {}) {
     setSettled([]);
     setBlocchi([]);
     setCompiti([]);
+    setIncassi([]);
     setReceipts({});
     setBuying(null);
     setSelectedDateStr(defaultDateStr());
@@ -2899,6 +2981,7 @@ function App({ eredita, cambiaCampo } = {}) {
     campi: L.t('area.campi'),
     campo: L.t('area.campo'),
     panoramica: L.t('area.panoramica'),
+    cassa: L.t('area.cassa'),
   };
 
   // Le icone delle aree stanno in src/45-icone.jsx e si chiamano per nome,
@@ -2912,7 +2995,7 @@ function App({ eredita, cambiaCampo } = {}) {
     { id: 'pianificazione', title: L.t('menu.pianificazione'), items: ['calendario', 'menu', 'presenze'] },
     // "Chi fa cosa" viene PRIMA della lista, ed e' l'ordine dei fatti: ci si
     // divide i compiti, poi si compra, poi si registra la spesa.
-    { id: 'spese', title: L.t('menu.spese'), items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa'] },
+    { id: 'spese', title: L.t('menu.spese'), items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa', ...(FEATURES.cassa ? ['cassa'] : [])] },
     { id: 'gruppo', title: L.t('menu.gruppo'), items: ['membri', 'regole', 'dotazioni', 'galleria'] },
     { id: 'altro', title: L.t('menu.altro'), items: ['archivio', 'guida', 'impostazioni'] },
   ];
@@ -2991,6 +3074,7 @@ function App({ eredita, cambiaCampo } = {}) {
     { k: 'separato', title: L.t('guida.separato.titolo'), body: L.t('guida.separato.corpo') },
     { k: 'fraalcuni', title: L.t('guida.fraalcuni.titolo'), body: L.t('guida.fraalcuni.corpo') },
     { k: 'saldi', title: L.t('guida.saldi.titolo'), body: L.t('guida.saldi.corpo') },
+    ...(FEATURES.cassa ? [{ k: 'cassa', title: L.t('guida.cassa.titolo'), body: L.t('guida.cassa.corpo') }] : []),
     { k: 'dotazioni', title: L.t('guida.dotazioni.titolo'), body: L.t('guida.dotazioni.corpo') },
     { k: 'backup', title: L.t('guida.backup.titolo'), body: L.t('guida.backup.corpo') },
     { k: 'sync', title: L.t('guida.sync.titolo'), body: L.t('guida.sync.corpo') },
@@ -3328,6 +3412,10 @@ function App({ eredita, cambiaCampo } = {}) {
         {/* ---------- CALENDARIO ---------- */}
         {scheda === 'campi' && schedaCampi({ stanzaStato, account, codiceInGioco, onApri: apriCampo })}
         {scheda === 'panoramica' && FEATURES.rooms && schedaPanoramica({ account, goTo, onApri: apriCampo, stanzaStato })}
+        {scheda === 'cassa' && FEATURES.cassa && schedaCassa({
+          addIncasso, applicaQuotaATutti, cassa: cassaRiassunto, incassaQuota, members, modificabile: cassaModificabile, nuovoIncasso,
+          quotaPerTutti, removeIncasso, scaricaRendiconto, setMemberField, setNuovoIncasso, setQuotaPerTutti,
+        })}
         {scheda === 'calendario' && schedaCalendario({
           admin, apriFoglioSpesa, primiPassi, campoInCorso, capogruppo: stanzaStato.capogruppo, meteoAperto: stanzaStato.sbloccata('meteo'), fetchWeather, getDayData, getMeal, goTo, isOnline, members, presenzeOrfane, purchases, readyOk, renderWeekStrip, selectedDateStr, sepDays, sepOpen, setSepOpen, toggleSepDay, updateDayData, weather, weekDays, wxBusy,
         })}

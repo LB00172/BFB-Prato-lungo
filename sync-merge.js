@@ -39,6 +39,12 @@
     // quindi si fonde voce per voce senza niente di nuovo — due persone che
     // assegnano compiti diversi mentre sono offline non si sovrascrivono.
     ['k', 'compiti'],
+    // Gli incassi della cassa del campo (cassa.js): le quote versate e gli
+    // altri soldi entrati. Una lista con un id come le altre: due cassieri
+    // che segnano incassi diversi offline non si sovrascrivono. Dove l'app
+    // non ha la cassa (la versione privata) la lista non c'e', e non cambia
+    // niente.
+    ['i', 'incassi'],
   ];
 
   // Insiemi di chiavi (niente id: la chiave e' il valore stesso).

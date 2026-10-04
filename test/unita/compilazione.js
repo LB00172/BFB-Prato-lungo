@@ -333,6 +333,7 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     '89-scheda-campi.jsx': 0,
     // «Il campo»: uscita da Impostazioni gia' tradotta, e nata cosi'.
     '86b-scheda-campo.jsx': 0,
+    '86c-scheda-cassa.jsx': 0,
     // La Panoramica dei campi: nata col dizionario.
     '89b-scheda-panoramica.jsx': 0,
     '50-interfaccia.jsx': 0,
@@ -834,7 +835,11 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
   // Quelli che non trasportano dati dell'utente: link che l'utente apre da
   // se' o testi di documentazione nei commenti.
   const NEUTRI = ['www.garanteprivacy.it', 'support.google.com', 'console.firebase.google.com', 'www.google.com', 'maps.google.com'];
-  const privacy = fs.readFileSync(path.join(RADICE, 'privacy.html'), 'utf8');
+  // Tutte e tre le lingue: una traduzione che tace un servizio e' un'informativa
+  // falsa per chi la legge in quella lingua.
+  const privacy = ['privacy.html', 'privacy.es.html', 'privacy.fr.html']
+    .map((f) => fs.readFileSync(path.join(RADICE, f), 'utf8'))
+    .reduce((acc, t) => ({ indexOf: (x) => (acc.indexOf(x) < 0 || t.indexOf(x) < 0 ? -1 : 0) }), { indexOf: () => 0 });
   const ignoti = [...trovati].filter((h) => !(h in NOTI) && NEUTRI.indexOf(h) < 0);
   const taciuti = Object.keys(NOTI).filter((h) => trovati.has(h) && privacy.indexOf(NOTI[h]) < 0);
   ok(`l'app parla solo con servizi che l'informativa conosce (${[...trovati].sort().join(', ')})`

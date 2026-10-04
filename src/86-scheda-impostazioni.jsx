@@ -637,7 +637,8 @@ const schedaImpostazioni = ({
       </p>
       {/* L'informativa: Google Play la vuole raggiungibile anche DENTRO
           l'app, non solo nella scheda dello store (ROADMAP § 3). */}
-      <a href="./privacy.html" target="_blank" rel="noopener" className="inline-flex items-center min-h-11 text-piccolo text-carta underline">{L.t('info.privacy')}</a>
+      {/* L'informativa nella lingua dell'app: l'italiano e' l'originale. */}
+      <a href={`./privacy${L.codice === 'it' ? '' : '.' + L.codice}.html`} target="_blank" rel="noopener" className="inline-flex items-center min-h-11 text-piccolo text-carta underline">{L.t('info.privacy')}</a>
       <p className="text-minuto text-salvia/80 pt-1">{BRAND.credits}</p>
     </div>
   </div>

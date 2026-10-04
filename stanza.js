@@ -315,19 +315,28 @@
   // `stanze`: [{ codice, membro, proprietario }], da StanzaCloud.statoDi.
   // Lo stesso campo puo' arrivare due volte (dal profilo e dal telefono): si
   // conta una volta sola.
+  //
+  // Dal 4 ottobre il capogruppo non viene piu' fermato e basta: se il campo
+  // ha un secondo capogruppo, glielo lascia (`daCedere`, come «Lascia il
+  // campo»: il Pro si spegne, l'ha pagato chi se ne va) e poi se ne va. Si
+  // ferma ancora solo dove un secondo non c'e' — e allora gli si dice di
+  // nominarlo, che e' la cosa da fare, invece di un «non si puo'».
+  // Se anche UN solo campo e' bloccato non si tocca niente, nemmeno quelli
+  // da cedere: una cancellazione fatta a meta' e' peggio di nessuna.
   function pianoCancellazione(stanze) {
     const visti = {};
     const bloccata = [];
+    const daCedere = [];
     const daTogliere = [];
     (stanze || []).forEach((x) => {
       if (!x || !x.codice) return;
       const c = normalizza(x.codice);
       if (visti[c]) return;
       visti[c] = true;
-      if (x.proprietario) bloccata.push(c);
+      if (x.proprietario) (x.vice ? daCedere : bloccata).push(c);
       else if (x.membro) daTogliere.push(c);
     });
-    return { bloccata, daTogliere };
+    return { bloccata, daCedere, daTogliere };
   }
 
   // ---------- Cosa si puo' fare quando non sei in nessun campo ----------

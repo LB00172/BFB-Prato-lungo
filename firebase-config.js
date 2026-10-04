@@ -177,6 +177,7 @@ window.APP_CONFIG = {
     titolare: "Lorenzo Ballerini",
     contatto: "",   // vuoto: si prende l'indirizzo di sistema, qui sotto
     aggiornata: "4 ottobre 2026",
+    aggiornataIso: "2026-10-04",   // la stessa data, per le pagine in spagnolo e francese
   },
   features: {
     // Accese il 21 settembre: i provider Google ed Email/Password sono attivi

@@ -1,4 +1,5 @@
 /* File GENERATO dai sorgenti in src/ tramite Babel (node build.js). Non modificare a mano. */
+function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
   useState,
   useEffect,
@@ -240,7 +241,9 @@ const SEZIONE_DI = {
   g: 'sezione.dotazioni',
   s: 'sezione.saldi',
   x: 'sezione.contoSeparato',
-  f: 'sezione.giorniGratis'
+  f: 'sezione.giorniGratis',
+  k: 'sezione.compiti',
+  i: 'sezione.cassa'
 };
 const sezioneDiPath = p => {
   const parti = String(p).split('|');
@@ -312,6 +315,13 @@ const descriviPath = (p, stato) => {
       return L.t('percorso.giornoSeparato', giorno(parti[1]));
     case 'f':
       return L.t('percorso.giornoGratis', giorno(parti[1]));
+    case 'k':
+      return L.t('percorso.compito');
+    case 'i':
+      {
+        const it = (stato.incassi || []).find(x => x.id === parti[1]);
+        return L.t('percorso.incasso') + (it && it.nota ? ` "${it.nota}"` : '');
+      }
     default:
       return p;
   }
@@ -540,6 +550,7 @@ const FEATURES = {
   rooms: false,
   equipExemption: false,
   compiti: true,
+  cassa: true,
   lingue: true,
   ...(CFG.features || {})
 };
@@ -900,6 +911,8 @@ const ICONE = {
   piu: 'M12 5v14 M5 12h14',
   // La Panoramica: quattro riquadri, tanti campi.
   panoramica: 'M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z',
+  // La cassa: la scatola con la fessura per le monete.
+  cassa: 'M4 9h16v11H4z M4 9l2-4h12l2 4 M10 13h4',
   // «Il campo»: la bandierina piantata.
   campo: 'M5 21V4 M5 4h12l-2.5 4L17 12H5',
   // La spunta di un passo fatto.
@@ -1950,7 +1963,8 @@ const usaAccount = ({
   //   1. le stanze da guardare: quelle che il profilo si e' segnato, piu'
   //      quella salvata su questo telefono (che copre chi e' entrato prima
   //      che il profilo cominciasse a segnarsele);
-  //   2. se sei PROPRIETARIO anche di una sola, ci si ferma e non si tocca
+  //   2. se sei PROPRIETARIO di un campo, il campo passa al secondo
+  //      capogruppo; se un secondo non c'e', ci si ferma e non si tocca
   //      niente: il campo resterebbe senza nessuno che lo amministri o lo
   //      possa cancellare (Stanza.pianoCancellazione);
   //   3. altrimenti si toglie la tua scheda dalle stanze, poi il profilo e
@@ -1978,6 +1992,14 @@ const usaAccount = ({
           setProblema('auth.cancellaBloccata');
           setProblemaDati(piano.bloccata.map(c => S.bello(c)).join(', '));
           return false;
+        }
+        // I campi con un secondo capogruppo passano a lui, prima di tutto il
+        // resto: e' l'ordine di «Lascia il campo» (prima il passaggio, poi
+        // la propria scheda), e si chiede prima di farlo.
+        if (piano.daCedere.length) {
+          const quali = piano.daCedere.map(c => S.bello(c)).join(', ');
+          if (typeof window !== 'undefined' && window.confirm && !window.confirm(L.t('auth.confermaCedi', quali))) return false;
+          for (const c of piano.daCedere) await sc.lasciaAllAiutante(c, utente);
         }
         await sc.togliMe(piano.daTogliere, utente);
       }
@@ -3152,6 +3174,9 @@ function App({
   // che la spesa esista. Non entrano nei conti: nei conti entra la spesa che
   // ne nasce, se ne nasce una (ROADMAP.md § 17).
   const [compiti, setCompiti] = useState(() => load('cambusa_compiti', []));
+  // La cassa del campo (cassa.js): gli incassi, accanto alle spese. Non
+  // entrano nei conti: dicono quanto e' entrato, non chi deve a chi.
+  const [incassi, setIncassi] = useState(() => load('cambusa_incassi', []));
   const [nuovoCompito, setNuovoCompito] = useState('');
   const [nuovoCompitoChi, setNuovoCompitoChi] = useState('');
   // Modifiche arrivate dagli altri DOPO la chiusura dei conti e respinte: non
@@ -3370,7 +3395,8 @@ function App({
     sepDays,
     freeDays,
     blocchi,
-    compiti
+    compiti,
+    incassi
   };
 
   // Cronologia delle modifiche (data di ultima modifica/cancellazione per ogni
@@ -3485,6 +3511,7 @@ function App({
   useEffect(() => salvaLocale('cambusa_freedays', freeDays), [freeDays]);
   useEffect(() => salvaLocale('cambusa_blocchi', blocchi), [blocchi]);
   useEffect(() => salvaLocale('cambusa_compiti', compiti), [compiti]);
+  useEffect(() => salvaLocale('cambusa_incassi', incassi), [incassi]);
   useEffect(() => salvaLocale('cambusa_weather', weather), [weather]);
   useEffect(() => {
     try {
@@ -3732,6 +3759,7 @@ function App({
     setFreeDays(giorni.freeDays);
     setBlocchi(res.state.blocchi);
     setCompiti(res.state.compiti || []);
+    setIncassi(res.state.incassi || []);
     saveMeta(res.meta);
     setTimeout(() => {
       suppressPushRef.current = false;
@@ -4019,7 +4047,10 @@ function App({
         }
       });
     }
-  }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi]);
+    // compiti e incassi ci sono: fino al 4 ottobre «compiti» mancava, e un
+    // compito segnato da solo restava su questo telefono finche' qualcos'altro
+    // non cambiava (e2e/cassa lo guarda per tutti e due).
+  }, [members, campData, purchases, gear, settled, equipment, toBuy, sepDays, freeDays, blocchi, compiti, incassi]);
 
   // ---------- Rete di sicurezza della sincronizzazione ----------
   // Tre casi in cui i dati resterebbero fermi su un telefono senza che nessuno
@@ -5330,6 +5361,9 @@ function App({
       setSepDays(Array.isArray(d.sepDays) ? d.sepDays : []);
       setFreeDays(Array.isArray(d.freeDays) ? d.freeDays : []);
       setBlocchi(Array.isArray(d.blocchi) ? d.blocchi : []);
+      // Le copie piu' vecchie non hanno compiti e cassa: allora restano come sono.
+      if (Array.isArray(d.compiti)) setCompiti(d.compiti);
+      if (Array.isArray(d.incassi)) setIncassi(d.incassi);
       setSnapList(null);
       window.alert(L.t('ripristino.fatto'));
     } catch (e) {
@@ -5892,6 +5926,125 @@ function App({
     }, L.t('saldi.legenda')));
   };
 
+  // ---------- La cassa del campo (cassa.js) ----------
+  // Gli incassi li segna chi tiene la cassa: il capogruppo, o tutti dove non
+  // c'e' nessuno da distinguere — come la scheda delle persone.
+  const cassaModificabile = !FEATURES.rooms || !stanzaStato.stanza || admin || !!stanzaStato.capogruppo;
+  const cassaRiassunto = window.Cassa.riassunto({
+    incassi,
+    members,
+    totali: totals,
+    fuoriConto
+  });
+  const [nuovoIncasso, setNuovoIncasso] = useState({
+    chi: '',
+    da: '',
+    quanto: '',
+    nota: ''
+  });
+  const [quotaPerTutti, setQuotaPerTutti] = useState('');
+  const registraIncasso = voce => {
+    const quanto = posNum(voce.quanto);
+    if (quanto <= 0) {
+      window.alert(L.t('cassa.quantoZero'));
+      return false;
+    }
+    if (!voce.chi && !String(voce.da || '').trim()) {
+      window.alert(L.t('cassa.daChiManca'));
+      return false;
+    }
+    setIncassi(prev => [...prev, {
+      id: uid(),
+      chi: voce.chi || '',
+      da: voce.chi ? '' : String(voce.da || '').trim(),
+      quanto: Math.round(quanto * 100) / 100,
+      nota: String(voce.nota || '').trim(),
+      at: Date.now()
+    }]);
+    return true;
+  };
+  const addIncasso = () => {
+    if (!cassaModificabile) return;
+    if (registraIncasso(nuovoIncasso)) setNuovoIncasso({
+      chi: '',
+      da: '',
+      quanto: '',
+      nota: ''
+    });
+  };
+  // La quota che manca, in un tocco: e' il gesto vero, al tavolo
+  // dell'accoglienza, con la fila delle famiglie.
+  const incassaQuota = p => {
+    if (!cassaModificabile) return;
+    if (!window.confirm(L.t('cassa.confermaIncassa', p.name, money(p.manca)))) return;
+    registraIncasso({
+      chi: p.id,
+      quanto: p.manca,
+      nota: L.t('cassa.quota')
+    });
+  };
+  const removeIncasso = id => {
+    if (!cassaModificabile) return;
+    const x = incassi.find(v => v.id === id);
+    if (x && !window.confirm(L.t('cassa.confermaTogli', money(Number(x.quanto) || 0)))) return;
+    setIncassi(prev => prev.filter(v => v.id !== id));
+  };
+  // La stessa quota a tutti quelli che pagano: gli esenti dalle spese (spesso
+  // i capi) restano senza, e la si cambia a mano a chi paga di meno.
+  const applicaQuotaATutti = () => {
+    if (!cassaModificabile) return;
+    const q = posNum(quotaPerTutti);
+    if (q <= 0) {
+      window.alert(L.t('cassa.quantoZero'));
+      return;
+    }
+    const chi = members.filter(m => !m.isChild);
+    if (!window.confirm(L.t('cassa.confermaQuota', money(q), chi.length))) return;
+    setMembers(prev => prev.map(m => m.isChild ? m : {
+      ...m,
+      quota: Math.round(q * 100) / 100
+    }));
+    setQuotaPerTutti('');
+  };
+  const scaricaRendiconto = () => {
+    const tipi = {};
+    for (const k of Object.keys(PURCHASE_TYPES)) tipi[k] = tipoSpesa(k);
+    const csv = window.Cassa.rendiconto({
+      riassunto: cassaRiassunto,
+      purchases,
+      equipment,
+      members,
+      t: {
+        tipo: L.t('cassa.csvTipo'),
+        data: L.t('cassa.csvData'),
+        descrizione: L.t('cassa.csvDescrizione'),
+        chi: L.t('cassa.csvChi'),
+        categoria: L.t('cassa.csvCategoria'),
+        importo: L.t('cassa.csvImporto'),
+        entrata: L.t('cassa.csvEntrata'),
+        uscita: L.t('cassa.csvUscita'),
+        quota: L.t('cassa.csvIncasso'),
+        attrezzatura: L.t('spesa.logisticaEAttrezzatura'),
+        tipi,
+        totaleEntrate: L.t('cassa.entrate'),
+        totaleUscite: L.t('cassa.uscite'),
+        saldo: L.t('cassa.csvSaldo'),
+        daIncassare: L.t('cassa.csvDaIncassare')
+      }
+    });
+    // Il segno all'inizio dice al foglio di calcolo che il file e' UTF-8:
+    // senza, gli accenti arrivano rotti.
+    const blob = new Blob(['\ufeff' + csv], {
+      type: 'text/csv;charset=utf-8'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${NOME_FILE}-rendiconto-${toDateStr(new Date())}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   // ---------- Backup (Export / Import) ----------
   const downloadJson = (filename, payload) => {
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -5919,6 +6072,7 @@ function App({
       freeDays,
       blocchi,
       compiti,
+      incassi,
       receipts
     });
     // Serve al promemoria serale per sapere che oggi è già stato fatto.
@@ -5978,6 +6132,7 @@ function App({
         if (Array.isArray(d.freeDays)) setFreeDays(d.freeDays);
         if (Array.isArray(d.blocchi)) setBlocchi(d.blocchi);
         if (Array.isArray(d.compiti)) setCompiti(d.compiti);
+        if (Array.isArray(d.incassi)) setIncassi(d.incassi);
         if (d.receipts && typeof d.receipts === 'object') setReceipts(d.receipts);
       } catch (err) {
         window.alert(L.t('import.nonLeggibile'));
@@ -6007,6 +6162,7 @@ function App({
     const warn = unpaid.length > 0 ? L.t('campo.rimborsiAperti', unpaid.length) : '';
     if (!window.confirm(L.t('campo.confermaChiusura', name, money(t.overallTotal), members.length, warn))) return;
     const id = toDateStr(new Date()) + '-' + uid();
+    // Nell'archivio vanno anche compiti e cassa: prima i compiti si perdevano.
     const state = {
       members,
       campData,
@@ -6016,7 +6172,9 @@ function App({
       equipment,
       toBuy,
       sepDays,
-      freeDays
+      freeDays,
+      compiti,
+      incassi
     };
     const meta = {
       id,
@@ -6079,6 +6237,7 @@ function App({
     setSettled([]);
     setBlocchi([]);
     setCompiti([]);
+    setIncassi([]);
     setReceipts({});
     setBuying(null);
     setSelectedDateStr(defaultDateStr());
@@ -6379,7 +6538,8 @@ function App({
     impostazioni: L.t('area.impostazioni'),
     campi: L.t('area.campi'),
     campo: L.t('area.campo'),
-    panoramica: L.t('area.panoramica')
+    panoramica: L.t('area.panoramica'),
+    cassa: L.t('area.cassa')
   };
 
   // Le icone delle aree stanno in src/45-icone.jsx e si chiamano per nome,
@@ -6399,7 +6559,7 @@ function App({
   {
     id: 'spese',
     title: L.t('menu.spese'),
-    items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa']
+    items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa', ...(FEATURES.cassa ? ['cassa'] : [])]
   }, {
     id: 'gruppo',
     title: L.t('menu.gruppo'),
@@ -6520,7 +6680,11 @@ function App({
     k: 'saldi',
     title: L.t('guida.saldi.titolo'),
     body: L.t('guida.saldi.corpo')
-  }, {
+  }, ...(FEATURES.cassa ? [{
+    k: 'cassa',
+    title: L.t('guida.cassa.titolo'),
+    body: L.t('guida.cassa.corpo')
+  }] : []), {
     k: 'dotazioni',
     title: L.t('guida.dotazioni.titolo'),
     body: L.t('guida.dotazioni.corpo')
@@ -6813,6 +6977,20 @@ function App({
     goTo,
     onApri: apriCampo,
     stanzaStato
+  }), scheda === 'cassa' && FEATURES.cassa && schedaCassa({
+    addIncasso,
+    applicaQuotaATutti,
+    cassa: cassaRiassunto,
+    incassaQuota,
+    members,
+    modificabile: cassaModificabile,
+    nuovoIncasso,
+    quotaPerTutti,
+    removeIncasso,
+    scaricaRendiconto,
+    setMemberField,
+    setNuovoIncasso,
+    setQuotaPerTutti
   }), scheda === 'calendario' && schedaCalendario({
     admin,
     apriFoglioSpesa,
@@ -9505,7 +9683,7 @@ const CAPITOLI_GUIDA = [{
 }, {
   id: 'conti',
   titolo: 'guida.cap.conti',
-  voci: ['spesa', 'conti', 'separato', 'fraalcuni', 'saldi']
+  voci: ['spesa', 'conti', 'separato', 'fraalcuni', 'saldi', 'cassa']
 }, {
   id: 'dati',
   titolo: 'guida.cap.dati',
@@ -10192,7 +10370,7 @@ const schedaImpostazioni = ({
 }, swVersion || '—')), /*#__PURE__*/React.createElement("p", {
   className: "text-piccolo text-carta/70 leading-snug"
 }, L.t('info.aggiornamento')), /*#__PURE__*/React.createElement("a", {
-  href: "./privacy.html",
+  href: `./privacy${L.codice === 'it' ? '' : '.' + L.codice}.html`,
   target: "_blank",
   rel: "noopener",
   className: "inline-flex items-center min-h-11 text-piccolo text-carta underline"
@@ -10572,6 +10750,227 @@ const schedaCampo = ({
   }, L.t('stanza.esci')), stanzaStato.problema && /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo font-bold text-red-700 leading-snug"
   }, L.t(stanzaStato.problema)));
+};
+// ---------- La cassa del campo (4 ottobre) ----------
+// Le entrate accanto alle uscite: le quote previste e versate, gli altri
+// soldi entrati, quanto si e' speso, quanto avanza, e il rendiconto per il
+// tesoriere. Le regole stanno in cassa.js; qui si disegna e basta.
+//
+// Gli incassi li segna il capogruppo (chi tiene la cassa); gli altri leggono.
+// Come per la scheda delle persone, e' una cortesia dell'interfaccia: la
+// serratura dei dati del campo e' quella di sempre.
+const schedaCassa = ({
+  addIncasso,
+  applicaQuotaATutti,
+  cassa,
+  incassaQuota,
+  members,
+  modificabile,
+  nuovoIncasso,
+  quotaPerTutti,
+  removeIncasso,
+  scaricaRendiconto,
+  setMemberField,
+  setNuovoIncasso,
+  setQuotaPerTutti
+}) => {
+  const r = cassa;
+  const nome = id => (members.find(m => m.id === id) || {}).name || L.t('cassa.exMembro');
+  const casella = 'w-full p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco';
+  const etichetta = 'block text-minuto uppercase font-bold tracking-wide text-gray-500 mb-1';
+  const riga = (chiave, valore, tono, dati) => /*#__PURE__*/React.createElement("div", _extends({}, dati, {
+    className: "flex justify-between items-center bg-carta/60 px-3 py-2 rounded border border-salvia/20"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-piccolo uppercase font-bold text-gray-500"
+  }, L.t(chiave)), /*#__PURE__*/React.createElement("span", {
+    className: `font-bold ${tono || 'text-bosco'}`
+  }, money(valore), " \u20AC"));
+  return /*#__PURE__*/React.createElement("div", {
+    "data-scheda": "cassa",
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-cassa-riepilogo": true,
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
+  }, L.t('cassa.titolo')), /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500 leading-snug"
+  }, L.t('cassa.spiega')), riga('cassa.entrate', r.entrate, 'text-bosco', {
+    'data-entrate': r.entrate
+  }), riga('cassa.uscite', r.uscite, 'text-legno', {
+    'data-uscite': r.uscite
+  }), r.fuori > 0.005 && /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug -mt-1 px-1"
+  }, L.t('cassa.diCuiFuori', money(r.fuori))), /*#__PURE__*/React.createElement("div", {
+    "data-saldo": r.saldo,
+    className: `p-3 rounded border flex justify-between items-center ${r.saldo < -0.005 ? 'bg-fuoco/10 border-fuoco/40' : 'bg-bosco/10 border-bosco/20'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-piccolo uppercase"
+  }, L.t(r.saldo < -0.005 ? 'cassa.mancano' : 'cassa.avanzo')), /*#__PURE__*/React.createElement("span", {
+    className: `font-rustic font-bold text-grande ${r.saldo < -0.005 ? 'text-fuoco' : 'text-bosco'}`
+  }, money(Math.abs(r.saldo)), " \u20AC")), r.daIncassare > 0.005 && /*#__PURE__*/React.createElement("p", {
+    "data-da-incassare": true,
+    className: "text-piccolo text-legno leading-snug"
+  }, frase('cassa.daIncassare', money(r.daIncassare), money(Math.abs(r.saldoAtteso)), r.saldoAtteso < -0.005))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
+  }, L.t('cassa.quoteTitolo')), modificabile && members.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 items-end"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "flex-grow"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: etichetta
+  }, L.t('cassa.quotaUguale')), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "0",
+    step: "0.01",
+    inputMode: "decimal",
+    "data-cifra-tutti": true,
+    value: quotaPerTutti,
+    onChange: e => setQuotaPerTutti(e.target.value),
+    placeholder: money(0),
+    className: casella
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: applicaQuotaATutti,
+    className: bottone('secondario', 'normale', 'shrink-0')
+  }, L.t('cassa.applica'))), members.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-normale text-gray-400 italic"
+  }, L.t('cassa.senzaMembri')) : /*#__PURE__*/React.createElement("ul", {
+    className: "divide-y divide-salvia/25"
+  }, r.persone.map(p => {
+    const m = members.find(x => x.id === p.id) || {};
+    return /*#__PURE__*/React.createElement("li", {
+      key: p.id,
+      "data-persona-cassa": p.name,
+      className: "py-1.5 flex items-center gap-2 min-h-11"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex-grow min-w-0 leading-tight"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold text-normale text-bosco truncate block"
+    }, p.name), /*#__PURE__*/React.createElement("span", {
+      className: "text-minuto text-gray-500"
+    }, p.previsto > 0 ? L.t('cassa.statoQuota', money(p.versato), money(p.previsto), p.manca > 0.005 ? money(p.manca) : null) : p.versato > 0 ? L.t('cassa.versatoSenzaQuota', money(p.versato)) : L.t('cassa.senzaQuota'))), modificabile && /*#__PURE__*/React.createElement("input", {
+      type: "number",
+      min: "0",
+      step: "0.01",
+      inputMode: "decimal",
+      "data-cifra-persona": true,
+      "aria-label": L.t('cassa.quotaDi', p.name),
+      value: m.quota == null ? '' : m.quota,
+      onChange: e => setMemberField(p.id, 'quota', e.target.value === '' ? undefined : e.target.value),
+      placeholder: L.t('cassa.quota'),
+      className: "w-20 shrink-0 px-2 py-1.5 bg-carta/50 border border-salvia/30 rounded text-piccolo text-right focus:outline-none focus:border-bosco"
+    }), modificabile && p.manca > 0.005 && /*#__PURE__*/React.createElement("button", {
+      "data-incassa": p.name,
+      onClick: () => incassaQuota(p),
+      className: bottone('primario', 'minuscolo', 'shrink-0')
+    }, L.t('cassa.incassa', money(p.manca))), p.previsto > 0 && p.manca <= 0.005 && /*#__PURE__*/React.createElement("span", {
+      className: "text-minuto font-bold uppercase text-bosco shrink-0",
+      "data-pagata": true
+    }, L.t('cassa.pagata')));
+  }))), modificabile && /*#__PURE__*/React.createElement("div", {
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
+  }, L.t('cassa.registraTitolo')), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("span", {
+    className: etichetta
+  }, L.t('cassa.daChi')), /*#__PURE__*/React.createElement("select", {
+    "data-incasso-chi": true,
+    value: nuovoIncasso.chi,
+    onChange: e => setNuovoIncasso(x => ({
+      ...x,
+      chi: e.target.value
+    })),
+    className: casella
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, L.t('cassa.altro')), members.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m.id,
+    value: m.id
+  }, m.name)))), /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("span", {
+    className: etichetta
+  }, L.t('cassa.quanto')), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "0",
+    step: "0.01",
+    inputMode: "decimal",
+    "data-incasso-quanto": true,
+    value: nuovoIncasso.quanto,
+    onChange: e => setNuovoIncasso(x => ({
+      ...x,
+      quanto: e.target.value
+    })),
+    placeholder: money(0),
+    className: casella
+  }))), !nuovoIncasso.chi && /*#__PURE__*/React.createElement("label", {
+    className: "block"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: etichetta
+  }, L.t('cassa.chiAltro')), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    "data-incasso-da": true,
+    value: nuovoIncasso.da,
+    onChange: e => setNuovoIncasso(x => ({
+      ...x,
+      da: e.target.value
+    })),
+    placeholder: L.t('cassa.chiAltroSegno'),
+    className: casella
+  })), /*#__PURE__*/React.createElement("label", {
+    className: "block"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: etichetta
+  }, L.t('cassa.nota')), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    "data-incasso-nota": true,
+    value: nuovoIncasso.nota,
+    onChange: e => setNuovoIncasso(x => ({
+      ...x,
+      nota: e.target.value
+    })),
+    placeholder: L.t('cassa.notaSegno'),
+    className: casella
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: addIncasso,
+    className: bottone('primario', 'normale', 'w-full')
+  }, L.t('cassa.registra'))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-2"
+  }, L.t('cassa.incassiTitolo', r.incassi.length)), r.incassi.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-normale text-gray-400 italic"
+  }, L.t('cassa.nessunIncasso')) : /*#__PURE__*/React.createElement("ul", {
+    className: "divide-y divide-salvia/25"
+  }, r.incassi.map(x => /*#__PURE__*/React.createElement("li", {
+    key: x.id,
+    "data-incasso": x.id,
+    className: "py-1.5 flex items-center gap-2 min-h-11"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-grow min-w-0 leading-tight"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-normale text-bosco truncate block"
+  }, x.chi ? nome(x.chi) : x.da || L.t('cassa.altro')), /*#__PURE__*/React.createElement("span", {
+    className: "text-minuto text-gray-500 truncate block"
+  }, [x.nota, x.at ? L.data(new Date(x.at), 'breve') : ''].filter(Boolean).join(' · '))), /*#__PURE__*/React.createElement("span", {
+    className: "font-rustic font-bold text-bosco shrink-0"
+  }, money(Number(x.quanto) || 0), " \u20AC"), modificabile && /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeIncasso(x.id),
+    "aria-label": L.t('cassa.togli'),
+    className: bottoneSottile('distruttivo')
+  }, icona('togli', 'w-4 h-4')))))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
+  }, L.t('cassa.rendicontoTitolo')), /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500 leading-snug"
+  }, L.t('cassa.rendicontoSpiega')), /*#__PURE__*/React.createElement("button", {
+    "data-rendiconto": true,
+    onClick: scaricaRendiconto,
+    className: bottone('secondario', 'normale', 'w-full')
+  }, L.t('cassa.scarica'))));
 };
 // ---------- Scheda "Chi fa cosa": i compiti assegnati ----------
 //

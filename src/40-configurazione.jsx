@@ -22,7 +22,7 @@ const BRAND = {
 // diciannove le schermate (ROADMAP.md § 18). L'italiano resta la lingua
 // predefinita — si cambia da Impostazioni, e la scelta resta sul telefono.
 // Quello che scrive l'utente (nomi, menu', spese) non si traduce mai.
-const FEATURES = { auth: false, rooms: false, equipExemption: false, compiti: true, lingue: true, ...(CFG.features || {}) };
+const FEATURES = { auth: false, rooms: false, equipExemption: false, compiti: true, cassa: true, lingue: true, ...(CFG.features || {}) };
 const LINGUA_KEY = 'cambusa_lingua';
 // Quali gruppi del menu sono aperti, su questo telefono.
 const MENU_GRUPPI_KEY = 'cambusa_menu_gruppi';

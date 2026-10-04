@@ -56,10 +56,11 @@
     <li><strong>Se entri col solo codice</strong>: un identificativo anonimo
       generato da Firebase. Nessun nome, nessun indirizzo.</li>
     <li><strong>I dati del campo</strong>, che scrivono i membri: i nomi dei
-      partecipanti (e se sono adulti o bambini), le presenze ai pasti, le
-      spese (importo, chi ha pagato, quando), i menù, le liste, i compiti, le
-      foto degli scontrini e della galleria. Li vedono <strong>solo i membri
-      di quel campo</strong>.</li>
+      partecipanti (e chi è esente dalle spese), le presenze ai pasti, le
+      spese (importo, chi ha pagato, quando, e fra chi si dividono), i menù,
+      le liste, i compiti, la cassa (le quote e gli incassi), le foto degli
+      scontrini e della galleria. Li vedono <strong>solo i membri di quel
+      campo</strong>.</li>
     <li><strong>La scheda di ogni persona</strong>, se qualcuno la compila:
       nome, cognome, email e telefono, e i dati per farsi rimborsare (IBAN,
       Satispay o PayPal). Sono tutti facoltativi. La compilano la persona
@@ -107,8 +108,9 @@
   Si cancellano il tuo profilo, il tuo posto nei campi dove sei entrato e
   l'account. Le spese e le presenze che hai scritto <strong>restano al
   campo</strong>, perché sono i conti del gruppo — come i messaggi in una chat
-  di gruppo. Se sei il proprietario di un campo, prima va ceduto a qualcun
-  altro o cancellato: altrimenti resterebbe senza nessuno che lo possa
+  di gruppo. Se sei il capogruppo di un campo, il campo passa al secondo
+  capogruppo; se un secondo capogruppo non c'è, va nominato prima, in «Il
+  campo»: altrimenti il campo resterebbe senza nessuno che lo possa
   amministrare.</p>
   <p>Senza l'app: <a href="cancella-account.html">chiedi la cancellazione qui</a>.</p>
 
@@ -131,7 +133,9 @@
   (function () {
     var p = (window.APP_CONFIG && window.APP_CONFIG.privacy) || {};
     document.querySelectorAll('[data-campo]').forEach(function (el) {
-      var v = p[el.getAttribute('data-campo')];
+      var k = el.getAttribute('data-campo');
+      var v = p[k];
+      if (k === 'aggiornata' && p.aggiornataIso) { try { v = new Date(p.aggiornataIso + 'T12:00:00').toLocaleDateString('it', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { /* resta quella scritta */ } }
       if (v) { el.textContent = v; return; }
       el.textContent = 'da completare';
       el.className = 'manca';

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camp Ops · Supprimer le compte</title>
+  <link href="vendor/fonts.css" rel="stylesheet">
+  <!-- La pagina web per chiedere la cancellazione dell'account: Google Play
+       la vuole IN AGGIUNTA al percorso dentro l'app, per chi l'app non ce
+       l'ha piu' (ROADMAP § 3). Contatto letto da firebase-config.js. -->
+  <style>
+    :root { --carta: #FAF0D8; --scheda: #FFFBF0; --bosco: #00494A; --legno: #7A4A2A; --testo: #1f2a29; }
+    @media (prefers-color-scheme: dark) {
+      :root { --carta: #0E1A1A; --scheda: #142524; --bosco: #A9C2BC; --legno: #D7A878; --testo: #E4EDE4; }
+    }
+    body { margin: 0; background: var(--carta); color: var(--testo); font-family: 'Courier Prime', monospace; line-height: 1.55; }
+    main { max-width: 680px; margin: 0 auto; padding: 28px 18px 60px; }
+    h1 { font-family: 'Special Elite', system-ui, sans-serif; color: var(--bosco); font-size: 26px; margin: 0 0 4px; }
+    h2 { font-family: 'Special Elite', system-ui, sans-serif; color: var(--bosco); font-size: 19px; margin: 30px 0 8px; }
+    .scheda { background: var(--scheda); border: 2px solid color-mix(in srgb, var(--bosco) 20%, transparent); border-radius: 8px; padding: 14px 16px; }
+    .nota { color: var(--legno); font-size: 14px; }
+    .manca { color: #B91C1C; font-weight: bold; }
+    a { color: var(--bosco); }
+    ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Supprimer le compte</h1>
+  <p class="nota">Camp Ops</p>
+
+  <h2>Si tu as l'application</h2>
+  <div class="scheda">
+    <p>Ouvre <strong>Réglages → Compte → Supprimer le compte</strong>. C'est
+    immédiat : ton profil, ta place dans les camps où tu es entré et le
+    compte sont supprimés.</p>
+  </div>
+
+  <h2>Si tu n'as plus l'application</h2>
+  <p>Écris à <span data-campo="contatto"></span> <strong>depuis l'adresse
+  e-mail de ton compte</strong>, en demandant la suppression. Il faut cette
+  adresse : c'est la seule façon de savoir que la demande vient vraiment de
+  toi. Nous la faisons dans les 30 jours et nous te répondons quand c'est
+  fait.</p>
+
+  <h2>Ce qui s'efface, et ce qui reste</h2>
+  <ul>
+    <li><strong>S'effacent</strong> : ton profil (prénom, nom, adresse), ta
+      place dans les camps où tu es entré, le compte.</li>
+    <li><strong>Restent au camp</strong> les dépenses et les présences que tu
+      as écrites : ce sont les comptes du groupe, comme les messages dans une
+      discussion de groupe. C'est qui administre le camp qui les efface, en
+      supprimant le camp.</li>
+    <li>Si tu es le <strong>chef de groupe</strong> d'un camp, le camp passe
+      au second chef de groupe ; s'il n'y en a pas, il faut le nommer avant,
+      dans « Le camp » : sinon le camp resterait sans personne pour
+      l'administrer.</li>
+  </ul>
+
+  <p><a href="privacy.fr.html">La politique de confidentialité</a></p>
+</main>
+<script src="firebase-config.js"></script>
+<script>
+  // Titolare, contatto e data vengono da firebase-config.js: scritti in un
+  // posto solo. Un contatto che manca si dice in rosso invece di inventarlo.
+  (function () {
+    var p = (window.APP_CONFIG && window.APP_CONFIG.privacy) || {};
+    document.querySelectorAll('[data-campo]').forEach(function (el) {
+      var k = el.getAttribute('data-campo');
+      var v = p[k];
+      if (k === 'aggiornata' && p.aggiornataIso) { try { v = new Date(p.aggiornataIso + 'T12:00:00').toLocaleDateString('fr', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { /* resta quella scritta */ } }
+      if (v) { el.textContent = v; return; }
+      el.textContent = 'à compléter';
+      el.className = 'manca';
+    });
+    var c = document.querySelector('[data-campo="contatto"]');
+    if (p.contatto && c) { c.innerHTML = ''; var a = document.createElement('a'); a.href = 'mailto:' + p.contatto; a.textContent = p.contatto; c.appendChild(a); }
+  })();
+</script>
+</body>
+</html>

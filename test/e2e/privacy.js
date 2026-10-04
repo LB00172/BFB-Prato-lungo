@@ -38,6 +38,24 @@ const IT = globalThis.Lingue.DIZIONARI.it;
   ok('e anche lei descrive il bottone vero', canc.toLowerCase().indexOf(IT['auth.cancellaAccount'].toLowerCase()) >= 0);
   ok('e rimanda all\'informativa', (await page.locator('a[href="privacy.html"]').count()) === 1);
 
+  // ---------- Spagnolo e francese ----------
+  // Le traduzioni descrivono gli stessi tasti, coi nomi che l'app usa in
+  // quella lingua: se il dizionario cambia, l'informativa tradotta deve
+  // cambiare con lui.
+  for (const [c, pagina, canc] of [['es', '/privacy.es.html', '/cancella-account.es.html'], ['fr', '/privacy.fr.html', '/cancella-account.fr.html']]) {
+    const D = globalThis.Lingue.DIZIONARI[c];
+    await page.goto(URL_APP + pagina, { waitUntil: 'load' });
+    const t = await page.locator('main').innerText();
+    const percorso = [D['area.impostazioni'], D['auth.titolo'], D['auth.cancellaAccount']].join(' → ');
+    ok(`l'informativa in ${c} descrive il percorso vero («${percorso}»)`, t.toLowerCase().indexOf(percorso.toLowerCase()) >= 0);
+    const esporta = [D['area.spesa'], D['spesa.dati'], D['backup.esporta']].join(' → ');
+    ok(`e quello per esportare («${esporta}»)`, t.toLowerCase().indexOf(esporta.toLowerCase()) >= 0);
+    const data = (t.match(/\d{1,2} [^\n]{0,15}2026/) || [''])[0];
+    ok(`e la data nella sua lingua (${data})`, !!data && !/ottobre/.test(data));
+    await page.goto(URL_APP + canc, { waitUntil: 'load' });
+    ok(`la pagina di cancellazione in ${c} descrive il tasto vero`, (await page.locator('main').innerText()).toLowerCase().indexOf(D['auth.cancellaAccount'].toLowerCase()) >= 0);
+  }
+
   // ---------- Dentro l'app ----------
   // Google la vuole raggiungibile anche dall'app, non solo dallo store.
   await page.goto(URL_APP + '/index.html', { waitUntil: 'load' });
@@ -45,6 +63,14 @@ const IT = globalThis.Lingue.DIZIONARI.it;
   await menu('Impostazioni');
   ok('dalle Impostazioni si arriva all\'informativa',
     (await page.locator('main a[href="./privacy.html"]').count()) === 1);
+  // In spagnolo il link porta all'informativa in spagnolo.
+  await page.evaluate(() => localStorage.setItem('cambusa_lingua', 'es'));
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
+  await menu(globalThis.Lingue.DIZIONARI.es['area.impostazioni']);
+  await page.waitForSelector('main a[href^="./privacy"]', { timeout: 20000 });
+  ok('con l\'app in spagnolo, l\'informativa è quella in spagnolo',
+    (await page.locator('main a[href="./privacy.es.html"]').count()) === 1 && (await page.locator('main a[href="./privacy.html"]').count()) === 0);
 
   ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
   await browser.close();

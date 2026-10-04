@@ -69,9 +69,31 @@ const chiamate = (page) => page.evaluate(() => ({
     const c = await chiamate(page);
     ok('il proprietario di un campo NON perde l\'account', c.auth.indexOf('cancella') < 0);
     ok('e nemmeno le schede nelle altre stanze', !c.stanza.some((x) => x.che === 'togliMe'));
-    ok('e gli si dice di quale campo e\' proprietario, e cosa fare',
-      /proprietario di TS9N-TC43/i.test(await page.locator('main').innerText()));
+    ok('e gli si dice di quale campo e\' capogruppo, e che serve un secondo',
+      /capogruppo di TS9N-TC43/i.test(await page.locator('main').innerText()) && /secondo capogruppo/i.test(await page.locator('main').innerText()));
     ok('la stanza resta sul telefono', c.salvata === CODICE);
+    await browser.close();
+  }
+
+  // ---------- 2-bis. Da capogruppo con un secondo: il campo passa a lui ----------
+  // Dal 4 ottobre il capogruppo non viene piu' fermato e basta: se c'e' un
+  // secondo capogruppo, il campo passa a lui (come «Lascia il campo»), poi
+  // si toglie la scheda e si cancella l'account. In quest'ordine.
+  {
+    const { browser, page, menu, errori } = await apri({
+      initScript: [ingressoFinto, { utente: REGISTRATO, stanza: CODICE, proprietario: true, vice: 'u-2' }],
+    });
+    await menu('Impostazioni');
+    await page.locator('main button', { hasText: BOTTONE }).first().click();
+    await page.waitForFunction(() => window.__auth.chiamate.indexOf('cancella') >= 0, null, { timeout: 8000 }).catch(() => {});
+    const c = await chiamate(page);
+    const ceduto = c.stanza.find((x) => x.che === 'lasciaAllAiutante');
+    ok('col secondo capogruppo il campo passa a lui', !!ceduto && ceduto.codice.replace(/-/g, '') === CODICE.replace(/-/g, '') && ceduto.uid === 'u-1');
+    ok(`prima si cede, poi si toglie la scheda, poi l'account (${c.ordine.join(' → ')})`,
+      c.ordine.indexOf('lasciaAllAiutante') >= 0 && c.ordine.indexOf('lasciaAllAiutante') < c.ordine.indexOf('cancella')
+      && (c.ordine.indexOf('togliMe') < 0 || c.ordine.indexOf('lasciaAllAiutante') < c.ordine.indexOf('togliMe')));
+    ok('e l\'account si cancella', c.auth.indexOf('cancella') >= 0);
+    ok('nessun errore JavaScript' + (errori.length ? ': ' + errori.join(' | ') : ''), errori.length === 0);
     await browser.close();
   }
 

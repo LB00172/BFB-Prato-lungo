@@ -117,7 +117,8 @@ const usaAccount = ({ scegliLingua } = {}) => {
   //   1. le stanze da guardare: quelle che il profilo si e' segnato, piu'
   //      quella salvata su questo telefono (che copre chi e' entrato prima
   //      che il profilo cominciasse a segnarsele);
-  //   2. se sei PROPRIETARIO anche di una sola, ci si ferma e non si tocca
+  //   2. se sei PROPRIETARIO di un campo, il campo passa al secondo
+  //      capogruppo; se un secondo non c'e', ci si ferma e non si tocca
   //      niente: il campo resterebbe senza nessuno che lo amministri o lo
   //      possa cancellare (Stanza.pianoCancellazione);
   //   3. altrimenti si toglie la tua scheda dalle stanze, poi il profilo e
@@ -142,6 +143,14 @@ const usaAccount = ({ scegliLingua } = {}) => {
           setProblema('auth.cancellaBloccata');
           setProblemaDati(piano.bloccata.map((c) => S.bello(c)).join(', '));
           return false;
+        }
+        // I campi con un secondo capogruppo passano a lui, prima di tutto il
+        // resto: e' l'ordine di «Lascia il campo» (prima il passaggio, poi
+        // la propria scheda), e si chiede prima di farlo.
+        if (piano.daCedere.length) {
+          const quali = piano.daCedere.map((c) => S.bello(c)).join(', ');
+          if (typeof window !== 'undefined' && window.confirm && !window.confirm(L.t('auth.confermaCedi', quali))) return false;
+          for (const c of piano.daCedere) await sc.lasciaAllAiutante(c, utente);
         }
         await sc.togliMe(piano.daTogliere, utente);
       }

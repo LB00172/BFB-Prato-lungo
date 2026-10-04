@@ -102,6 +102,40 @@ venti utenti veri* del campo 2026 — cosa hanno usato, cosa non hanno capito. �
 ricerca di mercato gratuita, la più affidabile che esista, e va fatta finché se
 lo ricordano.
 
+### Fatto fra il 28 settembre e il 4 ottobre, fuori dalla fila
+
+Il lavoro di interfaccia e di prove deciso per l'autunno. Ognuno ha la sua
+prova, vista fallire:
+
+- **Le bozze A1–C2** (29–30 settembre): il tasto «+ Spesa» e il foglio, i
+  primi passi di un campo nuovo, la scheda «Il campo», Impostazioni della
+  persona; il menu a gruppi che si chiudono, «Come funziona» a capitoli.
+- **Due capigruppo per campo** (30 settembre): il secondo amministra a pari
+  titolo; scegliere il secondo, comprare il Pro e cedere il campo restano
+  del primo. Regole Firestore e `test/regole/stanze.js` § 9-bis.
+- **La Panoramica dei campi** (30 settembre), per chi ha il Pro annuale, e
+  **la forma da computer** da 1024 px in su.
+- **La registrazione con il modulo** (30 settembre): nome, cognome, città,
+  paese, lingua; password con lettera, numero e carattere speciale.
+- **I rimborsi fatti sono soldi pagati** (30 settembre, `rimborsi.js`): uno
+  scontrino arrivato dopo chiede solo la differenza, invece di rimettere in
+  fila i bonifici già fatti. Nato da un controllo dei conti riga per riga.
+- **La scheda di ogni persona** (4 ottobre): nome, cognome, email,
+  telefono, IBAN, Satispay, PayPal; la compilano lei e il capogruppo.
+  Membri a righe sottili; «esente dalle spese» al posto di adulto/bambino.
+- **Le spese fra alcuni** (4 ottobre, `fra-alcuni.js`): la benzina fra chi
+  era in macchina. Sopra `conti.js`, che resta identico a `main`.
+- **L'avvio veloce delle gite**, **il link PayPal con la cifra**, e **la
+  cassa del campo** con entrate, quote e rendiconto CSV (4 ottobre,
+  `cassa.js`) — il pezzo che mancava per un campo scout. La cassa ha
+  aggiunto una lista alla sincronizzazione (`incassi`, prefisso `i` in
+  `sync-merge.js`), portata anche su `main` perché quel file resta uguale
+  nei due rami; su `main` non cambia niente.
+
+Il collaudo su un campo vero, all'aperto e senza linea, **non è ancora
+stato fatto con la versione pubblica**: tutto quello qui sopra non ha mai
+visto un prato. Prima del lancio, non dopo.
+
 ---
 
 ## Stato attuale (già pronto)
@@ -498,8 +532,11 @@ perdere la scheda nella stanza. Vedi `CLAUDE.md`, «L'account non è un muro».
       gli indirizzi esterni con cui l'app parla e diventa rossa se ne compare
       uno che l'informativa non nomina. **Manca il contatto** del titolare
       (`APP_CONFIG.privacy.contatto` in `firebase-config.js`): finché è vuoto
-      la pagina lo dice in rosso. In italiano: spagnolo e francese prima di
-      pubblicare in quei paesi.
+      la pagina lo dice in rosso. **In tre lingue dal 4 ottobre**:
+      `privacy.es.html`, `privacy.fr.html` e le due pagine di cancellazione;
+      l'app apre quella della sua lingua, e `e2e/privacy` controlla che ogni
+      traduzione descriva i tasti coi nomi veri del dizionario. Il contatto
+      oggi è l'email personale di Lorenzo: va messa quella dedicata.
 - [ ] Link all'informativa **in Play Console** (Lorenzo).
 - [ ] **Scheda «Sicurezza dei dati».** Si dichiara quello che raccogliamo
       davvero, e va guardato nel codice, non a memoria: nome e indirizzo
@@ -538,10 +575,12 @@ perdere la scheda nella stanza. Vedi `CLAUDE.md`, «L'account non è un muro».
       lui (Impostazioni → Il tuo aiutante). Il Pro non passa: si spegne nel
       passaggio. Le regole Firestore permettono il passaggio solo verso
       l'aiutante nominato (`test/regole/stanze.js` § 9).
-- [ ] **Resta da collegare alla cancellazione dell'account**: oggi un
-      capogruppo che vuole cancellarsi viene ancora fermato. La strada giusta
-      è proporgli, lì, di lasciare il campo all'aiutante — e se l'aiutante
-      non c'è, dirgli di nominarlo prima.
+- [x] **Collegato alla cancellazione dell'account** (4 ottobre): un
+      capogruppo che si cancella lascia il campo al secondo capogruppo
+      (`daCedere` in `Stanza.pianoCancellazione`, poi
+      `StanzaCloud.lasciaAllAiutante`), e il Pro si spegne. Se un secondo non
+      c'è, la cancellazione si ferma e gli si dice di nominarlo in «Il campo».
+      Informativa e pagina di cancellazione lo dicono, in tre lingue.
 
 **Il marchio**
 
@@ -556,11 +595,9 @@ perdere la scheda nella stanza. Vedi `CLAUDE.md`, «L'account non è un muro».
       di contrasto è sceso da ventuno coppie illeggibili a una (il verde di
       WhatsApp, che è loro). Icone disegnate al posto delle emoji nel menu e
       nella Guida; le altre emoji possono solo scendere.
-- [ ] **Il gioco e Bandy vanno tolti da questo ramo.** `src/60-gioco.jsx`,
-      `src/75-usa-gioco.jsx` e `bandy.png` sono roba della Brigata e non
-      devono finire sullo store. Togliere un sorgente da `build.js` è facile;
-      quello che costa sono le prove che lo guardano (`e2e/gioco`,
-      `e2e/livelli`, e la classifica dentro la sincronizzazione).
+- [x] **Il gioco e Bandy tolti da questo ramo** (28 settembre): sorgenti,
+      scheda, `bandy.png`, testi, prove. Restano su `main`, e
+      `unita/compilazione` diventa rossa se rientrano.
 
 Fonti: [account deletion](https://support.google.com/googleplay/android-developer/answer/13327111),
 [User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311),
