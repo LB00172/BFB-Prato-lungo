@@ -436,6 +436,8 @@ const schedaPresenze = ({
   chiediCopiaDaIeri,
   chiediGiornoGratis,
   chiediSetAll,
+  chiediTuttiSempre,
+  presenzeVuote,
   getDayData,
   getMeal,
   giornoBloccato,
@@ -570,6 +572,14 @@ const schedaPresenze = ({
         <p className="text-normale text-gray-400 italic">{L.t('presenze.primaIMembri')}</p>
       ) : (
         <>
+        {/* L'avvio veloce: in un campo senza nemmeno un pasto segnato si
+            propone di segnare tutti, sempre. Sparisce al primo pasto. */}
+        {presenzeVuote && (
+          <div data-avvio-veloce className="bg-bosco/8 border border-bosco/30 rounded p-3 space-y-2">
+            <p className="text-piccolo text-bosco leading-snug">{frase('presenze.avvioVeloce')}</p>
+            <button onClick={chiediTuttiSempre} className={bottone('primario', 'normale', 'w-full')}>{L.t('presenze.tuttiSempre')}</button>
+          </div>
+        )}
         {/* Azioni rapide: cambiano le presenze di TUTTI in un colpo, e
             la modifica arriva su tutti i telefoni. Stanno chiuse e
             chiedono conferma: è il tipo di tasto che si preme per
@@ -592,6 +602,7 @@ const schedaPresenze = ({
                 <button onClick={() => chiediSetAll('dinner')} className={bottone('bruno', 'normale')}>{L.t('presenze.tuttiCena')}</button>
                 <button onClick={chiediCopiaDaIeri} className={bottone('secondario', 'normale')}>{L.t('presenze.copiaIeri')}</button>
               </div>
+              <button data-tutti-sempre onClick={chiediTuttiSempre} className={bottone('secondario', 'normale', 'w-full')}>{L.t('presenze.tuttiSempre')}</button>
               <p className="text-minuto text-gray-400 leading-snug">
                 {L.t('presenze.bloccoNota')}
               </p>

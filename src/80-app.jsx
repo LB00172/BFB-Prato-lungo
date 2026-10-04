@@ -1469,6 +1469,45 @@ function App({ eredita, cambiaCampo } = {}) {
     setAllMeals(selectedDateStr, mealType);
   };
 
+  // ---------- Tutti, a ogni pasto, tutto il campo ----------
+  // L'avvio veloce delle gite: in un weekend con gli amici ci sono tutti a
+  // ogni pasto, e segnarli giorno per giorno e' la ragione per cui un gruppo
+  // piccolo lascerebbe perdere le presenze — e con loro i conti per pasto.
+  // Un tocco segna tutti i membri a pranzo e a cena in ogni giorno del campo;
+  // poi si tolgono le eccezioni. Aggiunge e basta: chi era gia' segnato resta
+  // com'e', e i giorni bloccati non si toccano.
+  const giorniDelCampo = () => {
+    const out = [];
+    const d = parseDate(CAMP_START);
+    const ultimo = parseDate(CAMP_END);
+    if (isNaN(d.getTime()) || isNaN(ultimo.getTime()) || d > ultimo) return out;
+    while (d <= ultimo && out.length < 120) { out.push(toDateStr(d)); d.setDate(d.getDate() + 1); }
+    return out;
+  };
+  const chiediTuttiSempre = () => {
+    if (members.length === 0) return;
+    const giorni = giorniDelCampo();
+    if (!giorni.length) { window.alert(L.t('presenze.senzaDate')); return; }
+    const liberi = giorni.filter((d) => !giornoBloccato(d));
+    if (!liberi.length) { window.alert(L.t('presenze.tuttiBloccati')); return; }
+    if (!window.confirm(L.t('presenze.confermaTuttiSempre', members.length, liberi.length, giorni.length - liberi.length))) return;
+    setCampData((prev) => {
+      const out = { ...prev };
+      liberi.forEach((d) => {
+        const day = { ...(out[d] || {}) };
+        if (day.bloccato && typeof day.bloccato === 'object') return;
+        const meals = { ...(day.meals || {}) };
+        members.forEach((m) => { meals[m.id] = { lunch: true, dinner: true }; });
+        out[d] = { ...day, meals };
+      });
+      return out;
+    });
+  };
+  // Nessun pasto segnato in tutto il campo: e' il momento di proporlo.
+  const pastiDelGiorno = (d) => (campData[d] && campData[d].meals) || {};
+  const presenzeVuote = members.length > 0 && !Object.keys(campData).some((d) =>
+    Object.values(pastiDelGiorno(d)).some((v) => v && (v.lunch || v.dinner)));
+
   // Copia le presenze (pranzo e cena) dal giorno precedente.
   const chiediCopiaDaIeri = () => {
     if (giornoBloccato(selectedDateStr)) {
@@ -3307,7 +3346,7 @@ function App({ eredita, cambiaCampo } = {}) {
 
         {/* ---------- PRESENZE ---------- */}
         {scheda === 'presenze' && schedaPresenze({
-          admin, azioniOpen, bloccaGiorno, chiediCopiaDaIeri, chiediGiornoGratis, chiediSetAll, getDayData, getMeal, giornoBloccato, giornoGratis, members, navigateDate, orfanoScelte, presenzeOrfane, riassegnaOrfane, sbloccaGiorno, scartaOrfane, selectedDateStr, setAzioniOpen, setCurrentDate, setOrfanoScelte, setSelectedDateStr, toggleMeal, updateDayData,
+          admin, azioniOpen, bloccaGiorno, chiediCopiaDaIeri, chiediGiornoGratis, chiediSetAll, chiediTuttiSempre, presenzeVuote, getDayData, getMeal, giornoBloccato, giornoGratis, members, navigateDate, orfanoScelte, presenzeOrfane, riassegnaOrfane, sbloccaGiorno, scartaOrfane, selectedDateStr, setAzioniOpen, setCurrentDate, setOrfanoScelte, setSelectedDateStr, toggleMeal, updateDayData,
         })}
 
         {/* ---------- SPESA ---------- */}

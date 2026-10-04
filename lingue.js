@@ -385,6 +385,13 @@
     'presenze.tuttiPranzo': 'Tutti a pranzo',
     'presenze.tuttiCena': 'Tutti a cena',
     'presenze.copiaIeri': 'Copia da ieri',
+    'presenze.tuttiSempre': 'Tutti, a ogni pasto, tutto il campo',
+    'presenze.avvioVeloce': 'Ancora nessun pasto segnato. *Ci siete tutti sempre?* Segnali tutti in un tocco, poi togli solo chi manca.',
+    'presenze.confermaTuttiSempre': (n, giorni, bloccati) => `Segnare ${n} ${n === 1 ? 'persona' : 'persone'} a pranzo e a cena in ${giorni} ${giorni === 1 ? 'giorno' : 'giorni'} del campo?`
+      + (bloccati ? `\n\n${bloccati} ${bloccati === 1 ? 'giorno è bloccato e resta' : 'giorni sono bloccati e restano'} com'${bloccati === 1 ? 'è' : 'erano'}.` : '')
+      + '\n\nNon toglie niente: chi è già segnato resta com\'è. Cambia le presenze anche sugli altri telefoni.',
+    'presenze.senzaDate': 'Il campo non ha ancora le date: si scelgono in «Il campo».',
+    'presenze.tuttiBloccati': 'Tutti i giorni del campo sono bloccati: le presenze non si cambiano.',
     'presenze.bloccoNota': 'Segna tutti, poi togli i pochi assenti. Se sono già tutti segnati, il bottone li toglie tutti. Ognuno di questi tasti chiede conferma: cambia le presenze di tutti, su tutti i telefoni.',
     'presenze.gratisEtichetta': 'gratis',
     'presenze.pranzo': 'Pranzo',
@@ -1569,6 +1576,13 @@
     'presenze.tuttiPranzo': 'Todos a comer',
     'presenze.tuttiCena': 'Todos a cenar',
     'presenze.copiaIeri': 'Copiar de ayer',
+    'presenze.tuttiSempre': 'Todos, en cada comida, todo el campamento',
+    'presenze.avvioVeloce': 'Todavía no hay ninguna comida marcada. *¿Estáis siempre todos?* Márcalos a todos de un toque y luego quita solo a quien falte.',
+    'presenze.confermaTuttiSempre': (n, giorni, bloccati) => `¿Marcar a ${n} ${n === 1 ? 'persona' : 'personas'} en la comida y en la cena durante ${giorni} ${giorni === 1 ? 'día' : 'días'} del campamento?`
+      + (bloccati ? `\n\n${bloccati} ${bloccati === 1 ? 'día está bloqueado y se queda' : 'días están bloqueados y se quedan'} como ${bloccati === 1 ? 'estaba' : 'estaban'}.` : '')
+      + '\n\nNo quita nada: quien ya está marcado se queda como está. Cambia la asistencia también en los otros teléfonos.',
+    'presenze.senzaDate': 'El campamento todavía no tiene fechas: se eligen en «El campamento».',
+    'presenze.tuttiBloccati': 'Todos los días del campamento están bloqueados: la asistencia no se cambia.',
     'presenze.bloccoNota': 'Márcalos a todos y luego quita a los pocos que falten. Si ya están todos marcados, el botón los quita a todos. Cada uno de estos botones pide confirmación: cambia la asistencia de todos, en todos los teléfonos.',
     'presenze.gratisEtichetta': 'gratis',
     'presenze.pranzo': 'Comida',
@@ -2697,6 +2711,13 @@
     'presenze.tuttiPranzo': 'Tous à midi',
     'presenze.tuttiCena': 'Tous le soir',
     'presenze.copiaIeri': 'Copier sur hier',
+    'presenze.tuttiSempre': 'Tout le monde, à chaque repas, tout le camp',
+    'presenze.avvioVeloce': "Aucun repas marqué pour l'instant. *Vous êtes toujours tous là ?* Marque tout le monde d'un geste, puis retire seulement qui manque.",
+    'presenze.confermaTuttiSempre': (n, giorni, bloccati) => `Marquer ${n} ${n < 2 ? 'personne' : 'personnes'} au déjeuner et au dîner pendant ${giorni} ${giorni < 2 ? 'jour' : 'jours'} du camp ?`
+      + (bloccati ? `\n\n${bloccati} ${bloccati < 2 ? 'jour est bloqué et reste' : 'jours sont bloqués et restent'} comme avant.` : '')
+      + "\n\nÇa n'enlève rien : qui est déjà marqué reste comme il est. Ça change les présences aussi sur les autres téléphones.",
+    'presenze.senzaDate': "Le camp n'a pas encore de dates : elles se choisissent dans « Le camp ».",
+    'presenze.tuttiBloccati': 'Tous les jours du camp sont bloqués : les présences ne changent pas.',
     'presenze.bloccoNota': "Note tout le monde, puis enlève les quelques absents. Si tout le monde est déjà noté, le bouton les enlève tous. Chacun de ces boutons demande confirmation : il change les présences de tout le monde, sur tous les téléphones.",
     'presenze.gratisEtichetta': 'gratuit',
     'presenze.pranzo': 'Midi',
