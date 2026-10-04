@@ -2354,6 +2354,15 @@ function App({ eredita, cambiaCampo } = {}) {
                     </div>
                     {mostraDati && (
                       <div className="mt-1.5 pt-1.5 border-t border-salvia/20 space-y-1">
+                        {/* Pagare con un tocco: PayPal con la cifra gia' scritta. */}
+                        {window.Rimborsi.linkPaypal(dest.paypal, t.amount) && (
+                          <a
+                            href={window.Rimborsi.linkPaypal(dest.paypal, t.amount)}
+                            target="_blank" rel="noopener noreferrer" data-paga-paypal
+                            onClick={(e) => e.stopPropagation()}
+                            className={bottone('primario', 'minuscolo', 'w-full inline-flex items-center justify-center')}
+                          >{L.t('saldi.pagaPaypal', money(t.amount))}</a>
+                        )}
                         {[['IBAN', dest.iban], [L.t('membri.satispay'), dest.satispay], ['PayPal', dest.paypal]].filter((r) => r[1]).map((r) => (
                           <div key={r[0]} className="flex items-start gap-2">
                             <span className="text-minuto uppercase font-bold text-salvia w-11 shrink-0 pt-0.5">{r[0]}</span>

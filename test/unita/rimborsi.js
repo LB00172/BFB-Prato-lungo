@@ -152,4 +152,14 @@ const chiude = (t, fatti, daFare) => {
   ok('un pagamento della vista unica vale per la cassa comune, se è l\'unica', r.unica === false && r.comune.transfers.length === 0 && r.comune.fatti.length === 1);
 }
 
+// ---------- Il link PayPal con la cifra ----------
+{
+  ok('paypal.me con la cifra già scritta, nel formato che PayPal legge',
+    R.linkPaypal('paypal.me/lorenzo', 12.5) === 'https://paypal.me/lorenzo/12.50EUR'
+    && R.linkPaypal('https://www.paypal.me/l.b/', 3) === 'https://paypal.me/l.b/3.00EUR');
+  ok('un\'email PayPal, una cifra a zero o un indirizzo storto non danno un link',
+    R.linkPaypal('anna@example.com', 5) === null && R.linkPaypal('paypal.me/anna', 0) === null
+    && R.linkPaypal('paypal.me/anna/../../x', 5) === null && R.linkPaypal('evil.com/paypal.me/anna', 5) === null);
+}
+
 fine();

@@ -5815,7 +5815,14 @@ function App({
         className: "font-rustic font-bold text-fuoco"
       }, money(t.amount), " \u20AC")), mostraDati && /*#__PURE__*/React.createElement("div", {
         className: "mt-1.5 pt-1.5 border-t border-salvia/20 space-y-1"
-      }, [['IBAN', dest.iban], [L.t('membri.satispay'), dest.satispay], ['PayPal', dest.paypal]].filter(r => r[1]).map(r => /*#__PURE__*/React.createElement("div", {
+      }, window.Rimborsi.linkPaypal(dest.paypal, t.amount) && /*#__PURE__*/React.createElement("a", {
+        href: window.Rimborsi.linkPaypal(dest.paypal, t.amount),
+        target: "_blank",
+        rel: "noopener noreferrer",
+        "data-paga-paypal": true,
+        onClick: e => e.stopPropagation(),
+        className: bottone('primario', 'minuscolo', 'w-full inline-flex items-center justify-center')
+      }, L.t('saldi.pagaPaypal', money(t.amount))), [['IBAN', dest.iban], [L.t('membri.satispay'), dest.satispay], ['PayPal', dest.paypal]].filter(r => r[1]).map(r => /*#__PURE__*/React.createElement("div", {
         key: r[0],
         className: "flex items-start gap-2"
       }, /*#__PURE__*/React.createElement("span", {

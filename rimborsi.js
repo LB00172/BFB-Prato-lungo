@@ -148,5 +148,17 @@
     return vistaUnica(r, preferita) ? r.tutte.transfers : r.comune.transfers.concat(r.separata.transfers);
   }
 
-  root.Rimborsi = { chiave, nuovaChiave, leggi, pareggia, sconta, residui, vistaUnica, daFare };
+  // Il link per pagare con PayPal, con la cifra gia' scritta. Solo per gli
+  // indirizzi paypal.me: e' PayPal stesso a leggere la cifra dal link
+  // (paypal.me/nome/12.50EUR). Un'email PayPal non ha un link cosi', e si
+  // copia come prima. Niente passa da noi: il link lo apre il telefono.
+  function linkPaypal(valore, cifra) {
+    const v = String(valore || '').trim();
+    const m = /^(?:https?:\/\/)?(?:www\.)?paypal\.me\/([A-Za-z0-9._-]{1,40})\/?$/i.exec(v);
+    const n = Number(cifra);
+    if (!m || !isFinite(n) || n <= 0) return null;
+    return `https://paypal.me/${m[1]}/${(Math.round(n * 100) / 100).toFixed(2)}EUR`;
+  }
+
+  root.Rimborsi = { chiave, nuovaChiave, leggi, pareggia, sconta, residui, vistaUnica, daFare, linkPaypal };
 })(typeof window !== 'undefined' ? window : globalThis);

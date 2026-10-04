@@ -101,14 +101,27 @@ const { chromium } = require('playwright-core');
   await p.waitForTimeout(400);
   const app = await p.evaluate(() => navigator.clipboard.readText().catch(() => ''));
   ok('il tasto copia mette il dato negli appunti: ' + app, app.includes('paypal.me/lorenzoballerini'));
+  // Il tasto per pagare con PayPal: la cifra di quella riga, gia' scritta.
+  const riga = p.locator('li[data-da-fare]', { has: p.locator('[data-paga-paypal]') }).first();
+  const href = await riga.locator('[data-paga-paypal]').getAttribute('href');
+  const cifra = ((await riga.innerText()).match(/(\d+),(\d{2})\s*€/) || []).slice(1).join('.');
+  ok(`accanto al PayPal c'è il tasto che lo apre con la cifra (${href})`, href === `https://paypal.me/lorenzoballerini/${cifra}EUR`);
+  // Toccarlo apre PayPal (qui fermato prima di uscire) e NON segna il rimborso:
+  // si segna quando i soldi sono arrivati, non quando si apre l'app che li manda.
+  await p.context().route('https://paypal.me/**', (r) => r.abort());
+  const [finestra] = await Promise.all([p.waitForEvent('popup'), riga.locator('[data-paga-paypal]').click()]);
+  await finestra.close().catch(() => {});
+  await p.waitForTimeout(300);   // qui si verifica che una spunta NON compaia
   const settledDopo = await p.evaluate(() => JSON.parse(localStorage.getItem('cambusa_settled') || '[]').length);
-  ok('copiare NON segna il rimborso come saldato', settledDopo === 0);
+  ok('né copiare né aprire PayPal segnano il rimborso come fatto', settledDopo === 0);
 
   // Segnato fatto, il rimborso passa fra quelli fatti: senza i dati di
   // pagamento, che non servono piu'.
   const righe = p.locator('li[data-da-fare]');
   const nRighe = await righe.count();
-  await righe.first().click();
+  // Si tocca la riga in alto, dove ci sono i nomi: in mezzo adesso c'e' il
+  // tasto di PayPal, che apre PayPal e NON segna il rimborso.
+  await righe.first().click({ position: { x: 12, y: 12 } });
   await p.waitForSelector('li[data-pagato]');
   const rigaSaldata = await p.locator('li[data-pagato]').first().innerText();
   ok('a rimborso fatto i dati spariscono da quella riga (' + nRighe + ' passaggi in tutto)',

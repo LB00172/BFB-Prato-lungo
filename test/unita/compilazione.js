@@ -819,6 +819,7 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     'geocoding-api.open-meteo.com': 'Open-Meteo',   // la ricerca del luogo per nome
     'play.google.com': 'Google Play',   // i pagamenti del Pro (Digital Goods API)
     'wa.me': 'WhatsApp',
+    'paypal.me': 'PayPal',   // il link per pagare un rimborso (rimborsi.js)
   };
   const html = fs.readFileSync(path.join(RADICE, 'index.html'), 'utf8');
   const caricati = [...html.matchAll(/<script\s+src="([^"]+)"/g)].map((m) => m[1])
