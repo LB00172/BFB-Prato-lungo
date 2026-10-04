@@ -35,6 +35,7 @@ const SORGENTI = [
   '77-usa-scontrini.jsx',    // foto degli scontrini: magazzino, migrazione, potatura
   '78-usa-account.jsx',      // chi sei: login, registrazione, verifica (FEATURES.auth)
   '79-usa-stanza.jsx',       // la stanza: crea, entra, chi c'e' dentro (FEATURES.rooms)
+  '79b-usa-mia-lista.jsx',   // la mia lista: sul telefono e, sotto il mio uid, nel cloud
   '80-app.jsx',              // function App(): stato, sincronizzazione, conti, gestori
   // Le schede: disegno uscito da App(), un file per area. Stanno DOPO
   // 80-app.jsx e va bene: sono `const` che App() chiama solo al disegno,
@@ -45,10 +46,11 @@ const SORGENTI = [
   '84-schede-album.jsx',    // Archivio, Aiuta Bandy, Come funziona
   '85-scheda-galleria.jsx', // Galleria
   '86-scheda-impostazioni.jsx', // Impostazioni
-  '86b-scheda-campo.jsx',
-  '86c-scheda-cassa.jsx',     // la cassa del campo: entrate, quote, rendiconto (cassa.js)     // Il campo: invito, nome e date, luogo, voci, aiutante, Pro
-  '87-scheda-compiti.jsx',
-  '88-scheda-ingresso.jsx',  // Chi fa cosa: compiti assegnati (FEATURES.compiti)
+  '86b-scheda-campo.jsx',     // Il campo: invito, nome e date, luogo, voci, aiutante, Pro
+  '86c-scheda-cassa.jsx',     // la cassa del campo: entrate, quote, rendiconto (cassa.js)
+  '87-scheda-compiti.jsx',    // Chi fa cosa: compiti assegnati (FEATURES.compiti)
+  '87b-scheda-mia-lista.jsx', // La mia lista: la checklist privata (ROADMAP § 6)
+  '88-scheda-ingresso.jsx',   // l'ingresso: la tessera dell'account e la schermata d'apertura
   '89-scheda-campi.jsx',     // I miei campi: la home, e il modulo Crea / Partecipa
   '89b-scheda-panoramica.jsx', // la Panoramica dei campi (Pro annuale)
   '90-avvio.jsx',            // il mount di React

@@ -84,6 +84,8 @@ const ICONE = {
   panoramica: 'M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z',
   // La cassa: la scatola con la fessura per le monete.
   cassa: 'M4 9h16v11H4z M4 9l2-4h12l2 4 M10 13h4',
+  // La mia lista: il foglietto con le spunte, piegato in un angolo.
+  mialista: 'M6 3h9l3 3v15H6z M15 3v3h3 M9 11l1.5 1.5L13 10 M9 16h6',
   // «Il campo»: la bandierina piantata.
   campo: 'M5 21V4 M5 4h12l-2.5 4L17 12H5',
   // La spunta di un passo fatto.

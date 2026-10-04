@@ -36,7 +36,7 @@
     'cambusa_members', 'cambusa_camp_data', 'cambusa_purchases',
     'cambusa_global_expenses', 'cambusa_settled', 'cambusa_saldi_ottimizzati',
     'cambusa_gear', 'cambusa_equipment', 'cambusa_tobuy', 'cambusa_sepdays',
-    'cambusa_freedays', 'cambusa_blocchi', 'cambusa_compiti', 'cambusa_incassi',
+    'cambusa_freedays', 'cambusa_blocchi', 'cambusa_compiti', 'cambusa_incassi', 'cambusa_mia_lista',
     'cambusa_archives', 'cambusa_weather',
     // La cronologia della fusione: portarla in un altro campo vorrebbe dire
     // date e lapidi di voci che li' non sono mai esistite.

@@ -730,6 +730,17 @@ codice.
 
 ## 6. Area "Checklist": una condivisa, una privata
 
+> **Fatta il 4 ottobre, in questa forma.** La condivisa c'era già: è «Chi fa
+> cosa» (§ 17), una lista di cose da fare con la spunta, che si fonde voce per
+> voce. La **privata** è «La mia lista»: `cambusa_mia_lista` sul telefono e
+> `rooms/<codice>/personali/<uid>` nel cloud, fuori dai dati del campo e
+> dall'esportazione — proprio il trabocchetto descritto qui sotto. La domanda
+> sull'ospite si è sciolta da sola: chi entra col codice ha comunque un uid
+> anonimo, quindi la lista ce l'ha; chi non è in una stanza la tiene sul
+> telefono, e glielo si dice. Niente Pro: si limita la quantità, e una lista
+> personale non è quantità da limitare. `e2e/mia-lista` e
+> `test/regole/stanze.js` (la lista di un altro non la legge nessuno).
+
 **Obiettivo:** una scheda in stile Google Task, con due elenchi dietro due
 bottoni — **Condivisa** (la vede e la spunta tutto il gruppo) e **Privata**
 (solo chi l'ha scritta).

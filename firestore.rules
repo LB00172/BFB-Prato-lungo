@@ -212,6 +212,15 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/rooms/$(stanza)).data.proprietario != uid;
       }
 
+      // ---------- La lista di una persona (4 ottobre) ----------
+      // «Cosa mi porto», la checklist privata (ROADMAP § 6). E' tua e di
+      // nessun altro: non la legge il capogruppo, non la leggono gli altri
+      // membri, e non sta nei dati del campo — che tutti leggono ed esportano.
+      // Ci si scrive solo da membri: fuori dal campo non ha senso averla.
+      match /personali/{uid} {
+        allow read, write: if request.auth != null && uid == request.auth.uid && membro(stanza);
+      }
+
       // ---------- I dati del campo ----------
       // Presenze, spese, menu', scontrini, foto: tutto quello che un campo
       // mette insieme. Il lettore guarda, il redattore scrive.

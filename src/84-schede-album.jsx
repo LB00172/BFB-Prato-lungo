@@ -156,7 +156,7 @@ const schedaGuida = ({
 // Una voce che non sta in nessun capitolo non si vedrebbe piu': una prova
 // lo vieta.
 const CAPITOLI_GUIDA = [
-  { id: 'partire', titolo: 'guida.cap.partire', voci: ['campo', 'membri', 'compiti', 'dotazioni', 'pronto', 'installa'] },
+  { id: 'partire', titolo: 'guida.cap.partire', voci: ['campo', 'membri', 'compiti', 'mialista', 'dotazioni', 'pronto', 'installa'] },
   { id: 'campo', titolo: 'guida.cap.campo', voci: ['calendario', 'menu', 'presenze', 'galleria'] },
   { id: 'spese', titolo: 'guida.cap.spese', voci: ['lista', 'attrezzatura', 'correggi'] },
   { id: 'conti', titolo: 'guida.cap.conti', voci: ['spesa', 'conti', 'separato', 'fraalcuni', 'saldi', 'cassa'] },

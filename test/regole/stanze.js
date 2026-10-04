@@ -432,6 +432,18 @@ const permesso = async (msg, azione) => {
   await negato('né scrive il registro degli acquisti', () => setDoc(doc(anna, 'acquisti/qualcosa'), { uid: 'anna' }));
   await negato('né lo legge', () => getDoc(doc(anna, 'acquisti/qualcosa')));
 
+  // La lista di una persona (4 ottobre, ROADMAP § 6): «cosa mi porto». Sua e
+  // di nessun altro — nemmeno del capogruppo, che amministra il campo ma non
+  // legge le liste della gente.
+  const mia = (db, uid) => doc(db, 'rooms/FOTOGRAT/personali/' + uid);
+  await permesso('ognuno scrive la propria lista', () => setDoc(mia(bruno, 'bruno'), { voci: [{ id: 'a', testo: 'Torcia' }] }));
+  await permesso('e la rilegge', () => getDoc(mia(bruno, 'bruno')));
+  await negato('il capogruppo non legge la lista di un altro', () => getDoc(mia(anna, 'bruno')));
+  await negato('e non la scrive', () => setDoc(mia(anna, 'bruno'), { voci: [] }));
+  await negato('un altro membro nemmeno', () => getDoc(mia(carla, 'bruno')));
+  await negato('chi non è nel campo non si scrive una lista lì', () => setDoc(doc(condiviso, 'rooms/FOTOGRAT/personali/vecchio'), { voci: [] }));
+  await negato('e da estraneo non si legge niente', () => getDoc(doc(env.unauthenticatedContext().firestore(), 'rooms/FOTOGRAT/personali/bruno')));
+
   console.log('\n7) Quello che non e\' previsto e\' chiuso');
   // Una collezione nuova non deve nascere aperta per distrazione.
   await negato('una collezione mai pensata non si legge', () => getDoc(doc(anna, 'qualcosa/altro')));

@@ -913,6 +913,8 @@ const ICONE = {
   panoramica: 'M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z',
   // La cassa: la scatola con la fessura per le monete.
   cassa: 'M4 9h16v11H4z M4 9l2-4h12l2 4 M10 13h4',
+  // La mia lista: il foglietto con le spunte, piegato in un angolo.
+  mialista: 'M6 3h9l3 3v15H6z M15 3v3h3 M9 11l1.5 1.5L13 10 M9 16h6',
   // «Il campo»: la bandierina piantata.
   campo: 'M5 21V4 M5 4h12l-2.5 4L17 12H5',
   // La spunta di un passo fatto.
@@ -2989,6 +2991,124 @@ const usaStanza = () => {
     caricaPanoramica
   };
 };
+// ---------- La mia lista (4 ottobre, ROADMAP § 6) ----------
+// La checklist privata: «cosa mi porto». Quella del gruppo c'e' gia', ed e'
+// «Chi fa cosa»; questa e' di una persona sola.
+//
+// Il punto facile da sbagliare (ROADMAP § 6): «privata» non puo' essere una
+// spunta su una voce dei dati del campo, perche' quei dati sono su ogni
+// telefono e finiscono nell'esportazione — trapelerebbe in silenzio. Qui sta
+// in una chiave sua sul telefono (cambusa_mia_lista, nel cassetto del campo)
+// e, quando c'e' un uid e una stanza, nel cloud sotto il proprio uid
+// (rooms/<codice>/personali/<uid>), che le regole fanno leggere solo a te.
+// NON entra nello stato sincronizzato, ne' nell'esportazione, ne'
+// nell'archivio.
+//
+// Fra telefono e cloud vince la copia piu' recente (Stanza.listaPiuRecente).
+// Si apre senza linea: prima il telefono, poi il cloud se risponde.
+const MIA_LISTA_KEY = 'cambusa_mia_lista';
+const usaMiaLista = ({
+  codice,
+  utente
+}) => {
+  const [lista, setLista] = useState(() => {
+    const v = load(MIA_LISTA_KEY, null);
+    return v && Array.isArray(v.voci) ? v : {
+      voci: [],
+      at: 0
+    };
+  });
+  const [nuova, setNuova] = useState('');
+  const [nelCloud, setNelCloud] = useState(false);
+  const uid = utente && utente.uid;
+  const sc = () => FEATURES.rooms && window.StanzaCloud && window.StanzaCloud.leggiPersonale ? window.StanzaCloud : null;
+
+  // scriviLocale e non setItem: con la memoria piena si perde la copia, non l'app.
+  useEffect(() => {
+    scriviLocale(MIA_LISTA_KEY, JSON.stringify(lista));
+  }, [lista]);
+
+  // All'ingresso nel campo (e quando arriva l'account): si confrontano le due
+  // copie e vince la piu' recente.
+  const listaRef = useRef(lista);
+  listaRef.current = lista;
+  useEffect(() => {
+    const c = sc();
+    if (!c || !codice || !uid) return undefined;
+    let vivo = true;
+    (async () => {
+      try {
+        const remota = await c.leggiPersonale(codice, utente);
+        if (!vivo) return;
+        const chi = window.Stanza.listaPiuRecente(listaRef.current, remota);
+        if (chi === 'remota') setLista({
+          voci: Array.isArray(remota.voci) ? remota.voci : [],
+          at: Number(remota.at) || 0
+        });else if (chi === 'locale') await c.scriviPersonale(codice, utente, listaRef.current);
+        if (vivo) setNelCloud(true);
+      } catch (e) {/* senza linea: resta quella del telefono, e si riprova al prossimo ingresso */}
+    })();
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codice, uid]);
+
+  // Ogni cambiamento va su, un attimo dopo: chi spunta cinque cose di fila
+  // non deve fare cinque scritture.
+  const timer = useRef(null);
+  const cambia = fn => {
+    setLista(prev => {
+      const nuovo = {
+        voci: fn(prev.voci),
+        at: Date.now()
+      };
+      const c = sc();
+      if (c && codice && uid) {
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => {
+          c.scriviPersonale(codice, utente, nuovo).then(() => setNelCloud(true)).catch(() => {});
+        }, 700);
+      }
+      return nuovo;
+    });
+  };
+  const aggiungi = () => {
+    const testo = nuova.trim();
+    if (!testo) return;
+    cambia(v => [...v, {
+      id: uid_(),
+      testo,
+      fatto: false
+    }]);
+    setNuova('');
+  };
+  const spunta = id => cambia(v => v.map(x => x.id === id ? {
+    ...x,
+    fatto: !x.fatto
+  } : x));
+  const togli = id => cambia(v => v.filter(x => x.id !== id));
+  const togliFatte = () => {
+    const n = lista.voci.filter(x => x.fatto).length;
+    if (!n || !window.confirm(L.t('miaLista.confermaTogliFatte', n))) return;
+    cambia(v => v.filter(x => !x.fatto));
+  };
+  return {
+    lista,
+    nuova,
+    setNuova,
+    aggiungi,
+    spunta,
+    togli,
+    togliFatte,
+    nelCloud,
+    privataNelCloud: !!(sc() && codice && uid)
+  };
+};
+
+// L'id di una voce: lo stesso generatore del resto dell'app, che qui si
+// chiama `uid` come l'utente — da cui il nome.
+const uid_ = () => uid();
 // `eredita` e `cambiaCampo` arrivano da Radice (90-avvio): servono a cambiare
 // campo senza mescolare i dati di due campi (cassetti.js).
 // La cache dell'app, riconosciuta dalla forma del nome che le da' build.js
@@ -3147,6 +3267,11 @@ function App({
   // Dietro FEATURES.rooms. Come l'account, l'hook gira comunque: senza
   // bandiera nessuno guarda il suo stato.
   const stanzaStato = usaStanza();
+  // La mia lista: privata, fuori dai dati del campo (src/79b-usa-mia-lista.jsx).
+  const miaLista = usaMiaLista({
+    codice: stanzaStato.stanza && stanzaStato.stanza.codice,
+    utente: account.utente
+  });
   // Il luogo per il meteo lo sa gia' lo stato della stanza: l'elenco sul
   // telefono (che legge aggiornaPeriodoCampo) si salva dopo il disegno, e
   // chi ha appena scelto il luogo vedrebbe il meteo del posto di prima.
@@ -6539,7 +6664,8 @@ function App({
     campi: L.t('area.campi'),
     campo: L.t('area.campo'),
     panoramica: L.t('area.panoramica'),
-    cassa: L.t('area.cassa')
+    cassa: L.t('area.cassa'),
+    mialista: L.t('area.miaLista')
   };
 
   // Le icone delle aree stanno in src/45-icone.jsx e si chiamano per nome,
@@ -6563,7 +6689,7 @@ function App({
   }, {
     id: 'gruppo',
     title: L.t('menu.gruppo'),
-    items: ['membri', 'regole', 'dotazioni', 'galleria']
+    items: ['membri', 'mialista', 'regole', 'dotazioni', 'galleria']
   }, {
     id: 'altro',
     title: L.t('menu.altro'),
@@ -6685,6 +6811,10 @@ function App({
     title: L.t('guida.cassa.titolo'),
     body: L.t('guida.cassa.corpo')
   }] : []), {
+    k: 'mialista',
+    title: L.t('guida.mialista.titolo'),
+    body: L.t('guida.mialista.corpo')
+  }, {
     k: 'dotazioni',
     title: L.t('guida.dotazioni.titolo'),
     body: L.t('guida.dotazioni.corpo')
@@ -6977,6 +7107,9 @@ function App({
     goTo,
     onApri: apriCampo,
     stanzaStato
+  }), scheda === 'mialista' && schedaMiaLista({
+    miaLista,
+    goTo
   }), scheda === 'cassa' && FEATURES.cassa && schedaCassa({
     addIncasso,
     applicaQuotaATutti,
@@ -9671,7 +9804,7 @@ const schedaGuida = ({
 const CAPITOLI_GUIDA = [{
   id: 'partire',
   titolo: 'guida.cap.partire',
-  voci: ['campo', 'membri', 'compiti', 'dotazioni', 'pronto', 'installa']
+  voci: ['campo', 'membri', 'compiti', 'mialista', 'dotazioni', 'pronto', 'installa']
 }, {
   id: 'campo',
   titolo: 'guida.cap.campo',
@@ -11070,6 +11203,78 @@ const schedaCompiti = ({
   }, fatti.length)), /*#__PURE__*/React.createElement("ul", null, fatti.map(riga))), members.length === 0 && /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo text-fuoco italic leading-snug px-1"
   }, L.t('compiti.senzaMembri')));
+};
+// ---------- La mia lista (4 ottobre) ----------
+// La checklist privata: «cosa mi porto». Lo stato sta in
+// src/79b-usa-mia-lista.jsx; qui si disegna. Dice in cima, con parole
+// semplici, chi la vede — cioe' nessuno —, perche' e' la prima domanda di chi
+// scrive qualcosa di suo dentro un'app di gruppo.
+const schedaMiaLista = ({
+  miaLista,
+  goTo
+}) => {
+  const m = miaLista;
+  const daFare = m.lista.voci.filter(x => !x.fatto);
+  const fatte = m.lista.voci.filter(x => x.fatto);
+  const riga = x => /*#__PURE__*/React.createElement("li", {
+    key: x.id,
+    "data-voce-mia": x.testo,
+    className: "flex items-center gap-2 py-1 min-h-11"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => m.spunta(x.id),
+    "aria-pressed": !!x.fatto,
+    "aria-label": x.testo,
+    className: bottoneScelta('casella', 'casella', !!x.fatto, 'simbolo')
+  }, x.fatto ? icona('fatto', 'w-5 h-5') : null), /*#__PURE__*/React.createElement("span", {
+    className: `flex-grow min-w-0 break-words text-normale ${x.fatto ? 'line-through text-gray-400' : 'text-bosco'}`
+  }, x.testo), /*#__PURE__*/React.createElement("button", {
+    onClick: () => m.togli(x.id),
+    "aria-label": L.t('miaLista.togli', x.testo),
+    className: bottoneSottile('distruttivo')
+  }, icona('togli', 'w-4 h-4')));
+  return /*#__PURE__*/React.createElement("div", {
+    "data-scheda": "mia-lista",
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco"
+  }, L.t('miaLista.titolo')), /*#__PURE__*/React.createElement("p", {
+    "data-chi-la-vede": true,
+    className: "text-piccolo text-gray-500 leading-snug"
+  }, L.t(m.privataNelCloud ? 'miaLista.soloTu' : 'miaLista.soloQui')), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    "data-nuova-voce": true,
+    value: m.nuova,
+    onChange: e => m.setNuova(e.target.value),
+    onKeyDown: e => {
+      if (e.key === 'Enter') m.aggiungi();
+    },
+    placeholder: L.t('miaLista.esempio'),
+    className: "flex-grow p-2.5 bg-carta/50 border border-salvia/30 rounded text-normale focus:outline-none focus:border-bosco"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: m.aggiungi,
+    "aria-label": L.t('miaLista.aggiungi'),
+    className: bottoneIcona('pieno')
+  }, "+")), m.lista.voci.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-normale text-gray-400 italic"
+  }, L.t('miaLista.vuota')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("ul", {
+    className: "divide-y divide-salvia/20"
+  }, daFare.map(riga)), fatte.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+    className: "font-rustic text-normale text-salvia mt-2 mb-1"
+  }, L.t('miaLista.fatte', fatte.length)), /*#__PURE__*/React.createElement("ul", {
+    className: "divide-y divide-salvia/20"
+  }, fatte.map(riga)), /*#__PURE__*/React.createElement("button", {
+    onClick: m.togliFatte,
+    className: bottone('testuale', 'minuscolo', 'mt-1')
+  }, L.t('miaLista.togliFatte'))))), FEATURES.compiti && /*#__PURE__*/React.createElement("p", {
+    className: "text-piccolo text-gray-500 leading-snug px-1"
+  }, L.t('miaLista.delGruppo'), ' ', /*#__PURE__*/React.createElement("button", {
+    onClick: () => goTo('compiti'),
+    className: bottone('testuale', 'minuscolo', 'inline-flex')
+  }, L.t('area.compiti'))));
 };
 // ---------- L'ingresso ----------
 // Due pezzi, e il secondo esiste per via del primo.

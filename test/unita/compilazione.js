@@ -334,6 +334,8 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
     // «Il campo»: uscita da Impostazioni gia' tradotta, e nata cosi'.
     '86b-scheda-campo.jsx': 0,
     '86c-scheda-cassa.jsx': 0,
+    '87b-scheda-mia-lista.jsx': 0,
+    '79b-usa-mia-lista.jsx': 0,
     // La Panoramica dei campi: nata col dizionario.
     '89b-scheda-panoramica.jsx': 0,
     '50-interfaccia.jsx': 0,

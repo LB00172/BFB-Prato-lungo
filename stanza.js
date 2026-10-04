@@ -587,6 +587,24 @@
   // proprietario compreso (test/regole/stanze.js, § 8). `fino` e' facoltativo
   // ('AAAA-MM-GG', compreso): senza, il Pro non scade. `oggi` si passa da
   // fuori, come in ordinaCampi.
+  // ---------- La mia lista (4 ottobre, ROADMAP § 6) ----------
+  // La checklist privata sta sul telefono e, sotto il proprio uid, nel cloud
+  // (rooms/<codice>/personali/<uid>): cosi' passa da un telefono all'altro
+  // di chi l'ha scritta, e non la vede nessun altro. Fra le due copie vince
+  // la piu' recente, intera: e' la lista di una persona sola, e due telefoni
+  // della stessa persona offline nello stesso momento non sono un caso da
+  // fondere voce per voce.
+  //   'remota': si prende quella del cloud;
+  //   'locale': si manda su quella del telefono;
+  //   'uguali': niente da fare.
+  function listaPiuRecente(locale, remota) {
+    const l = (locale && Number(locale.at)) || 0;
+    const r = (remota && Number(remota.at)) || 0;
+    if (r > l) return 'remota';
+    if (l > r) return 'locale';
+    return 'uguali';
+  }
+
   function campoPro(stanza, oggi) {
     const p = stanza && stanza.pro;
     if (!p || p.attivo !== true) return false;
@@ -688,6 +706,7 @@
     ricordaCampo,
     aggiornaCampi,
     campoPro,
+    listaPiuRecente,
     FUNZIONI_PRO,
     PRODOTTI_PRO,
     PLAY_BILLING,
@@ -893,6 +912,25 @@
 
   // L'abbonamento annuale di chi e' entrato (abbonati/<uid>, lo scrive solo
   // il server). null se non c'e': le regole lo fanno leggere solo a lui.
+  // La mia lista nel cloud: rooms/<codice>/personali/<uid>. Le regole la
+  // lasciano leggere e scrivere solo a te, e solo da membro del campo.
+  async function leggiPersonale(codice, utente) {
+    if (!utente || !utente.uid) return null;
+    const f = await sdk();
+    const d = await init();
+    const s = await f.getDoc(f.doc(d, 'rooms', root.Stanza.normalizza(codice), 'personali', utente.uid));
+    return s.exists() ? s.data() : null;
+  }
+  async function scriviPersonale(codice, utente, lista) {
+    if (!utente || !utente.uid) return false;
+    const f = await sdk();
+    const d = await init();
+    await f.setDoc(f.doc(d, 'rooms', root.Stanza.normalizza(codice), 'personali', utente.uid), {
+      voci: Array.isArray(lista && lista.voci) ? lista.voci : [], at: Number(lista && lista.at) || Date.now(),
+    });
+    return true;
+  }
+
   async function abbonamento(utente) {
     if (!utente || !utente.uid || utente.isAnonimo) return null;
     const f = await sdk();
@@ -1027,5 +1065,5 @@
     }
   }
 
-  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, statoDi, togliMe, impostaStanza, lasciaAllAiutante, motivo, attivaPro, statoCampo, abbonamento };
+  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, statoDi, togliMe, impostaStanza, lasciaAllAiutante, motivo, attivaPro, statoCampo, abbonamento, leggiPersonale, scriviPersonale };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

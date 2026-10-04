@@ -398,6 +398,15 @@ if (!S) { fine(); }
       ok('senza secondo capogruppo, quel campo ferma tutto', p5.bloccata.join() === S.normalizza('DDDD-5555') && p5.daCedere.length === 1);
     }
 
+    // ---------- La mia lista: fra telefono e cloud vince la piu' recente ----------
+    {
+      ok('la copia del cloud più recente vince', S.listaPiuRecente({ at: 1 }, { at: 2 }) === 'remota');
+      ok('quella del telefono più recente va su', S.listaPiuRecente({ at: 3 }, { at: 2 }) === 'locale');
+      ok('senza copia nel cloud, va su quella del telefono', S.listaPiuRecente({ at: 3 }, null) === 'locale');
+      ok('due copie dello stesso momento non si toccano', S.listaPiuRecente({ at: 2 }, { at: 2 }) === 'uguali'
+        && S.listaPiuRecente({ voci: [], at: 0 }, null) === 'uguali');
+    }
+
     // ---------- Il menu quando non sei in nessun campo ----------
     // Un menu pieno di sezioni vuote sembra un'app rotta, non un'app che
     // aspetta una cosa sola. La meta' che conta di piu' e' la prima: DENTRO

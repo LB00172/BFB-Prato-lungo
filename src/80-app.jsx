@@ -129,6 +129,8 @@ function App({ eredita, cambiaCampo } = {}) {
   // Dietro FEATURES.rooms. Come l'account, l'hook gira comunque: senza
   // bandiera nessuno guarda il suo stato.
   const stanzaStato = usaStanza();
+  // La mia lista: privata, fuori dai dati del campo (src/79b-usa-mia-lista.jsx).
+  const miaLista = usaMiaLista({ codice: stanzaStato.stanza && stanzaStato.stanza.codice, utente: account.utente });
   // Il luogo per il meteo lo sa gia' lo stato della stanza: l'elenco sul
   // telefono (che legge aggiornaPeriodoCampo) si salva dopo il disegno, e
   // chi ha appena scelto il luogo vedrebbe il meteo del posto di prima.
@@ -2982,6 +2984,7 @@ function App({ eredita, cambiaCampo } = {}) {
     campo: L.t('area.campo'),
     panoramica: L.t('area.panoramica'),
     cassa: L.t('area.cassa'),
+    mialista: L.t('area.miaLista'),
   };
 
   // Le icone delle aree stanno in src/45-icone.jsx e si chiamano per nome,
@@ -2996,7 +2999,7 @@ function App({ eredita, cambiaCampo } = {}) {
     // "Chi fa cosa" viene PRIMA della lista, ed e' l'ordine dei fatti: ci si
     // divide i compiti, poi si compra, poi si registra la spesa.
     { id: 'spese', title: L.t('menu.spese'), items: [...(FEATURES.compiti ? ['compiti'] : []), 'lista', 'attrezzatura', 'spesa', ...(FEATURES.cassa ? ['cassa'] : [])] },
-    { id: 'gruppo', title: L.t('menu.gruppo'), items: ['membri', 'regole', 'dotazioni', 'galleria'] },
+    { id: 'gruppo', title: L.t('menu.gruppo'), items: ['membri', 'mialista', 'regole', 'dotazioni', 'galleria'] },
     { id: 'altro', title: L.t('menu.altro'), items: ['archivio', 'guida', 'impostazioni'] },
   ];
 
@@ -3075,6 +3078,7 @@ function App({ eredita, cambiaCampo } = {}) {
     { k: 'fraalcuni', title: L.t('guida.fraalcuni.titolo'), body: L.t('guida.fraalcuni.corpo') },
     { k: 'saldi', title: L.t('guida.saldi.titolo'), body: L.t('guida.saldi.corpo') },
     ...(FEATURES.cassa ? [{ k: 'cassa', title: L.t('guida.cassa.titolo'), body: L.t('guida.cassa.corpo') }] : []),
+    { k: 'mialista', title: L.t('guida.mialista.titolo'), body: L.t('guida.mialista.corpo') },
     { k: 'dotazioni', title: L.t('guida.dotazioni.titolo'), body: L.t('guida.dotazioni.corpo') },
     { k: 'backup', title: L.t('guida.backup.titolo'), body: L.t('guida.backup.corpo') },
     { k: 'sync', title: L.t('guida.sync.titolo'), body: L.t('guida.sync.corpo') },
@@ -3412,6 +3416,7 @@ function App({ eredita, cambiaCampo } = {}) {
         {/* ---------- CALENDARIO ---------- */}
         {scheda === 'campi' && schedaCampi({ stanzaStato, account, codiceInGioco, onApri: apriCampo })}
         {scheda === 'panoramica' && FEATURES.rooms && schedaPanoramica({ account, goTo, onApri: apriCampo, stanzaStato })}
+        {scheda === 'mialista' && schedaMiaLista({ miaLista, goTo })}
         {scheda === 'cassa' && FEATURES.cassa && schedaCassa({
           addIncasso, applicaQuotaATutti, cassa: cassaRiassunto, incassaQuota, members, modificabile: cassaModificabile, nuovoIncasso,
           quotaPerTutti, removeIncasso, scaricaRendiconto, setMemberField, setNuovoIncasso, setQuotaPerTutti,
