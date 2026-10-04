@@ -1,4 +1,4 @@
-const CACHE_NAME = 'camp-ops-801478615b';
+const CACHE_NAME = 'camp-ops-d5bb1b7580';
 
 // Tutte le risorse sono locali (stesso dominio): il precache è affidabile.
 // Nessuna dipendenza da CDN esterni -> l'app funziona offline al 100%.
@@ -12,6 +12,7 @@ const ASSETS = [
   './conti.js',
   './voci.js',
   './rimborsi.js',
+  './fra-alcuni.js',
   './panoramica.js',
   './presenze.js',
   './allarmi.js',

@@ -56,6 +56,7 @@ const schedaSpesa = ({
           [L.t('spesa.cibo'), totals.totalFood],
           [L.t('spesa.bevande'), totals.totalDrinks],
           [L.t('spesa.logisticaEAttrezzatura'), totals.totalAccessory],
+          ...(totals.fraAlcuni && totals.fraAlcuni.totale > 0 ? [[L.t('spesa.fraAlcuni'), totals.fraAlcuni.totale]] : []),
         ].map(([label, val]) => (
           <div key={label} className="flex justify-between items-center bg-carta/60 px-3 py-2 rounded border border-salvia/20">
             <span className="text-piccolo uppercase font-bold text-gray-500">{label}</span>
@@ -181,6 +182,30 @@ const schedaSpesa = ({
         ? <>{frase('quote.tuttiSeparati', money(totals.foodDrinksCommon))}</>
         : null,
     })}
+
+    {/* Le spese fra alcuni (fra-alcuni.js): fuori dalle quote per pasto,
+        divise in parti uguali solo fra chi c'era. Una riga per spesa, con
+        quanto tocca a ciascuno: e' la domanda che si fa chi la vede. */}
+    {totals.fraAlcuni && totals.fraAlcuni.voci.length > 0 && (
+      <div data-quote-fra-alcuni className="bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm">
+        <h3 className="font-rustic text-grande border-b border-salvia/40 pb-2 text-bosco mb-2">{L.t('fraAlcuni.titolo')}</h3>
+        <p className="text-piccolo text-gray-500 leading-snug mb-2">{L.t('fraAlcuni.spiega')}</p>
+        <ul className="divide-y divide-salvia/20">
+          {totals.fraAlcuni.voci.map((v) => (
+            <li key={v.id} className="py-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-normale font-bold text-bosco min-w-0 break-words">{v.name}</span>
+                <span className="font-rustic font-bold text-bosco shrink-0">{money(v.price)} €</span>
+              </div>
+              {v.buyer && <p className="text-minuto text-legno">{L.t('fraAlcuni.pagataDa', v.buyer)}</p>}
+              <p className="text-piccolo text-gray-600 leading-snug">
+                {v.quote.map((q) => `${q.name} ${money(q.amount)} €`).join(' · ')}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
 
     {/* Quote cassa separata: solo il cibo dei giorni spuntati, diviso
         solo fra chi in quei giorni ha mangiato. */}
@@ -652,6 +677,7 @@ const schedaLista = ({
                     <span className="text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-legno">{L.t('lista.separatoEtichetta')}</span>
                   )}
                   {p.fromList && <span className="text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-legno">{L.t('lista.acquistataEtichetta')}</span>}
+                  {Array.isArray(p.per) && p.per.length > 0 && <span data-etichetta-fra className="text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-bosco">{L.t('fraAlcuni.etichetta', p.per.length)}</span>}
                   <span className="text-minuto text-gray-400 basis-full">
                     {p.buyer ? <span className="text-legno font-bold">{p.buyer}</span> : <span className="italic">{L.t('lista.acquirenteIgnoto')}</span>}
                     {p.at && ` · ${L.data(new Date(p.at), 'breve')} ${L.data(new Date(p.at), 'ora')}`}
@@ -806,6 +832,44 @@ const schedaAttrezzatura = ({
 // senza senso. La foto dello scontrino e' a un tocco, e facoltativa.
 //
 // La logica e' quella di sempre, addPurchase: qui cambia solo il disegno.
+// Fra chi si divide una spesa (fra-alcuni.js). «Come sempre» e' il modo di
+// tutte le spese di prima — per pasti o fra i presenti —; «solo alcuni» apre
+// i nomi, e la spesa si divide in parti uguali fra quelli accesi. Sta nel
+// foglio della spesa e nella maschera di correzione: scritta una volta.
+const sceltaFraChi = ({ members, per, setPer }) => {
+  const scelti = per || [];
+  const etichetta = 'block text-minuto uppercase font-bold tracking-wide text-gray-500 mb-1.5';
+  const quanti = scelti.length;
+  return (
+    <div data-fra-chi>
+      <span className={etichetta}>{L.t('fraAlcuni.siDivide')}</span>
+      <div className="flex flex-wrap gap-1.5">
+        <button data-fra="tutti" aria-pressed={!per} onClick={() => setPer(null)} className={bottoneScelta('pillola', 'tenue', !per, 'minuscolo')}>{L.t('fraAlcuni.comeSempre')}</button>
+        <button data-fra="alcuni" aria-pressed={!!per} onClick={() => setPer(per || [])} className={bottoneScelta('pillola', 'tenue', !!per, 'minuscolo')}>{L.t('fraAlcuni.soloAlcuni')}</button>
+      </div>
+      {per && (
+        <div className="mt-2 space-y-1.5">
+          <div className="flex flex-wrap gap-1.5">
+            {members.map((m) => {
+              const acceso = scelti.includes(m.id);
+              return (
+                <button
+                  key={m.id}
+                  data-fra-membro={m.name}
+                  aria-pressed={acceso}
+                  onClick={() => setPer((v) => { const x = v || []; return x.includes(m.id) ? x.filter((i) => i !== m.id) : [...x, m.id]; })}
+                  className={bottoneScelta('pillola', 'tenue', acceso, 'minuscolo')}
+                >{m.name}</button>
+              );
+            })}
+          </div>
+          <p className="text-minuto text-gray-500 leading-snug">{L.t('fraAlcuni.nota', quanti)}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const foglioSpesa = ({
   addPurchase,
   chiudi,
@@ -815,6 +879,7 @@ const foglioSpesa = ({
   pAccount,
   pBuyer,
   pName,
+  pPer,
   pPrice,
   pReceipt,
   pType,
@@ -824,6 +889,7 @@ const foglioSpesa = ({
   setPAccount,
   setPBuyer,
   setPName,
+  setPPer,
   setPPrice,
   setPReceipt,
   setPType,
@@ -835,7 +901,7 @@ const foglioSpesa = ({
   prendi(pBuyer);
   purchases.slice().sort((a, b) => (b.at || 0) - (a.at || 0)).forEach((p) => prendi(p.buyer));
   members.forEach((m) => prendi(m.name));
-  const conConto = pType !== 'logistica' && (sepDays.length > 0 || pAccount === 'sep');
+  const conConto = !pPer && pType !== 'logistica' && (sepDays.length > 0 || pAccount === 'sep');
   const etichetta = 'block text-minuto uppercase font-bold tracking-wide text-gray-500 mb-1.5';
   return (
     <div data-foglio-spesa role="dialog" aria-modal="true" aria-label={L.t('foglio.titolo')} className="fixed inset-0 z-40 flex flex-col justify-end">
@@ -895,6 +961,8 @@ const foglioSpesa = ({
             ))}
           </div>
         </div>
+
+        {sceltaFraChi({ members, per: pPer, setPer: setPPer })}
 
         {conConto && (
           <div>

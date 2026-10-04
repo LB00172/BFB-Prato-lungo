@@ -159,6 +159,6 @@ const CAPITOLI_GUIDA = [
   { id: 'partire', titolo: 'guida.cap.partire', voci: ['campo', 'membri', 'compiti', 'dotazioni', 'pronto', 'installa'] },
   { id: 'campo', titolo: 'guida.cap.campo', voci: ['calendario', 'menu', 'presenze', 'galleria'] },
   { id: 'spese', titolo: 'guida.cap.spese', voci: ['lista', 'attrezzatura', 'correggi'] },
-  { id: 'conti', titolo: 'guida.cap.conti', voci: ['spesa', 'conti', 'separato', 'saldi'] },
+  { id: 'conti', titolo: 'guida.cap.conti', voci: ['spesa', 'conti', 'separato', 'fraalcuni', 'saldi'] },
   { id: 'dati', titolo: 'guida.cap.dati', voci: ['sync', 'backup', 'chiusura', 'impostazioni'] },
 ];

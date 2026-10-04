@@ -39,7 +39,9 @@
     const per = root.Voci
       ? root.Voci.separa(purchases, equipment, voci || null)
       : { purchases, equipment, fuori: { totale: 0, perCategoria: {} } };
-    const t = root.Conti.calcola({
+    // Le spese fra alcuni come nell'app (fra-alcuni.js): dove c'e', si passa
+    // da li', che chiama Conti.calcola.
+    const t = (root.FraAlcuni ? root.FraAlcuni.calcola : root.Conti.calcola)({
       members,
       campData: s.campData && typeof s.campData === 'object' ? s.campData : {},
       purchases: per.purchases,

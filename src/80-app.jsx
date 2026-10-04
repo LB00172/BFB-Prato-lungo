@@ -80,6 +80,7 @@ function App({ eredita, cambiaCampo } = {}) {
   const [pType, setPType] = useState('alimentare');
   const [pBuyer, setPBuyer] = useState('');
   const [pAccount, setPAccount] = useState('comune'); // conto della spesa in corso
+  const [pPer, setPPer] = useState(null); // null = si divide come sempre; [id] = solo fra loro (fra-alcuni.js)
   const [snapList, setSnapList] = useState(null); // elenco snapshot per il ripristino
   // Giorno dell'ultimo backup su file (o del "ho già fatto"): serve al promemoria.
   const [backupOggi, setBackupOggi] = useState(() => localStorage.getItem(BACKUP_KEY) || '');
@@ -1636,6 +1637,7 @@ function App({ eredita, cambiaCampo } = {}) {
     setPPrice('');
     setPType('alimentare');
     setPAccount('comune');
+    setPPer(null);
     setListaSection('acquistato');
     goTo('lista');
     // Dopo goTo, che chiude il foglio: cambiare scheda vuol dire lasciarlo.
@@ -1738,11 +1740,13 @@ function App({ eredita, cambiaCampo } = {}) {
       window.alert(L.t('spesa.nomeEPrezzo'));
       return;
     }
+    if (pPer && pPer.length === 0) { window.alert(L.t('fraAlcuni.nessuno')); return; }
     if (!confermaPrezzo(price)) return;
     const id = uid();
     setPurchases((prev) => [...prev, {
       id, name, price, type: pType, buyer: pBuyer.trim(), at: Date.now(),
-      ...(pAccount === 'sep' && pType !== 'logistica' ? { account: 'sep' } : {}),
+      // Fra alcuni: si divide solo fra loro, e il conto separato non c'entra.
+      ...(pPer ? { per: pPer.slice() } : (pAccount === 'sep' && pType !== 'logistica' ? { account: 'sep' } : {})),
     }]);
     if (pReceipt) {
       setReceipts((prev) => ({ ...prev, [id]: pReceipt }));
@@ -1754,6 +1758,7 @@ function App({ eredita, cambiaCampo } = {}) {
     setPType('alimentare');
     setPBuyer('');
     setPReceipt(null);
+    setPPer(null);
     setManualOpen(false);   // si richiude: la spesa appena salvata si vede in cronologia
     // Il conto NON si azzera: chi sta registrando la spesa separata di solito
     // ne inserisce più di una di fila.
@@ -1769,6 +1774,7 @@ function App({ eredita, cambiaCampo } = {}) {
   const openEditPurchase = (p) => setEditing({
     kind: 'purchase', id: p.id, name: p.name, price: String(posNum(p.price)),
     buyer: p.buyer || '', type: p.type || 'alimentare', account: p.account === 'sep' ? 'sep' : 'comune',
+    per: Array.isArray(p.per) && p.per.length ? p.per.slice() : null,
   });
   const openEditEquip = (e) => setEditing({
     kind: 'equip', id: e.id, name: e.text, price: String(posNum(e.price)), buyer: e.buyer || '',
@@ -1782,11 +1788,16 @@ function App({ eredita, cambiaCampo } = {}) {
     if (!name) { window.alert(L.t('spesa.nomeVuoto')); return; }
     if (editing.kind === 'purchase') {
       if (price <= 0) { window.alert(L.t('spesa.prezzoZero')); return; }
+      const fraChi = editing.per;
+      if (fraChi && fraChi.length === 0) { window.alert(L.t('fraAlcuni.nessuno')); return; }
       if (!confermaPrezzo(price)) return;
       setPurchases((prev) => prev.map((p) => (p.id !== editing.id ? p : {
         ...p, name, price, type: editing.type, buyer: (editing.buyer || '').trim(),
-        // il conto vale solo per cibo e bevande: la logistica è sempre comune
-        ...(editing.account === 'sep' && editing.type !== 'logistica' ? { account: 'sep' } : { account: undefined }),
+        // il conto vale solo per cibo e bevande: la logistica è sempre comune;
+        // e una spesa fra alcuni non ha conto, si divide solo fra loro
+        ...(fraChi
+          ? { per: fraChi.slice(), account: undefined }
+          : { per: undefined, ...(editing.account === 'sep' && editing.type !== 'logistica' ? { account: 'sep' } : { account: undefined }) }),
       })));
     } else {
       setEquipment((prev) => prev.map((e) => (e.id !== editing.id ? e : {
@@ -2119,7 +2130,9 @@ function App({ eredita, cambiaCampo } = {}) {
     ? window.Voci.separa(purchases, equipment, FEATURES.rooms ? stanzaStato.voci : null)
     : { purchases, equipment, fuori: { totale: 0, perCategoria: {} } };
   const fuoriConto = perIConti.fuori;
-  const totals = Conti.calcola({
+  // Le spese fra alcuni escono da conti.js e rientrano sopra (fra-alcuni.js):
+  // conti.js resta identico a main.
+  const totals = window.FraAlcuni.calcola({
     members, campData, purchases: perIConti.purchases, equipment: perIConti.equipment, sepDays, freeDays,
     equipExemption: FEATURES.equipExemption,
   });
@@ -2928,6 +2941,7 @@ function App({ eredita, cambiaCampo } = {}) {
     { k: 'spesa', title: L.t('guida.spesa.titolo'), body: L.t('guida.spesa.corpo') },
     { k: 'conti', title: L.t('guida.conti.titolo'), body: L.t('guida.conti.corpo') },
     { k: 'separato', title: L.t('guida.separato.titolo'), body: L.t('guida.separato.corpo') },
+    { k: 'fraalcuni', title: L.t('guida.fraalcuni.titolo'), body: L.t('guida.fraalcuni.corpo') },
     { k: 'saldi', title: L.t('guida.saldi.titolo'), body: L.t('guida.saldi.corpo') },
     { k: 'dotazioni', title: L.t('guida.dotazioni.titolo'), body: L.t('guida.dotazioni.corpo') },
     { k: 'backup', title: L.t('guida.backup.titolo'), body: L.t('guida.backup.corpo') },
@@ -3366,7 +3380,7 @@ function App({ eredita, cambiaCampo } = {}) {
       )}
       {manualOpen && foglioSpesa({
         addPurchase, chiudi: () => setManualOpen(false), fotoCloud, members, onReceiptFile, pAccount, pBuyer, pName, pPrice, pReceipt, pType,
-        purchases, renderBuyerSelect, sepDays, setPAccount, setPBuyer, setPName, setPPrice, setPReceipt, setPType,
+        pPer, purchases, renderBuyerSelect, sepDays, setPAccount, setPBuyer, setPName, setPPer, setPPrice, setPReceipt, setPType,
       })}
 
       {buying && (
@@ -3517,7 +3531,7 @@ function App({ eredita, cambiaCampo } = {}) {
             {/* Il conto separato vale solo su cibo e bevande. Prima, sulla
                 logistica, la riga semplicemente non compariva: chi la cercava
                 non trovava niente e non poteva sapere perche'. Ora si dice. */}
-            {editing.kind === 'purchase' && (editing.type !== 'logistica' ? (
+            {editing.kind === 'purchase' && !editing.per && (editing.type !== 'logistica' ? (
               <div>
                 <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.conto')}</label>
                 <select
@@ -3534,6 +3548,8 @@ function App({ eredita, cambiaCampo } = {}) {
                   {frase('correggi.notaLogistica')}
                 </p>
             ))}
+
+            {editing.kind === 'purchase' && sceltaFraChi({ members, per: editing.per, setPer: (v) => setEditing((x) => ({ ...x, per: typeof v === 'function' ? v(x.per) : v })) })}
 
             <div className="flex gap-2 pt-1">
               <button onClick={() => setEditing(null)} className={bottone('secondario', 'normale', 'flex-1')}>{L.t('galleria.annulla')}</button>
