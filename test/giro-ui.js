@@ -184,9 +184,13 @@ const passi = {
     await p.waitForTimeout(300);
     // I gruppi del menu sono chiusi, come per chi apre l'app: si aprono uno
     // alla volta finche' la voce non compare, come farebbe una persona.
-    for (const g of await p.locator('nav button[data-gruppo][aria-expanded="false"]').all()) {
-      if (await p.locator(`nav button[data-voce="${voce}"]`).count()) break;
-      await g.click();
+    // Il primo gruppo chiuso si cerca ogni volta da capo: un elenco preso
+    // prima scivola appena se ne apre uno, e si cliccava il gruppo sbagliato.
+    for (let i = 0; i < 6 && !(await p.locator(`nav button[data-voce="${voce}"]`).count()); i++) {
+      const chiuso = p.locator('nav button[data-gruppo][aria-expanded="false"]').first();
+      if (!(await chiuso.count())) break;
+      await chiuso.click();
+      await p.waitForTimeout(150);
     }
     await p.locator(`nav button[data-voce="${voce}"]`).first().click();
     await p.waitForTimeout(500);
