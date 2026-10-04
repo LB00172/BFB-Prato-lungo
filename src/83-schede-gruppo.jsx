@@ -136,7 +136,7 @@ const schedaMembri = ({
                   </button>
                   <button
                     onClick={() => toggleChild(m.id)}
-                    data-eta
+                    data-esente
                     className={bottoneSottile('neutro', 'px-1')}
                   >
                     <span className={`inline-block w-16 text-center text-minuto font-bold uppercase tracking-wide py-0.5 rounded ${m.isChild ? 'bg-fuoco/15 text-legno' : 'bg-salvia/15 text-gray-500'}`}>

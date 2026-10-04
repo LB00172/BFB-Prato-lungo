@@ -94,7 +94,7 @@ const menu = async (p) => {
   // 90 + 30 + 24: gli stessi conti del campo (conti.js), non rifatti qui.
   ok(`un campo dice quanto si è speso, con i conti del campo (${speso})`, Number(speso) === 144);
   const a1 = (await p.locator('[data-panoramica-campo="AAAAAAAA"]').innerText()).replace(/[  ]/g, ' ');
-  ok(`e le persone, bambini a parte, e quanto costa a testa (${a1.replace(/\s+/g, ' ').slice(0, 120)}…)`, /3 \+ 1 bambini/.test(a1) && /48,00 €/.test(a1));
+  ok(`e le persone, gli esenti a parte, e quanto costa a testa (${a1.replace(/\s+/g, ' ').slice(0, 120)}…)`, /3 \+ 1 esenti/.test(a1) && /48,00 €/.test(a1));
   ok('e i rimborsi ancora da fare', /rimborsi? da fare/i.test(a1));
   ok('e che è il secondo capogruppo', /secondo capogruppo/i.test(a1));
   ok('il campo col buco lo dice', (await p.locator('[data-panoramica-campo="BBBBBBBB"] [data-buchi]').count()) === 1

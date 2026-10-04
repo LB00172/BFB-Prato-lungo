@@ -111,10 +111,10 @@ const idDi = (p, nome) => p.evaluate((n) => (JSON.parse(localStorage.getItem('ca
   ok('Anna resta fra i membri', (await membri(p)) === 'Anna,Bruno,Carla');
 
   chiesto.length = 0;
-  await p.locator('li', { hasText: 'Anna' }).locator('button', { hasText: /^Adulto$/ }).first().click();
+  await p.locator('li', { hasText: 'Anna' }).locator('button[data-esente]', { hasText: /^paga$/i }).first().click();
   await p.waitForTimeout(500);
   ok('nemmeno dichiararla bambina', /non è possibile/i.test(chiesto[0] || ''));
-  ok('Anna resta adulta', (await p.locator('li', { hasText: 'Anna' }).locator('button', { hasText: /^Adulto$/ }).count()) === 1);
+  ok('Anna continua a pagare', (await p.locator('li', { hasText: 'Anna' }).locator('button[data-esente]', { hasText: /^paga$/i }).count()) === 1);
 
   ok('e le quote non si sono mosse', (await quote()) === quotePrima);
 

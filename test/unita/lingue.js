@@ -320,4 +320,20 @@ const UN_GIORNO = new Date(2026, 7, 11, 14, 5);  // martedì 11 agosto 2026, 14:
   ok(`nessuna voce chiamata due volte, L.t('…')(…) (${sbagliate.join(', ') || 'nessuna'})`, sbagliate.length === 0);
 }
 
+// «Bambino» non si dice piu' (4 ottobre): chi non paga e' «esente dalle
+// spese», che vale per un bambino, per l'ospite d'onore e per chi cucina.
+// Una parola che torna da sola in un testo nuovo rifarebbe la domanda
+// sbagliata («e se sono adulto ma non pago?»).
+{
+  const tornati = [];
+  CODICI.forEach((c) => {
+    const d = L.DIZIONARI[c];
+    Object.keys(d).forEach((k) => {
+      const v = typeof d[k] === 'function' ? [d[k](0, 0, true, 0), d[k](2, 1, true, 2)].join(' ') : String(d[k]);
+      if (/bambin|niñ|enfant|adult/i.test(v)) tornati.push(c + ':' + k);
+    });
+  });
+  ok(`nessun testo parla di bambini o adulti: si dice «esente» (${tornati.length})${tornati.length ? ' — ' + tornati.join(', ') : ''}`, tornati.length === 0);
+}
+
 fine();

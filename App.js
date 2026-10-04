@@ -8888,7 +8888,7 @@ React.createElement("ul", {
     className: bottoneSottile('neutro', aperta ? 'text-bosco' : '')
   }, icona('info', aperta ? 'w-5 h-5 [stroke-width:2.4]' : 'w-5 h-5')), /*#__PURE__*/React.createElement("button", {
     onClick: () => toggleChild(m.id),
-    "data-eta": true,
+    "data-esente": true,
     className: bottoneSottile('neutro', 'px-1')
   }, /*#__PURE__*/React.createElement("span", {
     className: `inline-block w-16 text-center text-minuto font-bold uppercase tracking-wide py-0.5 rounded ${m.isChild ? 'bg-fuoco/15 text-legno' : 'bg-salvia/15 text-gray-500'}`
