@@ -167,7 +167,7 @@ const A_MANO_ATTESI = {
   '80-app.jsx': 7,
   '81-schede-giorno.jsx': 3,
   '82-schede-conti.jsx': 2,
-  '83-schede-gruppo.jsx': 2,
+  '83-schede-gruppo.jsx': 1,   // la «i» dei membri e' passata a bottoneSottile (ottobre 2026)
   '84-schede-album.jsx': 3,
   '85-scheda-galleria.jsx': 4,
   // "Chi fa cosa" non ne ha nessuno: e' nata dopo il vocabolario, e la sua
@@ -200,6 +200,15 @@ const classeDi = (testo, da) => {
   return '';
 };
 
+// I nomi del vocabolario NON si scrivono qui. Erano una regex a mano —
+// /bottone(Icona|Riga|Scelta)?\(/ — ed e' bastato che nascesse bottoneSottile
+// perche' i bottoni che lo usano tornassero a contare come "scritti a mano":
+// la guardia diceva che il vocabolario stava perdendo terreno mentre stava
+// crescendo. L'elenco si chiede a chi lo tiene gia'.
+const VOCABOLARIO = [...fs.readFileSync(path.join(RADICE, 'src', '50-interfaccia.jsx'), 'utf8')
+  .matchAll(/^const (bottone[A-Za-z]*)\s*=/gm)].map((m) => m[1]);
+const usaIlVocabolario = new RegExp('\\b(' + VOCABOLARIO.join('|') + ')\\(');
+
 const aMano = {};
 const schedeNuove = [];
 SORGENTI.filter((f) => /^8/.test(f)).forEach((f) => {
@@ -207,7 +216,7 @@ SORGENTI.filter((f) => /^8/.test(f)).forEach((f) => {
   let i = testo.indexOf('<button');
   while (i >= 0) {
     const cls = classeDi(testo, i);
-    if (!/\bbottone(Icona|Riga|Scelta)?\(/.test(cls)) {
+    if (!usaIlVocabolario.test(cls)) {
       aMano[f] = (aMano[f] || 0) + 1;
       if (!(f in A_MANO_ATTESI)) schedeNuove.push(`${f}: ${cls.replace(/\s+/g, ' ').slice(0, 50)}…`);
     }

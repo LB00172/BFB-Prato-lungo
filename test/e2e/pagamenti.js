@@ -63,7 +63,7 @@ const { chromium } = require('playwright-core');
   await p.reload({ waitUntil: 'load' });
   await p.waitForSelector('button[aria-label="Menu"]', { timeout: 20000 });
   await menu('Membri');
-  ok('il segnalino 💳 compare sul membro con i dati', (await p.locator('li:has-text("Lorenzo") >> text=💳').count()) > 0);
+  ok('il segnalino compare sul membro con i dati', (await p.locator('li:has-text("Lorenzo") [title="Ha inserito i dati per il rimborso"]').count()) > 0);
 
   // --- Presenze + spesa anticipata da Lorenzo, così Bruno e Anna gli devono dare ---
   await menu('Presenze');
