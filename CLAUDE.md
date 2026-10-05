@@ -25,7 +25,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
 3. **Le password in chiaro non entrano nel repository.** In
    `firebase-config.js` ci stanno solo le impronte PBKDF2 (`salt`, `hash`,
    `iter`). La password vera si comunica in chat e basta.
-4. **Prima di dire "fatto" gira `npm test`.** 70 prove, circa 9 minuti.
+4. **Prima di dire "fatto" gira `npm test`.** 75 prove, circa 10 minuti.
    Verde o non è finito.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
    proposito il codice che dovrebbe proteggere, si controlla che la prova
@@ -57,7 +57,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `src/80-app.jsx` | `function App()`: stato, sincronizzazione, gestori. I conti non stanno più qui |
 | `src/7*-usa-*.jsx` | lo **stato** uscito da `App()`: hook (`usaGioco`, `usaGalleria`, `usaScontrini`) che si portano dietro i loro `useState`. Tengono stato e **non disegnano** |
 | `src/8*-schede-*.jsx` | il **disegno** delle schede, uscito da `App()`. Non sono componenti React: sono funzioni che restituiscono JSX e ricevono le dipendenze in un oggetto. Disegnano e **non tengono stato** |
-| `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneScelta` (i chip accesi/spenti) |
+| `src/50-interfaccia.jsx` | vocabolario dei bottoni: `bottone`, `bottoneIcona`, `bottoneRiga`, `bottoneScelta` (i chip accesi/spenti), `bottoneSottile` (44 px da toccare, disegno piccolo: le righe dei membri). La guardia chiede l'elenco a questo file, non lo tiene scritto |
 | `src/87-scheda-compiti.jsx` | «Chi fa cosa»: i compiti assegnati, dietro `FEATURES.compiti`. Un compito **non** è una spesa |
 | `src/60-gioco.jsx` | "Aiuta Bandy": tavolozze, disegno, `BandyGame`. Non tocca i conti |
 | `App.js` | **generato**, non modificare |
@@ -65,6 +65,8 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `menu-spesa.js` | dal menù del giorno alle voci della spesa. Sta fuori da `src/` perché così è provabile con una prova unitaria invece di duplicare la logica nel test |
 | `magazzino-foto.js` | dove stanno le foto degli scontrini: IndexedDB, con `localStorage` come rete di sicurezza. Fuori da `src/` per lo stesso motivo |
 | `conti.js` | **i conti**: `Conti.calcola({membri, presenze, acquisti, attrezzatura, giorni separati, giorni gratis})`. Funzione pura, fuori da `src/`, provata sui numeri veri del campo 2026 |
+| `rimborsi.js` | **i rimborsi fatti sono soldi pagati** (portato da camp-ops a ottobre 2026): una spunta nei Saldi entra nei saldi di chi ha pagato e di chi ha ricevuto, e «chi paga chi» mostra solo quello che manca. Lavora **sopra** `conti.js`, che non si tocca; le chiavi di sempre (`Carla→Anna@4000`, `sep:`, `opt:`) valgono già come pagamenti. Si paga in una vista sola: l'altra rimanda. Pura, uguale nei due rami |
+| `fra-alcuni.js` | **le spese divise solo fra alcuni** (ottobre 2026): una spesa con `per: [id]` si divide in parti uguali, al centesimo, solo fra quei membri, nella cassa comune. Lavora **sopra** `conti.js` come `rimborsi.js`; senza spese fra alcuni il risultato è quello di `conti.js` al carattere. Si sceglie nel modulo a mano della Lista e nella correzione. Pura, uguale nei due rami |
 | `presenze.js` | le **regole** delle presenze: giorno, pasto, blocco, presenze orfane. Pure, fuori da `src/`. I gestori restano in `App()` |
 | `lingue.js` | **le lingue**: dizionario (it/es/fr), plurali come funzioni, le dodici forme di data, e la regola che si prova — ogni chiave italiana esiste altrove e viceversa. Fuori da `src/` |
 | `allarmi.js` | **quando svegliare qualcuno**: orologio di un altro telefono avanti di giorni, e perdite che meritano un allarme invece di essere il recupero di un ritardo. Pure, fuori da `src/` |
@@ -73,7 +75,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `sw.js` | service worker, precache atomico |
 | `build.js` | compilazione + versione della cache |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
-| `test/` | 12 prove unitarie + 58 end‑to‑end |
+| `test/` | 14 prove unitarie + 61 end‑to‑end |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -215,8 +217,14 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   mette insieme le due casse per fare meno bonifici: le cifre dovute restano
   identiche, cambia solo chi gira i soldi a chi. La vista per cassa resta ed è
   quella che spiega PERCHÉ una cifra è quella; l'ottimizzata serve QUANDO si
-  paga. Le spunte delle due viste sono separate (`opt:`), altrimenti un
-  rimborso segnato in una vista sembrerebbe fatto anche nell'altra.
+  paga.
+  **Da ottobre 2026 un rimborso segnato è un pagamento, non una spunta**
+  (`rimborsi.js`, da camp-ops). Prima la spunta era legata alla cifra: uno
+  scontrino dimenticato registrato dopo ricalcolava tutto e chi aveva già
+  pagato tornava debitore dell'intera cifra. Adesso compare solo la
+  differenza. Un pagamento vale in tutte e due le viste, ma si paga in una
+  sola: pagato dalla vista unica, la vista per cassa rimanda a lei, e
+  viceversa.
 - **Importazione, ripristino di emergenza e chiusura del campo stanno in
   modalità tecnica.** Non modificano i dati: li RIMPIAZZANO, e si portano
   via i blocchi insieme al resto. Erano le ultime tre strade aperte a
