@@ -103,6 +103,12 @@ Segnalarle come bug fa perdere tempo; "correggerle" fa danno.
   deciso il 21 settembre, e serve a non dover aggiornare venti telefoni nello
   stesso pomeriggio mentre il gruppo chiude i rimborsi. Da rivedere a marzo
   2027. Segnalarlo come duplicazione da unificare fa danno.
+- **`match /rooms/{resto=**}` aperto allo sviluppatore è voluto, per ora.**
+  Chi ha un documento `sviluppatori/<uid>` (creato a mano in console, mai da
+  un telefono) legge e scrive tutte le stanze: serve a collaudare l'app prima
+  che esista un dato vero. Non è una falla da segnalare finché l'app non è
+  pubblicata; **prima della pubblicazione va tolto** (`PLAY-STORE.md` § 0),
+  insieme a `sviluppa` in `src/79-usa-stanza.jsx`.
 - **La verifica del codice d'ingresso non ha un backend, ed è voluto.**
   L'impronta sta in `rooms/<id>/private/join`, che `allow read: if false` rende
   illeggibile a chiunque — ma le `get()` delle regole girano sul server e la

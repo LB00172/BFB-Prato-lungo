@@ -931,6 +931,18 @@
     return true;
   }
 
+  // L'account sviluppatore (5 ottobre): esiste sviluppatori/<uid>? Lo crea
+  // solo Lorenzo, a mano, dalla console Firebase — nessun telefono puo'
+  // scriverlo, e le regole lo fanno leggere solo a chi e'. Da anonimo non si
+  // chiede: un account anonimo non e' di nessuno.
+  async function sviluppatore(utente) {
+    if (!utente || !utente.uid || utente.isAnonimo) return false;
+    const f = await sdk();
+    const d = await init();
+    const s = await f.getDoc(f.doc(d, 'sviluppatori', utente.uid));
+    return s.exists();
+  }
+
   async function abbonamento(utente) {
     if (!utente || !utente.uid || utente.isAnonimo) return null;
     const f = await sdk();
@@ -1065,5 +1077,5 @@
     }
   }
 
-  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, statoDi, togliMe, impostaStanza, lasciaAllAiutante, motivo, attivaPro, statoCampo, abbonamento, leggiPersonale, scriviPersonale };
+  root.StanzaCloud = { disponibile, crea, entra, leggi, membri, impronta, statoDi, togliMe, impostaStanza, lasciaAllAiutante, motivo, attivaPro, statoCampo, abbonamento, sviluppatore, leggiPersonale, scriviPersonale };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

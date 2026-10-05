@@ -82,6 +82,14 @@ const schedaImpostazioni = ({
       },
     })}
 
+    {/* L'account sviluppatore: si dice, perche' chi collauda deve sapere
+        che sta vedendo tutto aperto — e non scambiarlo per l'app vera. */}
+    {FEATURES.rooms && stanzaStato.sviluppa && (
+      <p data-sviluppatore className="rounded border-2 border-fuoco/50 bg-fuoco/10 p-3 text-piccolo text-legno leading-snug">
+        {frase('sviluppo.attivo')}
+      </p>
+    )}
+
     {/* Tieni il tuo posto: per chi e' entrato col solo codice. Non e' un
         muro — si usa il campo anche senza — ma e' l'unica cosa che
         impedisce, cambiando telefono, di rientrare come una persona

@@ -89,12 +89,38 @@ service cloud.firestore {
         && (!('scade' in p) || request.time < p.scade);
     }
 
+    // L'account SVILUPPATORE (5 ottobre): per collaudare l'app in tutte le
+    // sue funzioni prima che esista un dato vero. Non sta scritto qui chi e':
+    // e' chi ha un documento sviluppatori/<uid>, che si crea solo a mano
+    // dalla console (la regola piu' sotto lo nega a ogni telefono, compreso
+    // il suo). Togliere quel documento spegne tutto.
+    // ⚠️ PRIMA DELLA PUBBLICAZIONE si toglie da qui (PLAY-STORE.md): da
+    // quel giorno nei campi ci sono soldi di persone vere.
+    function sviluppatore() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/sviluppatori/$(request.auth.uid));
+    }
+
     function membroDi(stanza, uid) {
       return exists(/databases/$(database)/documents/rooms/$(stanza)/members/$(uid));
     }
 
     function modifica(stanza) {
       return membro(stanza) && ruolo(stanza) in ['proprietario', 'redattore'];
+    }
+
+    // ---------- Lo sviluppatore: tutte le stanze, tutto quello che c'e' dentro ----------
+    // Le regole si sommano: questa apre, quelle sotto restano come sono per
+    // tutti gli altri. Compreso il segreto del codice e le liste private.
+    match /rooms/{resto=**} {
+      allow read, write: if sviluppatore();
+    }
+
+    // Chi e' sviluppatore. Si legge il proprio — l'app deve saperlo —, non
+    // si scrive mai da un telefono: altrimenti chiunque se lo darebbe.
+    match /sviluppatori/{uid} {
+      allow read: if request.auth != null && uid == request.auth.uid;
+      allow write: if false;
     }
 
     // ---------- Le stanze ----------
@@ -263,6 +289,7 @@ service cloud.firestore {
     // uid, illeggibile da chiunque altro.
     match /users/{uid} {
       allow read, write: if request.auth != null && uid == request.auth.uid;
+      allow read: if sviluppatore();
     }
 
     // ---------- L'abbonamento annuale ----------
@@ -271,7 +298,7 @@ service cloud.firestore {
     // Panoramica dei campi si apre con l'abbonamento annuale, e l'app deve
     // sapere se c'e'. Quello degli altri no: dice chi paga.
     match /abbonati/{uid} {
-      allow read: if request.auth != null && uid == request.auth.uid;
+      allow read: if request.auth != null && (uid == request.auth.uid || sviluppatore());
       allow write: if false;
     }
 

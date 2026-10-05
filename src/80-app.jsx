@@ -2886,6 +2886,14 @@ function App({ eredita, cambiaCampo } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheda, account.utente && account.utente.uid]);
 
+  // L'account sviluppatore (usaStanza): si chiede al cloud a ogni cambio di
+  // account. Senza linea resta quello che sapeva il telefono.
+  useEffect(() => {
+    if (!FEATURES.rooms) return;
+    stanzaStato.controllaSviluppatore(account.utente);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account.utente && account.utente.uid]);
+
   // Entrando in un campo si rilegge anche lui: chi e' il capogruppo, chi
   // l'aiutante, le regole. Senza, un capogruppo che non passa dalla home non
   // vedrebbe mai il tasto per scriverle.

@@ -34,7 +34,7 @@ Vercel dal ramo `main`. La usano ~20 persone che in montagna vanno offline.
    progetto, stanno nel codice che arriva su ogni telefono, e la protezione
    vera sono le regole. Una prova guarda il contenuto dei file e diventa rossa
    se una chiave di servizio compare, comunque la si chiami.
-4. **Prima di dire "fatto" gira `npm test`.** 104 prove, **tre minuti
+4. **Prima di dire "fatto" gira `npm test`.** 105 prove, **tre minuti
    scarsi**. Verde o non è finito. Se hai toccato `firestore.rules`, anche
    `npm run regole`.
 5. **Nessuna prova nuova vale finché non l'ho vista fallire.** Si sabota di
@@ -119,7 +119,7 @@ server statico sulla porta 8091. Se salta fuori `EADDRINUSE`, è rimasto un
 | `marca/` | il logo originale di **Camp Ops** a 2000 px. Le quattro misure (`logo.png`, `icon-512`, `icon-192`, `apple-touch-icon`) si ricavano da lì con Chromium, senza dipendenze nuove |
 | `test/censimento-testi.js` | **il metro del §18**: quanti testi l'utente legge che non passano ancora dal dizionario, e in quale file. Non è una prova — ma una prova lo usa come guardia |
 | `functions/` | **il server del Pro**, su Firebase (non su Vercel: `.vercelignore`). `pro.js` sono le decisioni (chi paga, fino a quando, un gettone vale una volta), provate da `unita/server-pro` con Google e Firestore finti; `index.js` collega e basta. Niente chiavi: usa l'identità del suo account di servizio. Si pubblica con `npx firebase deploy --only functions` |
-| `test/` | 21 prove unitarie + 83 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo; `apri({ prima })` per quello che deve esistere prima dell'apertura (le strade di rete finte). **Il menu dentro un campo ha i gruppi chiusi** (30 settembre): `apri()` e `campoDiProva()` li aprono tutti (`TUTTI_I_GRUPPI`) perché le prove cliccano le voci per nome; `apri({ menuChiuso: true })` mostra il menu vero, ed è quello che guarda `e2e/menu-chiuso`. Una prova che apre il browser da sé senza `campoDiProva()` deve scriversi `cambusa_menu_gruppi` da sola |
+| `test/` | 21 prove unitarie + 84 end‑to‑end, più `regole/` (fuori da `npm test`). `test/lib/app.js` ha `ingressoFinto`: Firebase Authentication finto e, a richiesta, un'app senza campo; `apri({ prima })` per quello che deve esistere prima dell'apertura (le strade di rete finte). **Il menu dentro un campo ha i gruppi chiusi** (30 settembre): `apri()` e `campoDiProva()` li aprono tutti (`TUTTI_I_GRUPPI`) perché le prove cliccano le voci per nome; `apri({ menuChiuso: true })` mostra il menu vero, ed è quello che guarda `e2e/menu-chiuso`. Una prova che apre il browser da sé senza `campoDiProva()` deve scriversi `cambusa_menu_gruppi` da sola |
 
 Su Firestore: documento `camps/<codice>` più le sottoraccolte `receipts`,
 `snapshots`, `archives`, `scores`, `photos`, `photofull`, `meta/weather`.
@@ -493,6 +493,19 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   incollando un link di Google Maps, e la quota si corregge a mano: il
   meteo del paese a valle non è quello del prato. `window.CAMP_LOCATION` la
   riscrive il disegno, come `L` e le date.
+- **L'account sviluppatore, finché l'app non è pubblicata** (5 ottobre).
+  Lorenzo collauda l'app in tutte le sue funzioni con un account che è
+  capogruppo e Pro in ogni campo e apre la Panoramica senza abbonamento.
+  Chi lo è non sta scritto nel repository: è chi ha un documento
+  `sviluppatori/<uid>` in Firestore, creato **a mano dalla console** — le
+  regole lo negano a ogni telefono, compreso il suo (`§ 8` di
+  `test/regole/stanze.js`, viste rosse sabotando). Le regole gli aprono
+  `rooms/**` e gli abbonamenti; l'app lo sa da `StanzaCloud.sviluppatore` e
+  lo dice in Impostazioni (`sviluppa` in `usaStanza`, `e2e/sviluppatore`).
+  Togliere il documento spegne tutto. **Prima della pubblicazione si toglie
+  anche dal codice** — è la prima riga di «Resta da fare» in
+  `PLAY-STORE.md`: con dati di persone vere, un account che legge tutto
+  contraddice l'informativa.
 - **Importazione, ripristino di emergenza e chiusura del campo stanno in
   modalità tecnica.** Non modificano i dati: li RIMPIAZZANO, e si portano
   via i blocchi insieme al resto. Erano le ultime tre strade aperte a

@@ -450,6 +450,30 @@ const permesso = async (msg, azione) => {
   await negato('e non si scrive', () => setDoc(doc(anna, 'qualcosa/altro'), { roba: 1 }));
   await negato('nemmeno dall\'utente condiviso', () => setDoc(doc(condiviso, 'qualcosa/altro'), { roba: 1 }));
 
+  console.log('\n8) L\'account sviluppatore (5 ottobre)');
+  // Per collaudare l'app prima che esista un dato vero: chi ha
+  // sviluppatori/<uid> entra dappertutto. Il cuore della prova e' quello che
+  // deve FALLIRE: nessuno se lo da' da solo, e chi non lo e' resta fuori.
+  const dev = env.authenticatedContext('dev', { email: 'dev@example.com', email_verified: true }).firestore();
+  await negato('nessuno si fa sviluppatore da solo', () => setDoc(doc(carla, 'sviluppatori/carla'), { si: true }));
+  await negato('e prima di esserlo, lo sviluppatore non entra in una stanza non sua', () => getDoc(doc(dev, 'rooms/K7RX2MQP/dati/presenze')));
+  await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'sviluppatori/dev'), { nota: 'collaudo' }));
+  await permesso('lo sviluppatore sa di esserlo', () => getDoc(doc(dev, 'sviluppatori/dev')));
+  await negato('un altro non legge chi è sviluppatore', () => getDoc(doc(carla, 'sviluppatori/dev')));
+  await negato('e lo sviluppatore non ne nomina un altro', () => setDoc(doc(dev, 'sviluppatori/carla'), { si: true }));
+  await permesso('legge i dati di una stanza in cui non è', () => getDoc(doc(dev, 'rooms/K7RX2MQP/dati/presenze')));
+  await permesso('e li scrive', () => setDoc(doc(dev, 'rooms/K7RX2MQP/dati/presenze'), { roba: 9 }));
+  await permesso('riscrive la stanza, Pro compreso', () => updateDoc(doc(dev, 'rooms/K7RX2MQP'), { pro: { attivo: true, fino: '2099-12-31' } }));
+  await permesso('legge anche il segreto del codice', () => getDoc(doc(dev, 'rooms/K7RX2MQP/private/join')));
+  await permesso('e gli abbonamenti degli altri', () => getDoc(doc(dev, 'abbonati/anna')));
+  // Il potere e' suo e di nessun altro: gli altri restano dove erano.
+  await negato('chi non è sviluppatore resta fuori come prima', () => getDoc(doc(carla, 'rooms/K7RX2MQP/private/join')));
+  await negato('e non si scrive il Pro', () => updateDoc(doc(anna, 'rooms/K7RX2MQP'), { pro: { attivo: true, fino: '2100-06-30' } }));
+  await negato('lo sviluppatore non scrive dove le regole non dicono niente', () => setDoc(doc(dev, 'qualcosa/altro'), { roba: 1 }));
+  await negato('né si scrive abbonato', () => setDoc(doc(dev, 'abbonati/dev'), { scade: Date.now() + 365 * giorno }));
+  await env.withSecurityRulesDisabled((c) => deleteDoc(doc(c.firestore(), 'sviluppatori/dev')));
+  await negato('tolto il documento, lo sviluppatore torna fuori', () => getDoc(doc(dev, 'rooms/K7RX2MQP/dati/presenze')));
+
   await env.cleanup();
   console.log(`\n${checks} verifiche — ${fails ? fails + ' FALLITE' : 'nessun problema'}`);
   process.exit(fails ? 1 : 0);

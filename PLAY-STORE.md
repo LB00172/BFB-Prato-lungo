@@ -26,6 +26,7 @@ sistemati, con le prove viste rosse sabotando:
 
 | Cosa | Chi |
 | --- | --- |
+| ⚠️ **Togliere l'account sviluppatore** (5 ottobre): in `firestore.rules` la funzione `sviluppatore()` e le righe che la chiamano, in `src/79-usa-stanza.jsx` `sviluppa`, la prova `e2e/sviluppatore` e il § 8 di `test/regole/stanze.js`; poi il documento `sviluppatori/<uid>` dalla console. Da quel giorno nei campi ci sono i soldi di persone vere, e l'informativa dice che li vedono solo i membri | Claude il codice, **tu** la console |
 | Il contatto dell'informativa (`APP_CONFIG.privacy.contatto`) | **Tu**: l'indirizzo con dominio |
 | Il campo di prova per il revisore, con dati finti | **Tu**, dall'app; il codice va nelle istruzioni del § 3 |
 | `/.well-known/assetlinks.json` | Claude, quando mi passi l'impronta SHA-256 da Play Console |

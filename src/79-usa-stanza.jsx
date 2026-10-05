@@ -38,6 +38,14 @@ const CAMPI_KEY = 'cambusa_campi';
 // L'invito e' partito da questo telefono. E' una chiave del CAMPO: in un
 // campo nuovo l'invito va rimandato.
 const INVITO_KEY = 'cambusa_invito_mandato';
+// L'account sviluppatore (5 ottobre): l'uid di chi lo e', come l'ha saputo
+// questo telefono l'ultima volta. Si ricorda l'UID e non un «si'»: un altro
+// account sullo stesso telefono non eredita niente.
+const SVILUPPATORE_KEY = 'cambusa_sviluppatore';
+const leggiSviluppatore = () => {
+  try { return localStorage.getItem(SVILUPPATORE_KEY) || ''; } catch (e) { return ''; }
+};
+
 const leggiCampi = () => {
   try {
     const v = JSON.parse(localStorage.getItem(CAMPI_KEY) || '[]');
@@ -49,6 +57,7 @@ const usaStanza = () => {
   // La stanza di adesso: null vuol dire "nessuna", che e' il caso normale
   // finche' la versione pubblica non esiste davvero.
   const [stanza, setStanza] = useState(leggiStanzaSalvata);
+  const [sviluppatoreUid, setSviluppatoreUid] = useState(leggiSviluppatore);
   const [membri, setMembri] = useState([]);
   // La bozza delle regole mentre il capogruppo le scrive (null: non le sta
   // scrivendo), e chi sta scegliendo come aiutante.
@@ -176,6 +185,9 @@ const usaStanza = () => {
     setPanoramica((x) => Object.assign({}, x, { stato: 'caricando' }));
     let abb = null;
     try { abb = await c.abbonamento(utente); } catch (e) { setPanoramica({ stato: 'senzaLinea', abbonato: null, righe: [] }); return; }
+    // Lo sviluppatore la apre senza abbonamento: la scadenza e' quella di
+    // un abbonamento vero, se c'e', altrimenti nessuna da mostrare.
+    if (sviluppa && !P.abbonamentoAttivo(abb, Date.now())) abb = { scade: Date.now() + 365 * 864e5 };
     if (!P.abbonamentoAttivo(abb, Date.now())) { setPanoramica({ stato: 'fatta', abbonato: false, righe: [] }); return; }
     const righe = [];
     for (const v of campi) {
@@ -337,19 +349,42 @@ const usaStanza = () => {
   // dall'elenco sul telefono, quindi chi smonta l'app puo' falsarla per se':
   // vale per quello che il telefono fa da solo. Quello che costa (spazio,
   // server) lo decidono le regole Firestore, che leggono la stanza vera.
+  // ---------- L'account sviluppatore (5 ottobre) ----------
+  // Chi ha un documento sviluppatori/<uid> (lo crea Lorenzo a mano dalla
+  // console) e' capogruppo e Pro in ogni campo, e apre la Panoramica senza
+  // abbonamento: serve a collaudare tutto prima che esista un dato vero. Le
+  // regole Firestore gli aprono le stanze; qui si apre l'interfaccia. Vale
+  // solo per l'account con cui e' entrato.
+  // ⚠️ Prima della pubblicazione si toglie (PLAY-STORE.md).
+  const utenteAdesso = (window.AuthCloud && window.AuthCloud.utente && window.AuthCloud.utente()) || null;
+  const sviluppa = !!(sviluppatoreUid && utenteAdesso && utenteAdesso.uid === sviluppatoreUid);
+  const controllaSviluppatore = async (utente) => {
+    const c = SC();
+    if (!utente || !utente.uid || utente.isAnonimo) {
+      if (sviluppatoreUid) { setSviluppatoreUid(''); scriviLocale(SVILUPPATORE_KEY, ''); }
+      return;
+    }
+    if (!c || !c.disponibile() || !c.sviluppatore) return;
+    try {
+      const v = (await c.sviluppatore(utente)) ? utente.uid : '';
+      setSviluppatoreUid(v);
+      scriviLocale(SVILUPPATORE_KEY, v);
+    } catch (e) { /* senza linea resta quello che sapeva il telefono */ }
+  };
+
   const voceAperta = stanza && window.Stanza
     ? campi.find((v) => window.Stanza.normalizza(v.codice) === window.Stanza.normalizza(stanza.codice))
     : null;
   const oggi = toDateStr(new Date());
-  const pro = !!(window.Stanza && window.Stanza.campoPro(voceAperta, oggi));
+  const pro = sviluppa || !!(window.Stanza && window.Stanza.campoPro(voceAperta, oggi));
   // Fino a quando (compreso), se il Pro ha una scadenza.
-  const proFino = (pro && voceAperta.pro && voceAperta.pro.fino) || '';
+  const proFino = (pro && voceAperta && voceAperta.pro && voceAperta.pro.fino) || '';
   // «Questa funzione e' aperta qui?» (Stanza.sbloccata). Senza stanza — la
   // versione privata, o un campo entrato col vecchio codice — non c'e' un
   // Pro da chiedere, e tutto resta com'era: aperto.
-  const sbloccata = (funzione) => !stanza || !window.Stanza || window.Stanza.sbloccata(funzione, voceAperta, oggi);
+  const sbloccata = (funzione) => sviluppa || !stanza || !window.Stanza || window.Stanza.sbloccata(funzione, voceAperta, oggi);
   // Si puo' creare un altro campo? Si chiede prima di aprire il modulo.
-  const puoCreare = !window.Stanza || window.Stanza.puoCreareCampo(campi, oggi);
+  const puoCreare = sviluppa || !window.Stanza || window.Stanza.puoCreareCampo(campi, oggi);
   // Cosa si sa del campo aperto: le sue regole, e chi lo guida. Come il Pro,
   // arriva dall'elenco sul telefono e si corregge a ogni lettura del cloud;
   // a decidere davvero chi puo' cambiare cosa sono le regole Firestore.
@@ -364,7 +399,7 @@ const usaStanza = () => {
   // resto. `capogruppo` vuol dire «amministra»: e' vero per tutti e due.
   // Come per il Pro, lo dice l'elenco sul telefono; chi puo' davvero lo
   // decidono le regole Firestore (amministra e primoCapo).
-  const primoCapo = !!(voceAperta && voceAperta.ruolo === 'proprietario');
+  const primoCapo = (sviluppa && !!stanza) || !!(voceAperta && voceAperta.ruolo === 'proprietario');
   const aiutante = !!(voceAperta && voceAperta.aiutante);
   const capogruppo = primoCapo || aiutante;
   const vice = (voceAperta && voceAperta.vice) || '';
@@ -606,7 +641,7 @@ const usaStanza = () => {
   };
 
   return {
-    pro, proFino, sbloccata, puoCreare, regole, capogruppo, primoCapo,
+    pro, proFino, sbloccata, puoCreare, regole, capogruppo, primoCapo, sviluppa, controllaSviluppatore,
     negozio, acquistando, esitoPro, compraPro, aiutante, vice, salvaRegole, nominaAiutante, lasciaCampo,
     bozzaRegole, setBozzaRegole, sceltaAiutante, setSceltaAiutante,
     dotazioni, bozzaDotazioni, setBozzaDotazioni, salvaDotazioni,
