@@ -10976,14 +10976,19 @@ const schedaCassa = ({
     return /*#__PURE__*/React.createElement("li", {
       key: p.id,
       "data-persona-cassa": p.name,
-      className: "py-1.5 flex items-center gap-2 min-h-11"
+      className: "py-1.5"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex-grow min-w-0 leading-tight"
+      className: "flex items-baseline justify-between gap-2"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "font-bold text-normale text-bosco truncate block"
-    }, p.name), /*#__PURE__*/React.createElement("span", {
-      className: "text-minuto text-gray-500"
-    }, p.previsto > 0 ? L.t('cassa.statoQuota', money(p.versato), money(p.previsto), p.manca > 0.005 ? money(p.manca) : null) : p.versato > 0 ? L.t('cassa.versatoSenzaQuota', money(p.versato)) : L.t('cassa.senzaQuota'))), modificabile && /*#__PURE__*/React.createElement("input", {
+      className: "font-bold text-normale text-bosco min-w-0 break-words"
+    }, p.name), p.previsto > 0 && p.manca <= 0.005 && /*#__PURE__*/React.createElement("span", {
+      className: "text-minuto font-bold uppercase text-bosco shrink-0",
+      "data-pagata": true
+    }, L.t('cassa.pagata'))), /*#__PURE__*/React.createElement("span", {
+      className: "text-minuto text-gray-500 block leading-snug"
+    }, p.previsto > 0 ? L.t('cassa.statoQuota', money(p.versato), money(p.previsto), p.manca > 0.005 ? money(p.manca) : null) : p.versato > 0 ? L.t('cassa.versatoSenzaQuota', money(p.versato)) : L.t('cassa.senzaQuota')), modificabile && /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mt-1"
+    }, /*#__PURE__*/React.createElement("input", {
       type: "number",
       min: "0",
       step: "0.01",
@@ -10993,15 +10998,12 @@ const schedaCassa = ({
       value: m.quota == null ? '' : m.quota,
       onChange: e => setMemberField(p.id, 'quota', e.target.value === '' ? undefined : e.target.value),
       placeholder: L.t('cassa.quota'),
-      className: "w-20 shrink-0 px-2 py-1.5 bg-carta/50 border border-salvia/30 rounded text-piccolo text-right focus:outline-none focus:border-bosco"
-    }), modificabile && p.manca > 0.005 && /*#__PURE__*/React.createElement("button", {
+      className: "w-24 shrink-0 px-2 py-1.5 min-h-11 bg-carta/50 border border-salvia/30 rounded text-piccolo text-right focus:outline-none focus:border-bosco"
+    }), p.manca > 0.005 && /*#__PURE__*/React.createElement("button", {
       "data-incassa": p.name,
       onClick: () => incassaQuota(p),
-      className: bottone('primario', 'minuscolo', 'shrink-0')
-    }, L.t('cassa.incassa', money(p.manca))), p.previsto > 0 && p.manca <= 0.005 && /*#__PURE__*/React.createElement("span", {
-      className: "text-minuto font-bold uppercase text-bosco shrink-0",
-      "data-pagata": true
-    }, L.t('cassa.pagata')));
+      className: bottone('primario', 'minuscolo', 'flex-grow')
+    }, L.t('cassa.incassa', money(p.manca)))));
   }))), modificabile && /*#__PURE__*/React.createElement("div", {
     className: "bg-scheda p-4 rounded-lg border-2 border-bosco/20 shadow-sm space-y-3"
   }, /*#__PURE__*/React.createElement("h3", {
@@ -11801,7 +11803,9 @@ const schedaPanoramica = ({
   }, L.t('panoramica.sottotitolo')), /*#__PURE__*/React.createElement("div", {
     "data-totali": true,
     className: "grid grid-cols-2 md:grid-cols-4 gap-3 bg-carta/60 rounded p-3"
-  }, cifra(L.t('panoramica.campi'), tot.campi), cifra(L.t('panoramica.speso'), `${money(tot.speso)} €`), cifra(L.t('panoramica.rimborsi'), tot.rimborsiAperti), cifra(L.t('panoramica.buchi'), tot.buchi)), p.stato === 'caricando' && /*#__PURE__*/React.createElement("p", {
+  }, cifra(L.t('panoramica.campi'), tot.campi), cifra(L.t('panoramica.speso'), `${money(tot.speso)} €`), cifra(L.t('panoramica.rimborsi'), tot.rimborsiAperti), cifra(L.t('panoramica.buchi'), tot.buchi), tot.conCassa > 0 && cifra(L.t('panoramica.incassato'), `${money(tot.entrate)} €`, {
+    'data-totale-entrate': tot.entrate
+  }), tot.conCassa > 0 && cifra(L.t('panoramica.daIncassare'), `${money(tot.daIncassare)} €`)), p.stato === 'caricando' && /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-gray-500"
   }, L.t('panoramica.leggo'))), p.righe.length === 0 && /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo text-gray-500 px-1"
@@ -11840,7 +11844,10 @@ const schedaPanoramica = ({
     className: "text-piccolo font-bold text-legno leading-snug"
   }, L.t('panoramica.conBuchi')), r.fuoriConto > 0 && /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-gray-500"
-  }, L.t('panoramica.fuoriConto', money(r.fuoriConto))), /*#__PURE__*/React.createElement("p", {
+  }, L.t('panoramica.fuoriConto', money(r.fuoriConto))), r.cassa && /*#__PURE__*/React.createElement("p", {
+    "data-cassa": r.cassa.entrate,
+    className: `text-piccolo leading-snug ${r.cassa.daIncassare > 0.005 ? 'text-legno' : 'text-bosco'}`
+  }, L.t('panoramica.cassa', money(r.cassa.entrate), r.cassa.daIncassare > 0.005 ? money(r.cassa.daIncassare) : null)), /*#__PURE__*/React.createElement("p", {
     className: "text-minuto text-gray-400"
   }, r.ultimaSpesa ? L.t('panoramica.ultimaSpesa', L.data(new Date(r.ultimaSpesa), 'breve')) : L.t('panoramica.nessunaSpesa')))))));
 };

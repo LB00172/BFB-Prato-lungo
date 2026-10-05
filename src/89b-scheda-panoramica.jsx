@@ -92,6 +92,8 @@ const schedaPanoramica = ({ account, goTo, onApri, stanzaStato }) => {
           {cifra(L.t('panoramica.speso'), `${money(tot.speso)} €`)}
           {cifra(L.t('panoramica.rimborsi'), tot.rimborsiAperti)}
           {cifra(L.t('panoramica.buchi'), tot.buchi)}
+          {tot.conCassa > 0 && cifra(L.t('panoramica.incassato'), `${money(tot.entrate)} €`, { 'data-totale-entrate': tot.entrate })}
+          {tot.conCassa > 0 && cifra(L.t('panoramica.daIncassare'), `${money(tot.daIncassare)} €`)}
         </div>
         {p.stato === 'caricando' && <p className="text-minuto text-gray-500">{L.t('panoramica.leggo')}</p>}
       </div>
@@ -123,6 +125,11 @@ const schedaPanoramica = ({ account, goTo, onApri, stanzaStato }) => {
                 </p>
                 {r.buchi > 0 && <p data-buchi className="text-piccolo font-bold text-legno leading-snug">{L.t('panoramica.conBuchi')}</p>}
                 {r.fuoriConto > 0 && <p className="text-minuto text-gray-500">{L.t('panoramica.fuoriConto', money(r.fuoriConto))}</p>}
+                {r.cassa && (
+                  <p data-cassa={r.cassa.entrate} className={`text-piccolo leading-snug ${r.cassa.daIncassare > 0.005 ? 'text-legno' : 'text-bosco'}`}>
+                    {L.t('panoramica.cassa', money(r.cassa.entrate), r.cassa.daIncassare > 0.005 ? money(r.cassa.daIncassare) : null)}
+                  </p>
+                )}
                 <p className="text-minuto text-gray-400">
                   {r.ultimaSpesa ? L.t('panoramica.ultimaSpesa', L.data(new Date(r.ultimaSpesa), 'breve')) : L.t('panoramica.nessunaSpesa')}
                 </p>

@@ -33,7 +33,8 @@ const PERSONE = [
   ['m5', 'Elena Rizzo'], ['m6', 'Davide Galli'], ['m7', 'Chiara Longo'], ['m8', 'Tommaso Ferri', true],
 ];
 const pieno = () => {
-  const members = PERSONE.map(([id, name, isChild]) => ({ id, name, isChild: !!isChild }));
+  // Le quote della cassa per chi paga; l'esente resta senza.
+  const members = PERSONE.map(([id, name, isChild]) => ({ id, name, isChild: !!isChild, ...(isChild ? {} : { quota: 150 }) }));
   const campData = {};
   GIORNI.forEach((d, i) => {
     const meals = {};
@@ -48,9 +49,21 @@ const pieno = () => {
     { id: 'p2', name: 'Carne per la grigliata', price: 96.5, type: 'alimentare', buyer: 'Marco Bellini', at: 2 },
     { id: 'p3', name: 'Vino e birra', price: 58.4, type: 'bevande', buyer: 'Sara Conti', at: 3 },
     { id: 'p4', name: 'Gas per i fornelli', price: 38, type: 'logistica', buyer: 'Luca Moretti', at: 4 },
+    // Una spesa fra alcuni: la benzina di chi era in macchina con Marco.
+    { id: 'p5', name: 'Benzina', price: 42, type: 'logistica', buyer: 'Marco Bellini', at: 5, per: ['m2', 'm3', 'm5'] },
   ];
+  const incassi = [
+    { id: 'i1', chi: 'm1', quanto: 150, nota: 'Quota', at: 10 },
+    { id: 'i2', chi: 'm2', quanto: 150, nota: 'Quota', at: 11 },
+    { id: 'i3', chi: 'm3', quanto: 80, nota: 'Acconto', at: 12 },
+    { id: 'i4', chi: '', da: 'Contributo del gruppo', quanto: 100, at: 13 },
+  ];
+  const miaLista = { voci: [
+    { id: 'l1', testo: 'Sacco a pelo', fatto: true }, { id: 'l2', testo: 'Torcia frontale', fatto: false },
+    { id: 'l3', testo: 'Borraccia', fatto: false }, { id: 'l4', testo: 'Crema solare', fatto: false },
+  ], at: 1 };
   const toBuy = [{ id: 't1', name: 'Carbonella', qty: '2 sacchi' }, { id: 't2', name: 'Latte', qty: '4 litri' }];
-  return { members, campData, purchases, toBuy };
+  return { members, campData, purchases, toBuy, incassi, miaLista };
 };
 
 // La scena: chi sei (account o no), dove sei (in un campo, pieno o vuoto, o
@@ -80,6 +93,8 @@ const scena = [(o) => {
         localStorage.setItem('cambusa_camp_data', JSON.stringify(o.dati.campData));
         localStorage.setItem('cambusa_purchases', JSON.stringify(o.dati.purchases));
         localStorage.setItem('cambusa_tobuy', JSON.stringify(o.dati.toBuy));
+        localStorage.setItem('cambusa_incassi', JSON.stringify(o.dati.incassi));
+        localStorage.setItem('cambusa_mia_lista', JSON.stringify(o.dati.miaLista));
       }
     }
   }
@@ -224,6 +239,12 @@ const GIRO = [
   ['19b-campo', '«Il campo» di un campo in corso', { account: true, campo: true, dati: true }, G(passi.menu('campo'))],
   ['19c-campo-voci', '«Il campo»: la riga di cosa si divide, aperta', { account: true, campo: true, dati: true }, G(passi.menu('campo'), passi.tocca('[data-riga="voci"]'))],
   ['20-guida', 'La guida', { account: true, campo: true, dati: true }, G(passi.menu('guida'))],
+  ['21-cassa', 'La cassa del campo: entrate, quote, rendiconto', { account: true, campo: true, dati: true }, G(passi.menu('cassa'))],
+  ['22-mia-lista', 'La mia lista, privata', { account: true, campo: true, dati: true }, G(passi.menu('mialista'))],
+  ['23-spesa-fra-alcuni', 'Il foglio della spesa con «solo alcuni»', { account: true, campo: true, dati: true },
+    G(passi.menu('lista'), passi.tocca('[data-tasto-spesa]'), passi.tocca('[data-fra="alcuni"]'), passi.tocca('[data-fra-membro="Marco Bellini"]'), passi.tocca('[data-fra-membro="Sara Conti"]'))],
+  ['24-quote-fra-alcuni', 'Le quote, con le spese fra alcuni', { account: true, campo: true, dati: true }, G(passi.menu('spesa'), passi.tocca('main button >> nth=1'))],
+  ['25-scheda-persona', 'La scheda di una persona', { account: true, campo: true, dati: true }, G(passi.menu('membri'), passi.tocca('[data-membro="Marco Bellini"] button[aria-label^="Dati"]'))],
 ];
 // Le varianti: lo stesso punto in un'altra condizione.
 const VARIANTI = [
@@ -233,6 +254,9 @@ const VARIANTI = [
   ['17-saldi', { larghezza: 320 }], ['09-calendario', { larghezza: 320 }],
   ['01-apertura', { lingua: 'es' }], ['17-saldi', { lingua: 'es' }], ['11-presenze', { lingua: 'es' }],
   ['01-apertura', { lingua: 'fr' }], ['17-saldi', { lingua: 'fr' }], ['11-presenze', { lingua: 'fr' }],
+  ['21-cassa', { tema: 'dark' }], ['21-cassa', { larghezza: 320 }], ['21-cassa', { lingua: 'es' }],
+  ['22-mia-lista', { tema: 'dark' }], ['23-spesa-fra-alcuni', { tema: 'dark' }], ['23-spesa-fra-alcuni', { larghezza: 320 }],
+  ['25-scheda-persona', { tema: 'dark' }],
 ];
 
 async function scatta(browser, nome, cosa, sc, azioni, variante) {

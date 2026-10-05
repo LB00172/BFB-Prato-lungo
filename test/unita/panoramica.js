@@ -11,6 +11,8 @@ const RADICE = path.resolve(__dirname, '..', '..');
 require(path.join(RADICE, 'conti.js'));
 require(path.join(RADICE, 'voci.js'));
 require(path.join(RADICE, 'rimborsi.js'));
+require(path.join(RADICE, 'fra-alcuni.js'));
+require(path.join(RADICE, 'cassa.js'));
 require(path.join(RADICE, 'panoramica.js'));
 const C = globalThis.Conti;
 const P = globalThis.Panoramica;
@@ -88,6 +90,21 @@ const stato = {
   const r1 = { riassunto: P.riassunto(stato, null) };
   const t = P.totali([r1, r1, { errore: 'x' }]);
   ok(`i totali contano solo i campi letti (${t.campi} campi, ${t.speso} €)`, t.campi === 2 && t.speso === 288);
+}
+
+// ---------- La cassa nella Panoramica (5 ottobre) ----------
+// Per chi organizza piu' unita': quanto e' entrato e quanto manca, campo per
+// campo. Un campo senza quote e senza incassi non ha una cassa: niente riga,
+// e nei totali non vale zero.
+{
+  const m = [{ id: 'a', name: 'Anna', quota: 100 }, { id: 'b', name: 'Bruno', quota: 100 }, { id: 'c', name: 'Capo', isChild: true }];
+  const conCassa = { members: m, campData: {}, purchases: [], incassi: [{ id: 'i1', chi: 'a', quanto: 100, at: 1 }, { id: 'i2', chi: '', da: 'Gruppo', quanto: 50, at: 2 }] };
+  const r = P.riassunto(conCassa, null);
+  ok(`un campo con la cassa dice incassato e da incassare (${JSON.stringify(r.cassa)})`, !!r.cassa && r.cassa.entrate === 150 && r.cassa.daIncassare === 100);
+  const senza = P.riassunto({ members: [{ id: 'a', name: 'Anna' }], campData: {}, purchases: [] }, null);
+  ok('un campo senza quote né incassi non ha una cassa', senza.cassa === null);
+  const tot = P.totali([{ riassunto: r }, { riassunto: senza }]);
+  ok(`i totali sommano solo le casse che ci sono (${tot.entrate}, ${tot.daIncassare}, ${tot.conCassa} campo)`, tot.entrate === 150 && tot.daIncassare === 100 && tot.conCassa === 1);
 }
 
 fine();

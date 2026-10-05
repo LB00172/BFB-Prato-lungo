@@ -30,7 +30,8 @@ const scena = (o) => [(s) => {
   const pasto = { lunch: true, dinner: true };
   const stati = {
     AAAAAAAA: {
-      members: [{ id: 'a', name: 'Anna', isChild: false }, { id: 'b', name: 'Bruno', isChild: false }, { id: 'c', name: 'Carla', isChild: false }, { id: 'd', name: 'Dino', isChild: true }],
+      members: [{ id: 'a', name: 'Anna', isChild: false, quota: 60 }, { id: 'b', name: 'Bruno', isChild: false, quota: 60 }, { id: 'c', name: 'Carla', isChild: false }, { id: 'd', name: 'Dino', isChild: true }],
+      incassi: [{ id: 'i1', chi: 'a', quanto: 60, at: 1 }],
       campData: { '2027-08-11': { meals: { a: pasto, b: pasto, c: pasto, d: pasto } }, '2027-08-12': { meals: { a: pasto, b: pasto, c: pasto, d: pasto } } },
       purchases: [
         { id: 'p1', name: 'Spesa', price: 90, type: 'alimentare', buyer: 'Anna', at: Date.parse('2027-08-11T10:00:00') },
@@ -99,6 +100,11 @@ const menu = async (p) => {
   ok('e che è il secondo capogruppo', /secondo capogruppo/i.test(a1));
   ok('il campo col buco lo dice', (await p.locator('[data-panoramica-campo="BBBBBBBB"] [data-buchi]').count()) === 1
     && (await p.locator('[data-panoramica-campo="AAAAAAAA"] [data-buchi]').count()) === 0);
+  ok('un campo con la cassa dice quanto è entrato e quanto manca',
+    /incassati 60,00 €/.test((await p.locator('[data-panoramica-campo="AAAAAAAA"] [data-cassa]').innerText()).replace(/[  ]/g, ' '))
+    && /da incassare 60,00 €/.test((await p.locator('[data-panoramica-campo="AAAAAAAA"] [data-cassa]').innerText()).replace(/[  ]/g, ' '))
+    && (await p.locator('[data-panoramica-campo="BBBBBBBB"] [data-cassa]').count()) === 0);
+  ok('e in cima c\'è l\'incassato di tutti i campi', Number(await p.locator('[data-totale-entrate]').getAttribute('data-totale-entrate')) === 60);
   ok('il campo che non si legge resta, e dice perché', /non riesco a leggerlo/i.test(await p.locator('[data-panoramica-campo="CCCCCCCC"]').innerText()));
   const tot = (await p.locator('[data-totali]').innerText()).replace(/\s+/g, ' ').replace(/[  ]/g, ' ');
   // Due campi letti: 144 + 12. Quello illeggibile non vale zero: non vale.

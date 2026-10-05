@@ -54,6 +54,13 @@
     const adulti = members.filter((m) => m && !m.isChild).length;
     const ultima = purchases.reduce((max, p) => (p && typeof p.at === 'number' && p.at > max ? p.at : max), 0);
     const tondo = (n) => Math.round((Number(n) || 0) * 100) / 100;
+    // La cassa (cassa.js), se il campo ne ha una: per chi organizza piu'
+    // unita' e' la domanda di ogni settimana — quanto e' entrato, quanto
+    // manca. Un campo senza quote e senza incassi non ha una cassa da dire.
+    const k = root.Cassa ? root.Cassa.riassunto({ incassi: lista(s.incassi), members, totali: t, fuoriConto: per.fuori }) : null;
+    const cassa = k && (k.entrate > 0 || k.previste > 0)
+      ? { entrate: k.entrate, daIncassare: k.daIncassare, saldo: k.saldo }
+      : null;
     return {
       persone: members.length,
       adulti,
@@ -70,6 +77,7 @@
       // in una Panoramica e' il campo da guardare per primo.
       buchi: lista(t.buchi).length,
       ultimaSpesa: ultima || null,
+      cassa,
     };
   }
 
@@ -89,6 +97,10 @@
       speso: Math.round(lette.reduce((n, r) => n + r.riassunto.speso, 0) * 100) / 100,
       rimborsiAperti: lette.reduce((n, r) => n + r.riassunto.rimborsiAperti, 0),
       buchi: lette.reduce((n, r) => n + r.riassunto.buchi, 0),
+      // La cassa si somma solo dove c'e': un campo senza cassa non vale zero.
+      entrate: Math.round(lette.reduce((n, r) => n + (r.riassunto.cassa ? r.riassunto.cassa.entrate : 0), 0) * 100) / 100,
+      daIncassare: Math.round(lette.reduce((n, r) => n + (r.riassunto.cassa ? r.riassunto.cassa.daIncassare : 0), 0) * 100) / 100,
+      conCassa: lette.filter((r) => r.riassunto.cassa).length,
     };
   }
 

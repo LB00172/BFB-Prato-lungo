@@ -71,31 +71,36 @@ const schedaCassa = ({
             {r.persone.map((p) => {
               const m = members.find((x) => x.id === p.id) || {};
               return (
-                <li key={p.id} data-persona-cassa={p.name} className="py-1.5 flex items-center gap-2 min-h-11">
-                  <div className="flex-grow min-w-0 leading-tight">
-                    <span className="font-bold text-normale text-bosco truncate block">{p.name}</span>
-                    <span className="text-minuto text-gray-500">
-                      {p.previsto > 0
-                        ? L.t('cassa.statoQuota', money(p.versato), money(p.previsto), p.manca > 0.005 ? money(p.manca) : null)
-                        : (p.versato > 0 ? L.t('cassa.versatoSenzaQuota', money(p.versato)) : L.t('cassa.senzaQuota'))}
-                    </span>
+                <li key={p.id} data-persona-cassa={p.name} className="py-1.5">
+                  {/* Nome e stato su una riga intera: con la casella e il tasto
+                      accanto, a 360 px il nome si tagliava e lo stato andava a
+                      capo cinque volte. I comandi stanno sotto. */}
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="font-bold text-normale text-bosco min-w-0 break-words">{p.name}</span>
+                    {p.previsto > 0 && p.manca <= 0.005 && <span className="text-minuto font-bold uppercase text-bosco shrink-0" data-pagata>{L.t('cassa.pagata')}</span>}
                   </div>
+                  <span className="text-minuto text-gray-500 block leading-snug">
+                    {p.previsto > 0
+                      ? L.t('cassa.statoQuota', money(p.versato), money(p.previsto), p.manca > 0.005 ? money(p.manca) : null)
+                      : (p.versato > 0 ? L.t('cassa.versatoSenzaQuota', money(p.versato)) : L.t('cassa.senzaQuota'))}
+                  </span>
                   {modificabile && (
-                    <input
-                      type="number" min="0" step="0.01" inputMode="decimal" data-cifra-persona
-                      aria-label={L.t('cassa.quotaDi', p.name)}
-                      value={m.quota == null ? '' : m.quota}
-                      onChange={(e) => setMemberField(p.id, 'quota', e.target.value === '' ? undefined : e.target.value)}
-                      placeholder={L.t('cassa.quota')}
-                      className="w-20 shrink-0 px-2 py-1.5 bg-carta/50 border border-salvia/30 rounded text-piccolo text-right focus:outline-none focus:border-bosco"
-                    />
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        type="number" min="0" step="0.01" inputMode="decimal" data-cifra-persona
+                        aria-label={L.t('cassa.quotaDi', p.name)}
+                        value={m.quota == null ? '' : m.quota}
+                        onChange={(e) => setMemberField(p.id, 'quota', e.target.value === '' ? undefined : e.target.value)}
+                        placeholder={L.t('cassa.quota')}
+                        className="w-24 shrink-0 px-2 py-1.5 min-h-11 bg-carta/50 border border-salvia/30 rounded text-piccolo text-right focus:outline-none focus:border-bosco"
+                      />
+                      {p.manca > 0.005 && (
+                        <button data-incassa={p.name} onClick={() => incassaQuota(p)} className={bottone('primario', 'minuscolo', 'flex-grow')}>
+                          {L.t('cassa.incassa', money(p.manca))}
+                        </button>
+                      )}
+                    </div>
                   )}
-                  {modificabile && p.manca > 0.005 && (
-                    <button data-incassa={p.name} onClick={() => incassaQuota(p)} className={bottone('primario', 'minuscolo', 'shrink-0')}>
-                      {L.t('cassa.incassa', money(p.manca))}
-                    </button>
-                  )}
-                  {p.previsto > 0 && p.manca <= 0.005 && <span className="text-minuto font-bold uppercase text-bosco shrink-0" data-pagata>{L.t('cassa.pagata')}</span>}
                 </li>
               );
             })}
