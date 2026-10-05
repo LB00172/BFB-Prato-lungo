@@ -2904,6 +2904,7 @@ function App() {
   const [pType, setPType] = useState('alimentare');
   const [pBuyer, setPBuyer] = useState('');
   const [pAccount, setPAccount] = useState('comune'); // conto della spesa in corso
+  const [pPer, setPPer] = useState(null); // null = si divide come sempre; [id] = solo fra loro (fra-alcuni.js)
   const [snapList, setSnapList] = useState(null); // elenco snapshot per il ripristino
   // Giorno dell'ultimo backup su file (o del "ho già fatto"): serve al promemoria.
   const [backupOggi, setBackupOggi] = useState(() => localStorage.getItem(BACKUP_KEY) || '');
@@ -4720,6 +4721,10 @@ function App() {
       window.alert(L.t('spesa.nomeEPrezzo'));
       return;
     }
+    if (pPer && pPer.length === 0) {
+      window.alert(L.t('fraAlcuni.nessuno'));
+      return;
+    }
     if (!confermaPrezzo(price)) return;
     const id = uid();
     setPurchases(prev => [...prev, {
@@ -4729,7 +4734,10 @@ function App() {
       type: pType,
       buyer: pBuyer.trim(),
       at: Date.now(),
-      ...(pAccount === 'sep' && pType !== 'logistica' ? {
+      // Fra alcuni: si divide solo fra loro, e il conto separato non c'entra.
+      ...(pPer ? {
+        per: pPer.slice()
+      } : pAccount === 'sep' && pType !== 'logistica' ? {
         account: 'sep'
       } : {})
     }]);
@@ -4745,6 +4753,7 @@ function App() {
     setPType('alimentare');
     setPBuyer('');
     setPReceipt(null);
+    setPPer(null);
     setManualOpen(false); // si richiude: la spesa appena salvata si vede in cronologia
     // Il conto NON si azzera: chi sta registrando la spesa separata di solito
     // ne inserisce più di una di fila.
@@ -4764,7 +4773,8 @@ function App() {
     price: String(posNum(p.price)),
     buyer: p.buyer || '',
     type: p.type || 'alimentare',
-    account: p.account === 'sep' ? 'sep' : 'comune'
+    account: p.account === 'sep' ? 'sep' : 'comune',
+    per: Array.isArray(p.per) && p.per.length ? p.per.slice() : null
   });
   const openEditEquip = e => setEditing({
     kind: 'equip',
@@ -4787,6 +4797,11 @@ function App() {
         window.alert(L.t('spesa.prezzoZero'));
         return;
       }
+      const fraChi = editing.per;
+      if (fraChi && fraChi.length === 0) {
+        window.alert(L.t('fraAlcuni.nessuno'));
+        return;
+      }
       if (!confermaPrezzo(price)) return;
       setPurchases(prev => prev.map(p => p.id !== editing.id ? p : {
         ...p,
@@ -4794,11 +4809,18 @@ function App() {
         price,
         type: editing.type,
         buyer: (editing.buyer || '').trim(),
-        // il conto vale solo per cibo e bevande: la logistica è sempre comune
-        ...(editing.account === 'sep' && editing.type !== 'logistica' ? {
-          account: 'sep'
-        } : {
+        // il conto vale solo per cibo e bevande: la logistica è sempre comune;
+        // e una spesa fra alcuni non ha conto, si divide solo fra loro
+        ...(fraChi ? {
+          per: fraChi.slice(),
           account: undefined
+        } : {
+          per: undefined,
+          ...(editing.account === 'sep' && editing.type !== 'logistica' ? {
+            account: 'sep'
+          } : {
+            account: undefined
+          })
         })
       }));
     } else {
@@ -5201,7 +5223,9 @@ function App() {
   // Stanno in conti.js, fuori da src/: sono una funzione pura di sei cose e
   // vanno provati sui numeri veri di un campo vero, con una prova unitaria,
   // invece che leggendo cifre a schermo. Qui resta solo cosa gli si passa.
-  const totals = Conti.calcola({
+  // Le spese fra alcuni escono da conti.js e rientrano sopra (fra-alcuni.js):
+  // conti.js resta identico nei due rami.
+  const totals = window.FraAlcuni.calcola({
     members,
     campData,
     purchases,
@@ -5944,6 +5968,11 @@ function App() {
     title: L.t('guida.separato.titolo'),
     body: L.t('guida.separato.corpo')
   }, {
+    k: 'fraalcuni',
+    icon: '🚗',
+    title: L.t('guida.fraalcuni.titolo'),
+    body: L.t('guida.fraalcuni.corpo')
+  }, {
     k: 'saldi',
     icon: '🤝',
     title: L.t('guida.saldi.titolo'),
@@ -6304,9 +6333,11 @@ function App() {
     newBuyName,
     newBuyQty,
     onReceiptFile,
+    members,
     openEditPurchase,
     pAccount,
     pBuyer,
+    pPer,
     pName,
     pPrice,
     pReceipt,
@@ -6326,6 +6357,7 @@ function App() {
     setPAccount,
     setPBuyer,
     setPName,
+    setPPer,
     setPPrice,
     setPReceipt,
     setPType,
@@ -6611,7 +6643,7 @@ function App() {
   }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
     key: k,
     value: k
-  }, tipoSpesa(k)))))), editing.kind === 'purchase' && (editing.type !== 'logistica' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, tipoSpesa(k)))))), editing.kind === 'purchase' && !editing.per && (editing.type !== 'logistica' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
   }, L.t('lista.conto')), /*#__PURE__*/React.createElement("select", {
     value: editing.account,
@@ -6626,7 +6658,14 @@ function App() {
     value: "sep"
   }, L.t('giorno.contoSeparato')))) : /*#__PURE__*/React.createElement("p", {
     className: "text-piccolo text-gray-500 leading-snug bg-[#F0F4F1]/60 border border-[#8F9E8B]/25 rounded p-2"
-  }, frase('correggi.notaLogistica'))), /*#__PURE__*/React.createElement("div", {
+  }, frase('correggi.notaLogistica'))), editing.kind === 'purchase' && sceltaFraChi({
+    members,
+    per: editing.per,
+    setPer: v => setEditing(x => ({
+      ...x,
+      per: typeof v === 'function' ? v(x.per) : v
+    }))
+  }), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 pt-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setEditing(null),
@@ -7275,7 +7314,7 @@ const schedaSpesa = ({
   className: "text-piccolo text-gray-500 -mt-1"
 }, frase('spesa.cassaNota')), /*#__PURE__*/React.createElement("div", {
   className: "space-y-2"
-}, [[L.t('spesa.cibo'), totals.totalFood], [L.t('spesa.bevande'), totals.totalDrinks], [L.t('spesa.logisticaEAttrezzatura'), totals.totalAccessory]].map(([label, val]) => /*#__PURE__*/React.createElement("div", {
+}, [[L.t('spesa.cibo'), totals.totalFood], [L.t('spesa.bevande'), totals.totalDrinks], [L.t('spesa.logisticaEAttrezzatura'), totals.totalAccessory], ...(totals.fraAlcuni && totals.fraAlcuni.totale > 0 ? [[L.t('spesa.fraAlcuni'), totals.fraAlcuni.totale]] : [])].map(([label, val]) => /*#__PURE__*/React.createElement("div", {
   key: label,
   className: "flex justify-between items-center bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20"
 }, /*#__PURE__*/React.createElement("span", {
@@ -7362,7 +7401,29 @@ const schedaSpesa = ({
   buchi: totals.buchi.filter(x => x.cassa === 'comune'),
   nonRipartito: totals.nonRipartitoComune,
   avviso: totals.foodDrinksCommon > 0 && totals.adultMealsCommon === 0 && totals.adultMealsTotal > 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, frase('quote.tuttiSeparati', money(totals.foodDrinksCommon))) : null
-}), cassaSepAttiva && schedaQuote({
+}), totals.fraAlcuni && totals.fraAlcuni.voci.length > 0 && /*#__PURE__*/React.createElement("div", {
+  "data-quote-fra-alcuni": true,
+  className: "bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm"
+}, /*#__PURE__*/React.createElement("h3", {
+  className: "font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-2"
+}, L.t('fraAlcuni.titolo')), /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-gray-500 leading-snug mb-2"
+}, L.t('fraAlcuni.spiega')), /*#__PURE__*/React.createElement("ul", {
+  className: "divide-y divide-[#8F9E8B]/20"
+}, totals.fraAlcuni.voci.map(v => /*#__PURE__*/React.createElement("li", {
+  key: v.id,
+  className: "py-2"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "flex items-baseline justify-between gap-2"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "text-normale font-bold text-[#2D392C] min-w-0 break-words"
+}, v.name), /*#__PURE__*/React.createElement("span", {
+  className: "font-rustic font-bold text-[#2D392C] shrink-0"
+}, money(v.price), " \u20AC")), v.buyer && /*#__PURE__*/React.createElement("p", {
+  className: "text-minuto text-[#5C4A3C]"
+}, L.t('fraAlcuni.pagataDa', v.buyer)), /*#__PURE__*/React.createElement("p", {
+  className: "text-piccolo text-gray-600 leading-snug"
+}, v.quote.map(q => `${q.name} ${money(q.amount)} €`).join(' · ')))))), cassaSepAttiva && schedaQuote({
   titolo: L.t('quote.cassaSeparata'),
   sottotitolo: L.t('quote.cassaSeparataNota', totals.sepDaysCount),
   elenco: totals.breakdown.filter(b => b.mealsSep > 0 || b.paySep > 0.005),
@@ -7529,12 +7590,62 @@ const schedaSpesa = ({
 }, L.t('cloud.errore', cloud.error)), cloud.status === 'idle' && L.t(localStorage.getItem('cambusa_sync_optout') === '1' ? 'cloud.disattivata' : 'cloud.inAttesa')), !isOnline && /*#__PURE__*/React.createElement("span", {
   className: "text-[#D97706] font-bold shrink-0"
 }, L.t('cloud.offline')))))));
+
+// Fra chi si divide una spesa (fra-alcuni.js). «Come sempre» e' il modo di
+// tutte le spese di prima — per pasti o fra i presenti —; «solo alcuni» apre
+// i nomi, e la spesa si divide in parti uguali fra quelli accesi. Sta nel
+// foglio della spesa e nella maschera di correzione: scritta una volta.
+const sceltaFraChi = ({
+  members,
+  per,
+  setPer
+}) => {
+  const scelti = per || [];
+  const etichetta = 'block text-minuto uppercase font-bold tracking-wide text-gray-500 mb-1.5';
+  const quanti = scelti.length;
+  return /*#__PURE__*/React.createElement("div", {
+    "data-fra-chi": true
+  }, /*#__PURE__*/React.createElement("span", {
+    className: etichetta
+  }, L.t('fraAlcuni.siDivide')), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-fra": "tutti",
+    "aria-pressed": !per,
+    onClick: () => setPer(null),
+    className: bottoneScelta('pillola', 'tenue', !per, 'minuscolo')
+  }, L.t('fraAlcuni.comeSempre')), /*#__PURE__*/React.createElement("button", {
+    "data-fra": "alcuni",
+    "aria-pressed": !!per,
+    onClick: () => setPer(per || []),
+    className: bottoneScelta('pillola', 'tenue', !!per, 'minuscolo')
+  }, L.t('fraAlcuni.soloAlcuni'))), per && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 space-y-1.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, members.map(m => {
+    const acceso = scelti.includes(m.id);
+    return /*#__PURE__*/React.createElement("button", {
+      key: m.id,
+      "data-partecipante": m.name,
+      "aria-pressed": acceso,
+      onClick: () => setPer(v => {
+        const x = v || [];
+        return x.includes(m.id) ? x.filter(i => i !== m.id) : [...x, m.id];
+      }),
+      className: bottoneScelta('pillola', 'tenue', acceso, 'minuscolo')
+    }, m.name);
+  })), /*#__PURE__*/React.createElement("p", {
+    className: "text-minuto text-gray-500 leading-snug"
+  }, L.t('fraAlcuni.nota', quanti))));
+};
 const schedaLista = ({
   addPurchase,
   addToBuy,
   attachReceiptTo,
   listaSection,
   manualOpen,
+  members,
   newBuyName,
   newBuyQty,
   onReceiptFile,
@@ -7542,6 +7653,7 @@ const schedaLista = ({
   pAccount,
   pBuyer,
   pName,
+  pPer,
   pPrice,
   pReceipt,
   pType,
@@ -7560,6 +7672,7 @@ const schedaLista = ({
   setPAccount,
   setPBuyer,
   setPName,
+  setPPer,
   setPPrice,
   setPReceipt,
   setPType,
@@ -7739,7 +7852,7 @@ const schedaLista = ({
 }, Object.keys(PURCHASE_TYPES).map(k => /*#__PURE__*/React.createElement("option", {
   key: k,
   value: k
-}, tipoSpesa(k)))))), pType !== 'logistica' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+}, tipoSpesa(k)))))), pType !== 'logistica' && !pPer && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
   className: "block text-piccolo uppercase font-bold text-gray-500 mb-1"
 }, L.t('lista.conto')), /*#__PURE__*/React.createElement("select", {
   value: pAccount,
@@ -7751,7 +7864,11 @@ const schedaLista = ({
   value: "sep"
 }, L.t('giorno.contoSeparato'))), pAccount === 'sep' && /*#__PURE__*/React.createElement("p", {
   className: "text-minuto mt-1 leading-snug text-[#5C4A3C]"
-}, sepDays.length === 0 ? L.t('lista.senzaGiorniSpuntati') : L.t('lista.siDivide', sepDays.length))), /*#__PURE__*/React.createElement("button", {
+}, sepDays.length === 0 ? L.t('lista.senzaGiorniSpuntati') : L.t('lista.siDivide', sepDays.length))), sceltaFraChi({
+  members,
+  per: pPer,
+  setPer: setPPer
+}), /*#__PURE__*/React.createElement("button", {
   onClick: addPurchase,
   className: bottone('primario', 'grande', 'w-full')
 }, L.t('lista.salva'))), /*#__PURE__*/React.createElement("div", {
@@ -7815,7 +7932,10 @@ const schedaLista = ({
     className: "flex flex-wrap items-center gap-1 min-w-0 flex-grow"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B]"
-  }, tipoSpesa(p.type) || p.type), p.account === 'sep' && p.type !== 'logistica' && /*#__PURE__*/React.createElement("span", {
+  }, tipoSpesa(p.type) || p.type), Array.isArray(p.per) && p.per.length > 0 && /*#__PURE__*/React.createElement("span", {
+    "data-etichetta-fra": true,
+    className: "text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#2D392C]"
+  }, L.t('fraAlcuni.etichetta', p.per.length)), p.account === 'sep' && p.type !== 'logistica' && !p.per && /*#__PURE__*/React.createElement("span", {
     className: "text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"
   }, L.t('lista.separatoEtichetta')), p.fromList && /*#__PURE__*/React.createElement("span", {
     className: "text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]"

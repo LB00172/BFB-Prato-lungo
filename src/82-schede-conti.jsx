@@ -55,6 +55,7 @@ const schedaSpesa = ({
           [L.t('spesa.cibo'), totals.totalFood],
           [L.t('spesa.bevande'), totals.totalDrinks],
           [L.t('spesa.logisticaEAttrezzatura'), totals.totalAccessory],
+          ...(totals.fraAlcuni && totals.fraAlcuni.totale > 0 ? [[L.t('spesa.fraAlcuni'), totals.fraAlcuni.totale]] : []),
         ].map(([label, val]) => (
           <div key={label} className="flex justify-between items-center bg-[#F0F4F1]/60 px-3 py-2 rounded border border-[#8F9E8B]/20">
             <span className="text-piccolo uppercase font-bold text-gray-500">{label}</span>
@@ -168,6 +169,30 @@ const schedaSpesa = ({
         ? <>{frase('quote.tuttiSeparati', money(totals.foodDrinksCommon))}</>
         : null,
     })}
+
+    {/* Le spese fra alcuni (fra-alcuni.js): fuori dalle quote per pasto,
+        divise in parti uguali solo fra chi c'era. Una riga per spesa, con
+        quanto tocca a ciascuno: e' la domanda che si fa chi la vede. */}
+    {totals.fraAlcuni && totals.fraAlcuni.voci.length > 0 && (
+      <div data-quote-fra-alcuni className="bg-white p-4 rounded-lg border-2 border-[#2D392C]/20 shadow-sm">
+        <h3 className="font-rustic text-grande border-b border-[#8F9E8B]/40 pb-2 text-[#2D392C] mb-2">{L.t('fraAlcuni.titolo')}</h3>
+        <p className="text-piccolo text-gray-500 leading-snug mb-2">{L.t('fraAlcuni.spiega')}</p>
+        <ul className="divide-y divide-[#8F9E8B]/20">
+          {totals.fraAlcuni.voci.map((v) => (
+            <li key={v.id} className="py-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-normale font-bold text-[#2D392C] min-w-0 break-words">{v.name}</span>
+                <span className="font-rustic font-bold text-[#2D392C] shrink-0">{money(v.price)} €</span>
+              </div>
+              {v.buyer && <p className="text-minuto text-[#5C4A3C]">{L.t('fraAlcuni.pagataDa', v.buyer)}</p>}
+              <p className="text-piccolo text-gray-600 leading-snug">
+                {v.quote.map((q) => `${q.name} ${money(q.amount)} €`).join(' · ')}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
 
     {/* Quote cassa separata: solo il cibo dei giorni spuntati, diviso
         solo fra chi in quei giorni ha mangiato. */}
@@ -405,12 +430,51 @@ const schedaSpesa = ({
   </div>
 );
 
+// Fra chi si divide una spesa (fra-alcuni.js). «Come sempre» e' il modo di
+// tutte le spese di prima — per pasti o fra i presenti —; «solo alcuni» apre
+// i nomi, e la spesa si divide in parti uguali fra quelli accesi. Sta nel
+// foglio della spesa e nella maschera di correzione: scritta una volta.
+const sceltaFraChi = ({ members, per, setPer }) => {
+  const scelti = per || [];
+  const etichetta = 'block text-minuto uppercase font-bold tracking-wide text-gray-500 mb-1.5';
+  const quanti = scelti.length;
+  return (
+    <div data-fra-chi>
+      <span className={etichetta}>{L.t('fraAlcuni.siDivide')}</span>
+      <div className="flex flex-wrap gap-1.5">
+        <button data-fra="tutti" aria-pressed={!per} onClick={() => setPer(null)} className={bottoneScelta('pillola', 'tenue', !per, 'minuscolo')}>{L.t('fraAlcuni.comeSempre')}</button>
+        <button data-fra="alcuni" aria-pressed={!!per} onClick={() => setPer(per || [])} className={bottoneScelta('pillola', 'tenue', !!per, 'minuscolo')}>{L.t('fraAlcuni.soloAlcuni')}</button>
+      </div>
+      {per && (
+        <div className="mt-2 space-y-1.5">
+          <div className="flex flex-wrap gap-1.5">
+            {members.map((m) => {
+              const acceso = scelti.includes(m.id);
+              return (
+                <button
+                  key={m.id}
+                  data-partecipante={m.name}
+                  aria-pressed={acceso}
+                  onClick={() => setPer((v) => { const x = v || []; return x.includes(m.id) ? x.filter((i) => i !== m.id) : [...x, m.id]; })}
+                  className={bottoneScelta('pillola', 'tenue', acceso, 'minuscolo')}
+                >{m.name}</button>
+              );
+            })}
+          </div>
+          <p className="text-minuto text-gray-500 leading-snug">{L.t('fraAlcuni.nota', quanti)}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const schedaLista = ({
   addPurchase,
   addToBuy,
   attachReceiptTo,
   listaSection,
   manualOpen,
+  members,
   newBuyName,
   newBuyQty,
   onReceiptFile,
@@ -418,6 +482,7 @@ const schedaLista = ({
   pAccount,
   pBuyer,
   pName,
+  pPer,
   pPrice,
   pReceipt,
   pType,
@@ -436,6 +501,7 @@ const schedaLista = ({
   setPAccount,
   setPBuyer,
   setPName,
+  setPPer,
   setPPrice,
   setPReceipt,
   setPType,
@@ -646,8 +712,9 @@ const schedaLista = ({
       </div>
 
       {/* Conto su cui addebitare cibo e bevande. La logistica è sempre
-          comune, quindi per quella il menu non serve. */}
-      {pType !== 'logistica' && (
+          comune, quindi per quella il menu non serve; e una spesa fra
+          alcuni si divide solo fra loro, senza conto. */}
+      {pType !== 'logistica' && !pPer && (
         <div>
           <label className="block text-piccolo uppercase font-bold text-gray-500 mb-1">{L.t('lista.conto')}</label>
           <select
@@ -667,6 +734,8 @@ const schedaLista = ({
           )}
         </div>
       )}
+
+      {sceltaFraChi({ members, per: pPer, setPer: setPPer })}
 
       <button onClick={addPurchase} className={bottone('primario', 'grande', 'w-full')}>
         {L.t('lista.salva')}
@@ -750,7 +819,8 @@ const schedaLista = ({
               <div className="flex items-center gap-2">
                 <div className="flex flex-wrap items-center gap-1 min-w-0 flex-grow">
                   <span className="text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#8F9E8B]">{tipoSpesa(p.type) || p.type}</span>
-                  {p.account === 'sep' && p.type !== 'logistica' && (
+                  {Array.isArray(p.per) && p.per.length > 0 && <span data-etichetta-fra className="text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#2D392C]">{L.t('fraAlcuni.etichetta', p.per.length)}</span>}
+                  {p.account === 'sep' && p.type !== 'logistica' && !p.per && (
                     <span className="text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]">{L.t('lista.separatoEtichetta')}</span>
                   )}
                   {p.fromList && <span className="text-minuto uppercase font-bold text-white px-1.5 py-0.5 rounded bg-[#5C4A3C]">{L.t('lista.acquistataEtichetta')}</span>}
