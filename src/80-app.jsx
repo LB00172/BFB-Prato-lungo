@@ -1691,12 +1691,20 @@ function App() {
     // Due casse, due elenchi. Un elenco solo farebbe sembrare che chi ha
     // anticipato sul conto separato debba essere rimborsato da tutti.
     const sepAttiva = t.sepDaysCount > 0 || t.foodDrinksSep > 0.005;
+    // Da fare e gia' fatti, separati: un elenco che rimettesse fra i bonifici
+    // quelli gia' pagati farebbe pagare due volte chi lo legge nel gruppo.
     const blocco = (c, titolo) => {
-      if (c.transfers.length === 0 && c.settlement.length === 0) return;
+      if (c.transfers.length === 0 && c.settlement.length === 0 && c.fatti.length === 0) return;
       if (c.transfers.length > 0) {
         lines.push('');
         lines.push(L.t('report.chiPagaChi', titolo));
         c.transfers.forEach((x) => lines.push(L.t('report.riga', x.from, x.to, money(x.amount))));
+      }
+      if (c.fatti.length > 0) {
+        lines.push('');
+        lines.push(L.t('report.giaFatti', titolo));
+        c.fatti.forEach((x) => lines.push(L.t('report.rigaFatta', x.from, x.to, money(x.amount))));
+        if (c.transfers.length === 0) lines.push(L.t('report.tuttiFatti'));
       }
       if (c.settlement.length > 0) {
         lines.push('');
@@ -1712,11 +1720,11 @@ function App() {
     // Il resoconto segue quello che si sta guardando: mandare nel gruppo un
     // elenco diverso da quello a schermo e' il modo piu' rapido di far pagare
     // due volte qualcuno.
-    if (sepAttiva && saldiOttimizzati) {
-      blocco({ transfers: t.transfersOttimizzati, settlement: t.settlement }, '');
+    if (sepAttiva && vistaUnica) {
+      blocco({ transfers: rimborsi.tutte.transfers, fatti: rimborsi.tutte.fatti, settlement: t.settlement }, '');
     } else {
-      blocco(t.casse.comune, sepAttiva ? L.t('report.cassaComune') : '');
-      if (sepAttiva) blocco(t.casse.separata, L.t('report.cassaSeparata'));
+      blocco({ ...t.casse.comune, ...rimborsi.comune }, sepAttiva ? L.t('report.cassaComune') : '');
+      if (sepAttiva) blocco({ ...t.casse.separata, ...rimborsi.separata }, L.t('report.cassaSeparata'));
     }
     if (t.freeDaysCount > 0) {
       lines.push(L.t('report.giorniGratis', t.freeDaysCount, t.mealsFree));
@@ -1773,8 +1781,15 @@ function App() {
   } = usaGalleria({ activeTab, cloudConnesso: cloud.connected, campData });
 
   // ---------- Rimborsi saldati (barrati) ----------
-  const toggleSettled = (key) => {
-    setSettled((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  // Un rimborso segnato e' un pagamento (rimborsi.js): entra nei saldi e
+  // «chi paga chi» mostra solo quello che manca. Segnarlo aggiunge una chiave
+  // nuova — anche se la stessa cifra fra le stesse persone e' gia' stata
+  // pagata una volta —, annullarlo toglie quella e basta.
+  const segnaRimborso = (t) => {
+    setSettled((prev) => [...prev, window.Rimborsi.nuovaChiave(t, prev)]);
+  };
+  const annullaRimborso = (chiave) => {
+    setSettled((prev) => prev.filter((k) => k !== chiave));
   };
 
   // ---------- Aggiunta attrezzatura ----------
@@ -1906,17 +1921,18 @@ function App() {
   // spuntati l'app resta com'era, con una cassa sola.
   const cassaSepAttiva = totals.sepDaysCount > 0 || totals.foodDrinksSep > 0.005;
 
-  // Chiave del rimborso segnato come saldato. La cassa separata ha il suo
-  // prefisso: senza, due passaggi identici nelle due casse (stesse persone,
-  // stessa cifra) si spegnerebbero a vicenda con un tocco solo.
-  const chiaveRimborso = (t) =>
-    `${t.cassa === 'separata' ? 'sep:' : t.cassa === 'tutte' ? 'opt:' : ''}${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
+  // Quello che manca dopo i rimborsi gia' fatti, vista per vista
+  // (rimborsi.js): un rimborso segnato e' un pagamento, non una spunta.
+  // Quanto manca lo sa la vista in cui si e' pagato: l'altra rimanda.
+  const rimborsi = window.Rimborsi.residui(totals, settled);
+  const vistaUnica = window.Rimborsi.vistaUnica(rimborsi, saldiOttimizzati);
 
   // La vista dei passaggi ottimizzati: le due casse messe insieme. Riusa i
   // saldi complessivi, che sono gia' la somma delle due.
   const cassaUnica = {
     settlement: totals.settlement,
-    transfers: totals.transfersOttimizzati,
+    transfers: rimborsi.tutte.transfers,
+    fatti: rimborsi.tutte.fatti,
     byBuyer: totals.byBuyer,
     unattributed: totals.unattributed,
     unknownBuyers: totals.unknownBuyers,
@@ -2037,37 +2053,46 @@ function App() {
             })}
           </ul>
         )}
-        {s.transfers.length > 0 && (
+        {/* Si paga in una vista sola: l'altra dice dove guardare
+            (rimborsi.js spiega perche' non puo' fare i conti da se'). */}
+        {c.rimandaUnica || c.rimandaPerCassa ? (
+          <div className="mt-3 pt-3 border-t border-[#8F9E8B]/30" data-rimanda={c.rimandaUnica ? 'unica' : 'cassa'}>
+            <p className="text-minuto text-[#8F9E8B] leading-snug mb-2">{L.t(c.rimandaUnica ? 'saldi.pagatiNellaVistaUnica' : 'saldi.pagatiPerCassa')}</p>
+            <button onClick={() => setSaldiOttimizzati(!!c.rimandaUnica)} className={bottone('bruno', 'normale', 'w-full')}>
+              {L.t('saldi.vaiVistaUnica')}
+            </button>
+          </div>
+        ) : (s.transfers.length > 0 || (s.fatti || []).length > 0) && (
           <div className="mt-3 pt-3 border-t border-[#8F9E8B]/30">
             <h4 className="font-rustic text-normale text-[#8F9E8B] mb-1">{L.t('saldi.chiPagaChi')}</h4>
-            <p className="text-minuto text-gray-400 mb-2">{L.t('saldi.toccaRiga')}</p>
+            {s.transfers.length > 0 ? (
+              <p className="text-minuto text-gray-400 mb-2">{L.t('saldi.toccaRiga')}</p>
+            ) : (
+              <p className="text-piccolo text-[#8FBF8F] font-bold mb-2" data-tutti-fatti>{L.t('saldi.tuttiFatti')}</p>
+            )}
             <ul className="space-y-1.5">
               {s.transfers.map((t, i) => {
-                const key = chiaveRimborso(t);
-                const paid = settled.includes(key);
                 // Dati di pagamento di chi deve ricevere (scheda Membri, tasto "i").
                 const dest = members.find((m) => m.name === t.to);
-                const mostraDati = !paid && dest && (dest.paypal || dest.iban);
+                const mostraDati = dest && (dest.paypal || dest.iban || dest.satispay);
                 return (
                   <li
-                    key={key + i}
-                    onClick={() => toggleSettled(key)}
-                    className={`cursor-pointer select-none bg-[#1F271E] px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-[#8F9E8B]/20'}`}
+                    key={`${t.from}→${t.to}@${i}`}
+                    data-da-fare
+                    onClick={() => segnaRimborso(t)}
+                    className="cursor-pointer select-none bg-[#1F271E] px-3 py-2 rounded border transition-opacity border-[#8F9E8B]/20"
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`text-piccolo ${paid ? 'line-through text-gray-400' : ''}`}>
+                      <span className="text-piccolo">
                         <span className="font-bold">{t.from}</span>
                         <span className="text-[#8F9E8B]"> → </span>
                         <span className="font-bold">{t.to}</span>
                       </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className={`font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-[#D97706]'}`}>{money(t.amount)} €</span>
-                        {paid && <span className="text-[#8FBF8F] text-normale font-bold">✓</span>}
-                      </span>
+                      <span className="font-rustic font-bold text-[#D97706]">{money(t.amount)} €</span>
                     </div>
                     {mostraDati && (
                       <div className="mt-1.5 pt-1.5 border-t border-[#8F9E8B]/20 space-y-1">
-                        {[['PayPal', dest.paypal], ['IBAN', dest.iban]].filter((r) => r[1]).map((r) => (
+                        {[['PayPal', dest.paypal], ['IBAN', dest.iban], [L.t('membri.satispay'), dest.satispay]].filter((r) => r[1]).map((r) => (
                           <div key={r[0]} className="flex items-start gap-2">
                             <span className="text-minuto uppercase font-bold text-[#8F9E8B] w-11 shrink-0 pt-0.5">{r[0]}</span>
                             <span className={`text-piccolo text-[#F0F4F1] break-all leading-snug ${r[0] === 'IBAN' ? 'font-mono' : ''}`}>{r[1]}</span>
@@ -2085,10 +2110,10 @@ function App() {
                 );
               })}
             </ul>
-            {/* Chi deve incassare ma non ha lasciato PayPal/IBAN. */}
+            {/* Chi deve incassare ma non ha lasciato i dati per il rimborso. */}
             {(() => {
               const senza = [...new Set(s.transfers.map((t) => t.to))]
-                .filter((n) => { const d = members.find((m) => m.name === n); return d && !d.paypal && !d.iban; });
+                .filter((n) => { const d = members.find((m) => m.name === n); return d && !d.paypal && !d.iban && !d.satispay; });
               if (senza.length === 0) return null;
               return (
                 <p className="text-minuto text-gray-400 italic mt-2">
@@ -2096,6 +2121,33 @@ function App() {
                 </p>
               );
             })()}
+            {/* I rimborsi fatti: soldi che si sono mossi, e che i saldi
+                hanno gia' scontato. Si toccano solo per annullare uno
+                segnato per sbaglio. */}
+            {(s.fatti || []).length > 0 && (
+              <div className="mt-3" data-rimborsi-fatti>
+                <h4 className="font-rustic text-piccolo text-[#8F9E8B] mb-1">{L.t('saldi.fatti')}</h4>
+                <ul className="space-y-1">
+                  {s.fatti.map((f) => (
+                    <li
+                      data-pagato={f.chiave}
+                      key={f.chiave}
+                      onClick={() => annullaRimborso(f.chiave)}
+                      className="cursor-pointer select-none bg-[#1F271E] px-3 py-1.5 rounded border border-[#8FBF8F]/40 opacity-60 flex items-center justify-between"
+                    >
+                      <span className="text-piccolo line-through text-gray-400">
+                        <span className="font-bold">{f.from}</span> → <span className="font-bold">{f.to}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="font-rustic font-bold line-through text-gray-400">{money(f.amount)} €</span>
+                        <span className="text-[#8FBF8F] text-normale font-bold">✓</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-minuto text-gray-400 mt-1">{L.t('saldi.toccaFatto')}</p>
+              </div>
+            )}
           </div>
         )}
         {s.unattributed > 0.005 && (
@@ -2130,7 +2182,7 @@ function App() {
             in più (o in meno) dello speso: quei centesimi non hanno un
             destinatario, quindi l'ultimo passaggio non combacia col saldo.
             Senza spiegarlo sembra un errore di conto. */}
-        {Math.abs(c.scarto) >= 0.005 && s.transfers.length > 0 && (
+        {Math.abs(c.scarto) >= 0.005 && (s.transfers.length > 0 || (s.fatti || []).length > 0) && (
           <p className="text-minuto text-gray-400 italic mt-2">
             {L.t('saldi.arrotondamento', money(Math.abs(c.scarto)))}
           </p>
@@ -2242,8 +2294,7 @@ function App() {
     const name = (closeName || '').trim() || L.t('campo.nomePredefinito');
     const range = campRange();
     const t = totals;
-    const daPagare = saldiOttimizzati ? t.transfersOttimizzati : t.transfers;
-    const unpaid = daPagare.filter((x) => !settled.includes(chiaveRimborso(x)));
+    const unpaid = window.Rimborsi.daFare(rimborsi, saldiOttimizzati);
     const warn = unpaid.length > 0 ? L.t('campo.rimborsiAperti', unpaid.length) : '';
     if (!window.confirm(L.t('campo.confermaChiusura', name, money(t.overallTotal), members.length, warn))) return;
 
@@ -2821,7 +2872,7 @@ function App() {
 
         {/* ---------- SPESA ---------- */}
         {activeTab === 'spesa' && schedaSpesa({
-          admin, archives, bloccoConti, campCodeInput, cassaSepAttiva, cassaUnica, chiudiConti, cloud, connectCloud, disconnectCloud, exportData, goTo, importData, isOnline, openClose, openRestore, pastiDi, riapriConti, risparmio, saldiOttimizzati, schedaQuote, schedaSaldi, setCampCodeInput, setSaldiOttimizzati, setSpesaSection, shareReport, spesaSection, totals,
+          admin, archives, bloccoConti, campCodeInput, cassaSepAttiva, cassaUnica, chiudiConti, cloud, connectCloud, disconnectCloud, exportData, goTo, importData, isOnline, openClose, openRestore, pastiDi, riapriConti, risparmio, saldiOttimizzati, rimborsi, schedaQuote, schedaSaldi, setCampCodeInput, setSaldiOttimizzati, setSpesaSection, shareReport, spesaSection, totals,
         })}
 
         {/* ---------- TACCUINO DELLE SPESE ---------- */}

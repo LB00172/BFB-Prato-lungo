@@ -4922,12 +4922,20 @@ function App() {
     // Due casse, due elenchi. Un elenco solo farebbe sembrare che chi ha
     // anticipato sul conto separato debba essere rimborsato da tutti.
     const sepAttiva = t.sepDaysCount > 0 || t.foodDrinksSep > 0.005;
+    // Da fare e gia' fatti, separati: un elenco che rimettesse fra i bonifici
+    // quelli gia' pagati farebbe pagare due volte chi lo legge nel gruppo.
     const blocco = (c, titolo) => {
-      if (c.transfers.length === 0 && c.settlement.length === 0) return;
+      if (c.transfers.length === 0 && c.settlement.length === 0 && c.fatti.length === 0) return;
       if (c.transfers.length > 0) {
         lines.push('');
         lines.push(L.t('report.chiPagaChi', titolo));
         c.transfers.forEach(x => lines.push(L.t('report.riga', x.from, x.to, money(x.amount))));
+      }
+      if (c.fatti.length > 0) {
+        lines.push('');
+        lines.push(L.t('report.giaFatti', titolo));
+        c.fatti.forEach(x => lines.push(L.t('report.rigaFatta', x.from, x.to, money(x.amount))));
+        if (c.transfers.length === 0) lines.push(L.t('report.tuttiFatti'));
       }
       if (c.settlement.length > 0) {
         lines.push('');
@@ -4941,14 +4949,21 @@ function App() {
     // Il resoconto segue quello che si sta guardando: mandare nel gruppo un
     // elenco diverso da quello a schermo e' il modo piu' rapido di far pagare
     // due volte qualcuno.
-    if (sepAttiva && saldiOttimizzati) {
+    if (sepAttiva && vistaUnica) {
       blocco({
-        transfers: t.transfersOttimizzati,
+        transfers: rimborsi.tutte.transfers,
+        fatti: rimborsi.tutte.fatti,
         settlement: t.settlement
       }, '');
     } else {
-      blocco(t.casse.comune, sepAttiva ? L.t('report.cassaComune') : '');
-      if (sepAttiva) blocco(t.casse.separata, L.t('report.cassaSeparata'));
+      blocco({
+        ...t.casse.comune,
+        ...rimborsi.comune
+      }, sepAttiva ? L.t('report.cassaComune') : '');
+      if (sepAttiva) blocco({
+        ...t.casse.separata,
+        ...rimborsi.separata
+      }, L.t('report.cassaSeparata'));
     }
     if (t.freeDaysCount > 0) {
       lines.push(L.t('report.giorniGratis', t.freeDaysCount, t.mealsFree));
@@ -5050,8 +5065,15 @@ function App() {
   });
 
   // ---------- Rimborsi saldati (barrati) ----------
-  const toggleSettled = key => {
-    setSettled(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  // Un rimborso segnato e' un pagamento (rimborsi.js): entra nei saldi e
+  // «chi paga chi» mostra solo quello che manca. Segnarlo aggiunge una chiave
+  // nuova — anche se la stessa cifra fra le stesse persone e' gia' stata
+  // pagata una volta —, annullarlo toglie quella e basta.
+  const segnaRimborso = t => {
+    setSettled(prev => [...prev, window.Rimborsi.nuovaChiave(t, prev)]);
+  };
+  const annullaRimborso = chiave => {
+    setSettled(prev => prev.filter(k => k !== chiave));
   };
 
   // ---------- Aggiunta attrezzatura ----------
@@ -5197,16 +5219,18 @@ function App() {
   // spuntati l'app resta com'era, con una cassa sola.
   const cassaSepAttiva = totals.sepDaysCount > 0 || totals.foodDrinksSep > 0.005;
 
-  // Chiave del rimborso segnato come saldato. La cassa separata ha il suo
-  // prefisso: senza, due passaggi identici nelle due casse (stesse persone,
-  // stessa cifra) si spegnerebbero a vicenda con un tocco solo.
-  const chiaveRimborso = t => `${t.cassa === 'separata' ? 'sep:' : t.cassa === 'tutte' ? 'opt:' : ''}${t.from}→${t.to}@${Math.round(t.amount * 100)}`;
+  // Quello che manca dopo i rimborsi gia' fatti, vista per vista
+  // (rimborsi.js): un rimborso segnato e' un pagamento, non una spunta.
+  // Quanto manca lo sa la vista in cui si e' pagato: l'altra rimanda.
+  const rimborsi = window.Rimborsi.residui(totals, settled);
+  const vistaUnica = window.Rimborsi.vistaUnica(rimborsi, saldiOttimizzati);
 
   // La vista dei passaggi ottimizzati: le due casse messe insieme. Riusa i
   // saldi complessivi, che sono gia' la somma delle due.
   const cassaUnica = {
     settlement: totals.settlement,
-    transfers: totals.transfersOttimizzati,
+    transfers: rimborsi.tutte.transfers,
+    fatti: rimborsi.tutte.fatti,
     byBuyer: totals.byBuyer,
     unattributed: totals.unattributed,
     unknownBuyers: totals.unknownBuyers
@@ -5307,28 +5331,38 @@ function App() {
       }, L.t('saldi.haAnticipatoDeve', money(x.paid), money(x.owed)))), /*#__PURE__*/React.createElement("span", {
         className: `font-rustic font-bold text-normale shrink-0 text-right ${credito ? 'text-[#8FBF8F]' : debito ? 'text-[#D97706]' : 'text-gray-400'}`
       }, credito ? L.t('saldi.riceve', money(x.net)) : debito ? L.t('saldi.da', money(-x.net)) : L.t('saldi.inPari')));
-    })), s.transfers.length > 0 && /*#__PURE__*/React.createElement("div", {
+    })), c.rimandaUnica || c.rimandaPerCassa ? /*#__PURE__*/React.createElement("div", {
+      className: "mt-3 pt-3 border-t border-[#8F9E8B]/30",
+      "data-rimanda": c.rimandaUnica ? 'unica' : 'cassa'
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-minuto text-[#8F9E8B] leading-snug mb-2"
+    }, L.t(c.rimandaUnica ? 'saldi.pagatiNellaVistaUnica' : 'saldi.pagatiPerCassa')), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setSaldiOttimizzati(!!c.rimandaUnica),
+      className: bottone('bruno', 'normale', 'w-full')
+    }, L.t('saldi.vaiVistaUnica'))) : (s.transfers.length > 0 || (s.fatti || []).length > 0) && /*#__PURE__*/React.createElement("div", {
       className: "mt-3 pt-3 border-t border-[#8F9E8B]/30"
     }, /*#__PURE__*/React.createElement("h4", {
       className: "font-rustic text-normale text-[#8F9E8B] mb-1"
-    }, L.t('saldi.chiPagaChi')), /*#__PURE__*/React.createElement("p", {
+    }, L.t('saldi.chiPagaChi')), s.transfers.length > 0 ? /*#__PURE__*/React.createElement("p", {
       className: "text-minuto text-gray-400 mb-2"
-    }, L.t('saldi.toccaRiga')), /*#__PURE__*/React.createElement("ul", {
+    }, L.t('saldi.toccaRiga')) : /*#__PURE__*/React.createElement("p", {
+      className: "text-piccolo text-[#8FBF8F] font-bold mb-2",
+      "data-tutti-fatti": true
+    }, L.t('saldi.tuttiFatti')), /*#__PURE__*/React.createElement("ul", {
       className: "space-y-1.5"
     }, s.transfers.map((t, i) => {
-      const key = chiaveRimborso(t);
-      const paid = settled.includes(key);
       // Dati di pagamento di chi deve ricevere (scheda Membri, tasto "i").
       const dest = members.find(m => m.name === t.to);
-      const mostraDati = !paid && dest && (dest.paypal || dest.iban);
+      const mostraDati = dest && (dest.paypal || dest.iban || dest.satispay);
       return /*#__PURE__*/React.createElement("li", {
-        key: key + i,
-        onClick: () => toggleSettled(key),
-        className: `cursor-pointer select-none bg-[#1F271E] px-3 py-2 rounded border transition-opacity ${paid ? 'border-[#8FBF8F]/40 opacity-60' : 'border-[#8F9E8B]/20'}`
+        key: `${t.from}→${t.to}@${i}`,
+        "data-da-fare": true,
+        onClick: () => segnaRimborso(t),
+        className: "cursor-pointer select-none bg-[#1F271E] px-3 py-2 rounded border transition-opacity border-[#8F9E8B]/20"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center justify-between"
       }, /*#__PURE__*/React.createElement("span", {
-        className: `text-piccolo ${paid ? 'line-through text-gray-400' : ''}`
+        className: "text-piccolo"
       }, /*#__PURE__*/React.createElement("span", {
         className: "font-bold"
       }, t.from), /*#__PURE__*/React.createElement("span", {
@@ -5336,14 +5370,10 @@ function App() {
       }, " \u2192 "), /*#__PURE__*/React.createElement("span", {
         className: "font-bold"
       }, t.to)), /*#__PURE__*/React.createElement("span", {
-        className: "flex items-center gap-1.5"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: `font-rustic font-bold ${paid ? 'line-through text-gray-400' : 'text-[#D97706]'}`
-      }, money(t.amount), " \u20AC"), paid && /*#__PURE__*/React.createElement("span", {
-        className: "text-[#8FBF8F] text-normale font-bold"
-      }, "\u2713"))), mostraDati && /*#__PURE__*/React.createElement("div", {
+        className: "font-rustic font-bold text-[#D97706]"
+      }, money(t.amount), " \u20AC")), mostraDati && /*#__PURE__*/React.createElement("div", {
         className: "mt-1.5 pt-1.5 border-t border-[#8F9E8B]/20 space-y-1"
-      }, [['PayPal', dest.paypal], ['IBAN', dest.iban]].filter(r => r[1]).map(r => /*#__PURE__*/React.createElement("div", {
+      }, [['PayPal', dest.paypal], ['IBAN', dest.iban], [L.t('membri.satispay'), dest.satispay]].filter(r => r[1]).map(r => /*#__PURE__*/React.createElement("div", {
         key: r[0],
         className: "flex items-start gap-2"
       }, /*#__PURE__*/React.createElement("span", {
@@ -5360,13 +5390,39 @@ function App() {
     })), (() => {
       const senza = [...new Set(s.transfers.map(t => t.to))].filter(n => {
         const d = members.find(m => m.name === n);
-        return d && !d.paypal && !d.iban;
+        return d && !d.paypal && !d.iban && !d.satispay;
       });
       if (senza.length === 0) return null;
       return /*#__PURE__*/React.createElement("p", {
         className: "text-minuto text-gray-400 italic mt-2"
       }, frase('saldi.senzaDati', senza.join(', '), senza.length === 1));
-    })()), s.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
+    })(), (s.fatti || []).length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "mt-3",
+      "data-rimborsi-fatti": true
+    }, /*#__PURE__*/React.createElement("h4", {
+      className: "font-rustic text-piccolo text-[#8F9E8B] mb-1"
+    }, L.t('saldi.fatti')), /*#__PURE__*/React.createElement("ul", {
+      className: "space-y-1"
+    }, s.fatti.map(f => /*#__PURE__*/React.createElement("li", {
+      "data-pagato": f.chiave,
+      key: f.chiave,
+      onClick: () => annullaRimborso(f.chiave),
+      className: "cursor-pointer select-none bg-[#1F271E] px-3 py-1.5 rounded border border-[#8FBF8F]/40 opacity-60 flex items-center justify-between"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-piccolo line-through text-gray-400"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, f.from), " \u2192 ", /*#__PURE__*/React.createElement("span", {
+      className: "font-bold"
+    }, f.to)), /*#__PURE__*/React.createElement("span", {
+      className: "flex items-center gap-1.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-rustic font-bold line-through text-gray-400"
+    }, money(f.amount), " \u20AC"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[#8FBF8F] text-normale font-bold"
+    }, "\u2713"))))), /*#__PURE__*/React.createElement("p", {
+      className: "text-minuto text-gray-400 mt-1"
+    }, L.t('saldi.toccaFatto')))), s.unattributed > 0.005 && /*#__PURE__*/React.createElement("p", {
       className: "text-minuto text-[#D97706] italic mt-2"
     }, L.t('saldi.senzaAcquirente', money(s.unattributed))), c.nonRipartito > 0.005 && /*#__PURE__*/React.createElement("div", {
       className: "mt-2 bg-[#D97706]/10 border border-[#D97706]/40 rounded p-2.5"
@@ -5380,7 +5436,7 @@ function App() {
       key: u.name
     }, i > 0 ? ', ' : '', /*#__PURE__*/React.createElement("span", {
       className: "font-bold"
-    }, u.name), " (", money(u.paid), " \u20AC)")), frase('saldi.daControllareCoda', s.unknownBuyers.length === 1))), Math.abs(c.scarto) >= 0.005 && s.transfers.length > 0 && /*#__PURE__*/React.createElement("p", {
+    }, u.name), " (", money(u.paid), " \u20AC)")), frase('saldi.daControllareCoda', s.unknownBuyers.length === 1))), Math.abs(c.scarto) >= 0.005 && (s.transfers.length > 0 || (s.fatti || []).length > 0) && /*#__PURE__*/React.createElement("p", {
       className: "text-minuto text-gray-400 italic mt-2"
     }, L.t('saldi.arrotondamento', money(Math.abs(c.scarto)))), /*#__PURE__*/React.createElement("p", {
       className: "text-minuto text-gray-400 italic mt-1"
@@ -5498,8 +5554,7 @@ function App() {
     const name = (closeName || '').trim() || L.t('campo.nomePredefinito');
     const range = campRange();
     const t = totals;
-    const daPagare = saldiOttimizzati ? t.transfersOttimizzati : t.transfers;
-    const unpaid = daPagare.filter(x => !settled.includes(chiaveRimborso(x)));
+    const unpaid = window.Rimborsi.daFare(rimborsi, saldiOttimizzati);
     const warn = unpaid.length > 0 ? L.t('campo.rimborsiAperti', unpaid.length) : '';
     if (!window.confirm(L.t('campo.confermaChiusura', name, money(t.overallTotal), members.length, warn))) return;
     const id = toDateStr(new Date()) + '-' + uid();
@@ -6231,6 +6286,7 @@ function App() {
     riapriConti,
     risparmio,
     saldiOttimizzati,
+    rimborsi,
     schedaQuote,
     schedaSaldi,
     setCampCodeInput,
@@ -7192,6 +7248,7 @@ const schedaSpesa = ({
   riapriConti,
   risparmio,
   saldiOttimizzati,
+  rimborsi,
   schedaQuote,
   schedaSaldi,
   setCampCodeInput,
@@ -7345,25 +7402,34 @@ const schedaSpesa = ({
   className: "font-rustic font-bold text-[#2D392C]"
 }, money(totals.collected), " \u20AC")))), spesaSection === 'saldi' && /*#__PURE__*/React.createElement("div", {
   className: "space-y-4"
-}, cassaSepAttiva && (risparmio > 0 || saldiOttimizzati) && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+}, cassaSepAttiva && (risparmio > 0 || saldiOttimizzati || rimborsi.unica) && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
   onClick: () => setSaldiOttimizzati(!saldiOttimizzati),
   className: bottoneScelta('interruttore', 'bordato', saldiOttimizzati, 'minuscolo', 'w-full')
 }, saldiOttimizzati ? L.t('saldi.tornaPerCassa') : L.t('saldi.ottimizza', totals.transfers.length, totals.transfersOttimizzati.length)), /*#__PURE__*/React.createElement("p", {
   className: "text-minuto text-gray-400 italic mt-1 leading-snug"
 }, L.t(saldiOttimizzati ? 'saldi.notaOttimizzati' : 'saldi.notaPerCassa'))), saldiOttimizzati ? schedaSaldi({
   cassa: cassaUnica,
+  rimandaPerCassa: rimborsi.perCassa,
   titolo: L.t('saldi.passaggiOttimizzati'),
   sottotitolo: L.t('saldi.passaggiNota'),
   scarto: totals.roundingDiff,
   nonRipartito: totals.nonRipartito
 }) : /*#__PURE__*/React.createElement(React.Fragment, null, schedaSaldi({
-  cassa: totals.casse.comune,
+  cassa: {
+    ...totals.casse.comune,
+    ...rimborsi.comune
+  },
+  rimandaUnica: rimborsi.unica,
   titolo: L.t(cassaSepAttiva ? 'saldi.cassaComune' : 'saldi.finale'),
   sottotitolo: cassaSepAttiva ? L.t('saldi.cassaComuneNota') : null,
   scarto: totals.roundingDiffComune,
   nonRipartito: totals.nonRipartitoComune
 }), cassaSepAttiva && schedaSaldi({
-  cassa: totals.casse.separata,
+  cassa: {
+    ...totals.casse.separata,
+    ...rimborsi.separata
+  },
+  rimandaUnica: rimborsi.unica,
   titolo: L.t('saldi.cassaSeparata'),
   sottotitolo: L.t('saldi.cassaSeparataNota', totals.sepDaysCount),
   scarto: totals.roundingDiffSep,

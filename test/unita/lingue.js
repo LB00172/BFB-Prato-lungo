@@ -76,6 +76,7 @@ ok(`il dizionario italiano ha ${CHIAVI.length} voci`, CHIAVI.length > 20);
     'es:quote.gratis',                             // "Gratis" e' anche spagnolo
     'es:guida.calendario.titolo',                  // "Calendario" e' anche spagnolo
     'es:guida.gioco.titolo', 'fr:guida.gioco.titolo', // nome proprio del gioco
+    'es:membri.satispay', 'fr:membri.satispay',    // e' un marchio
   ];
   const copiate = [];
   CODICI.filter((c) => c !== 'it').forEach((c) => {
