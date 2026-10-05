@@ -605,7 +605,9 @@ ok(`i ${inPrecache.length} file del precache esistono davvero` + (fantasmi.lengt
 {
   const { execFileSync } = require('child_process');
   const UGUALI = ['conti.js', 'presenze.js', 'sync-merge.js', 'allarmi.js',
-    'menu-spesa.js', 'magazzino-foto.js', 'pdf-ricordo.js'];
+    'menu-spesa.js', 'magazzino-foto.js', 'pdf-ricordo.js',
+    // Portati su main a ottobre 2026: logica dei soldi, quindi non si duplica.
+    'rimborsi.js', 'fra-alcuni.js'];
   const DIVERSI = ['firebase-config.js', 'manifest.json',
     'logo.png', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
   const git = (args) => execFileSync('git', args, { cwd: RADICE, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });

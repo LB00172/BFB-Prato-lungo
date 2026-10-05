@@ -438,7 +438,8 @@ sa. A fine turno si guarda `git status`: se ci sono file, si rifà a mano.
   diventa rosso.
   Un solo vincolo tecnico a questa separazione: **la logica dei soldi non si
   duplica**. `conti.js`, `presenze.js`, `sync-merge.js` e `allarmi.js` devono
-  restare la stessa cosa nei due rami, perché un errore sui conti corretto una
+  restare la stessa cosa nei due rami — e dal 5 ottobre anche `rimborsi.js` e
+  `fra-alcuni.js`, portati su `main` con la scheda della persona, perché un errore sui conti corretto una
   volta sola sarebbe un errore ancora vivo dall'altra parte. Se uno di quei
   file diverge, è un problema da risolvere, non una conseguenza accettabile.
 - **Il Pro è del campo, non della persona** (28 settembre). Lo paga chi crea
